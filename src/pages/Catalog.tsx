@@ -64,7 +64,7 @@ const Catalog = () => {
           <TabsList className="inline-flex h-12 items-center justify-start space-x-2 rounded-md bg-muted p-1 text-muted-foreground w-full overflow-x-auto">
             <TabsTrigger 
               value="all" 
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-6 py-1.5 text-sm font-medium"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-6 py-1.5 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-sm hover:bg-accent/80"
             >
               <Grid2X2Icon className="mr-2 h-4 w-4" />
               Все категории
@@ -74,7 +74,7 @@ const Catalog = () => {
               <TabsTrigger 
                 key={category.id}
                 value={category.name}
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-6 py-1.5 text-sm font-medium"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-6 py-1.5 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-sm hover:bg-accent/80"
               >
                 {category.name}
               </TabsTrigger>
