@@ -7,6 +7,8 @@ import { lazy, Suspense, useEffect } from "react";
 import { seedDatabase } from "./utils/seedDatabase";
 import { CartProvider } from "./hooks/useCart";
 import { supabase } from "./integrations/supabase/client";
+import Navbar from "./components/Navbar";
+import RequireAuth from "./components/RequireAuth";
 
 // Pages
 import Index from "./pages/Index";
