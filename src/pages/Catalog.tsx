@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
@@ -168,8 +167,8 @@ const Catalog = () => {
                       <ProductCard 
                         key={product.id} 
                         product={product}
-                        startDate={bookingDates.startDate}
-                        endDate={bookingDates.endDate}
+                        selectedStartDate={bookingDates.startDate}
+                        selectedEndDate={bookingDates.endDate}
                       />
                     ))}
                   </div>
