@@ -8,7 +8,6 @@ import AnimatedTransition from './AnimatedTransition';
 import { cn } from '@/lib/utils';
 import { checkAuth } from '@/services/apiService';
 import { useCartContext } from '@/hooks/useCart';
-
 const Navbar = () => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -17,7 +16,6 @@ const Navbar = () => {
   const {
     cartCount
   } = useCartContext();
-
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -27,17 +25,11 @@ const Navbar = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
-
   const isActive = (path: string) => {
     return location.pathname === path;
   };
-
-  return (
-    <header className={cn(
-      'fixed top-0 left-0 right-0 z-50 py-4 px-4 md:px-8 transition-all duration-300 backdrop-blur-md', 
-      isScrolled ? 'bg-white/70 dark:bg-black/70 shadow-soft' : 'bg-transparent'
-    )}>
-      <div className="container max-w-7xl mx-auto flex items-center justify-between">
+  return <header className={cn('fixed top-0 left-0 right-0 z-50 py-4 px-4 md:px-8 transition-all duration-300 backdrop-blur-md', isScrolled ? 'bg-white/70 dark:bg-black/70 shadow-soft' : 'bg-transparent')}>
+      <div className="container mx-auto px-4">
         <div className="flex items-center gap-8">
           <Link to="/" className="text-xl font-semibold tracking-tight hover:opacity-80 transition-opacity flex items-center">
             <img src="/logo.svg" alt="PlayBack Rental" className="h-8 mr-2" onError={e => {
@@ -97,16 +89,13 @@ const Navbar = () => {
           </Sheet>
         </div>
       </div>
-    </header>
-  );
+    </header>;
 };
-
 interface NavLinkProps {
   to: string;
   active: boolean;
   children: React.ReactNode;
 }
-
 const NavLink: React.FC<NavLinkProps> = ({
   to,
   active,
@@ -117,5 +106,4 @@ const NavLink: React.FC<NavLinkProps> = ({
       {active && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full animate-in-up" />}
     </Link>;
 };
-
 export default Navbar;
