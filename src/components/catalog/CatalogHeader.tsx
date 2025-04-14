@@ -22,8 +22,8 @@ const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }:
   };
 
   return (
-    <div className="bg-gradient-to-r from-primary/90 to-primary py-16 px-4">
-      <div className="container mx-auto">
+    <div className="bg-gradient-to-r from-primary/90 to-primary py-16">
+      <div className="container max-w-7xl mx-auto px-4">
         <h1 className="heading-1 text-white mb-6">Каталог техники</h1>
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <SearchBar onSubmit={onSearch} defaultValue={searchValue} />
