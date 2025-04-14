@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { SearchIcon, MenuIcon, ShoppingCartIcon, XIcon } from 'lucide-react';
@@ -35,7 +36,7 @@ const Navbar = () => {
   return (
     <header className={cn(
       'fixed top-0 left-0 right-0 z-50 py-4 transition-all duration-300 backdrop-blur-md', 
-      isScrolled ? 'bg-white/70 dark:bg-black/70 shadow-soft' : 'bg-gradient-to-r from-black/70 to-black/40 bg-opacity-50'
+      isScrolled ? 'bg-white/70 dark:bg-black/70 shadow-soft' : 'bg-white bg-opacity-90'
     )}>
       <div className="container mx-auto">
         <div className="flex items-center justify-between">
