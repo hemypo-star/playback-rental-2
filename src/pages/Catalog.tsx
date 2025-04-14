@@ -116,7 +116,7 @@ const Catalog = () => {
       <div className="container mx-auto px-4 py-8">
         <SidebarProvider defaultOpen>
           <div className="flex min-h-[500px] w-full">
-            <Sidebar variant="inset" collapsible="none" className="w-1/4 min-w-[240px]">
+            <Sidebar variant="inset" collapsible="none" className="w-1/4 min-w-[240px] pr-6">
               <SidebarContent>
                 <h3 className="font-medium text-sm uppercase text-muted-foreground mb-3 px-3">Категории</h3>
                 <SidebarMenu>
@@ -146,7 +146,7 @@ const Catalog = () => {
               </SidebarContent>
             </Sidebar>
 
-            <div className="flex-1 pl-6">
+            <div className="flex-1">
               {bookingDates.startDate && bookingDates.endDate && (
                 <div className="mb-6 p-3 bg-primary/10 rounded-md inline-flex items-center">
                   <CalendarIcon className="h-4 w-4 mr-2 text-primary" />
