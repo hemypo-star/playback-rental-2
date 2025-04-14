@@ -5,15 +5,10 @@ import { cn } from '@/lib/utils';
 import { addMonths, format, isBefore, startOfDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { BookingPeriod } from '@/types/product';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import BookingPeriodSelect from './booking/BookingPeriodSelect';
+import SelectedPeriod from './booking/SelectedPeriod';
 
 interface BookingCalendarProps {
   onBookingChange: (booking: BookingPeriod) => void;
@@ -50,17 +45,14 @@ const BookingCalendar = ({
     }
   }, [initialStartDate, initialEndDate]);
   
-  // Update booking when any date or time value changes
   useEffect(() => {
     if (dateRange?.from) {
-      // Create dates with time
       const startWithTime = new Date(dateRange.from);
       startWithTime.setHours(parseInt(startHour), 0, 0);
       
       const endWithTime = new Date(dateRange.to || dateRange.from);
       endWithTime.setHours(parseInt(endHour), 0, 0);
       
-      // Create booking object
       const newBooking: BookingPeriod = {
         id: 'temp-id', 
         productId: 'temp-product',
@@ -78,19 +70,11 @@ const BookingCalendar = ({
       onBookingChange(newBooking);
     }
   }, [dateRange, startHour, endHour, onBookingChange]);
-  
-  // Handle next month navigation
+
   const handleNextMonth = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
   };
   
-  // Generate hour options (full hours only)
-  const hours = Array.from({ length: 24 }, (_, i) => ({
-    value: i.toString(),
-    label: i < 10 ? `0${i}:00` : `${i}:00`
-  }));
-  
-  // Custom day renderer to highlight the end date
   const modifiersStyles = {
     day_selected: {
       backgroundColor: 'hsl(var(--primary))',
@@ -147,56 +131,22 @@ const BookingCalendar = ({
           </div>
         )}
       </div>
+
+      <BookingPeriodSelect
+        startHour={startHour}
+        endHour={endHour}
+        onStartHourChange={setStartHour}
+        onEndHourChange={setEndHour}
+      />
       
-      <div className="p-4 border-t bg-muted/20">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium mb-1.5 block">Время начала</label>
-            <Select value={startHour} onValueChange={setStartHour}>
-              <SelectTrigger className="w-full">
-                <Clock className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue placeholder="Час" />
-              </SelectTrigger>
-              <SelectContent>
-                {hours.map(hour => (
-                  <SelectItem key={`start-hour-${hour.value}`} value={hour.value}>
-                    {hour.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <label className="text-sm font-medium mb-1.5 block">Время окончания</label>
-            <Select value={endHour} onValueChange={setEndHour}>
-              <SelectTrigger className="w-full">
-                <Clock className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                <SelectValue placeholder="Час" />
-              </SelectTrigger>
-              <SelectContent>
-                {hours.map(hour => (
-                  <SelectItem key={`end-hour-${hour.value}`} value={hour.value}>
-                    {hour.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {dateRange?.from && (
+        <div className="p-4 border-t">
+          <SelectedPeriod
+            from={dateRange.from}
+            to={dateRange.to || dateRange.from}
+          />
         </div>
-        
-        {dateRange?.from && (
-          <div className="mt-4 p-3 bg-primary/10 rounded-md">
-            <p className="text-sm font-medium">
-              Выбранный период аренды:
-            </p>
-            <p className="text-sm mt-1">
-              {dateRange.from ? format(dateRange.from, 'dd.MM.yyyy') : ''} {startHour}:00 — 
-              {dateRange.to ? format(dateRange.to, 'dd.MM.yyyy') : format(dateRange.from, 'dd.MM.yyyy')} {endHour}:00
-            </p>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };
