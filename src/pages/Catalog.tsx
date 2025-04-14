@@ -4,13 +4,22 @@ import { useQuery } from '@tanstack/react-query';
 import { SearchIcon, Grid2X2Icon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import ProductCard from '@/components/ProductCard';
 import AnimatedTransition from '@/components/AnimatedTransition';
 import * as supabaseService from '@/services/supabaseService';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarProvider,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from '@/components/ui/sidebar';
 
 const Catalog = () => {
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
   
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -29,12 +38,14 @@ const Catalog = () => {
   };
   
   const filteredProducts = products?.filter(product => {
-    if (search) {
-      const searchLower = search.toLowerCase();
-      return product.title.toLowerCase().includes(searchLower) || 
-             product.description.toLowerCase().includes(searchLower);
-    }
-    return true;
+    const matchesSearch = search ? 
+      product.title.toLowerCase().includes(search.toLowerCase()) || 
+      product.description.toLowerCase().includes(search.toLowerCase())
+      : true;
+      
+    const matchesCategory = activeTab === 'all' || product.category === activeTab;
+    
+    return matchesSearch && matchesCategory;
   });
 
   return (
@@ -60,60 +71,55 @@ const Catalog = () => {
       </div>
       
       <div className="container mx-auto px-4 py-12">
-        <Tabs defaultValue="all" className="space-y-8">
-          <TabsList className="inline-flex h-12 items-center justify-start space-x-2 rounded-md bg-muted p-1 text-muted-foreground w-full overflow-x-auto">
-            <TabsTrigger 
-              value="all" 
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-6 py-1.5 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-sm hover:bg-accent/80"
-            >
-              <Grid2X2Icon className="mr-2 h-4 w-4" />
-              Все категории
-            </TabsTrigger>
-            
-            {categories?.map((category) => (
-              <TabsTrigger 
-                key={category.id}
-                value={category.name}
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-6 py-1.5 text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-sm hover:bg-accent/80"
-              >
-                {category.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <SidebarProvider defaultOpen>
+          <div className="flex min-h-[500px] w-full">
+            <Sidebar variant="inset" collapsible="none">
+              <SidebarContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => setActiveTab('all')}
+                      isActive={activeTab === 'all'}
+                      className="w-full"
+                    >
+                      <Grid2X2Icon className="mr-2 h-4 w-4" />
+                      <span>Все категории</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  {categories?.map((category) => (
+                    <SidebarMenuItem key={category.id}>
+                      <SidebarMenuButton
+                        onClick={() => setActiveTab(category.name)}
+                        isActive={activeTab === category.name}
+                        className="w-full"
+                      >
+                        <span>{category.name}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarContent>
+            </Sidebar>
 
-          <TabsContent value="all" className="mt-6">
-            <AnimatedTransition show={true} type="fade">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredProducts?.map((product) => (
-                  <ProductCard 
-                    key={product.id} 
-                    product={product}
-                  />
-                ))}
-              </div>
-            </AnimatedTransition>
-          </TabsContent>
-
-          {categories?.map((category) => (
-            <TabsContent key={category.id} value={category.name} className="mt-6">
+            <div className="flex-1 pl-6">
               <AnimatedTransition show={true} type="fade">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredProducts
-                    ?.filter(product => product.category === category.name)
-                    .map((product) => (
-                      <ProductCard 
-                        key={product.id} 
-                        product={product}
-                      />
-                    ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredProducts?.map((product) => (
+                    <ProductCard 
+                      key={product.id} 
+                      product={product}
+                    />
+                  ))}
                 </div>
               </AnimatedTransition>
-            </TabsContent>
-          ))}
-        </Tabs>
+            </div>
+          </div>
+        </SidebarProvider>
       </div>
     </div>
   );
 };
 
 export default Catalog;
+
