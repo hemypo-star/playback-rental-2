@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -66,7 +67,7 @@ const App = () => {
           <CartProvider>
             <div className="flex flex-col min-h-screen">
               <Navbar />
-              <main className="pt-16 flex-1">
+              <main className="flex-1">
                 <Suspense fallback={<Loading />}>
                   <Routes>
                     <Route path="/" element={<Index />} />

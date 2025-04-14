@@ -16,7 +16,7 @@ const SearchBar = ({ onSubmit, defaultValue = '' }: SearchBarProps) => {
   };
 
   return (
-    <div className="relative flex-1 max-w-md w-full">
+    <div className="relative flex-1 w-full">
       <form onSubmit={handleSubmit}>
         <Input
           id="search-input"
