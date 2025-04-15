@@ -1,8 +1,7 @@
-
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
-import { CalendarIcon, CheckIcon, Clock } from 'lucide-react';
+import { Clock, CalendarIcon, CheckIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import BookingCalendar from '@/components/BookingCalendar';
