@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { getCategories } from '@/services/apiService';
@@ -6,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRightIcon, Layers } from 'lucide-react';
 
-// This will be replaced by database images
 const categoryImages: Record<string, string> = {
   'Компьютеры': 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80',
   'Ноутбуки': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
@@ -22,15 +20,16 @@ export const CategoriesSection = () => {
   });
 
   return (
-    <section className="py-12 bg-gradient-to-b from-secondary/30 to-background">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <span className="chip mb-2 bg-primary/10 text-primary">Категории</span>
-            <h2 className="heading-2">Оборудование для любых нужд</h2>
-          </div>
+    <section className="py-20">
+      <div className="container px-4 mx-auto">
+        <div className="text-center mb-12">
+          <span className="chip mb-3">Наше оборудование</span>
+          <h2 className="heading-2">Категории оборудования</h2>
+          <p className="body-text max-w-2xl mx-auto">
+            Выберите из нашего широкого ассортимента профессионального оборудования для вашего следующего проекта
+          </p>
         </div>
-
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {isLoading ? (
             Array(8).fill(0).map((_, i) => (

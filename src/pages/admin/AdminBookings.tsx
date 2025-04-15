@@ -12,9 +12,11 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Check, CheckCircle, FileText, MoreVertical, RefreshCw, Search, X } from 'lucide-react';
 import * as supabaseService from '@/services/supabaseService';
+
 interface BookingWithProduct extends BookingPeriod {
   product?: Product;
 }
+
 const AdminBookings = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingPeriod['status'] | 'all'>('all');
@@ -24,7 +26,6 @@ const AdminBookings = () => {
     toast
   } = useToast();
 
-  // Fetch all products to join with bookings
   const {
     data: products
   } = useQuery({
@@ -32,7 +33,6 @@ const AdminBookings = () => {
     queryFn: supabaseService.getProducts
   });
 
-  // Fetch bookings directly from Supabase
   const {
     data: bookings,
     refetch,
@@ -43,7 +43,6 @@ const AdminBookings = () => {
     queryFn: supabaseService.getBookings
   });
 
-  // Join bookings with products
   const bookingsWithProducts: BookingWithProduct[] = React.useMemo(() => {
     if (!bookings || !products) return [];
     return bookings.map(booking => {
@@ -55,7 +54,6 @@ const AdminBookings = () => {
     });
   }, [bookings, products]);
 
-  // Filtered bookings
   const filteredBookings = React.useMemo(() => {
     if (!bookingsWithProducts) return [];
     let filtered = [...bookingsWithProducts];
@@ -69,7 +67,6 @@ const AdminBookings = () => {
     return filtered;
   }, [bookingsWithProducts, search, statusFilter]);
 
-  // Handlers
   const handleStatusUpdate = async (id: string, status: BookingPeriod['status']) => {
     try {
       await supabaseService.updateBookingStatus(id, status);
@@ -77,8 +74,8 @@ const AdminBookings = () => {
         title: 'Success',
         description: 'Booking status updated successfully.'
       });
-      refetch(); // Refresh bookings
-      setOpen(false); // Close the modal
+      refetch();
+      setOpen(false);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -87,10 +84,12 @@ const AdminBookings = () => {
       });
     }
   };
+
   const handleOpenChange = (booking: BookingWithProduct) => {
     setSelectedBooking(booking);
     setOpen(true);
   };
+
   return <div className="container mx-auto py-10">
       <Card className="shadow-md">
         <CardHeader>
@@ -100,16 +99,16 @@ const AdminBookings = () => {
           <div className="grid gap-4 mb-4">
             <div className="flex items-center space-x-2">
               <Search className="h-4 w-4 text-gray-500" />
-              <Input type="search" placeholder="Search bookings..." value={search} onChange={e => setSearch(e.target.value)} className="bg-gray-100 border-gray-300 focus:ring-primary focus:border-primary" />
+              <Input type="search" placeholder="Поиск бронирований..." value={search} onChange={e => setSearch(e.target.value)} className="bg-gray-100 border-gray-300 focus:ring-primary focus:border-primary" />
             </div>
             <div className="flex items-center space-x-4">
               <label htmlFor="status-filter" className="text-sm font-medium">Статус:</label>
               <select id="status-filter" className="bg-gray-100 border-gray-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-primary focus:border-primary" value={statusFilter} onChange={e => setStatusFilter(e.target.value as BookingPeriod['status'] | 'all')}>
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="completed">Completed</option>
+                <option value="all">Все статусы</option>
+                <option value="pending">В ожидании</option>
+                <option value="confirmed">Подтверждено</option>
+                <option value="cancelled">Отменено</option>
+                <option value="completed">Завершено</option>
               </select>
             </div>
           </div>
@@ -117,14 +116,14 @@ const AdminBookings = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Product</TableHead>
+                <TableHead>Клиент</TableHead>
+                <TableHead>Оборудование</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Телефон</TableHead>
+                <TableHead>Дата начала</TableHead>
+                <TableHead>Дата окончания</TableHead>
+                <TableHead>Статус</TableHead>
+                <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -181,7 +180,6 @@ const AdminBookings = () => {
         </CardContent>
       </Card>
 
-      {/* Booking Details Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -253,4 +251,5 @@ const AdminBookings = () => {
       </Dialog>
     </div>;
 };
+
 export default AdminBookings;
