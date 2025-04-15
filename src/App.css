@@ -1,1 +1,14 @@
+
 /* Base app styles */
+.page-header {
+  @apply w-full bg-gradient-to-r from-primary/90 to-primary;
+}
+
+.page-header-content {
+  @apply container mx-auto px-4 py-16;
+}
+
+.section-container {
+  @apply container mx-auto px-4 py-20;
+}
+

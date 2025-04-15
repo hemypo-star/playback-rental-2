@@ -64,7 +64,7 @@ const Catalog = () => {
       
       <div className="container mx-auto px-4 py-8">
         <SidebarProvider defaultOpen>
-          <div className="flex min-h-[500px] w-full">
+          <div className="flex gap-8 min-h-[500px]">
             <CategorySidebar
               categories={categories}
               activeTab={activeTab}

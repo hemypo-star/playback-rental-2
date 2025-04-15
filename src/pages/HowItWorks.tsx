@@ -2,24 +2,25 @@ import { CalendarIcon, CameraIcon, CheckSquareIcon, ClockIcon, MapPinIcon, Packa
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+
 const HowItWorks = () => {
-  return <div className="min-h-screen">
+  return (
+    <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="bg-primary text-white py-[80px] my-[50px] px-0 mx-0">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="heading-1 mb-6">Как мы работаем</h1>
+      <div className="w-full bg-gradient-to-r from-primary/90 to-primary">
+        <div className="container mx-auto px-4 py-16 text-center">
+          <h1 className="heading-1 text-white mb-6">Как мы работаем</h1>
           <p className="text-xl text-white/90 max-w-2xl mx-auto">
-          Аренда профессионального оборудования еще никогда не была такой простой. Следуйте нашему простому процессу, чтобы приобрести оборудование, необходимое для вашего следующего проекта.
+            Аренда профессионального оборудования еще никогда не была такой простой. Следуйте нашему простому процессу, чтобы приобрести оборудование, необходимое для вашего следующего проекта.
           </p>
         </div>
-      </section>
+      </div>
 
       {/* Process Steps */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid gap-12">
-              {[{
+      <div className="container mx-auto px-4 py-20">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid gap-12">
+            {[{
               step: 1,
               title: "Просмотрите наш каталог",
               description: "Ознакомьтесь с нашей обширной коллекцией профессионального оборудования. Отфильтруйте по категориям или выполните поиск по конкретным позициям.",
@@ -51,7 +52,7 @@ const HowItWorks = () => {
               icon: <CameraIcon className="h-10 w-10 text-primary" />
             }, {
               step: 7,
-              title: "Верните оборудованиеt",
+              title: "Верните оборудование",
               description: "Верните оборудование по истечении срока аренды. Наши сотрудники проверят его и завершат процесс.",
               icon: <CheckSquareIcon className="h-10 w-10 text-primary" />
             }].map((step, index) => <div key={index} className="flex gap-6">
@@ -70,14 +71,13 @@ const HowItWorks = () => {
                     <p className="text-muted-foreground">{step.description}</p>
                   </div>
                 </div>)}
-            </div>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Pricing Information */}
-      <section className="py-20 bg-secondary/50">
-        <div className="container mx-auto px-4">
+      <div className="bg-secondary/50 w-full">
+        <div className="container mx-auto px-4 py-20">
           <div className="text-center mb-12">
             <h2 className="heading-2 mb-4">Наши цены на аренду</h2>
             <p className="body-text max-w-2xl mx-auto">
@@ -119,20 +119,19 @@ const HowItWorks = () => {
               </Card>)}
           </div>
         </div>
-      </section>
+      </div>
 
       {/* FAQ Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="heading-2 mb-4">Часто задаваемые вопросы</h2>
-            <p className="body-text max-w-2xl mx-auto">
-             У вас есть вопросы о процессе аренды? Ниже вы найдете ответы на часто задаваемые вопросы.
-            </p>
-          </div>
+      <div className="container mx-auto px-4 py-20">
+        <div className="text-center mb-12">
+          <h2 className="heading-2 mb-4">Часто задаваемые вопросы</h2>
+          <p className="body-text max-w-2xl mx-auto">
+            У вас есть вопросы о процессе аренды? Ниже вы найдете ответы на часто задаваемые вопросы.
+          </p>
+        </div>
 
-          <div className="max-w-3xl mx-auto space-y-6">
-            {[{
+        <div className="max-w-3xl mx-auto space-y-6">
+          {[{
             question: "Требуется ли вам внести залог за аренду оборудования?",
             answer: "Да, мы требуем внести страховой залог, который полностью возвращается при возврате оборудования в хорошем состоянии. Сумма залога варьируется в зависимости от стоимости оборудования."
           }, {
@@ -151,13 +150,12 @@ const HowItWorks = () => {
                 <h3 className="text-lg font-medium mb-2">{faq.question}</h3>
                 <p className="text-muted-foreground">{faq.answer}</p>
               </div>)}
-          </div>
         </div>
-      </section>
+      </div>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-primary/90 to-primary text-white">
-        <div className="container mx-auto px-4 text-center">
+      <div className="w-full bg-gradient-to-r from-primary/90 to-primary">
+        <div className="container mx-auto px-4 py-20 text-center">
           <h2 className="heading-2 mb-6">Готовы арендовать оборудование?</h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Просмотрите наш каталог прямо сейчас, чтобы найти идеальное оборудование для вашего следующего проекта.
@@ -166,7 +164,9 @@ const HowItWorks = () => {
             <Link to="/catalog">Просмотр каталога оборудования</Link>
           </Button>
         </div>
-      </section>
-    </div>;
+      </div>
+    </div>
+  );
 };
+
 export default HowItWorks;

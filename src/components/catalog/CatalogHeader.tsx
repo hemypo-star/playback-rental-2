@@ -22,10 +22,10 @@ const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }:
   };
 
   return (
-    <div className="bg-gradient-to-r from-primary/90 to-primary py-16 w-full">
-      <div className="container max-w-full px-4">
+    <div className="w-full bg-gradient-to-r from-primary/90 to-primary">
+      <div className="container mx-auto px-4 py-16">
         <h1 className="heading-1 text-white mb-6">Каталог техники</h1>
-        <div className="flex flex-col sm:flex-row items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4 max-w-4xl">
           <SearchBar onSubmit={onSearch} defaultValue={searchValue} />
           
           <Popover>
