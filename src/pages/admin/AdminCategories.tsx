@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +38,7 @@ const AdminCategories = () => {
   });
 
   const addCategoryMutation = useMutation({
-    mutationFn: async (category: Partial<Category>) => {
+    mutationFn: async (categoryData: Partial<Category>) => {
       let imageUrl = formData.imageUrl;
       
       if (uploadType === 'file' && imageFile) {
@@ -47,7 +46,9 @@ const AdminCategories = () => {
       }
       
       return supabaseService.addCategory({
-        ...category,
+        name: categoryData.name!,
+        slug: categoryData.slug,
+        description: categoryData.description,
         imageUrl,
       });
     },
@@ -125,7 +126,6 @@ const AdminCategories = () => {
       [name]: value,
     }));
     
-    // Auto-generate slug from name if slug is empty
     if (name === 'name' && (!formData.slug || formData.slug === '')) {
       setFormData((prev) => ({
         ...prev,

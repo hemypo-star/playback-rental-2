@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { addDays } from 'date-fns';
 
 // Sample data for initial DB population
 const sampleProducts = [
@@ -76,6 +77,7 @@ const sampleProducts = [
   }
 ];
 
+// Sample categories data
 const sampleCategories = [
   { name: 'Фотокамеры', slug: 'photo-cameras' },
   { name: 'Видеокамеры', slug: 'video-cameras' },
@@ -148,8 +150,13 @@ export const seedDatabase = async () => {
         console.error('No products found after seeding');
         return;
       }
+
+      // Create sample bookings with proper dates
+      const currentDate = new Date();
+      const nextWeek = addDays(currentDate, 7);
+      const twoWeeksLater = addDays(currentDate, 14);
+      const threeWeeksLater = addDays(currentDate, 21);
       
-      // Create sample bookings
       const sampleBookings = [
         {
           product_id: products.find(p => p.title === 'Sony Alpha A7 III')?.id,

@@ -61,17 +61,23 @@ export type Database = {
       }
       categories: {
         Row: {
+          description: string | null
           id: string
+          imageurl: string | null
           name: string
           slug: string | null
         }
         Insert: {
+          description?: string | null
           id?: string
+          imageurl?: string | null
           name: string
           slug?: string | null
         }
         Update: {
+          description?: string | null
           id?: string
+          imageurl?: string | null
           name?: string
           slug?: string | null
         }

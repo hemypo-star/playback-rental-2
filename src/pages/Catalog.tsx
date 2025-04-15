@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
@@ -33,7 +32,6 @@ const Catalog = () => {
       : supabaseService.getProducts(),
   });
 
-  // Update activeTab when category changes from URL or location state
   useEffect(() => {
     if (categoryFromUrl || locationState?.activeCategory) {
       setActiveTab(categoryFromUrl || locationState?.activeCategory || 'all');

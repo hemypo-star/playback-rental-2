@@ -421,6 +421,45 @@ export const importProductsFromCSV = async (csvContent: string) => {
 };
 
 /**
+ * Create a new booking
+ */
+export const createBooking = async (bookingData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .insert([bookingData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update booking status
+ */
+export const updateBookingStatus = async (bookingId: string, status: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ status })
+      .eq('id', bookingId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating booking status:', error);
+    throw error;
+  }
+};
+
+/**
  * Mock authentication functions for demo
  */
 export const login = async (username: string, password: string) => {
