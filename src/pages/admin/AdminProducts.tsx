@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -64,7 +63,6 @@ import {
 } from '@/services/supabaseService';
 import { Product, Category } from '@/types/product';
 
-// Form schema for product
 const productSchema = z.object({
   title: z.string().min(1, { message: 'Название товара обязательно' }),
   description: z.string().min(1, { message: 'Описание обязательно' }),
@@ -87,7 +85,6 @@ const AdminProducts = () => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showCategoryInput, setShowCategoryInput] = useState(false);
 
-  // Fetch products and categories
   const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: getProducts
@@ -98,7 +95,6 @@ const AdminProducts = () => {
     queryFn: getCategories
   });
 
-  // Form setup
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -112,7 +108,6 @@ const AdminProducts = () => {
     }
   });
 
-  // Mutations
   const createMutation = useMutation({
     mutationFn: createProduct,
     onSuccess: () => {
@@ -153,7 +148,12 @@ const AdminProducts = () => {
   });
 
   const addCategoryMutation = useMutation({
-    mutationFn: addCategory,
+    mutationFn: (name: string) => {
+      return addCategory({
+        name: name,
+        slug: name.toLowerCase().replace(/\s+/g, '-')
+      });
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast({
@@ -187,14 +187,12 @@ const AdminProducts = () => {
     }
   });
 
-  // Filter products based on search term
   const filteredProducts = products?.filter(product => 
     product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Form submission handler
   const onSubmit = (values: ProductFormValues) => {
     if (editProduct) {
       updateMutation.mutate({ id: editProduct.id, product: values });
@@ -203,14 +201,12 @@ const AdminProducts = () => {
     }
   };
 
-  // Add new category handler
   const handleAddCategory = () => {
     if (newCategoryName.trim()) {
       addCategoryMutation.mutate(newCategoryName);
     }
   };
 
-  // Open dialog to edit a product
   const handleEdit = (product: Product) => {
     setEditProduct(product);
     form.reset({
@@ -225,14 +221,12 @@ const AdminProducts = () => {
     setOpen(true);
   };
 
-  // Delete confirmation and deletion
   const handleDelete = (id: string) => {
     if (confirm('Вы уверены, что хотите удалить этот товар?')) {
       deleteMutation.mutate(id);
     }
   };
 
-  // Export products to CSV
   const handleExport = async () => {
     const csvContent = await exportProductsToCSV();
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -245,7 +239,6 @@ const AdminProducts = () => {
     document.body.removeChild(link);
   };
 
-  // Import products from CSV
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -258,7 +251,6 @@ const AdminProducts = () => {
     };
     reader.readAsText(file);
     
-    // Clear the input
     event.target.value = '';
   };
 
