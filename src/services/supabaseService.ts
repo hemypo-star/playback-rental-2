@@ -1,6 +1,6 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { isDateRangeAvailable } from '@/utils/dateUtils';
+import { Category } from '@/types/product';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xwylatyyhqyfwsxfwzmn.supabase.co';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4';
@@ -106,7 +106,7 @@ export const uploadProductImage = async (file: File) => {
 /**
  * Get all categories
  */
-export const getCategories = async () => {
+export const getCategories = async (): Promise<Category[]> => {
   try {
     const { data, error } = await supabase.from('categories').select('*');
     if (error) throw error;
@@ -118,11 +118,25 @@ export const getCategories = async () => {
 };
 
 /**
+ * Get category by ID
+ */
+export const getCategoryById = async (id: string): Promise<Category | null> => {
+  try {
+    const { data, error } = await supabase.from('categories').select('*').eq('id', id).single();
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error getting category by ID:', error);
+    return null;
+  }
+};
+
+/**
  * Add a category
  */
-export const addCategory = async (categoryName: string) => {
+export const addCategory = async (categoryData: Partial<Category>): Promise<Category | null> => {
   try {
-    const { data, error } = await supabase.from('categories').insert([{ name: categoryName }]).select().single();
+    const { data, error } = await supabase.from('categories').insert([categoryData]).select().single();
     if (error) throw error;
     return data;
   } catch (error) {
@@ -132,58 +146,66 @@ export const addCategory = async (categoryName: string) => {
 };
 
 /**
- * Create a new booking
+ * Update a category
  */
-export const createBooking = async (bookingData: any) => {
+export const updateCategory = async (id: string, updates: Partial<Category>): Promise<Category | null> => {
   try {
-    const { data, error } = await supabase.from('bookings').insert([bookingData]).select().single();
+    const { data, error } = await supabase.from('categories').update(updates).eq('id', id).select().single();
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error creating booking:', error);
+    console.error('Error updating category:', error);
     return null;
   }
 };
 
 /**
- * Update a booking
+ * Delete a category
  */
-export const updateBooking = async (id: string, updates: any) => {
+export const deleteCategory = async (id: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.from('bookings').update(updates).eq('id', id).select().single();
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating booking:', error);
-    return null;
-  }
-};
-
-/**
- * Update booking status
- */
-export const updateBookingStatus = async (id: string, status: string) => {
-  try {
-    const { data, error } = await supabase.from('bookings').update({ status }).eq('id', id).select().single();
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating booking status:', error);
-    return null;
-  }
-};
-
-/**
- * Delete a booking
- */
-export const deleteBooking = async (id: string) => {
-  try {
-    const { error } = await supabase.from('bookings').delete().eq('id', id);
+    const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Error deleting booking:', error);
+    console.error('Error deleting category:', error);
     return false;
+  }
+};
+
+/**
+ * Upload a category image to storage
+ */
+export const uploadCategoryImage = async (file: File): Promise<string> => {
+  try {
+    // Create products bucket if it doesn't exist
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (!buckets?.find(bucket => bucket.name === 'categories')) {
+      await supabase.storage.createBucket('categories', {
+        public: true,
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+        fileSizeLimit: 5 * 1024 * 1024, // 5MB
+      });
+    }
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('categories')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: publicUrlData } = supabase.storage
+      .from('categories')
+      .getPublicUrl(filePath);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error('Error uploading category image:', error);
+    throw error;
   }
 };
 

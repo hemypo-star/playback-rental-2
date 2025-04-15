@@ -1,7 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import * as supabaseService from '@/services/supabaseService';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
@@ -10,10 +10,12 @@ import ProductGrid from '@/components/catalog/ProductGrid';
 
 const Catalog = () => {
   const location = useLocation();
-  const locationState = location.state as { startDate?: Date; endDate?: Date } | null;
+  const [searchParams] = useSearchParams();
+  const categoryFromUrl = searchParams.get('category');
+  const locationState = location.state as { activeCategory?: string; startDate?: Date; endDate?: Date } | null;
   
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState(categoryFromUrl || locationState?.activeCategory || 'all');
   const [bookingDates, setBookingDates] = useState<{startDate?: Date, endDate?: Date}>({
     startDate: locationState?.startDate,
     endDate: locationState?.endDate
@@ -30,6 +32,13 @@ const Catalog = () => {
       ? supabaseService.getAvailableProducts(bookingDates.startDate, bookingDates.endDate)
       : supabaseService.getProducts(),
   });
+
+  // Update activeTab when category changes from URL or location state
+  useEffect(() => {
+    if (categoryFromUrl || locationState?.activeCategory) {
+      setActiveTab(categoryFromUrl || locationState?.activeCategory || 'all');
+    }
+  }, [categoryFromUrl, locationState]);
 
   const handleBookingChange = (startDate: Date | undefined, endDate: Date | undefined) => {
     setBookingDates({ startDate, endDate });

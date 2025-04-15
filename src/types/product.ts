@@ -28,6 +28,8 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
+  description?: string;
+  imageUrl?: string;
 }
 
 export interface BookingFormData {

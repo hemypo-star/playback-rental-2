@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRightIcon, Layers } from 'lucide-react';
 
+// This will be replaced by database images
 const categoryImages: Record<string, string> = {
   'Компьютеры': 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80',
   'Ноутбуки': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
@@ -45,14 +46,15 @@ export const CategoriesSection = () => {
             categories?.map((category) => (
               <Link 
                 key={category.id} 
-                to={`/catalog?category=${category.name}`}
+                to={`/catalog?category=${encodeURIComponent(category.name)}`}
+                state={{ activeCategory: category.name }}
                 className="group block"
               >
                 <Card className="overflow-hidden border-0 transition-all duration-300 group-hover:shadow-lg">
                   <div className="relative h-48 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
                     <img 
-                      src={categoryImages[category.name] || categoryImages.default} 
+                      src={category.imageUrl || categoryImages[category.name] || categoryImages.default} 
                       alt={category.name}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
