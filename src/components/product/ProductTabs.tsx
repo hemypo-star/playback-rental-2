@@ -2,7 +2,7 @@
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
-import { CalendarIcon, CheckIcon } from 'lucide-react';
+import { CalendarIcon, CheckIcon, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import BookingCalendar from '@/components/BookingCalendar';
@@ -29,7 +29,7 @@ const ProductTabs = ({ product, bookings, onBookingChange, bookingDates }: Produ
           <div className="p-6 rounded-xl glass-card">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 flex items-center justify-center rounded-full bg-primary/10">
-                <ClockIcon className="h-5 w-5 text-primary" />
+                <Clock className="h-5 w-5 text-primary" />
               </div>
               <h3 className="font-medium">Стоимость аренды</h3>
             </div>
