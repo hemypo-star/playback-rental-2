@@ -1,5 +1,5 @@
 
-import { PackageIcon, CameraIcon } from 'lucide-react';
+import { Package, Camera } from 'lucide-react';
 import { CalendarIconComponent } from './CalendarIconComponent';
 
 export const HowItWorksSection = () => {
@@ -19,7 +19,7 @@ export const HowItWorksSection = () => {
             {
               title: "Выберите оборудование",
               description: "Просмотрите наш обширный каталог и выберите оборудование, необходимое для вашего проекта.",
-              icon: <PackageIcon className="h-8 w-8 text-primary" />,
+              icon: <Package className="h-8 w-8 text-primary" />,
             },
             {
               title: "Забронируйте даты",
@@ -29,7 +29,7 @@ export const HowItWorksSection = () => {
             {
               title: "Получите и создавайте",
               description: "Заберите оборудование в нашем пункте выдачи и приступайте к реализации своего проекта.",
-              icon: <CameraIcon className="h-8 w-8 text-primary" />,
+              icon: <Camera className="h-8 w-8 text-primary" />,
             },
           ].map((step, index) => (
             <div key={index} className="flex flex-col items-center text-center p-6 rounded-xl glass-card">

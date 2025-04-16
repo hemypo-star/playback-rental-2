@@ -1,4 +1,5 @@
-import { CalendarIcon, CameraIcon, CheckSquareIcon, ClockIcon, MapPinIcon, PackageIcon, UserIcon } from "lucide-react";
+
+import { CalendarIcon, Camera, CheckSquare, Clock, MapPin, Package, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
@@ -24,7 +25,7 @@ const HowItWorks = () => {
               step: 1,
               title: "Просмотрите наш каталог",
               description: "Ознакомьтесь с нашей обширной коллекцией профессионального оборудования. Отфильтруйте по категориям или выполните поиск по конкретным позициям.",
-              icon: <PackageIcon className="h-10 w-10 text-primary" />
+              icon: <Package className="h-10 w-10 text-primary" />
             }, {
               step: 2,
               title: "Проверьте наличие свободной техники",
@@ -34,27 +35,27 @@ const HowItWorks = () => {
               step: 3,
               title: "Выберите период аренды",
               description: "Выберите свой срок аренды с помощью наших гибких опций: 4 часа, 1 день, 3 дня или более 5 дней. Воспользуйтесь скидками при длительной аренде.",
-              icon: <ClockIcon className="h-10 w-10 text-primary" />
+              icon: <Clock className="h-10 w-10 text-primary" />
             }, {
               step: 4,
               title: "Полное бронирование",
               description: "Укажите свои данные и завершите процесс бронирования. Вы получите электронное письмо с подтверждением бронирования и всей необходимой информацией.",
-              icon: <UserIcon className="h-10 w-10 text-primary" />
+              icon: <User className="h-10 w-10 text-primary" />
             }, {
               step: 5,
               title: "Оборудование для подбора персонала",
               description: "Посетите наш офис, чтобы забрать свое оборудование. Наши сотрудники помогут вам настроиться и ответят на любые вопросы.",
-              icon: <MapPinIcon className="h-10 w-10 text-primary" />
+              icon: <MapPin className="h-10 w-10 text-primary" />
             }, {
               step: 6,
               title: "Создайте Свой проект",
               description: "Используйте наше профессиональное оборудование для вашего проекта с уверенностью. При необходимости мы оказываем техническую поддержку.",
-              icon: <CameraIcon className="h-10 w-10 text-primary" />
+              icon: <Camera className="h-10 w-10 text-primary" />
             }, {
               step: 7,
               title: "Верните оборудование",
               description: "Верните оборудование по истечении срока аренды. Наши сотрудники проверят его и завершат процесс.",
-              icon: <CheckSquareIcon className="h-10 w-10 text-primary" />
+              icon: <CheckSquare className="h-10 w-10 text-primary" />
             }].map((step, index) => <div key={index} className="flex gap-6">
                   <div className="flex-shrink-0">
                     <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -113,7 +114,7 @@ const HowItWorks = () => {
                   <p className="font-medium text-primary">{option.price}</p>
                 </div>
                 <p className="text-sm flex items-center justify-center">
-                  <CheckSquareIcon className="h-4 w-4 mr-2 text-green-500" />
+                  <CheckSquare className="h-4 w-4 mr-2 text-green-500" />
                   {option.feature}
                 </p>
               </Card>)}
