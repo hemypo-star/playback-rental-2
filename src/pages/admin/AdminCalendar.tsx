@@ -6,6 +6,7 @@ import * as supabaseService from '@/services/supabaseService';
 import CalendarHeader from '@/components/admin/calendar/CalendarHeader';
 import CalendarTable from '@/components/admin/calendar/CalendarTable';
 import StatusLegend from '@/components/admin/calendar/StatusLegend';
+import { BookingPeriod } from '@/types/product';
 
 // Interface for bookings with display name
 interface ExtendedBooking extends BookingPeriod {
