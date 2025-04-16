@@ -1,5 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
+import { addDays } from 'date-fns';
 
 // Sample data for initial DB population
 const sampleProducts = [
@@ -77,6 +77,7 @@ const sampleProducts = [
   }
 ];
 
+// Sample categories data
 const sampleCategories = [
   { name: 'Фотокамеры', slug: 'photo-cameras' },
   { name: 'Видеокамеры', slug: 'video-cameras' },
@@ -88,109 +89,122 @@ const sampleCategories = [
   { name: 'Аксессуары', slug: 'accessories' }
 ];
 
-// Sample bookings
-const currentDate = new Date();
-const nextWeek = new Date(currentDate);
-nextWeek.setDate(nextWeek.getDate() + 7);
-
-const twoWeeksLater = new Date(currentDate);
-twoWeeksLater.setDate(twoWeeksLater.getDate() + 14);
-
-const threeWeeksLater = new Date(currentDate);
-threeWeeksLater.setDate(threeWeeksLater.getDate() + 21);
-
+// Function to seed the database with initial data
 export const seedDatabase = async () => {
   try {
-    // Check if database is already seeded
-    const { count } = await supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true });
+    const { data: existingCategories } = await supabase.from('categories').select('*');
+    const { data: existingProducts } = await supabase.from('products').select('*');
     
-    if (count && count > 0) {
-      console.log('Database already seeded, skipping...');
-      return;
-    }
-    
-    console.log('Seeding database...');
-    
-    // Insert categories
-    const { error: categoriesError } = await supabase
-      .from('categories')
-      .insert(sampleCategories);
-    
-    if (categoriesError) {
-      console.error('Error seeding categories:', categoriesError);
-      return;
-    }
-    
-    // Insert products
-    const { error: productsError } = await supabase
-      .from('products')
-      .insert(sampleProducts);
-    
-    if (productsError) {
-      console.error('Error seeding products:', productsError);
-      return;
-    }
-    
-    // Get product IDs
-    const { data: products } = await supabase
-      .from('products')
-      .select('id, title');
-    
-    if (!products || products.length === 0) {
-      console.error('No products found after seeding');
-      return;
-    }
-    
-    // Create sample bookings
-    const sampleBookings = [
-      {
-        product_id: products.find(p => p.title === 'Sony Alpha A7 III')?.id,
-        start_date: currentDate.toISOString(),
-        end_date: nextWeek.toISOString(),
-        customer_name: 'Иван Петров',
-        customer_email: 'ivan@example.com',
-        customer_phone: '+7 (999) 123-4567',
-        status: 'confirmed',
-        total_price: 4500 * 7,
-        notes: null
-      },
-      {
-        product_id: products.find(p => p.title === 'Godox SL-60W LED')?.id,
-        start_date: nextWeek.toISOString(),
-        end_date: twoWeeksLater.toISOString(),
-        customer_name: 'Анна Сидорова',
-        customer_email: 'anna@example.com',
-        customer_phone: '+7 (999) 765-4321',
-        status: 'pending',
-        total_price: 1200 * 7,
-        notes: 'Нужен дополнительный аккумулятор'
-      },
-      {
-        product_id: products.find(p => p.title === 'DJI Mavic 3')?.id,
-        start_date: twoWeeksLater.toISOString(),
-        end_date: threeWeeksLater.toISOString(),
-        customer_name: 'Алексей Иванов',
-        customer_email: 'alex@example.com',
-        customer_phone: '+7 (999) 111-2222',
-        status: 'confirmed',
-        total_price: 6500 * 7,
-        notes: null
+    // Only seed if there's no data
+    if ((!existingCategories || existingCategories.length === 0) && (!existingProducts || existingProducts.length === 0)) {
+      console.log('Seeding database with initial data...');
+      
+      // Add categories
+      const categories = [
+        {
+          name: 'Компьютеры',
+          slug: 'computers',
+          description: 'Настольные компьютеры и серверы',
+          imageUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80'
+        },
+        {
+          name: 'Ноутбуки',
+          slug: 'laptops',
+          description: 'Портативные компьютеры для работы и учебы',
+          imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80'
+        },
+        {
+          name: 'Планшеты',
+          slug: 'tablets',
+          description: 'Мобильные устройства для работы и развлечений',
+          imageUrl: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=800&q=80'
+        },
+        {
+          name: 'Мониторы',
+          slug: 'monitors',
+          description: 'Дисплеи для компьютеров и ноутбуков',
+          imageUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80'
+        }
+      ];
+      
+      for (const category of categories) {
+        await supabase.from('categories').insert([category]);
       }
-    ];
-    
-    // Insert bookings
-    const { error: bookingsError } = await supabase
-      .from('bookings')
-      .insert(sampleBookings);
-    
-    if (bookingsError) {
-      console.error('Error seeding bookings:', bookingsError);
-      return;
+      
+      // Insert products
+      const { error: productsError } = await supabase
+        .from('products')
+        .insert(sampleProducts);
+      
+      if (productsError) {
+        console.error('Error seeding products:', productsError);
+        return;
+      }
+      
+      // Get product IDs
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, title');
+      
+      if (!products || products.length === 0) {
+        console.error('No products found after seeding');
+        return;
+      }
+
+      // Create sample bookings with proper dates
+      const currentDate = new Date();
+      const nextWeek = addDays(currentDate, 7);
+      const twoWeeksLater = addDays(currentDate, 14);
+      const threeWeeksLater = addDays(currentDate, 21);
+      
+      const sampleBookings = [
+        {
+          product_id: products.find(p => p.title === 'Sony Alpha A7 III')?.id,
+          start_date: currentDate.toISOString(),
+          end_date: nextWeek.toISOString(),
+          customer_name: 'Иван Петров',
+          customer_email: 'ivan@example.com',
+          customer_phone: '+7 (999) 123-4567',
+          status: 'confirmed',
+          total_price: 4500 * 7,
+          notes: null
+        },
+        {
+          product_id: products.find(p => p.title === 'Godox SL-60W LED')?.id,
+          start_date: nextWeek.toISOString(),
+          end_date: twoWeeksLater.toISOString(),
+          customer_name: 'Анна Сидорова',
+          customer_email: 'anna@example.com',
+          customer_phone: '+7 (999) 765-4321',
+          status: 'pending',
+          total_price: 1200 * 7,
+          notes: 'Нужен дополнительный аккумулятор'
+        },
+        {
+          product_id: products.find(p => p.title === 'DJI Mavic 3')?.id,
+          start_date: twoWeeksLater.toISOString(),
+          end_date: threeWeeksLater.toISOString(),
+          customer_name: 'Алексей Иванов',
+          customer_email: 'alex@example.com',
+          customer_phone: '+7 (999) 111-2222',
+          status: 'confirmed',
+          total_price: 6500 * 7,
+          notes: null
+        }
+      ];
+      
+      // Insert bookings
+      const { error: bookingsError } = await supabase
+        .from('bookings')
+        .insert(sampleBookings);
+      
+      if (bookingsError) {
+        console.error('Error seeding bookings:', bookingsError);
+        return;
+      }
+      
+      console.log('Database seeded successfully!');
     }
-    
-    console.log('Database seeded successfully!');
   } catch (error) {
     console.error('Error seeding database:', error);
   }

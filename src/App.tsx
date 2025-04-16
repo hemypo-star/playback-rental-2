@@ -8,6 +8,8 @@ import { lazy, Suspense, useEffect } from "react";
 import { seedDatabase } from "./utils/seedDatabase";
 import { CartProvider } from "./hooks/useCart";
 import { supabase } from "./integrations/supabase/client";
+import Navbar from "./components/Navbar";
+import RequireAuth from "./components/RequireAuth";
 
 // Pages
 import Index from "./pages/Index";
@@ -19,10 +21,8 @@ const Login = lazy(() => import("./pages/Login"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks"));
 const Contact = lazy(() => import("./pages/Contact"));
 import NotFound from "./pages/NotFound";
-
-// Components
-import Navbar from "./components/Navbar";
-import RequireAuth from "./components/RequireAuth";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import { Footer } from "./components/Footer";
 
 const Loading = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -40,13 +40,10 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  // Seed the database with initial data if empty
   useEffect(() => {
     seedDatabase().catch(console.error);
 
-    // Create products storage bucket if it doesn't exist
     const createProductsBucket = async () => {
-      // Check if bucket exists
       const { data: buckets } = await supabase.storage.listBuckets();
       const bucketExists = buckets?.some(bucket => bucket.name === 'products');
       
@@ -68,30 +65,32 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <CartProvider>
-            <Navbar />
-            <main className="pt-16">
-              <Suspense fallback={<Loading />}>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/catalog" element={<Catalog />} />
-                  <Route path="/product/:id" element={<ProductDetail />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/how-it-works" element={<HowItWorks />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/login" element={<Login />} />
-                  
-                  {/* Admin route with authentication */}
-                  <Route path="/admin" element={
-                    <RequireAuth>
-                      <Admin />
-                    </RequireAuth>
-                  } />
-                  
-                  {/* Create a catch-all route that redirects to NotFound component */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </main>
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-1 pt-20">
+                <Suspense fallback={<Loading />}>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/catalog" element={<Catalog />} />
+                    <Route path="/product/:id" element={<ProductDetail />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/how-it-works" element={<HowItWorks />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    
+                    <Route path="/admin" element={
+                      <RequireAuth>
+                        <Admin />
+                      </RequireAuth>
+                    } />
+                    
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </main>
+              <Footer />
+            </div>
             <Toaster />
             <Sonner />
           </CartProvider>

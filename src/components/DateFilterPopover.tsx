@@ -68,7 +68,7 @@ const DateFilterPopover = ({
       <PopoverTrigger asChild>
         <Button 
           variant="outline" 
-          className="bg-white/10 text-white border-white/20 hover:bg-white/20 h-12"
+          className="bg-white/10 text-white border-white/20 hover:bg-white/20 h-12 w-full md:w-auto"
         >
           <CalendarIcon className="mr-2 h-5 w-5" />
           {startDate && endDate ? formatDateRange(startDate, endDate, true) : "Выбрать время"}
