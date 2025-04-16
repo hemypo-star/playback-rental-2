@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { addMonths, format, isBefore, startOfDay } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { BookingPeriod } from '@/types/product';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import BookingPeriodSelect from './booking/BookingPeriodSelect';
 import SelectedPeriod from './booking/SelectedPeriod';
+
 interface BookingCalendarProps {
   onBookingChange: (booking: BookingPeriod) => void;
   initialStartDate?: Date;
@@ -16,6 +18,7 @@ interface BookingCalendarProps {
   isCompact?: boolean;
   className?: string;
 }
+
 const BookingCalendar = ({
   onBookingChange,
   initialStartDate,
@@ -32,6 +35,7 @@ const BookingCalendar = ({
   } : undefined);
   const [startHour, setStartHour] = useState<string>(initialStartDate?.getHours().toString() || "9");
   const [endHour, setEndHour] = useState<string>(initialEndDate?.getHours().toString() || "18");
+
   useEffect(() => {
     if (initialStartDate && initialEndDate) {
       setDateRange({
@@ -42,6 +46,7 @@ const BookingCalendar = ({
       setEndHour(initialEndDate.getHours().toString());
     }
   }, [initialStartDate, initialEndDate]);
+
   useEffect(() => {
     if (dateRange?.from) {
       const startWithTime = new Date(dateRange.from);
@@ -64,9 +69,11 @@ const BookingCalendar = ({
       onBookingChange(newBooking);
     }
   }, [dateRange, startHour, endHour, onBookingChange]);
+
   const handleNextMonth = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
   };
+
   const modifiersStyles = {
     day_selected: {
       backgroundColor: 'hsl(var(--primary))',
@@ -77,21 +84,29 @@ const BookingCalendar = ({
       color: 'hsl(var(--primary-foreground)) !important'
     }
   };
+
   return <div className={cn("border rounded-lg shadow-sm bg-card", className)}>
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-5 w-5 text-primary" />
           <h3 className="font-medium">Выберите даты аренды</h3>
         </div>
-        
       </div>
       
       <div className="p-4 py-[10px]">
-        <Calendar mode="range" month={currentMonth} onMonthChange={setCurrentMonth} selected={dateRange} onSelect={setDateRange} disabled={date => isBefore(date, today)} modifiersStyles={modifiersStyles} showOutsideDays fixedWeeks className={cn("border-0 p-0 pointer-events-auto w-full max-w-none", isCompact && "scale-[0.9] origin-top")} />
-        
-        {currentMonth && <div className="flex justify-end mt-2">
-            
-          </div>}
+        <Calendar 
+          mode="range" 
+          month={currentMonth} 
+          onMonthChange={setCurrentMonth} 
+          selected={dateRange} 
+          onSelect={setDateRange} 
+          disabled={date => isBefore(date, today)} 
+          modifiersStyles={modifiersStyles} 
+          showOutsideDays 
+          fixedWeeks 
+          locale={ru} 
+          className={cn("border-0 p-0 pointer-events-auto w-full max-w-none", isCompact && "scale-[0.9] origin-top")} 
+        />
       </div>
 
       <BookingPeriodSelect startHour={startHour} endHour={endHour} onStartHourChange={setStartHour} onEndHourChange={setEndHour} />
@@ -101,5 +116,6 @@ const BookingCalendar = ({
         </div>}
     </div>;
 };
+
 export { BookingCalendar };
 export default BookingCalendar;

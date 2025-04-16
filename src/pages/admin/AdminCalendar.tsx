@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { addDays, format, isWithinInterval, startOfDay, endOfDay, isSameDay } from 'date-fns';
@@ -225,6 +224,8 @@ const AdminCalendar = () => {
                   }
                 }}
                 initialFocus
+                locale={ru}
+                className="p-3 pointer-events-auto"
               />
             </PopoverContent>
           </Popover>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,7 +25,6 @@ const DateFilterPopover = ({
   const [tempStartDate, setTempStartDate] = useState<Date | undefined>(startDate);
   const [tempEndDate, setTempEndDate] = useState<Date | undefined>(endDate);
   
-  // Update temp dates when props change
   useEffect(() => {
     if (startDate !== tempStartDate) {
       setTempStartDate(startDate);
@@ -40,7 +38,6 @@ const DateFilterPopover = ({
   const handleBookingChange = (booking: BookingPeriod) => {
     setTempStartDate(booking.startDate);
     setTempEndDate(booking.endDate);
-    // Don't close the popover here, don't update parent state until Apply button is clicked
   };
   
   const handleClear = (e: React.MouseEvent) => {
@@ -53,12 +50,10 @@ const DateFilterPopover = ({
   
   const handleApply = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Only update parent state and close popover when user explicitly applies
     onDateRangeChange(tempStartDate, tempEndDate);
     setIsOpen(false);
   };
   
-  // Prevent popover from closing when clicking within the calendar
   const handlePopoverInteraction = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
@@ -87,7 +82,7 @@ const DateFilterPopover = ({
             onBookingChange={handleBookingChange}
             initialStartDate={tempStartDate}
             initialEndDate={tempEndDate}
-            isCompact={false} // Use full size in popover
+            isCompact={false}
             className="w-full"
           />
           
