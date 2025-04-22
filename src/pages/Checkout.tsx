@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -26,6 +25,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import BookingCalendar from '@/components/BookingCalendar';
 import { BookingPeriod } from '@/types/product';
+import { calculateRentalPrice, calculateRentalDetails, formatCurrency } from '@/utils/pricingUtils';
 
 const Checkout = () => {
   const [loading, setLoading] = useState(false);
@@ -78,13 +78,10 @@ const Checkout = () => {
     setLoading(true);
     
     try {
-      // Create bookings for each cart item
       for (const item of cartItems) {
-        // Use selected booking time if available, otherwise use the cart item's dates
         const startDate = selectedBookingTime ? selectedBookingTime.startDate : item.startDate;
         const endDate = selectedBookingTime ? selectedBookingTime.endDate : item.endDate;
         
-        // Insert directly into the database using Supabase
         const { data, error } = await supabase
           .from('bookings')
           .insert({
@@ -107,13 +104,10 @@ const Checkout = () => {
         }
       }
       
-      // Clear the cart after successful checkout
       clearCart();
       
-      // Show success
       setOrderComplete(true);
       
-      // Record successful booking in analytics (example)
       console.log('Booking completed successfully:', {
         items: cartItems.length,
         totalValue: getCartTotal()
@@ -182,10 +176,13 @@ const Checkout = () => {
               ) : (
                 <div className="space-y-6">
                   {cartItems.map((item) => {
-                    const days = Math.ceil(
-                      (item.endDate.getTime() - item.startDate.getTime()) / (1000 * 60 * 60 * 24)
+                    const hours = Math.ceil(
+                      (item.endDate.getTime() - item.startDate.getTime()) / (1000 * 60 * 60)
                     );
-                    const itemTotal = item.price * days;
+                    const days = Math.ceil(hours / 24);
+                    
+                    const pricingDetails = calculateRentalDetails(item.price, hours);
+                    const itemTotal = pricingDetails.total;
                     
                     return (
                       <div key={item.id} className="flex gap-4">
@@ -203,8 +200,28 @@ const Checkout = () => {
                             <CalendarIcon className="inline-block h-3 w-3 mr-1" />
                             {formatDateRange(item.startDate, item.endDate, true)}
                           </p>
+                          
+                          {pricingDetails.dayDiscount > 0 && (
+                            <p className="text-xs text-green-600 mb-1">
+                              Скидка: {pricingDetails.dayDiscount}%
+                            </p>
+                          )}
+                          
                           <div className="flex justify-between items-center">
-                            <p className="font-medium">{itemTotal.toFixed(2)} ₽</p>
+                            <div>
+                              {pricingDetails.discount > 0 ? (
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm line-through text-muted-foreground">
+                                    {formatCurrency(pricingDetails.subtotal)}
+                                  </p>
+                                  <p className="font-medium">
+                                    {formatCurrency(itemTotal)}
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="font-medium">{formatCurrency(itemTotal)}</p>
+                              )}
+                            </div>
                             <Button 
                               variant="ghost" 
                               size="sm" 
@@ -307,15 +324,24 @@ const Checkout = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {cartItems.map((item) => {
-                const days = Math.ceil(
-                  (item.endDate.getTime() - item.startDate.getTime()) / (1000 * 60 * 60 * 24)
+                const hours = Math.ceil(
+                  (item.endDate.getTime() - item.startDate.getTime()) / (1000 * 60 * 60)
                 );
-                const itemTotal = item.price * days;
+                const pricingDetails = calculateRentalDetails(item.price, hours);
                 
                 return (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{item.title}</span>
-                    <span>{itemTotal.toFixed(2)} ₽</span>
+                  <div key={item.id} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{item.title}</span>
+                      <span>{formatCurrency(pricingDetails.total)}</span>
+                    </div>
+                    
+                    {pricingDetails.dayDiscount > 0 && (
+                      <div className="flex justify-between text-xs text-green-600">
+                        <span>Скидка:</span>
+                        <span>-{pricingDetails.dayDiscount}%</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -324,7 +350,7 @@ const Checkout = () => {
               
               <div className="flex justify-between text-lg font-semibold">
                 <span>Итого:</span>
-                <span>{getCartTotal().toFixed(2)} ₽</span>
+                <span>{formatCurrency(getCartTotal())}</span>
               </div>
             </CardContent>
             <CardFooter>
