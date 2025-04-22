@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
 import { Clock } from 'lucide-react';
+import BookingCalendarColumn from './BookingCalendarColumn';
 
 interface BookingDateRangePickerProps {
   onChange: (dateRange: {
@@ -113,83 +114,30 @@ const BookingDateRangePicker = ({
   return (
     <div className={cn("space-y-4", className)}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <h3 className="font-medium text-center">Взять</h3>
-          <div className="border rounded-lg shadow-sm bg-card overflow-hidden">
-            <Calendar
-              mode="range"
-              defaultMonth={leftMonth}
-              month={leftMonth}
-              onMonthChange={handleLeftMonthChange}
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={1}
-              locale={ru}
-              modifiersStyles={modifiersStyles}
-              disabled={date => isBefore(date, new Date())}
-              className="border-0"
-            />
-            
-            <div className="p-4 border-t flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-blue-500" />
-              <span className="mr-2">Время:</span>
-              <Select 
-                value={startTime} 
-                onValueChange={setStartTime}
-              >
-                <SelectTrigger className="w-[110px]">
-                  <SelectValue placeholder="Выберите время" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HOURS.map((hour) => (
-                    <SelectItem key={hour.value} value={hour.value}>
-                      {hour.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="font-medium text-center">Вернуть</h3>
-          <div className="border rounded-lg shadow-sm bg-card overflow-hidden">
-            <Calendar
-              mode="range"
-              defaultMonth={rightMonth}
-              month={rightMonth}
-              onMonthChange={handleRightMonthChange}
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={1}
-              locale={ru}
-              modifiersStyles={modifiersStyles}
-              disabled={date => isBefore(date, new Date())}
-              className="border-0"
-            />
-            
-            <div className="p-4 border-t flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-blue-500" />
-              <span className="mr-2">Время:</span>
-              <Select 
-                value={endTime} 
-                onValueChange={setEndTime}
-              >
-                <SelectTrigger className="w-[110px]">
-                  <SelectValue placeholder="Выберите время" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HOURS.map((hour) => (
-                    <SelectItem key={hour.value} value={hour.value}>
-                      {hour.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
+        <BookingCalendarColumn
+          label="Взять"
+          month={leftMonth}
+          onMonthChange={handleLeftMonthChange}
+          selected={dateRange}
+          onSelect={setDateRange}
+          timeValue={startTime}
+          onTimeChange={setStartTime}
+          hours={HOURS}
+          modifiersStyles={modifiersStyles}
+          disabled={date => isBefore(date, new Date())}
+        />
+        <BookingCalendarColumn
+          label="Вернуть"
+          month={rightMonth}
+          onMonthChange={handleRightMonthChange}
+          selected={dateRange}
+          onSelect={setDateRange}
+          timeValue={endTime}
+          onTimeChange={setEndTime}
+          hours={HOURS}
+          modifiersStyles={modifiersStyles}
+          disabled={date => isBefore(date, new Date())}
+        />
       </div>
 
       {dateRange?.from && (
