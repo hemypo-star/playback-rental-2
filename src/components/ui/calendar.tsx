@@ -51,14 +51,10 @@ function Calendar({
         day_today: "bg-accent text-accent-foreground",
         day_outside: "text-muted-foreground opacity-50 aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_range_start: cn(
-          "aria-selected:bg-primary aria-selected:text-primary-foreground rounded-l-full"
-        ),
-        day_range_end: cn(
-          "aria-selected:bg-primary aria-selected:text-primary-foreground rounded-r-full"
-        ),
+        // вот ключевые изменения ниже:
+        day_range_start: "bg-red-500 text-white rounded-l-full",
+        day_range_middle: "bg-red-500 text-white",
+        day_range_end: "bg-red-500 text-white rounded-r-full",
         day_hidden: "invisible",
         ...classNames,
       }}
