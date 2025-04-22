@@ -11,7 +11,12 @@ export const CallToActionSection = () => {
             Начните просматривать наш каталог прямо сейчас, чтобы найти идеальное оборудование для вашего проекта.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="default" asChild>
+            <Button 
+              size="lg" 
+              variant="default" 
+              asChild 
+              className="bg-white text-primary hover:bg-white/90"
+            >
               <Link to="/catalog">Каталог</Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="border-white text-white hover:bg-transparent hover:bg-white/10">
