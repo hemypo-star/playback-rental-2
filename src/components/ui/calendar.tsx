@@ -19,19 +19,21 @@ function Calendar({
 }: CalendarProps) {
 
   // Custom day renderer for pill-shaped range backgrounds
-  const CustomDay = (dayProps: any) => {
+  const CustomDay = (props: any) => {
     // Extract relevant props
-    const { date, selected, modifiers, disabled, onSelect, onDayClick, onDayFocus } = dayProps;
+    const { date, selected, disabled, hidden, 
+      modifiers, outside, today, 
+      onDayClick, onDayFocus, onDayMouseEnter, onDayMouseLeave } = props;
 
     // Identify if this date matches any of the range modifiers
-    const isStart = modifiers?.has('range_start');
-    const isMiddle = modifiers?.has('range_middle');
-    const isEnd = modifiers?.has('range_end');
-    const isSelected = modifiers?.has('selected');
-    const isToday = modifiers?.has('today');
-    const isDisabled = modifiers?.has('disabled');
-    const isOutside = modifiers?.has('outside');
-    const isHidden = modifiers?.has('hidden');
+    const isStart = modifiers?.range_start;
+    const isMiddle = modifiers?.range_middle;
+    const isEnd = modifiers?.range_end;
+    const isSelected = modifiers?.selected;
+    const isToday = modifiers?.today;
+    const isDisabled = disabled;
+    const isOutside = outside;
+    const isHidden = hidden;
 
     // Don't show if hidden
     if (isHidden) return null;
@@ -70,8 +72,10 @@ function Calendar({
           tabIndex={isDisabled ? -1 : 0}
           disabled={isDisabled}
           aria-selected={isSelected}
-          onClick={(e) => onDayClick?.(date, modifiers, e)}
-          onFocus={(e) => onDayFocus?.(date, modifiers, e)}
+          onClick={(e) => onDayClick && onDayClick(date, modifiers, e)}
+          onFocus={(e) => onDayFocus && onDayFocus(date, modifiers, e)}
+          onMouseEnter={(e) => onDayMouseEnter && onDayMouseEnter(date, modifiers, e)}
+          onMouseLeave={(e) => onDayMouseLeave && onDayMouseLeave(date, modifiers, e)}
           className={cn(
             buttonVariants({ variant: "ghost" }),
             "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent",
