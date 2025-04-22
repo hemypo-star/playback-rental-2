@@ -15,9 +15,11 @@ export function useToast() {
 
 // Standalone function for external/legacy use
 export function toast(props: Omit<ToasterToast, "id">) {
-  // This is just a placeholder for external usage
-  // The actual implementation happens in the useToast hook
-  // (for SSR, old-style imports, etc)
+  const context = useToastContext();
+  if (context) {
+    return context.toast(props);
+  }
+  
   console.warn(
     "toast() was called outside of a component. Please use useToast() hook inside a component instead."
   );

@@ -2,8 +2,8 @@
 "use client";
 
 import * as React from "react";
-import { reducer, actionTypes, toastTimeouts, TOAST_REMOVE_DELAY, State, Action } from "./toast-reducer";
-import type { ToastProps, ToastActionElement, ToasterToast } from "./toast-types";
+import { reducer, actionTypes, toastTimeouts, TOAST_REMOVE_DELAY } from "./toast-reducer";
+import type { ToasterToast } from "./toast-types";
 
 // Utility for generating IDs
 let count = 0;
@@ -112,4 +112,3 @@ export function useToastContext() {
   }
   return context;
 }
-

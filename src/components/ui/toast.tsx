@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// NEW: Добавить время жизни тоста по умолчанию
+// Default toast duration of 3 seconds
 const DEFAULT_TOAST_DURATION = 3000;
 
 const ToastProvider = ToastPrimitives.Provider;
@@ -43,12 +43,11 @@ const toastVariants = cva(
 
 type ToastPrimitiveRootProps = React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>;
 
-// Исправленный Toast-компонент, управляемый через open/onOpenChange
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   ToastPrimitiveRootProps &
     VariantProps<typeof toastVariants> & {
-      duration?: number; // duration в мс
+      duration?: number;
     }
 >(
   (
@@ -63,14 +62,17 @@ const Toast = React.forwardRef<
     },
     ref
   ) => {
-    // duration и auto-close
+    // Auto-hide toast after duration
     React.useEffect(() => {
       if (!open) return;
+      
       const timer = setTimeout(() => {
         if (onOpenChange) onOpenChange(false);
       }, duration);
+      
       return () => clearTimeout(timer);
     }, [open, duration, onOpenChange]);
+    
     return (
       <ToastPrimitives.Root
         ref={ref}
@@ -101,7 +103,6 @@ const ToastAction = React.forwardRef<
 ));
 ToastAction.displayName = ToastPrimitives.Action.displayName;
 
-// ToastClose теперь вызывает onOpenChange(false)
 const ToastClose = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Close>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Close>
@@ -113,7 +114,6 @@ const ToastClose = React.forwardRef<
       className
     )}
     aria-label="Закрыть"
-    // onClick уже встроенно вызывает onOpenChange(false), Radix контролирует open
     {...props}
   >
     <X className="h-4 w-4" />

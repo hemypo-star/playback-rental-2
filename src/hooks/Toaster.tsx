@@ -8,7 +8,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
-import { ToastProvider as ToastContextProvider, useToast, type ToasterToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast"
 
 export function Toaster() {
   const { toasts } = useToast()
@@ -37,9 +37,9 @@ export function Toaster() {
 // Wrapper that provides both the Toaster and the ToastProvider context
 export function ToasterProvider({ children }: { children: React.ReactNode }) {
   return (
-    <ToastContextProvider>
+    <>
       {children}
       <Toaster />
-    </ToastContextProvider>
+    </>
   )
 }
