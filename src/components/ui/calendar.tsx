@@ -1,7 +1,7 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker, DayPickerProps, DateModifiers } from "react-day-picker";
+import { DayPicker, DayPickerProps, DayModifiers } from "react-day-picker";
 import { ru } from 'date-fns/locale';
 
 import { cn } from "@/lib/utils";
