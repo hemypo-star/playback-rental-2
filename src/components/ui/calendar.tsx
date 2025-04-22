@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
@@ -47,18 +46,13 @@ function Calendar({
           buttonVariants({ variant: "ghost" }),
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
         ),
-        // Apply full left radius to left side of red range background (start)
-        day_range_start: "aria-selected:bg-primary aria-selected:text-primary-foreground rounded-l-full",
-        // Apply full right radius to right side of red range background (end)
-        day_range_end: "aria-selected:bg-primary aria-selected:text-primary-foreground rounded-r-full",
-        // No border radius on selected circle
-        day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+        day_range_start: "bg-primary text-white rounded-l-full",
+        day_range_middle: "bg-primary text-white",
+        day_range_end: "bg-primary text-white rounded-r-full",
+        day_selected: "",
         day_today: "bg-accent text-accent-foreground",
         day_outside: "text-muted-foreground opacity-50 aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
         ...classNames,
       }}
@@ -73,4 +67,3 @@ function Calendar({
 Calendar.displayName = "Calendar";
 
 export { Calendar };
-
