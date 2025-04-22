@@ -23,22 +23,6 @@ function Calendar({
       locale={locale}
       className={cn("p-3 w-full pointer-events-auto", className)}
       modifiersStyles={{
-        day_range_start: {
-          backgroundColor: 'hsl(var(--primary))',
-          color: 'white',
-          borderTopLeftRadius: '9999px',
-          borderBottomLeftRadius: '9999px'
-        },
-        day_range_middle: {
-          backgroundColor: 'hsl(var(--primary))',
-          color: 'white'
-        },
-        day_range_end: {
-          backgroundColor: 'hsl(var(--primary))',
-          color: 'white',
-          borderTopRightRadius: '9999px',
-          borderBottomRightRadius: '9999px'
-        },
         ...modifiersStyles,
       }}
       classNames={{
@@ -58,7 +42,12 @@ function Calendar({
         head_cell:
           "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] flex-1",
         row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative flex-1 [&:has([aria-selected])]:bg-accent focus-within:relative focus-within:z-20",
+        cell: cn(
+          "h-9 w-9 text-center text-sm p-0 relative flex-1 [&:has([aria-selected])]:bg-accent focus-within:relative focus-within:z-20",
+          "first:[&:has(.day-range-start)]:rounded-l-full [&:has(.day-range-start)]:bg-red-500 [&:has(.day-range-start)]:text-white",
+          "[&:has(.day-range-middle)]:bg-red-500 [&:has(.day-range-middle)]:text-white",
+          "last:[&:has(.day-range-end)]:rounded-r-full [&:has(.day-range-end)]:bg-red-500 [&:has(.day-range-end)]:text-white"
+        ),
         day: cn(
           buttonVariants({ variant: "ghost" }),
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
