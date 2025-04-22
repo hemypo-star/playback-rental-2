@@ -1,4 +1,6 @@
 
+// All type definitions related to toasts
+
 import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
