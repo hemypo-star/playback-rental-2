@@ -1,3 +1,4 @@
+
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
@@ -35,19 +36,22 @@ const ProductTabs = ({ product, bookings, onBookingChange, bookingDates }: Produ
             <ul className="space-y-2">
               <li className="flex items-center gap-2">
                 <span className="text-muted-foreground">4 часа:</span>
-                <span className="font-medium">{(product.price * 0.7).toFixed(2)} ₽</span>
+                <span className="font-medium">{(product.price * 0.7).toLocaleString()} ₽</span>
+                <span className="text-xs text-green-600">(-30%)</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-muted-foreground">Сутки:</span>
-                <span className="font-medium">{product.price.toFixed(2)} ₽</span>
+                <span className="font-medium">{product.price.toLocaleString()} ₽</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-muted-foreground">от 3-ех суток:</span>
-                <span className="font-medium">{(product.price * 0.9).toFixed(2)} ₽/день</span>
+                <span className="font-medium">{(product.price * 0.9).toLocaleString()} ₽/день</span>
+                <span className="text-xs text-green-600">(-10%)</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-muted-foreground">от 5 дней:</span>
-                <span className="font-medium">{(product.price * 0.7).toFixed(2)} ₽/день</span>
+                <span className="font-medium">{(product.price * 0.7).toLocaleString()} ₽/день</span>
+                <span className="text-xs text-green-600">(-30%)</span>
               </li>
             </ul>
           </div>

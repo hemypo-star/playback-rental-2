@@ -14,21 +14,20 @@ export const calculateRentalPrice = (
   const millisPerDay = 1000 * 60 * 60 * 24;
   const days = Math.ceil((endDate.getTime() - startDate.getTime()) / millisPerDay);
   
+  // Calculate hours for short-term rentals
+  const hours = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60));
+  
+  // Short-term rental: 4 hours or less gets a fixed price (70% of daily rate)
+  if (hours <= 4) {
+    return basePrice * 0.7;
+  }
+  
   // Apply discount based on duration
   let discount = 0;
   if (days >= 5) {
     discount = 0.3; // 30% off for 5+ days
   } else if (days >= 3) {
     discount = 0.1; // 10% off for 3+ days
-  }
-  
-  // Calculate hourly rate if less than a day
-  if (days < 1) {
-    const hours = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60));
-    // 4 hours is 70% of the daily rate
-    if (hours <= 4) {
-      return basePrice * 0.7;
-    }
   }
   
   const pricePerDay = basePrice * (1 - discount);
@@ -48,32 +47,44 @@ export const calculateRentalDetails = (
 } => {
   const days = Math.ceil(hours / 24);
   
-  // Calculate the discount percentage based on days
+  // Initialize variables
   let dayDiscount = 0;
-  if (days >= 5) {
-    dayDiscount = 30;
-  } else if (days >= 3) {
-    dayDiscount = 10;
-  }
+  let subtotal = 0;
+  let total = 0;
+  let discountAmount = 0;
+  let hourlyRate = 0;
   
-  // Calculate hourly rate for short rentals
-  let hourlyRate = basePrice;
+  // Short-term rental: 4 hours or less
   if (hours <= 4) {
-    hourlyRate = basePrice * 0.7 / 4; // Per hour for 4-hour rental
-  } else if (hours <= 8) {
+    // For 4 hours, charge 70% of daily rate
+    total = basePrice * 0.7;
+    subtotal = basePrice; // Original daily price
+    discountAmount = basePrice * 0.3; // 30% discount
+    hourlyRate = total / 4; // Rate per hour
+    dayDiscount = 30; // 30% discount percentage
+  } 
+  // 8 hours or less
+  else if (hours <= 8) {
     hourlyRate = basePrice * 0.85 / 8; // Per hour for 8-hour rental
-  } else {
+    subtotal = basePrice;
+    total = basePrice * 0.85;
+    discountAmount = basePrice * 0.15;
+    dayDiscount = 15;
+  } 
+  // Multi-day rental
+  else {
+    // Calculate the discount percentage based on days
+    if (days >= 5) {
+      dayDiscount = 30;
+    } else if (days >= 3) {
+      dayDiscount = 10;
+    }
+    
     hourlyRate = basePrice / 24; // Per hour for full day rental
+    subtotal = days * basePrice;
+    discountAmount = subtotal * (dayDiscount / 100);
+    total = subtotal - discountAmount;
   }
-  
-  // Calculate subtotal (before discount)
-  const subtotal = days * basePrice;
-  
-  // Calculate discount amount
-  const discountAmount = subtotal * (dayDiscount / 100);
-  
-  // Calculate total (after discount)
-  const total = subtotal - discountAmount;
   
   return {
     total,
