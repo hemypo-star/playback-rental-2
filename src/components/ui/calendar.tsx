@@ -21,7 +21,7 @@ function Calendar({
   // Custom day renderer for pill-shaped range backgrounds
   const CustomDay = (dayProps: any) => {
     // Extract relevant props
-    const { date, selected, modifiers, outside } = dayProps;
+    const { date, selected, modifiers, disabled, onSelect, onDayClick, onDayFocus } = dayProps;
 
     // Identify if this date matches any of the range modifiers
     const isStart = modifiers?.has('range_start');
@@ -32,6 +32,9 @@ function Calendar({
     const isDisabled = modifiers?.has('disabled');
     const isOutside = modifiers?.has('outside');
     const isHidden = modifiers?.has('hidden');
+
+    // Don't show if hidden
+    if (isHidden) return null;
 
     // Compose backgrounds for each range type
     let backgroundDiv: JSX.Element | null = null;
@@ -59,9 +62,6 @@ function Calendar({
       numberColor += " text-accent-foreground";
     }
 
-    // Don't show if hidden
-    if (isHidden) return null;
-
     return (
       <div className="relative w-full h-full flex items-center justify-center">
         {backgroundDiv}
@@ -69,6 +69,9 @@ function Calendar({
           type="button"
           tabIndex={isDisabled ? -1 : 0}
           disabled={isDisabled}
+          aria-selected={isSelected}
+          onClick={(e) => onDayClick?.(date, modifiers, e)}
+          onFocus={(e) => onDayFocus?.(date, modifiers, e)}
           className={cn(
             buttonVariants({ variant: "ghost" }),
             "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent",
