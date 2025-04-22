@@ -1,8 +1,6 @@
 
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -16,16 +14,17 @@ import {
   deleteProduct,
   exportProductsToCSV,
   importProductsFromCSV,
-  addCategory
+  addCategory,
+  uploadProductImage,
+  uploadCategoryImage
 } from '@/services/supabaseService';
 import { Product, Category } from '@/types/product';
-import { uploadProductImage, uploadCategoryImage } from "@/services/supabaseService";
 
 import ProductEditDialog from '@/components/admin/products/ProductEditDialog';
 import ProductTable from '@/components/admin/products/ProductTable';
 import CSVImportExportButtons from '@/components/admin/products/CSVImportExportButtons';
-
 import { Search } from "lucide-react";
+import { Input } from '@/components/ui/input';
 
 const productSchema = z.object({
   title: z.string().min(1, { message: 'Название товара обязательно' }),
@@ -320,4 +319,3 @@ const AdminProducts = () => {
 };
 
 export default AdminProducts;
-

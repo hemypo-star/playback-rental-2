@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 
-const Admin = () => {
+export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const navigate = useNavigate();
   
@@ -64,6 +64,4 @@ const Admin = () => {
       </Tabs>
     </div>
   );
-};
-
-export default Admin;
+}
