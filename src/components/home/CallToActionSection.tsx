@@ -1,10 +1,7 @@
-
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-
 export const CallToActionSection = () => {
-  return (
-    <section className="py-20 bg-gradient-to-r from-accent/90 to-accent text-white">
+  return <section className="py-20 bg-gradient-to-r from-primary/90 to-primary text-white">
       <div className="container px-4 mx-auto">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="heading-2 mb-6">Готовы арендовать высококачественное оборудование?</h2>
@@ -21,6 +18,5 @@ export const CallToActionSection = () => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
