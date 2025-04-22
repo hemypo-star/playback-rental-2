@@ -17,7 +17,7 @@ export interface CartItem {
 
 export const useCart = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  // Use optional chaining to prevent errors if toast is not available
+  // Safely get toast context, which may not be available during initial render
   const toast = useToast();
 
   // Load cart from localStorage on initial render
@@ -95,10 +95,20 @@ export const useCart = () => {
     localStorage.removeItem('cart');
   };
 
-  // New function to update cart dates for all items
+  // Update cart dates for all items - prevent duplicate updates
   const updateCartDates = (startDate: Date, endDate: Date) => {
     if (!startDate || !endDate) {
       return false;
+    }
+
+    // Check if any items would actually change
+    const wouldChange = cartItems.some(item => 
+      item.startDate.getTime() !== startDate.getTime() || 
+      item.endDate.getTime() !== endDate.getTime()
+    );
+
+    if (!wouldChange) {
+      return false; // No need to update if dates haven't changed
     }
 
     setCartItems(prevItems => 

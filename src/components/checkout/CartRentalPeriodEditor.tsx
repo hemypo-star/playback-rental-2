@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Clock } from "lucide-react";
 import { formatDateRange } from "@/utils/dateUtils";
 import { BookingPeriod } from "@/types/product";
+import { useState, useEffect } from "react";
 
 interface CartRentalPeriodEditorProps {
   initialStartDate?: Date;
@@ -18,6 +19,20 @@ const CartRentalPeriodEditor = ({
   onBookingChange,
   selectedBookingTime
 }: CartRentalPeriodEditorProps) => {
+  const [lastBooking, setLastBooking] = useState<string | null>(null);
+
+  // Create a memoized handler to prevent multiple calls with the same data
+  const handleBookingChange = (booking: BookingPeriod) => {
+    // Create a unique signature for this booking to detect duplicates
+    const bookingSignature = `${booking.startDate.getTime()}-${booking.endDate.getTime()}`;
+    
+    // Only call onBookingChange if this is a new booking signature
+    if (bookingSignature !== lastBooking) {
+      setLastBooking(bookingSignature);
+      onBookingChange(booking);
+    }
+  };
+
   if (!initialStartDate || !initialEndDate) return null;
 
   return (
@@ -28,7 +43,7 @@ const CartRentalPeriodEditor = ({
       </CardHeader>
       <CardContent>
         <BookingCalendar
-          onBookingChange={onBookingChange}
+          onBookingChange={handleBookingChange}
           initialStartDate={initialStartDate}
           initialEndDate={initialEndDate}
           isCompact={false}
