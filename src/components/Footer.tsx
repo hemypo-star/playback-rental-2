@@ -1,4 +1,3 @@
-
 import { Mail, Phone, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -25,7 +24,7 @@ export const Footer = () => {
             <h3 className="font-semibold mb-4">Адрес</h3>
             <div className="flex items-start gap-2 text-muted-foreground">
               <MapPin className="h-4 w-4 mt-1 flex-shrink-0" />
-              <p>Москва, ул. Ленина, д. 1,<br />офис 123</p>
+              <p>Г.Кемерово, ул. Демьяна Бедного, 6</p>
             </div>
           </div>
           
