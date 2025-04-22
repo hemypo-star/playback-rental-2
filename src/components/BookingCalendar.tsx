@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -75,33 +74,36 @@ const BookingCalendar = ({
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  // Use the styles defined here to customize the appearance of the calendar days
   const modifiersStyles = {
     day_selected: {
       backgroundColor: 'hsl(var(--primary))',
       color: 'hsl(var(--primary-foreground))',
+      fontWeight: '500',
       borderRadius: '0.375rem'
     },
     day_range_start: {
       backgroundColor: 'hsl(var(--primary)) !important',
       color: 'hsl(var(--primary-foreground)) !important',
-      borderTopLeftRadius: '0.375rem',
-      borderBottomLeftRadius: '0.375rem',
-      borderTopRightRadius: '0',
-      borderBottomRightRadius: '0'
+      fontWeight: '500',
+      borderTopLeftRadius: '0.375rem !important',
+      borderBottomLeftRadius: '0.375rem !important',
+      borderTopRightRadius: '0 !important',
+      borderBottomRightRadius: '0 !important'
     },
     day_range_end: {
       backgroundColor: 'hsl(var(--primary)) !important',
       color: 'hsl(var(--primary-foreground)) !important',
-      borderTopRightRadius: '0.375rem',
-      borderBottomRightRadius: '0.375rem',
-      borderTopLeftRadius: '0',
-      borderBottomLeftRadius: '0'
+      fontWeight: '500',
+      borderTopRightRadius: '0.375rem !important',
+      borderBottomRightRadius: '0.375rem !important',
+      borderTopLeftRadius: '0 !important',
+      borderBottomLeftRadius: '0 !important'
     },
     day_range_middle: {
       backgroundColor: 'hsl(var(--accent)) !important',
       color: 'hsl(var(--accent-foreground)) !important',
-      borderRadius: '0'
+      fontWeight: '500',
+      borderRadius: '0 !important'
     }
   };
 
