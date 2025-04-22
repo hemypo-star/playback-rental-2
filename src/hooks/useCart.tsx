@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
 import { useToast } from '@/hooks/use-toast';
@@ -16,7 +17,8 @@ export interface CartItem {
 
 export const useCart = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const { toast } = useToast();
+  // Use optional chaining to prevent errors if toast is not available
+  const toast = useToast();
 
   // Load cart from localStorage on initial render
   useEffect(() => {
@@ -45,7 +47,7 @@ export const useCart = () => {
   const addToCart = (product: Product, startDate?: Date, endDate?: Date) => {
     // Check if required dates are provided
     if (!startDate || !endDate) {
-      toast({
+      toast?.toast({
         title: "Сначала выберите даты",
         description: "Пожалуйста, выберите даты аренды перед добавлением в корзину",
         variant: "destructive",
@@ -71,7 +73,7 @@ export const useCart = () => {
       }
     ]);
 
-    toast({
+    toast?.toast({
       title: "Добавлено в корзину",
       description: `${product.title} добавлен в корзину.`,
     });
@@ -82,7 +84,7 @@ export const useCart = () => {
   const removeFromCart = (itemId: string) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
 
-    toast({
+    toast?.toast({
       title: "Удалено из корзины",
       description: "Товар удален из корзины.",
     });

@@ -64,8 +64,8 @@ const App = () => {
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <CartProvider>
-            <ToasterProvider>
+          <ToasterProvider>
+            <CartProvider>
               <div className="flex flex-col min-h-screen">
                 <Navbar />
                 <main className="flex-1 pt-20">
@@ -93,8 +93,8 @@ const App = () => {
                 <Footer />
               </div>
               <Sonner />
-            </ToasterProvider>
-          </CartProvider>
+            </CartProvider>
+          </ToasterProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </BrowserRouter>
