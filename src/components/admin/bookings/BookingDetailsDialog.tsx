@@ -1,5 +1,5 @@
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Check, CheckCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
@@ -21,11 +21,16 @@ export const BookingDetailsDialog = ({
 }: BookingDetailsDialogProps) => {
   if (!booking) return null;
 
+  const handleStatusUpdate = (status: BookingPeriod['status']) => {
+    onStatusUpdate(booking.id, status);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Детали бронирования</DialogTitle>
+          <DialogDescription>Информация о бронировании и возможность изменить статус</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
@@ -70,13 +75,12 @@ export const BookingDetailsDialog = ({
           </div>
           <div className="space-y-2">
             <h3 className="text-lg font-medium">Обновить статус</h3>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               {booking.status !== 'confirmed' && (
                 <Button 
                   variant="outline" 
-                  onClick={() => {
-                    onStatusUpdate(booking.id, 'confirmed');
-                  }}
+                  onClick={() => handleStatusUpdate('confirmed')}
+                  type="button"
                 >
                   Подтвердить
                   <Check className="ml-2 h-4 w-4" />
@@ -85,9 +89,8 @@ export const BookingDetailsDialog = ({
               {booking.status !== 'cancelled' && (
                 <Button 
                   variant="destructive" 
-                  onClick={() => {
-                    onStatusUpdate(booking.id, 'cancelled');
-                  }}
+                  onClick={() => handleStatusUpdate('cancelled')}
+                  type="button"
                 >
                   Отменить
                   <X className="ml-2 h-4 w-4" />
@@ -96,9 +99,8 @@ export const BookingDetailsDialog = ({
               {booking.status !== 'completed' && (
                 <Button 
                   variant="secondary" 
-                  onClick={() => {
-                    onStatusUpdate(booking.id, 'completed');
-                  }}
+                  onClick={() => handleStatusUpdate('completed')}
+                  type="button"
                 >
                   Завершить
                   <CheckCircle className="ml-2 h-4 w-4" />

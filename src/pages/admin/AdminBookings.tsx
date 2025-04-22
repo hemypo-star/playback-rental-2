@@ -85,10 +85,6 @@ const AdminBookings = () => {
     setDialogOpen(true);
   };
 
-  const handleCloseDetails = () => {
-    setDialogOpen(false);
-  };
-
   return (
     <div className="container mx-auto py-10">
       <Card className="shadow-md">
