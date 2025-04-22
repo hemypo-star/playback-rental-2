@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
@@ -22,6 +23,22 @@ function Calendar({
       locale={locale}
       className={cn("p-3 w-full pointer-events-auto", className)}
       modifiersStyles={{
+        day_range_start: {
+          backgroundColor: 'hsl(var(--red-500))',
+          color: 'white',
+          borderTopLeftRadius: '9999px',
+          borderBottomLeftRadius: '9999px'
+        },
+        day_range_middle: {
+          backgroundColor: 'hsl(var(--red-500))',
+          color: 'white'
+        },
+        day_range_end: {
+          backgroundColor: 'hsl(var(--red-500))',
+          color: 'white',
+          borderTopRightRadius: '9999px',
+          borderBottomRightRadius: '9999px'
+        },
         ...modifiersStyles,
       }}
       classNames={{
