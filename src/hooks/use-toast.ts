@@ -116,7 +116,22 @@ const reducer = (state: State, action: Action): State => {
   }
 }
 
-function useToast() {
+// Create a context for the toast
+type ToastContextType = {
+  toasts: ToasterToast[]
+  toast: (props: Omit<ToasterToast, "id">) => string
+  dismiss: (toastId?: string) => void
+  remove: (toastId?: string) => void
+  update: (toastId: string, props: Partial<ToasterToast>) => void
+} | undefined
+
+const ToastContext = React.createContext<ToastContextType>(undefined)
+
+export function ToastProvider({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const [state, dispatch] = React.useReducer(reducer, {
     toasts: [],
   })
@@ -185,17 +200,40 @@ function useToast() {
     [dispatch]
   )
 
-  return {
-    toasts: state.toasts,
-    toast,
-    update,
-    dismiss,
-    remove,
-  }
+  const value = React.useMemo(() => {
+    return {
+      toasts: state.toasts,
+      toast,
+      dismiss,
+      remove,
+      update,
+    }
+  }, [state.toasts, toast, dismiss, remove, update])
+
+  return (
+    <ToastContext.Provider value={value}>
+      {children}
+    </ToastContext.Provider>
+  )
 }
 
-// Create a singleton instance of the toast hook to use throughout the app
-const { toasts, toast, dismiss, remove, update } = useToast()
+export function useToast() {
+  const context = React.useContext(ToastContext)
+  
+  if (context === undefined) {
+    throw new Error("useToast must be used within a ToastProvider")
+  }
+  
+  return context
+}
 
-export { useToast, toast, dismiss, remove, update, type ToasterToast }
+// This function is for standalone usage outside of components
+export function toast(props: Omit<ToasterToast, "id">) {
+  // This is just a placeholder for external usage
+  // The actual implementation happens in the useToast hook
+  console.warn("toast() was called outside of a component. Please use useToast() hook inside a component instead.")
+  return ""
+}
+
+export { type ToasterToast }
 export type { ToastProps, ToastActionElement }

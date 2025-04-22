@@ -1,5 +1,5 @@
 
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster, ToasterProvider } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -65,34 +65,35 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <CartProvider>
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <main className="flex-1 pt-20">
-                <Suspense fallback={<Loading />}>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/catalog" element={<Catalog />} />
-                    <Route path="/product/:id" element={<ProductDetail />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/how-it-works" element={<HowItWorks />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                    
-                    <Route path="/admin" element={
-                      <RequireAuth>
-                        <Admin />
-                      </RequireAuth>
-                    } />
-                    
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-              </main>
-              <Footer />
-            </div>
-            <Toaster />
-            <Sonner />
+            <ToasterProvider>
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-1 pt-20">
+                  <Suspense fallback={<Loading />}>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/catalog" element={<Catalog />} />
+                      <Route path="/product/:id" element={<ProductDetail />} />
+                      <Route path="/checkout" element={<Checkout />} />
+                      <Route path="/how-it-works" element={<HowItWorks />} />
+                      <Route path="/contact" element={<Contact />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                      
+                      <Route path="/admin" element={
+                        <RequireAuth>
+                          <Admin />
+                        </RequireAuth>
+                      } />
+                      
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </main>
+                <Footer />
+              </div>
+              <Sonner />
+            </ToasterProvider>
           </CartProvider>
         </TooltipProvider>
       </QueryClientProvider>

@@ -1,4 +1,4 @@
 
-import { Toaster } from "@/hooks/Toaster"
+import { Toaster, ToasterProvider } from "@/hooks/Toaster"
 
-export { Toaster }
+export { Toaster, ToasterProvider }
