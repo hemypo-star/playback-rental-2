@@ -1,45 +1,18 @@
 
-import * as React from "react"
+import { type ToastProps } from "@/components/ui/toast"
 import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "@/components/ui/toast"
-import { useToast as useToastOriginal } from "@/components/ui/use-toast"
+  useToast as useToastOriginal,
+  type ToastActionElement,
+} from "@/components/ui/use-toast"
 
-export type ToasterToast = React.ComponentPropsWithoutRef<typeof Toast>
-
-export const useToast = useToastOriginal;
-
-interface ToasterProps {
-  toasts: ToasterToast[]
-  onRemove: (toastId?: string) => void
+export type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
 }
 
-export function Toaster({ toasts, onRemove }: ToasterProps) {
-  return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
-  )
-}
+export const useToast = useToastOriginal
 
 // Re-export toast object from the original use-toast
 export const { toast } = useToastOriginal()
