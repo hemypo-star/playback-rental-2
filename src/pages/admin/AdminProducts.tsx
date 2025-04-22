@@ -4,10 +4,6 @@ import {
   Package,
   Plus,
   Search,
-  Trash2,
-  Pencil,
-  Upload,
-  Download,
   Image,
   X
 } from 'lucide-react';
@@ -152,11 +148,8 @@ const AdminProducts = () => {
   });
 
   const addCategoryMutation = useMutation({
-    mutationFn: (name: string) => {
-      return addCategory({
-        name: name,
-        slug: name.toLowerCase().replace(/\s+/g, '-')
-      });
+    mutationFn: (categoryData: Partial<Category>) => {
+      return addCategory(categoryData);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
@@ -230,7 +223,11 @@ const AdminProducts = () => {
       }
     }
     if (newCategoryName.trim()) {
-      addCategoryMutation.mutate({ name: newCategoryName, imageUrl });
+      addCategoryMutation.mutate({ 
+        name: newCategoryName, 
+        imageUrl,
+        slug: newCategoryName.toLowerCase().replace(/\s+/g, '-')
+      });
     }
   };
 
