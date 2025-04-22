@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
@@ -46,9 +47,9 @@ function Calendar({
           buttonVariants({ variant: "ghost" }),
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
         ),
-        day_range_start: "bg-primary text-white rounded-l-full",
-        day_range_middle: "bg-primary text-white",
-        day_range_end: "bg-primary text-white rounded-r-full",
+        day_range_start: "bg-red-500 text-white rounded-l-full",
+        day_range_middle: "bg-red-500 text-white",
+        day_range_end: "bg-red-500 text-white rounded-r-full",
         day_selected: "",
         day_today: "bg-accent text-accent-foreground",
         day_outside: "text-muted-foreground opacity-50 aria-selected:bg-accent aria-selected:text-accent-foreground",
@@ -67,3 +68,4 @@ function Calendar({
 Calendar.displayName = "Calendar";
 
 export { Calendar };
+
