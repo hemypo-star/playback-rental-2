@@ -1,7 +1,7 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, DayPickerProps, DateModifiers } from "react-day-picker";
 import { ru } from 'date-fns/locale';
 
 import { cn } from "@/lib/utils";
@@ -17,12 +17,84 @@ function Calendar({
   locale = ru,
   ...props
 }: CalendarProps) {
+
+  // Custom day renderer for pill-shaped range backgrounds
+  const CustomDay = (dayProps: any) => {
+    // Extract relevant props
+    const { date, selected, modifiers, outside } = dayProps;
+
+    // Identify if this date matches any of the range modifiers
+    const isStart = modifiers?.has('range_start');
+    const isMiddle = modifiers?.has('range_middle');
+    const isEnd = modifiers?.has('range_end');
+    const isSelected = modifiers?.has('selected');
+    const isToday = modifiers?.has('today');
+    const isDisabled = modifiers?.has('disabled');
+    const isOutside = modifiers?.has('outside');
+    const isHidden = modifiers?.has('hidden');
+
+    // Compose backgrounds for each range type
+    let backgroundDiv: JSX.Element | null = null;
+    if (isStart) {
+      backgroundDiv = (
+        <div className="absolute inset-0 bg-red-500 rounded-l-full z-0" />
+      );
+    } else if (isEnd) {
+      backgroundDiv = (
+        <div className="absolute inset-0 bg-red-500 rounded-r-full z-0" />
+      );
+    } else if (isMiddle) {
+      backgroundDiv = (
+        <div className="absolute inset-0 bg-red-500 z-0" />
+      );
+    } 
+
+    // Compose text styling
+    let numberColor = "relative z-10";
+    if (isStart || isMiddle || isEnd) {
+      numberColor += " text-white";
+    } else if (isDisabled || isOutside) {
+      numberColor += " text-muted-foreground opacity-50";
+    } else if (isToday) {
+      numberColor += " text-accent-foreground";
+    }
+
+    // Don't show if hidden
+    if (isHidden) return null;
+
+    return (
+      <div className="relative w-full h-full flex items-center justify-center">
+        {backgroundDiv}
+        <button
+          type="button"
+          tabIndex={isDisabled ? -1 : 0}
+          disabled={isDisabled}
+          className={cn(
+            buttonVariants({ variant: "ghost" }),
+            "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent",
+            // Remove background for selected/today
+            isSelected ? "bg-transparent" : "",
+            isToday ? "bg-transparent" : "",
+          )}
+          aria-label={date?.toDateString()}
+        >
+          <span className={numberColor}>
+            {date?.getDate()}
+          </span>
+        </button>
+      </div>
+    );
+  };
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       locale={locale}
       className={cn("p-3 w-full pointer-events-auto", className)}
       modifiersStyles={{
+        // Remove any default background styling for selected/today from props or elsewhere
+        day_selected: {},
+        day_today: {},
         ...modifiersStyles,
       }}
       classNames={{
@@ -43,28 +115,23 @@ function Calendar({
           "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] flex-1",
         row: "flex w-full mt-2",
         cell: cn(
-          "h-9 w-9 text-center text-sm p-0 relative flex-1 [&:has([aria-selected])]:bg-accent focus-within:relative focus-within:z-20",
-          "first:[&:has(.day-range-start)]:rounded-l-full [&:has(.day-range-start)]:bg-red-500 [&:has(.day-range-start)]:text-white",
-          "[&:has(.day-range-middle)]:bg-red-500 [&:has(.day-range-middle)]:text-white",
-          "last:[&:has(.day-range-end)]:rounded-r-full [&:has(.day-range-end)]:bg-red-500 [&:has(.day-range-end)]:text-white"
+          "h-9 w-9 text-center text-sm p-0 relative flex-1 focus-within:relative focus-within:z-20"
         ),
-        day: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-        ),
-        day_range_start: "day-range-start",
-        day_range_middle: "day-range-middle",
-        day_range_end: "day-range-end",
+        day: "", // We handle all button styling custom in the renderer
+        day_range_start: "",
+        day_range_middle: "",
+        day_range_end: "",
         day_selected: "",
-        day_today: "text-accent-foreground",
-        day_outside: "text-muted-foreground opacity-50 aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_disabled: "text-muted-foreground opacity-50",
+        day_today: "",
+        day_outside: "",
+        day_disabled: "",
         day_hidden: "invisible",
         ...classNames,
       }}
       components={{
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
+        Day: CustomDay,
       }}
       {...props}
     />
