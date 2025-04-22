@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -77,11 +78,18 @@ const BookingCalendar = ({
   const modifiersStyles = {
     day_selected: {
       backgroundColor: 'hsl(var(--primary))',
-      color: 'hsl(var(--primary-foreground))'
+      color: 'hsl(var(--primary-foreground))',
+      borderRadius: '0.375rem'
+    },
+    day_range_start: {
+      backgroundColor: 'hsl(var(--primary)) !important',
+      color: 'hsl(var(--primary-foreground)) !important',
+      borderRadius: '0.375rem'
     },
     day_range_end: {
       backgroundColor: 'hsl(var(--primary)) !important',
-      color: 'hsl(var(--primary-foreground)) !important'
+      color: 'hsl(var(--primary-foreground)) !important',
+      borderRadius: '0.375rem'
     }
   };
 
