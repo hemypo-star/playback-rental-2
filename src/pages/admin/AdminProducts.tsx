@@ -62,6 +62,8 @@ import {
   addCategory
 } from '@/services/supabaseService';
 import { Product, Category } from '@/types/product';
+import ImageUploadField from "@/components/ImageUploadField";
+import { uploadProductImage, uploadCategoryImage } from "@/services/supabaseService";
 
 const productSchema = z.object({
   title: z.string().min(1, { message: 'Название товара обязательно' }),
@@ -84,6 +86,8 @@ const AdminProducts = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showCategoryInput, setShowCategoryInput] = useState(false);
+  const [fileForProduct, setFileForProduct] = useState<File | null>(null);
+  const [fileForCategory, setFileForCategory] = useState<File | null>(null);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -193,17 +197,40 @@ const AdminProducts = () => {
     product.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const onSubmit = (values: ProductFormValues) => {
+  const onSubmit = async (values: ProductFormValues) => {
+    let imageUrl = values.imageUrl;
+
+    if (fileForProduct) {
+      try {
+        imageUrl = await uploadProductImage(fileForProduct);
+        setFileForProduct(null);
+      } catch (e) {
+        toast({ variant: "destructive", title: "Ошибка загрузки", description: "Не удалось загрузить изображение товара" });
+        return;
+      }
+    }
+
+    const payload = { ...values, imageUrl };
     if (editProduct) {
-      updateMutation.mutate({ id: editProduct.id, product: values });
+      updateMutation.mutate({ id: editProduct.id, product: payload });
     } else {
-      createMutation.mutate(values as any);
+      createMutation.mutate(payload as any);
     }
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
+    let imageUrl: string | undefined;
+    if (fileForCategory) {
+      try {
+        imageUrl = await uploadCategoryImage(fileForCategory);
+        setFileForCategory(null);
+      } catch (e) {
+        toast({ variant: "destructive", title: "Ошибка загрузки", description: "Не удалось загрузить изображение категории" });
+        return;
+      }
+    }
     if (newCategoryName.trim()) {
-      addCategoryMutation.mutate(newCategoryName);
+      addCategoryMutation.mutate({ name: newCategoryName, imageUrl });
     }
   };
 
@@ -253,6 +280,13 @@ const AdminProducts = () => {
     
     event.target.value = '';
   };
+
+  const statusOptions = [
+    { value: "pending", label: "Ожидание" },
+    { value: "confirmed", label: "Подтвержден" },
+    { value: "cancelled", label: "Отменён" },
+    { value: "completed", label: "Завершён" },
+  ];
 
   return (
     <div>
@@ -433,9 +467,13 @@ const AdminProducts = () => {
                     name="imageUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>URL изображения</FormLabel>
+                        <FormLabel>Изображение товара</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://example.com/image.jpg" {...field} />
+                          <ImageUploadField
+                            label=""
+                            previewUrl={fileForProduct ? URL.createObjectURL(fileForProduct) : field.value || null}
+                            onChange={f => setFileForProduct(f)}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -533,7 +571,6 @@ const AdminProducts = () => {
                 <TableHead className="text-right">Цена / сутки</TableHead>
                 <TableHead>Кол-во</TableHead>
                 <TableHead>Статус</TableHead>
-                <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -559,33 +596,13 @@ const AdminProducts = () => {
                   <TableCell className="text-right">{product.price.toLocaleString()} ₽</TableCell>
                   <TableCell>{product.quantity}</TableCell>
                   <TableCell>
-                    {product.available ? (
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
-                        Доступен
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-100">
-                        Недоступен
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleEdit(product)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleDelete(product.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <StatusDropdown
+                      value={product.available ? "confirmed" : "cancelled"}
+                      onChange={newStatus => {
+                        updateMutation.mutate({ id: product.id, product: { available: newStatus === "confirmed" } });
+                      }}
+                      options={statusOptions}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -596,5 +613,33 @@ const AdminProducts = () => {
     </div>
   );
 };
+
+function StatusDropdown({ value, onChange, options }: { value: string, onChange: (v: string) => void, options: { value: string, label: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const current = options.find(o => o.value === value);
+  return (
+    <div className="relative">
+      <Button variant="ghost" size="sm" className="px-2" onClick={() => setOpen(v => !v)}>
+        {current?.label || value}
+      </Button>
+      {open && (
+        <div className="absolute z-10 min-w-[120px] mt-2 bg-white border rounded shadow">
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              className={`block w-full text-left px-3 py-1 hover:bg-gray-100 ${opt.value === value ? 'font-semibold' : ''}`}
+              onClick={() => {
+                setOpen(false);
+                onChange(opt.value);
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default AdminProducts;

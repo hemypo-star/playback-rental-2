@@ -80,15 +80,15 @@ export const deleteProduct = async (id: string) => {
 /**
  * Upload product image
  */
-export const uploadProductImage = async (file: File) => {
+export const uploadProductImage = async (file: File): Promise<string> => {
   try {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `products/${fileName}`;
+    const filePath = `${fileName}`;
 
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('products')
-      .upload(filePath, file);
+      .upload(filePath, file, { upsert: true });
 
     if (error) throw error;
 
@@ -178,25 +178,15 @@ export const deleteCategory = async (id: string): Promise<boolean> => {
  */
 export const uploadCategoryImage = async (file: File): Promise<string> => {
   try {
-    // Create products bucket if it doesn't exist
-    const { data: buckets } = await supabase.storage.listBuckets();
-    if (!buckets?.find(bucket => bucket.name === 'categories')) {
-      await supabase.storage.createBucket('categories', {
-        public: true,
-        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
-        fileSizeLimit: 5 * 1024 * 1024, // 5MB
-      });
-    }
-
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
+    const { error } = await supabase.storage
       .from('categories')
-      .upload(filePath, file);
+      .upload(filePath, file, { upsert: true });
 
-    if (uploadError) throw uploadError;
+    if (error) throw error;
 
     const { data: publicUrlData } = supabase.storage
       .from('categories')
@@ -214,38 +204,31 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
  */
 export const getAvailableProducts = async (startDate: Date, endDate: Date) => {
   try {
-    // Get all products
     const { data: products } = await supabase.from('products').select('*');
     
     if (!products) return [];
     
-    // Get all bookings
     const { data: bookings } = await supabase.from('bookings').select('*').not('status', 'eq', 'cancelled');
     
-    if (!bookings) return products; // If no bookings, all products are available
+    if (!bookings) return products;
     
     console.log("Filtering products for availability between", startDate, "and", endDate);
     console.log("Total bookings in system:", bookings.length);
     
-    // Filter products that are available during the selected period
     const availableProducts = products.filter(product => {
-      // Skip products that are marked as unavailable
       if (!product.available) return false;
       
-      // Find bookings for this product
       const productBookings = bookings.filter(booking => booking.product_id === product.id);
       
       if (productBookings.length === 0) {
-        return true; // No bookings for this product, so it's available
+        return true;
       }
       
-      // Map to DateRange objects
       const productBookedRanges = productBookings.map(booking => ({
         start: new Date(booking.start_date),
         end: new Date(booking.end_date)
       }));
       
-      // Check if the product is available during the selected period
       return isDateRangeAvailable(startDate, endDate, productBookedRanges);
     });
     
@@ -270,7 +253,6 @@ export const getProductBookings = async (productId: string) => {
     
     if (error) throw error;
     
-    // Transform booking data
     return data.map(booking => ({
       id: booking.id,
       productId: booking.product_id,
@@ -311,7 +293,6 @@ export const getBookings = async () => {
     
     if (error) throw error;
     
-    // Transform booking data to BookingPeriod objects
     return data.map(booking => ({
       id: booking.id,
       productId: booking.product_id,
@@ -338,18 +319,15 @@ export const exportProductsToCSV = async () => {
   try {
     const products = await getProducts();
     
-    // Convert products to CSV format
     const headers = ['id', 'title', 'description', 'price', 'category', 'imageurl', 'quantity', 'available'];
     const csvRows = [
       headers.join(','),
       ...products.map(product => 
         headers.map(header => {
-          // Handle special cases like boolean or comma in text
-          const value = product[header as keyof typeof product];
-          if (typeof value === 'string' && value.includes(',')) {
-            return `"${value}"`;
+          if (typeof product[header as keyof typeof product] === 'string' && product[header as keyof typeof product].includes(',')) {
+            return `"${product[header as keyof typeof product]}"`;
           }
-          return value;
+          return product[header as keyof typeof product];
         }).join(',')
       )
     ];
@@ -371,7 +349,6 @@ export const importProductsFromCSV = async (csvContent: string) => {
     
     const products = [];
     
-    // Skip header line and process each row
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i].trim()) continue;
       
@@ -381,7 +358,6 @@ export const importProductsFromCSV = async (csvContent: string) => {
       headers.forEach((header, index) => {
         let value = values[index];
         
-        // Handle quoted values with commas
         if (value && value.startsWith('"') && !value.endsWith('"')) {
           let j = index + 1;
           while (j < values.length) {
@@ -389,11 +365,9 @@ export const importProductsFromCSV = async (csvContent: string) => {
             if (values[j].endsWith('"')) break;
             j++;
           }
-          // Remove quotes
           value = value.substring(1, value.length - 1);
         }
         
-        // Convert to appropriate types
         if (header === 'available') {
           product[header] = value.toLowerCase() === 'true';
         } else if (header === 'price' || header === 'quantity') {
@@ -406,9 +380,7 @@ export const importProductsFromCSV = async (csvContent: string) => {
       products.push(product);
     }
     
-    // Insert products into database
     for (const product of products) {
-      // Skip id when inserting
       const { id, ...productData } = product;
       await supabase.from('products').insert([productData]);
     }
@@ -463,7 +435,6 @@ export const updateBookingStatus = async (bookingId: string, status: string) => 
  * Mock authentication functions for demo
  */
 export const login = async (username: string, password: string) => {
-  // Demo authentication logic
   if (username === 'admin' && password === 'admin123') {
     localStorage.setItem('auth_token', 'demo_token');
     localStorage.setItem('user', JSON.stringify({ username: 'admin', role: 'admin' }));
