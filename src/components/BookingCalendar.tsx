@@ -1,10 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { addMonths, format, isBefore, startOfDay } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookingPeriod } from '@/types/product';
-import BookingDateRangePicker from './booking/BookingDateRangePicker';
+import DateRangePickerRu from './booking/DateRangePickerRu';
 
 interface BookingCalendarProps {
   onBookingChange: (booking: BookingPeriod) => void;
@@ -64,7 +63,7 @@ const BookingCalendar = ({
       </div>
       
       <div className="p-4">
-        <BookingDateRangePicker
+        <DateRangePickerRu
           onChange={handleDateRangeChange}
           initialStartDate={initialStartDate}
           initialEndDate={initialEndDate}
