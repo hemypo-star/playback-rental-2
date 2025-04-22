@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -104,6 +103,7 @@ const AdminBookings = () => {
             isLoading={isLoading}
             isError={isError}
             onViewDetails={handleOpenDetails}
+            onStatusUpdate={handleStatusUpdate}
           />
         </CardContent>
       </Card>

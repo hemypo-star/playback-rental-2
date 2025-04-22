@@ -6,6 +6,13 @@ interface BookingStatusBadgeProps {
   status: BookingPeriod['status'];
 }
 
+const statusLabels: Record<BookingPeriod['status'], string> = {
+  pending: 'Ожидание',
+  confirmed: 'Подтверждено',
+  cancelled: 'Отменено',
+  completed: 'Завершено'
+};
+
 export const BookingStatusBadge = ({ status }: BookingStatusBadgeProps) => {
   return (
     <Badge 
@@ -16,7 +23,7 @@ export const BookingStatusBadge = ({ status }: BookingStatusBadgeProps) => {
         : 'outline'
       }
     >
-      {status}
+      {statusLabels[status]}
     </Badge>
   );
 };
