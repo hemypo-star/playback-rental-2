@@ -72,19 +72,34 @@ export const BookingDetailsDialog = ({
             <h3 className="text-lg font-medium">Обновить статус</h3>
             <div className="flex space-x-2">
               {booking.status !== 'confirmed' && (
-                <Button variant="outline" onClick={() => onStatusUpdate(booking.id, 'confirmed')}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    onStatusUpdate(booking.id, 'confirmed');
+                  }}
+                >
                   Подтвердить
                   <Check className="ml-2 h-4 w-4" />
                 </Button>
               )}
               {booking.status !== 'cancelled' && (
-                <Button variant="destructive" onClick={() => onStatusUpdate(booking.id, 'cancelled')}>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    onStatusUpdate(booking.id, 'cancelled');
+                  }}
+                >
                   Отменить
                   <X className="ml-2 h-4 w-4" />
                 </Button>
               )}
               {booking.status !== 'completed' && (
-                <Button variant="secondary" onClick={() => onStatusUpdate(booking.id, 'completed')}>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    onStatusUpdate(booking.id, 'completed');
+                  }}
+                >
                   Завершить
                   <CheckCircle className="ml-2 h-4 w-4" />
                 </Button>
@@ -93,7 +108,7 @@ export const BookingDetailsDialog = ({
           </div>
         </div>
         <DialogFooter>
-          <Button type="submit" onClick={() => onOpenChange(false)}>
+          <Button type="button" onClick={() => onOpenChange(false)}>
             Закрыть
           </Button>
         </DialogFooter>

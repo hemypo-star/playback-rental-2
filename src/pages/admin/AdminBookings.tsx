@@ -14,7 +14,7 @@ const AdminBookings = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingPeriod['status'] | 'all'>('all');
   const [selectedBooking, setSelectedBooking] = useState<BookingWithProduct | null>(null);
-  const [open, setOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: products } = useQuery({
@@ -70,7 +70,7 @@ const AdminBookings = () => {
         description: 'Статус бронирования успешно обновлен.'
       });
       refetch();
-      setOpen(false);
+      setDialogOpen(false);
     } catch (error: any) {
       toast({
         title: 'Ошибка',
@@ -80,9 +80,13 @@ const AdminBookings = () => {
     }
   };
 
-  const handleOpenChange = (booking: BookingWithProduct) => {
+  const handleOpenDetails = (booking: BookingWithProduct) => {
     setSelectedBooking(booking);
-    setOpen(true);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDetails = () => {
+    setDialogOpen(false);
   };
 
   return (
@@ -103,15 +107,15 @@ const AdminBookings = () => {
             bookings={filteredBookings}
             isLoading={isLoading}
             isError={isError}
-            onViewDetails={handleOpenChange}
+            onViewDetails={handleOpenDetails}
           />
         </CardContent>
       </Card>
 
       <BookingDetailsDialog
         booking={selectedBooking}
-        open={open}
-        onOpenChange={setOpen}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
         onStatusUpdate={handleStatusUpdate}
       />
     </div>
