@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker, DayPickerProps, DayModifiers } from "react-day-picker";
@@ -21,22 +20,36 @@ function Calendar({
   // Custom day renderer for pill-shaped range backgrounds
   const CustomDay = (props: any) => {
     // Extract relevant props
-    const { date, selected, disabled, hidden, 
-      modifiers, outside, today, 
-      onDayClick, onDayFocus, onDayMouseEnter, onDayMouseLeave } = props;
-
-    // Identify if this date matches any of the range modifiers
-    const isStart = modifiers?.range_start;
-    const isMiddle = modifiers?.range_middle;
-    const isEnd = modifiers?.range_end;
-    const isSelected = modifiers?.selected;
-    const isToday = modifiers?.today;
-    const isDisabled = disabled;
-    const isOutside = outside;
-    const isHidden = hidden;
+    const { 
+      date, 
+      displayMonth,
+      modifiers = {}, 
+      disabled, 
+      hidden, 
+      selected, 
+      outside, 
+      today, 
+      // Event handlers from DayPicker
+      onClick,
+      onMouseEnter,
+      onMouseLeave,
+      onFocus,
+      onBlur,
+      onKeyDown,
+      // Other props
+      ...rest
+    } = props;
 
     // Don't show if hidden
-    if (isHidden) return null;
+    if (hidden) return null;
+
+    // Identify if this date matches any of the range modifiers
+    const isStart = modifiers.range_start;
+    const isMiddle = modifiers.range_middle;
+    const isEnd = modifiers.range_end;
+    const isSelected = modifiers.selected;
+    const isDisabled = disabled;
+    const isOutside = outside;
 
     // Compose backgrounds for each range type
     let backgroundDiv: JSX.Element | null = null;
@@ -60,7 +73,7 @@ function Calendar({
       numberColor += " text-white";
     } else if (isDisabled || isOutside) {
       numberColor += " text-muted-foreground opacity-50";
-    } else if (isToday) {
+    } else if (today) {
       numberColor += " text-accent-foreground";
     }
 
@@ -72,18 +85,21 @@ function Calendar({
           tabIndex={isDisabled ? -1 : 0}
           disabled={isDisabled}
           aria-selected={isSelected}
-          onClick={(e) => onDayClick && onDayClick(date, modifiers, e)}
-          onFocus={(e) => onDayFocus && onDayFocus(date, modifiers, e)}
-          onMouseEnter={(e) => onDayMouseEnter && onDayMouseEnter(date, modifiers, e)}
-          onMouseLeave={(e) => onDayMouseLeave && onDayMouseLeave(date, modifiers, e)}
+          onClick={onClick}
+          onMouseEnter={onMouseEnter}
+          onMouseLeave={onMouseLeave}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
           className={cn(
             buttonVariants({ variant: "ghost" }),
             "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors bg-transparent",
             // Remove background for selected/today
             isSelected ? "bg-transparent" : "",
-            isToday ? "bg-transparent" : "",
+            today ? "bg-transparent" : "",
           )}
           aria-label={date?.toDateString()}
+          {...rest}
         >
           <span className={numberColor}>
             {date?.getDate()}
