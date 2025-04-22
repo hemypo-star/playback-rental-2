@@ -1,13 +1,13 @@
 
-import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
-import { ru } from 'date-fns/locale';
+import * as React from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { DayPicker } from "react-day-picker"
+import { ru } from 'date-fns/locale'
 
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button"
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
 function Calendar({
   className,
@@ -23,22 +23,22 @@ function Calendar({
       locale={locale}
       className={cn("p-3 w-full pointer-events-auto", className)}
       modifiersStyles={{
-        // Base modifiers styling
+        // Updated color scheme using alternative colors
         range_start: {
           color: 'white',
-          backgroundColor: 'hsl(var(--primary))',
+          backgroundColor: 'hsl(var(--primary))', // Keep primary color
           borderTopLeftRadius: '50%',
           borderBottomLeftRadius: '50%',
         },
         range_end: {
           color: 'white',
-          backgroundColor: 'hsl(var(--primary))',
+          backgroundColor: 'hsl(var(--primary))', // Keep primary color
           borderTopRightRadius: '50%',
           borderBottomRightRadius: '50%',
         },
         range_middle: {
           color: 'inherit',
-          backgroundColor: 'hsl(var(--accent))',
+          backgroundColor: 'hsl(var(--accent))', // Soft accent background
         },
         ...modifiersStyles,
       }}
@@ -82,8 +82,9 @@ function Calendar({
       }}
       {...props}
     />
-  );
+  )
 }
-Calendar.displayName = "Calendar";
 
-export { Calendar };
+Calendar.displayName = "Calendar"
+
+export { Calendar }

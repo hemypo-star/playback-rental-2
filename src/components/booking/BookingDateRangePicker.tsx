@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ru } from 'date-fns/locale';
 import { format, isAfter, isBefore, addMonths, startOfMonth, setHours } from 'date-fns';
@@ -59,7 +58,6 @@ const BookingDateRangePicker = ({
       : "9"
   );
 
-  // Sync months when moving through calendar
   const handleLeftMonthChange = (month: Date) => {
     setLeftMonth(month);
     setRightMonth(addMonths(month, 1));
@@ -70,7 +68,6 @@ const BookingDateRangePicker = ({
     setLeftMonth(addMonths(month, -1));
   };
 
-  // Update the combined datetime when any part changes
   useEffect(() => {
     if (!dateRange?.from) return;
 
@@ -82,10 +79,7 @@ const BookingDateRangePicker = ({
       end = new Date(dateRange.to);
       end.setHours(parseInt(endTime, 10), 0, 0, 0);
       
-      // Validate that end is after start
       if (isBefore(end, start)) {
-        // If end date is same as start date but time makes it earlier, 
-        // adjust end time to be equal to start time
         if (format(dateRange.from, 'yyyy-MM-dd') === format(dateRange.to, 'yyyy-MM-dd')) {
           setEndTime(startTime);
           end.setHours(parseInt(startTime, 10), 0, 0, 0);
@@ -96,30 +90,28 @@ const BookingDateRangePicker = ({
     onChange({ start, end });
   }, [dateRange, startTime, endTime, onChange]);
 
-  // Custom modifiers styles for our date range
   const modifiersStyles = {
     range_start: {
       color: 'white',
-      backgroundColor: '#1E88E5',
+      backgroundColor: '#8B5CF6',
       borderTopLeftRadius: '50%',
       borderBottomLeftRadius: '50%',
     },
     range_end: {
       color: 'white',
-      backgroundColor: '#1E88E5',
+      backgroundColor: '#8B5CF6',
       borderTopRightRadius: '50%',
       borderBottomRightRadius: '50%',
     },
     range_middle: {
       color: 'black',
-      backgroundColor: '#E3F2FD',
+      backgroundColor: '#E5DEFF',
     }
   };
 
   return (
     <div className={cn("space-y-4", className)}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Left Calendar (Pick-up) */}
         <div className="space-y-2">
           <h3 className="font-medium text-center">Взять</h3>
           <div className="border rounded-lg shadow-sm bg-card overflow-hidden">
@@ -159,7 +151,6 @@ const BookingDateRangePicker = ({
           </div>
         </div>
 
-        {/* Right Calendar (Return) */}
         <div className="space-y-2">
           <h3 className="font-medium text-center">Вернуть</h3>
           <div className="border rounded-lg shadow-sm bg-card overflow-hidden">
@@ -200,7 +191,6 @@ const BookingDateRangePicker = ({
         </div>
       </div>
 
-      {/* Selected Period Summary */}
       {dateRange?.from && (
         <div className="p-4 border rounded-lg bg-blue-50">
           <h3 className="font-medium mb-2">Выбранный период:</h3>
