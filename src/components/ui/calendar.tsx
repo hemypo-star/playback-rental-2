@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
@@ -54,8 +53,12 @@ function Calendar({
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_range_start: "aria-selected:bg-primary aria-selected:text-primary-foreground",
-        day_range_end: "aria-selected:bg-primary aria-selected:text-primary-foreground",
+        day_range_start: cn(
+          "aria-selected:bg-primary aria-selected:text-primary-foreground rounded-l-full"
+        ),
+        day_range_end: cn(
+          "aria-selected:bg-primary aria-selected:text-primary-foreground rounded-r-full"
+        ),
         day_hidden: "invisible",
         ...classNames,
       }}
