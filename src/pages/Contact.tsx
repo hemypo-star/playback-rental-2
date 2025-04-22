@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { usePhoneInputMask } from "@/hooks/usePhoneInputMask";
 
 const phoneRegex = /^\+7\d{10}$/;
 const nameRegex = /^[A-Za-zА-Яа-яЁё\s\-]+$/;
@@ -25,6 +26,17 @@ const Contact = () => {
     message?: string
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { handlePhoneChange, handlePhonePaste } = usePhoneInputMask((maskedValue) => {
+    setFormState((prev) => ({
+      ...prev,
+      phone: maskedValue,
+    }));
+    setErrors((prev) => ({
+      ...prev,
+      phone: undefined,
+    }));
+  });
 
   const validateForm = () => {
     const nextErrors: { name?: string; email?: string; phone?: string; message?: string } = {};
@@ -56,6 +68,7 @@ const Contact = () => {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
+    if (e.target.name === "phone") return;
     setFormState({
       ...formState,
       [e.target.name]: e.target.value,
@@ -185,6 +198,12 @@ const Contact = () => {
                       required
                       autoComplete="off"
                       className={errors.name ? "border-destructive" : ""}
+                      pattern="[A-Za-zА-Яа-яЁё\s\-]+"
+                      onPaste={e => {
+                        const paste = e.clipboardData.getData('text');
+                        if (!/^[A-Za-zА-Яа-яЁё\s\-]+$/.test(paste)) e.preventDefault();
+                      }}
+                      inputMode="text"
                     />
                     {errors.name && <p className="text-destructive text-sm">{errors.name}</p>}
                   </div>
@@ -198,11 +217,14 @@ const Contact = () => {
                       name="phone"
                       type="tel"
                       value={formState.phone}
-                      onChange={handleChange}
+                      onChange={handlePhoneChange}
+                      onPaste={handlePhonePaste}
                       required
                       autoComplete="off"
                       className={errors.phone ? "border-destructive" : ""}
-                      placeholder="+79999999999"
+                      placeholder="+7 (___) ___-__-__"
+                      maxLength={18}
+                      inputMode="tel"
                     />
                     {errors.phone && <p className="text-destructive text-sm">{errors.phone}</p>}
                   </div>

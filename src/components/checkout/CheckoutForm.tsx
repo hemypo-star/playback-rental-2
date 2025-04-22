@@ -1,7 +1,7 @@
-
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { usePhoneInputMask } from "@/hooks/usePhoneInputMask";
 
 const phoneRegex = /^\+7\d{10}$/;
 const nameRegex = /^[A-Za-zА-Яа-яЁё\s\-]+$/;
@@ -13,7 +13,16 @@ interface CheckoutFormProps {
 }
 
 const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
-  // Валидация для каждого поля (только отображение ошибок)
+  const { handlePhoneChange, handlePhonePaste } = usePhoneInputMask((val) => {
+    const syntheticEvent = {
+      target: {
+        name: "phone",
+        value: val,
+      },
+    } as React.ChangeEvent<HTMLInputElement>;
+    onInputChange(syntheticEvent);
+  });
+
   const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -60,6 +69,12 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
                 onBlur={handleBlur}
                 className={errors.name ? "border-destructive" : ""}
                 autoComplete="off"
+                pattern="[A-Za-zА-Яа-яЁё\s\-]+"
+                onPaste={e => {
+                  const paste = e.clipboardData.getData('text');
+                  if (!/^[A-Za-zА-Яа-яЁё\s\-]+$/.test(paste)) e.preventDefault();
+                }}
+                inputMode="text"
               />
               {errors.name && <span className="text-destructive text-sm">{errors.name}</span>}
             </div>
@@ -75,6 +90,7 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
                 onBlur={handleBlur}
                 className={errors.email ? "border-destructive" : ""}
                 autoComplete="off"
+                pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
               />
               {errors.email && <span className="text-destructive text-sm">{errors.email}</span>}
             </div>
@@ -86,11 +102,14 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
               id="phone"
               name="phone"
               value={formData.phone}
-              onChange={onInputChange}
-              placeholder="+79999999999"
+              onChange={handlePhoneChange}
+              onPaste={handlePhonePaste}
+              placeholder="+7 (___) ___-__-__"
               onBlur={handleBlur}
               className={errors.phone ? "border-destructive" : ""}
               autoComplete="off"
+              maxLength={18}
+              inputMode="tel"
             />
             {errors.phone && <span className="text-destructive text-sm">{errors.phone}</span>}
           </div>
