@@ -1,52 +1,13 @@
+
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Package,
-  Plus,
-  Search,
-  Image,
-  X
-} from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+
 import {
   getProducts,
   getCategories,
@@ -58,11 +19,13 @@ import {
   addCategory
 } from '@/services/supabaseService';
 import { Product, Category } from '@/types/product';
-import ImageUploadField from "@/components/ImageUploadField";
 import { uploadProductImage, uploadCategoryImage } from "@/services/supabaseService";
-import StatusDropdown from "@/components/admin/StatusDropdown";
-import AddCategorySection from "@/components/admin/AddCategorySection";
-import { Upload, Download, Plus, Search, Image, X, Package } from "lucide-react";
+
+import ProductEditDialog from '@/components/admin/products/ProductEditDialog';
+import ProductTable from '@/components/admin/products/ProductTable';
+import CSVImportExportButtons from '@/components/admin/products/CSVImportExportButtons';
+
+import { Search } from "lucide-react";
 
 const productSchema = z.object({
   title: z.string().min(1, { message: 'Название товара обязательно' }),
@@ -75,6 +38,13 @@ const productSchema = z.object({
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
+
+const statusOptions = [
+  { value: "pending", label: "Ожидание" },
+  { value: "confirmed", label: "Подтвержден" },
+  { value: "cancelled", label: "Отменён" },
+  { value: "completed", label: "Завершён" },
+];
 
 const AdminProducts = () => {
   const { toast } = useToast();
@@ -281,13 +251,6 @@ const AdminProducts = () => {
     event.target.value = '';
   };
 
-  const statusOptions = [
-    { value: "pending", label: "Ожидание" },
-    { value: "confirmed", label: "Подтвержден" },
-    { value: "cancelled", label: "Отменён" },
-    { value: "completed", label: "Завершён" },
-  ];
-
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -299,13 +262,15 @@ const AdminProducts = () => {
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="absolute left-0 top-0 h-9 w-9 border-0"
+            <button 
+              type="button"
+              className="absolute left-0 top-0 h-9 w-9 border-0 flex items-center justify-center z-10"
+              tabIndex={-1}
+              aria-label="search"
+              style={{ background: "transparent" }}
             >
               <Search className="h-4 w-4" />
-            </Button>
+            </button>
             <Input
               placeholder="Поиск товаров..."
               value={searchTerm}
@@ -314,291 +279,45 @@ const AdminProducts = () => {
             />
           </div>
           
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Добавить товар
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>
-                  {editProduct ? 'Редактировать товар' : 'Добавить новый товар'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editProduct 
-                    ? 'Измените информацию о товаре и нажмите Сохранить'
-                    : 'Заполните информацию о новом товаре для добавления в каталог'
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Категория</FormLabel>
-                        {showCategoryInput ? (
-                          <AddCategorySection
-                            form={form}
-                            onAddCategory={handleAddCategory}
-                            show={showCategoryInput}
-                            setShow={setShowCategoryInput}
-                            newCategoryName={newCategoryName}
-                            setNewCategoryName={setNewCategoryName}
-                            fileForCategory={fileForCategory}
-                            setFileForCategory={setFileForCategory}
-                            isPending={addCategoryMutation.isPending}
-                          />
-                        ) : (
-                          <div className="flex gap-2">
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Выберите категорию" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {categories?.map((category: Category) => (
-                                  <SelectItem key={category.id} value={category.name}>
-                                    {category.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              onClick={() => setShowCategoryInput(true)}
-                              size="sm"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Название</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Sony Alpha A7 III" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Описание</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Полнокадровая беззеркальная камера..."
-                            className="min-h-[100px]"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Цена за сутки (₽)</FormLabel>
-                          <FormControl>
-                            <Input type="number" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="quantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Количество</FormLabel>
-                          <FormControl>
-                            <Input type="number" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Изображение товара</FormLabel>
-                        <FormControl>
-                          <ImageUploadField
-                            label=""
-                            previewUrl={fileForProduct ? URL.createObjectURL(fileForProduct) : field.value || null}
-                            onChange={f => setFileForProduct(f)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="available"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center gap-2 space-y-0">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            checked={field.value}
-                            onChange={field.onChange}
-                            className="h-4 w-4"
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Доступно для бронирования
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => {
-                        setOpen(false);
-                        setEditProduct(null);
-                        form.reset();
-                      }}
-                    >
-                      Отмена
-                    </Button>
-                    <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                      {createMutation.isPending || updateMutation.isPending
-                        ? 'Сохранение...'
-                        : editProduct ? 'Сохранить изменения' : 'Добавить товар'
-                      }
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Экспорт CSV
-            </Button>
-            
-            <div className="relative">
-              <Button variant="outline" disabled={isUploading}>
-                <Upload className="h-4 w-4 mr-2" />
-                {isUploading ? 'Загрузка...' : 'Импорт CSV'}
-              </Button>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleImport}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-                disabled={isUploading}
-              />
-            </div>
-          </div>
+          <ProductEditDialog
+            open={open}
+            setOpen={setOpen}
+            editProduct={editProduct}
+            form={form}
+            categories={categories ?? []}
+            showCategoryInput={showCategoryInput}
+            setShowCategoryInput={setShowCategoryInput}
+            newCategoryName={newCategoryName}
+            setNewCategoryName={setNewCategoryName}
+            fileForProduct={fileForProduct}
+            setFileForProduct={setFileForProduct}
+            fileForCategory={fileForCategory}
+            setFileForCategory={setFileForCategory}
+            addCategoryMutation={addCategoryMutation}
+            onSubmit={onSubmit}
+            handleAddCategory={handleAddCategory}
+            createPending={createMutation.isPending}
+            updatePending={updateMutation.isPending}
+          />
+
+          <CSVImportExportButtons
+            isUploading={isUploading}
+            handleExport={handleExport}
+            handleImport={handleImport}
+          />
         </div>
       </div>
-      
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      ) : filteredProducts?.length === 0 ? (
-        <div className="text-center p-8">
-          <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">Товары не найдены</h3>
-          <p className="text-muted-foreground mb-4">
-            Попробуйте изменить поисковый запрос или добавьте новые товары
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-md border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Фото</TableHead>
-                <TableHead>ID</TableHead>
-                <TableHead>Название</TableHead>
-                <TableHead>Категория</TableHead>
-                <TableHead className="text-right">Цена / сутки</TableHead>
-                <TableHead>Кол-во</TableHead>
-                <TableHead>Статус</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts?.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    {product.imageUrl ? (
-                      <div 
-                        className="w-10 h-10 rounded bg-center bg-cover"
-                        style={{ backgroundImage: `url(${product.imageUrl})` }}
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
-                        <Image className="h-5 w-5 opacity-70" />
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{product.id}</TableCell>
-                  <TableCell className="font-medium">{product.title}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{product.category}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">{product.price.toLocaleString()} ₽</TableCell>
-                  <TableCell>{product.quantity}</TableCell>
-                  <TableCell>
-                    <StatusDropdown
-                      value={product.available ? "confirmed" : "cancelled"}
-                      onChange={(newStatus) => {
-                        updateMutation.mutate({ id: product.id, product: { available: newStatus === "confirmed" } });
-                      }}
-                      options={statusOptions}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      <ProductTable
+        products={filteredProducts || []}
+        isLoading={isLoading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        updateMutation={updateMutation}
+        statusOptions={statusOptions}
+      />
     </div>
   );
 };
 
 export default AdminProducts;
+
