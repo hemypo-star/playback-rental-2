@@ -25,6 +25,7 @@ const ToastContext = React.createContext<ToastContextType>(undefined);
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = React.useReducer(reducer, { toasts: [] });
 
+  // Ensure toasts are removed from the DOM after they're dismissed
   React.useEffect(() => {
     state.toasts.forEach((toast) => {
       if (toast.open === false && !toastTimeouts.has(toast.id)) {
@@ -44,14 +45,25 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const toast = React.useCallback(
     (props: Omit<ToasterToast, "id">) => {
       const id = genId();
+      const newToast = {
+        ...props,
+        id,
+        open: true,
+        onOpenChange: (open: boolean) => {
+          if (open === false) {
+            dispatch({
+              type: actionTypes.DISMISS_TOAST,
+              toastId: id,
+            });
+          }
+        },
+      };
+      
       dispatch({
         type: actionTypes.ADD_TOAST,
-        toast: {
-          ...props,
-          id,
-          open: true,
-        },
+        toast: newToast,
       });
+      
       return id;
     },
     []

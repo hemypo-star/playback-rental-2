@@ -1,16 +1,16 @@
 
 "use client";
 
-import { ToastProvider } from "./toast-context";
 import { useToastContext } from "./toast-context";
 import type { ToasterToast, ToastProps, ToastActionElement } from "./toast-types";
 
-// Re-export provider
-export { ToastProvider };
-
-// Main hook
+// Main hook for component use
 export function useToast() {
-  return useToastContext();
+  const context = useToastContext();
+  if (!context) {
+    throw new Error("useToast must be used within a ToastProvider");
+  }
+  return context;
 }
 
 // Standalone function for external/legacy use
@@ -26,5 +26,4 @@ export function toast(props: Omit<ToasterToast, "id">) {
   return "";
 }
 
-export { type ToasterToast };
-export type { ToastProps, ToastActionElement };
+export type { ToasterToast, ToastProps, ToastActionElement };
