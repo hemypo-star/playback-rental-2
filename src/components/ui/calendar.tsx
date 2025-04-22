@@ -24,17 +24,17 @@ function Calendar({
       className={cn("p-3 w-full pointer-events-auto", className)}
       modifiersStyles={{
         day_range_start: {
-          backgroundColor: 'hsl(var(--red-500))',
+          backgroundColor: 'hsl(var(--primary))',
           color: 'white',
           borderTopLeftRadius: '9999px',
           borderBottomLeftRadius: '9999px'
         },
         day_range_middle: {
-          backgroundColor: 'hsl(var(--red-500))',
+          backgroundColor: 'hsl(var(--primary))',
           color: 'white'
         },
         day_range_end: {
-          backgroundColor: 'hsl(var(--red-500))',
+          backgroundColor: 'hsl(var(--primary))',
           color: 'white',
           borderTopRightRadius: '9999px',
           borderBottomRightRadius: '9999px'
@@ -63,9 +63,9 @@ function Calendar({
           buttonVariants({ variant: "ghost" }),
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
         ),
-        day_range_start: "bg-red-500 text-white rounded-l-full",
-        day_range_middle: "bg-red-500 text-white",
-        day_range_end: "bg-red-500 text-white rounded-r-full",
+        day_range_start: "day-range-start",
+        day_range_middle: "day-range-middle",
+        day_range_end: "day-range-end",
         day_selected: "",
         day_today: "text-accent-foreground",
         day_outside: "text-muted-foreground opacity-50 aria-selected:bg-accent aria-selected:text-accent-foreground",
