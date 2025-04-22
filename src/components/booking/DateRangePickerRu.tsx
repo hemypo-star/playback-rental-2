@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ru } from "date-fns/locale";
 import {
@@ -14,8 +13,9 @@ import {
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CalendarMonthColumn from "./DateRangePickerRu/CalendarMonthColumn";
+import CalendarHeader from "./DateRangePickerRu/CalendarHeader";
+import SelectedInfo from "./DateRangePickerRu/SelectedInfo";
 
-// Часы: 10—19, шаг 1 час, формат 24ч
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 10).map((hour) => ({
   value: hour.toString(),
   label: (hour < 10 ? `0${hour}` : hour) + ":00",
@@ -52,7 +52,6 @@ const DateRangePickerRu = ({
     initialEndDate ? initialEndDate.getHours().toString() : "10"
   );
 
-  // RU days of week
   const daysOfWeek = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"].map((d) =>
     d.toUpperCase()
   );
@@ -72,7 +71,6 @@ const DateRangePickerRu = ({
     });
   };
 
-  // Выбор даты: разрешаем выбирать сегодня (isBefore check — только до сегодня)
   const handleDateClick = (date: Date) => {
     setSelection((prev) => {
       if (!prev.from || (prev.from && prev.to)) return { from: date, to: null };
@@ -126,7 +124,6 @@ const DateRangePickerRu = ({
 
   const getDayKey = (date: Date) => format(date, "yyyy-MM-dd");
 
-  // Create grid for month
   const buildDaysGrid = (monthDate: Date) => {
     const month = monthDate.getMonth();
     const year = monthDate.getFullYear();
@@ -141,7 +138,6 @@ const DateRangePickerRu = ({
     return daysGrid;
   };
 
-  // Emit changes up
   useEffect(() => {
     if (!selection.from) {
       onChange({ start: null, end: null });
@@ -149,9 +145,13 @@ const DateRangePickerRu = ({
     }
     const start = new Date(selection.from);
     start.setHours(parseInt(startTime, 10), 0, 0, 0);
+
     let end: Date | null = null;
     if (selection.to) {
       end = new Date(selection.to);
+      end.setHours(parseInt(endTime, 10), 0, 0, 0);
+    } else {
+      end = new Date(selection.from);
       end.setHours(parseInt(endTime, 10), 0, 0, 0);
     }
     onChange({ start, end });
@@ -159,27 +159,9 @@ const DateRangePickerRu = ({
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="flex items-center justify-between border-b pb-2 mb-5">
-        <span className="font-medium text-base text-[#222]">Взять / Вернуть</span>
-        <div className="flex gap-3">
-          <button
-            onClick={handlePrevMonth}
-            className="p-2 rounded-full hover:bg-[#F2F2FA]"
-            aria-label="Предыдущий месяц"
-          >
-            <ChevronLeft className="h-5 w-5 text-[#222]" />
-          </button>
-          <button
-            onClick={handleNextMonth}
-            className="p-2 rounded-full hover:bg-[#F2F2FA]"
-            aria-label="Следующий месяц"
-          >
-            <ChevronRight className="h-5 w-5 text-[#222]" />
-          </button>
-        </div>
-      </div>
+      <CalendarHeader onPrev={handlePrevMonth} onNext={handleNextMonth} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
-        {/* Left month: "Взять" */}
         <div>
           <CalendarMonthColumn
             label="Взять"
@@ -195,7 +177,6 @@ const DateRangePickerRu = ({
             hours={HOURS}
           />
         </div>
-        {/* Right month: "Вернуть" */}
         <div>
           <CalendarMonthColumn
             label="Вернуть"
@@ -212,28 +193,12 @@ const DateRangePickerRu = ({
           />
         </div>
       </div>
-      {selection.from && (
-        <div className="p-4 mt-4 rounded-lg bg-[#F9FAFB] border text-[#1B1F3B]">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="flex items-center">
-              <span className="font-medium">Взять:</span>
-              <span className="ml-2">
-                {format(selection.from, "dd MMMM yyyy", { locale: ru })} в{" "}
-                {startTime.padStart(2, "0")}:00
-              </span>
-            </div>
-            {selection.to && (
-              <div className="flex items-center">
-                <span className="font-medium sm:ml-4">Вернуть:</span>
-                <span className="ml-2">
-                  {format(selection.to, "dd MMMM yyyy", { locale: ru })} в{" "}
-                  {endTime.padStart(2, "0")}:00
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <SelectedInfo
+        from={selection.from}
+        to={selection.to}
+        startTime={startTime}
+        endTime={endTime}
+      />
     </div>
   );
 };
