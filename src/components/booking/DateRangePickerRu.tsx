@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ru } from 'date-fns/locale';
-import { format, addMonths, isBefore, isAfter, isSameDay, isWithinInterval, startOfMonth } from 'date-fns';
+import { format, addMonths, isBefore, isAfter, isSameDay, isWithinInterval, startOfMonth, startOfDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -59,7 +59,7 @@ const DateRangePickerRu = ({
 
   // date selection logic
   const handleDateClick = (date: Date) => {
-    if (isBefore(date, new Date())) return;
+    // Allow selecting today by removing the isBefore check
     setSelection(prev => {
       // Start new selection unconditionally if none/complete
       if (!prev.from || (prev.from && prev.to)) return { from: date, to: null };
@@ -79,7 +79,9 @@ const DateRangePickerRu = ({
     const today = new Date();
     today.setHours(0,0,0,0);
 
-    const disabled = isBefore(date, today);
+    // Only disable dates before today (not including today)
+    const disabled = isBefore(date, today) && !isSameDay(date, today);
+    
     if (date.getMonth() !== currentMonth) return "invisible pointer-events-none"; // hide out-of-month
     const isToday = isSameDay(date, today);
     const isStart = selection.from && isSameDay(date, selection.from);
