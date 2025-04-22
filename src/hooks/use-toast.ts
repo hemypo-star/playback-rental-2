@@ -194,5 +194,8 @@ function useToast() {
   }
 }
 
-export { useToast, type ToasterToast }
+// Create a singleton instance of the toast hook to use throughout the app
+const { toasts, toast, dismiss, remove, update } = useToast()
+
+export { useToast, toast, dismiss, remove, update, type ToasterToast }
 export type { ToastProps, ToastActionElement }
