@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ru } from 'date-fns/locale';
 import { format, addMonths, isBefore, isAfter, isSameDay, isWithinInterval, startOfMonth } from 'date-fns';
@@ -18,7 +19,7 @@ interface DateRangePickerRuProps {
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 10).map(hour => ({
   value: hour.toString(),
   label: `${hour}:00`
-});
+})); // Fixed: Added missing closing parenthesis here
 
 const DateRangePickerRu = ({
   onChange,
