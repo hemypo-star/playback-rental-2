@@ -95,6 +95,28 @@ export const useCart = () => {
     localStorage.removeItem('cart');
   };
 
+  // New function to update cart dates for all items
+  const updateCartDates = (startDate: Date, endDate: Date) => {
+    if (!startDate || !endDate) {
+      return false;
+    }
+
+    setCartItems(prevItems => 
+      prevItems.map(item => ({
+        ...item,
+        startDate,
+        endDate
+      }))
+    );
+
+    toast?.toast({
+      title: "Даты обновлены",
+      description: "Даты аренды и стоимость обновлены для всех товаров.",
+    });
+
+    return true;
+  };
+
   const getCartTotal = () => {
     return cartItems.reduce((total, item) => {
       const itemTotal = calculateRentalPrice(item.price, item.startDate, item.endDate);
@@ -107,6 +129,7 @@ export const useCart = () => {
     addToCart,
     removeFromCart,
     clearCart,
+    updateCartDates,
     getCartTotal,
     cartCount: cartItems.length
   };

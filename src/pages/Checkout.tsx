@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -41,7 +42,8 @@ const Checkout = () => {
     cartItems, 
     removeFromCart, 
     getCartTotal, 
-    clearCart 
+    clearCart,
+    updateCartDates 
   } = useCartContext();
   
   const navigate = useNavigate();
@@ -54,6 +56,10 @@ const Checkout = () => {
 
   const handleBookingChange = (booking: BookingPeriod) => {
     setSelectedBookingTime(booking);
+    // Update all cart items with the new dates and recalculate prices
+    if (booking && booking.startDate && booking.endDate) {
+      updateCartDates(booking.startDate, booking.endDate);
+    }
   };
   
   const handleCheckout = async () => {
@@ -79,9 +85,6 @@ const Checkout = () => {
     
     try {
       for (const item of cartItems) {
-        const startDate = selectedBookingTime ? selectedBookingTime.startDate : item.startDate;
-        const endDate = selectedBookingTime ? selectedBookingTime.endDate : item.endDate;
-        
         const { data, error } = await supabase
           .from('bookings')
           .insert({
@@ -89,12 +92,10 @@ const Checkout = () => {
             customer_name: formData.name,
             customer_email: formData.email,
             customer_phone: formData.phone,
-            start_date: startDate.toISOString(),
-            end_date: endDate.toISOString(),
+            start_date: item.startDate.toISOString(),
+            end_date: item.endDate.toISOString(),
             status: 'pending',
-            total_price: item.price * Math.ceil(
-              (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-            ),
+            total_price: calculateRentalPrice(item.price, item.startDate, item.endDate),
             notes: `Бронирование из корзины: ${item.title}`
           });
         
