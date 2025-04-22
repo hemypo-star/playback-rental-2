@@ -1,4 +1,3 @@
-
 // Calculate rental price based on number of days
 export const calculateRentalPrice = (
   basePrice: number,
@@ -63,21 +62,12 @@ export const calculateRentalDetails = (
     hourlyRate = total / 4; // Rate per hour
     dayDiscount = 30; // 30% discount percentage
   } 
-  // 8 hours or less
-  else if (hours <= 8) {
-    hourlyRate = basePrice * 0.85 / 8; // Per hour for 8-hour rental
-    subtotal = basePrice;
-    total = basePrice * 0.85;
-    discountAmount = basePrice * 0.15;
-    dayDiscount = 15;
-  } 
-  // Multi-day rental
+  // More than 4 hours - regular daily rate with possible multi-day discounts
   else {
-    // Calculate the discount percentage based on days
     if (days >= 5) {
-      dayDiscount = 30;
+      dayDiscount = 30; // 30% discount for 5+ days
     } else if (days >= 3) {
-      dayDiscount = 10;
+      dayDiscount = 10; // 10% discount for 3-4 days
     }
     
     hourlyRate = basePrice / 24; // Per hour for full day rental
@@ -113,10 +103,6 @@ export const calculateHourlyRate = (dailyPrice: number, hours: number): number =
   // For 4 hours, charge 70% of daily rate
   if (hours <= 4) {
     return dailyPrice * 0.7;
-  }
-  // For 8 hours, charge 85% of daily rate
-  if (hours <= 8) {
-    return dailyPrice * 0.85;
   }
   // Otherwise, charge full daily rate
   return dailyPrice;
