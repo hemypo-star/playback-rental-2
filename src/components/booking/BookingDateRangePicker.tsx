@@ -93,19 +93,20 @@ const BookingDateRangePicker = ({
   const modifiersStyles = {
     range_start: {
       color: 'white',
-      backgroundColor: '#8B5CF6',
+      backgroundColor: '#ea384c', // Red accent
       borderTopLeftRadius: '50%',
       borderBottomLeftRadius: '50%',
     },
     range_end: {
       color: 'white',
-      backgroundColor: '#8B5CF6',
+      backgroundColor: '#ea384c', // Red accent
       borderTopRightRadius: '50%',
       borderBottomRightRadius: '50%',
     },
     range_middle: {
       color: 'black',
-      backgroundColor: '#E5DEFF',
+      backgroundColor: '#0EA5E9', // Dark blue with opacity
+      opacity: 0.2
     }
   };
 

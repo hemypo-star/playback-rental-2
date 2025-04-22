@@ -23,22 +23,22 @@ function Calendar({
       locale={locale}
       className={cn("p-3 w-full pointer-events-auto", className)}
       modifiersStyles={{
-        // Updated color scheme using alternative colors
         range_start: {
           color: 'white',
-          backgroundColor: 'hsl(var(--primary))', // Keep primary color
+          backgroundColor: '#ea384c', // Red accent
           borderTopLeftRadius: '50%',
           borderBottomLeftRadius: '50%',
         },
         range_end: {
           color: 'white',
-          backgroundColor: 'hsl(var(--primary))', // Keep primary color
+          backgroundColor: '#ea384c', // Red accent
           borderTopRightRadius: '50%',
           borderBottomRightRadius: '50%',
         },
         range_middle: {
           color: 'inherit',
-          backgroundColor: 'hsl(var(--accent))', // Soft accent background
+          backgroundColor: '#0EA5E9', // Dark blue with some opacity
+          opacity: 0.2
         },
         ...modifiersStyles,
       }}
