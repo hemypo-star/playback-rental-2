@@ -47,6 +47,8 @@ function Calendar({
           buttonVariants({ variant: "ghost" }),
           "h-9 w-9 p-0 font-normal aria-selected:opacity-100 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
         ),
+        day_range_start: "rounded-l-md",
+        day_range_end: "rounded-r-md",
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         day_today: "bg-accent text-accent-foreground",
@@ -54,8 +56,6 @@ function Calendar({
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_range_start: "aria-selected:bg-primary aria-selected:text-primary-foreground",
-        day_range_end: "aria-selected:bg-primary aria-selected:text-primary-foreground",
         day_hidden: "invisible",
         ...classNames,
       }}
@@ -70,3 +70,4 @@ function Calendar({
 Calendar.displayName = "Calendar";
 
 export { Calendar };
+
