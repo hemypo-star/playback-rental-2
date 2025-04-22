@@ -60,6 +60,9 @@ import {
 import { Product, Category } from '@/types/product';
 import ImageUploadField from "@/components/ImageUploadField";
 import { uploadProductImage, uploadCategoryImage } from "@/services/supabaseService";
+import StatusDropdown from "@/components/admin/StatusDropdown";
+import AddCategorySection from "@/components/admin/AddCategorySection";
+import { Upload, Download, Plus, Search, Image, X, Package } from "lucide-react";
 
 const productSchema = z.object({
   title: z.string().min(1, { message: 'Название товара обязательно' }),
@@ -211,22 +214,22 @@ const AdminProducts = () => {
     }
   };
 
-  const handleAddCategory = async () => {
-    let imageUrl: string | undefined;
+  const handleAddCategory = async ({ name, imageUrl, slug }: { name: string; imageUrl?: string; slug: string }) => {
+    let imageUrlReturned: string | undefined = imageUrl;
     if (fileForCategory) {
       try {
-        imageUrl = await uploadCategoryImage(fileForCategory);
+        imageUrlReturned = await uploadCategoryImage(fileForCategory);
         setFileForCategory(null);
       } catch (e) {
         toast({ variant: "destructive", title: "Ошибка загрузки", description: "Не удалось загрузить изображение категории" });
         return;
       }
     }
-    if (newCategoryName.trim()) {
-      addCategoryMutation.mutate({ 
-        name: newCategoryName, 
-        imageUrl,
-        slug: newCategoryName.toLowerCase().replace(/\s+/g, '-')
+    if (name.trim()) {
+      addCategoryMutation.mutate({
+        name,
+        imageUrl: imageUrlReturned,
+        slug,
       });
     }
   };
@@ -339,30 +342,17 @@ const AdminProducts = () => {
                       <FormItem>
                         <FormLabel>Категория</FormLabel>
                         {showCategoryInput ? (
-                          <div className="flex gap-2">
-                            <Input 
-                              placeholder="Новая категория..."
-                              value={newCategoryName}
-                              onChange={(e) => setNewCategoryName(e.target.value)}
-                              className="flex-1"
-                            />
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              onClick={handleAddCategory}
-                              size="sm"
-                            >
-                              Добавить
-                            </Button>
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => setShowCategoryInput(false)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <AddCategorySection
+                            form={form}
+                            onAddCategory={handleAddCategory}
+                            show={showCategoryInput}
+                            setShow={setShowCategoryInput}
+                            newCategoryName={newCategoryName}
+                            setNewCategoryName={setNewCategoryName}
+                            fileForCategory={fileForCategory}
+                            setFileForCategory={setFileForCategory}
+                            isPending={addCategoryMutation.isPending}
+                          />
                         ) : (
                           <div className="flex gap-2">
                             <Select 
@@ -595,7 +585,7 @@ const AdminProducts = () => {
                   <TableCell>
                     <StatusDropdown
                       value={product.available ? "confirmed" : "cancelled"}
-                      onChange={newStatus => {
+                      onChange={(newStatus) => {
                         updateMutation.mutate({ id: product.id, product: { available: newStatus === "confirmed" } });
                       }}
                       options={statusOptions}
@@ -610,33 +600,5 @@ const AdminProducts = () => {
     </div>
   );
 };
-
-function StatusDropdown({ value, onChange, options }: { value: string, onChange: (v: string) => void, options: { value: string, label: string }[] }) {
-  const [open, setOpen] = useState(false);
-  const current = options.find(o => o.value === value);
-  return (
-    <div className="relative">
-      <Button variant="ghost" size="sm" className="px-2" onClick={() => setOpen(v => !v)}>
-        {current?.label || value}
-      </Button>
-      {open && (
-        <div className="absolute z-10 min-w-[120px] mt-2 bg-white border rounded shadow">
-          {options.map(opt => (
-            <button
-              key={opt.value}
-              className={`block w-full text-left px-3 py-1 hover:bg-gray-100 ${opt.value === value ? 'font-semibold' : ''}`}
-              onClick={() => {
-                setOpen(false);
-                onChange(opt.value);
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default AdminProducts;
