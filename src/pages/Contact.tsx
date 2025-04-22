@@ -1,10 +1,13 @@
-
 import { useState } from "react";
 import { MailIcon, MapPinIcon, PhoneIcon, SendIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+
+const phoneRegex = /^\+7\d{10}$/;
+const nameRegex = /^[A-Za-zА-Яа-яЁё\s\-]+$/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Contact = () => {
   const { toast } = useToast();
@@ -15,7 +18,40 @@ const Contact = () => {
     subject: "",
     message: "",
   });
+  const [errors, setErrors] = useState<{
+    name?: string,
+    email?: string,
+    phone?: string,
+    message?: string
+  }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateForm = () => {
+    const nextErrors: { name?: string; email?: string; phone?: string; message?: string } = {};
+
+    if (!formState.name.trim()) {
+      nextErrors.name = "Введите имя";
+    } else if (!nameRegex.test(formState.name.trim())) {
+      nextErrors.name = "Имя может содержать только буквы";
+    }
+    if (!formState.phone.trim()) {
+      nextErrors.phone = "Введите телефон";
+    } else if (!phoneRegex.test(formState.phone.trim())) {
+      nextErrors.phone = "Телефон должен быть в формате +79999999999";
+    }
+    if (!formState.email.trim()) {
+      nextErrors.email = "Введите email";
+    } else if (!emailRegex.test(formState.email.trim())) {
+      nextErrors.email = "Введите корректный email";
+    }
+    if (!formState.message.trim()) {
+      nextErrors.message = "Введите сообщение";
+    }
+
+    setErrors(nextErrors);
+
+    return Object.keys(nextErrors).length === 0;
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -24,10 +60,17 @@ const Contact = () => {
       ...formState,
       [e.target.name]: e.target.value,
     });
+    setErrors((prev) => ({
+      ...prev,
+      [e.target.name]: undefined,
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
     setIsSubmitting(true);
 
     // Simulate form submission
@@ -44,6 +87,7 @@ const Contact = () => {
         subject: "",
         message: "",
       });
+      setErrors({});
     }, 1500);
   };
 
@@ -65,7 +109,6 @@ const Contact = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
             {/* Contact Information */}
             <div className="space-y-8">
-              
               <div className="grid gap-6">
                 <div className="flex gap-4">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -128,7 +171,7 @@ const Contact = () => {
             <div className="bg-white rounded-xl shadow-soft p-8 subtle-ring">
               <h2 className="heading-3 mb-6">Отправьте нам сообщение</h2>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label htmlFor="name" className="text-sm font-medium">
@@ -140,7 +183,10 @@ const Contact = () => {
                       value={formState.name}
                       onChange={handleChange}
                       required
+                      autoComplete="off"
+                      className={errors.name ? "border-destructive" : ""}
                     />
+                    {errors.name && <p className="text-destructive text-sm">{errors.name}</p>}
                   </div>
                   
                   <div className="space-y-2">
@@ -150,12 +196,34 @@ const Contact = () => {
                     <Input
                       id="phone"
                       name="phone"
-                      type="phone"
+                      type="tel"
                       value={formState.phone}
                       onChange={handleChange}
                       required
+                      autoComplete="off"
+                      className={errors.phone ? "border-destructive" : ""}
+                      placeholder="+79999999999"
                     />
+                    {errors.phone && <p className="text-destructive text-sm">{errors.phone}</p>}
                   </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formState.email}
+                    onChange={handleChange}
+                    required
+                    autoComplete="off"
+                    className={errors.email ? "border-destructive" : ""}
+                    placeholder="example@email.com"
+                  />
+                  {errors.email && <p className="text-destructive text-sm">{errors.email}</p>}
                 </div>
                 
                 <div className="space-y-2">
@@ -169,7 +237,9 @@ const Contact = () => {
                     value={formState.message}
                     onChange={handleChange}
                     required
+                    className={errors.message ? "border-destructive" : ""}
                   />
+                  {errors.message && <p className="text-destructive text-sm">{errors.message}</p>}
                 </div>
                 
                 <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
@@ -200,10 +270,8 @@ const Contact = () => {
             Мы удобно расположены в самом центре города. Приходите в наш выставочный зал, чтобы лично ознакомиться с нашим оборудованием.
             </p>
           </div>
-          
           <div className="max-w-6xl mx-auto h-96 rounded-xl overflow-hidden subtle-ring">
             <div className="w-full h-full bg-white">
-              {/* This would be replaced with an actual map integration */}
               <div className="w-full h-full flex items-center justify-center bg-muted">
                 <div className="text-center p-8">
                   <MapPinIcon className="h-12 w-12 text-primary mx-auto mb-4" />
