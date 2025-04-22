@@ -6,6 +6,12 @@ import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
+// Часы: 10—19, шаг 1 час, формат 24ч
+const HOURS = Array.from({ length: 10 }, (_, i) => i + 10).map(hour => ({
+  value: hour.toString(),
+  label: (hour < 10 ? `0${hour}` : hour) + ':00'
+}));
+
 interface DateRangePickerRuProps {
   onChange: (range: {
     start: Date | null;
@@ -16,11 +22,6 @@ interface DateRangePickerRuProps {
   className?: string;
 }
 
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 10).map(hour => ({
-  value: hour.toString(),
-  label: `${hour}:00`
-})); // Fixed: Added missing closing parenthesis here
-
 const DateRangePickerRu = ({
   onChange,
   initialStartDate,
@@ -29,271 +30,205 @@ const DateRangePickerRu = ({
 }: DateRangePickerRuProps) => {
   const [leftMonth, setLeftMonth] = useState<Date>(initialStartDate ? startOfMonth(initialStartDate) : startOfMonth(new Date()));
   const [rightMonth, setRightMonth] = useState<Date>(addMonths(leftMonth, 1));
-  
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
-  
-  const [selection, setSelection] = useState<{
-    from: Date | null;
-    to: Date | null;
-  }>({
+  const [selection, setSelection] = useState<{from: Date | null; to: Date | null;}>({
     from: initialStartDate || null,
     to: initialEndDate || null
   });
-  
-  const [startTime, setStartTime] = useState<string>(
-    initialStartDate ? initialStartDate.getHours().toString() : "10"
-  );
-  
-  const [endTime, setEndTime] = useState<string>(
-    initialEndDate ? initialEndDate.getHours().toString() : "10"
-  );
+  const [startTime, setStartTime] = useState<string>(initialStartDate ? initialStartDate.getHours().toString() : "10");
+  const [endTime, setEndTime] = useState<string>(initialEndDate ? initialEndDate.getHours().toString() : "10");
 
+  // calc days of week RU
+  const daysOfWeek = ['пн','вт','ср','чт','пт','сб','вс'].map(d => d.toUpperCase());
+
+  // calendar navigation
   const handlePrevMonth = () => {
-    setLeftMonth(prevMonth => {
-      const newLeftMonth = addMonths(prevMonth, -1);
-      setRightMonth(addMonths(newLeftMonth, 1));
-      return newLeftMonth;
+    setLeftMonth(prev => {
+      const newLeft = addMonths(prev, -1);
+      setRightMonth(addMonths(newLeft, 1));
+      return newLeft;
     });
   };
-
   const handleNextMonth = () => {
-    setRightMonth(prevMonth => {
-      const newRightMonth = addMonths(prevMonth, 1);
-      setLeftMonth(addMonths(newRightMonth, -1));
-      return newRightMonth;
+    setRightMonth(prev => {
+      const newRight = addMonths(prev, 1);
+      setLeftMonth(addMonths(newRight, -1));
+      return newRight;
     });
   };
 
+  // date selection logic
   const handleDateClick = (date: Date) => {
     if (isBefore(date, new Date())) return;
-    
     setSelection(prev => {
-      // If no selection or both dates selected, start a new selection
-      if (!prev.from || (prev.from && prev.to)) {
-        return { from: date, to: null };
-      }
-      
-      // If only start date is selected
+      // Start new selection unconditionally if none/complete
+      if (!prev.from || (prev.from && prev.to)) return { from: date, to: null };
       if (prev.from && !prev.to) {
-        // If clicking on the same date, deselect it
-        if (isSameDay(date, prev.from)) {
-          return { from: null, to: null };
-        }
-        
-        // If clicking on a date before start date, swap them
-        if (isBefore(date, prev.from)) {
-          return { from: date, to: prev.from };
-        }
-        
-        // Otherwise, complete the range
+        if (isSameDay(date, prev.from)) return { from: null, to: null };
+        if (isBefore(date, prev.from)) return { from: date, to: prev.from };
         return { from: prev.from, to: date };
       }
-      
       return prev;
     });
   };
 
-  const handleDateHover = (date: Date) => {
-    setHoverDate(date);
-  };
+  const handleDateHover = (date: Date|null) => setHoverDate(date);
 
-  const getDateClasses = (date: Date) => {
+  // classes for each day cell
+  const getDayClasses = (date: Date, currentMonth: number) => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const isDisabled = isBefore(date, today);
+    today.setHours(0,0,0,0);
+
+    const disabled = isBefore(date, today);
+    if (date.getMonth() !== currentMonth) return "invisible pointer-events-none"; // hide out-of-month
+    const isToday = isSameDay(date, today);
     const isStart = selection.from && isSameDay(date, selection.from);
     const isEnd = selection.to && isSameDay(date, selection.to);
-    const isToday = isSameDay(date, today);
-    
-    let isInRange = false;
-    let isInHoverRange = false;
-    
-    // Check if date is in selected range
+
+    // fill for selected range or hover
+    let isInRange = false, isInHover = false;
     if (selection.from && selection.to) {
-      isInRange = isWithinInterval(date, {
-        start: selection.from,
-        end: selection.to
-      });
+      isInRange = isWithinInterval(date, {start: selection.from, end: selection.to});
+    } else if (selection.from && hoverDate && isAfter(hoverDate, selection.from)) {
+      isInHover = isWithinInterval(date, {start: selection.from, end: hoverDate});
     }
-    
-    // Check if date is in hover preview range
-    if (selection.from && !selection.to && hoverDate && isAfter(hoverDate, selection.from)) {
-      isInHoverRange = isWithinInterval(date, {
-        start: selection.from,
-        end: hoverDate
-      });
-    }
-    
+
+    // corners for range
+    const roundedLeft = (isStart) ? 'rounded-l-full' : '';
+    const roundedRight = (isEnd) ? 'rounded-r-full' : '';
     return cn(
-      "w-10 h-10 flex items-center justify-center text-sm relative",
-      "transition-colors duration-200 cursor-pointer select-none",
-      isDisabled ? "text-gray-300 pointer-events-none opacity-40" : "hover:bg-red-50",
-      isToday ? "border border-red-400" : "",
-      isStart ? "bg-[#1B1F3B] text-white rounded-l-full z-10" : "",
-      isEnd ? "bg-[#1B1F3B] text-white rounded-r-full z-10" : "",
-      (isInRange || isInHoverRange) && !isStart && !isEnd ? "bg-red-50" : "",
-      (isStart || isEnd) && "font-medium"
+      "w-10 h-10 flex items-center justify-center text-sm font-medium transition-colors duration-100 select-none",
+      disabled && "opacity-40 pointer-events-none",
+      (isStart || isEnd) && "bg-[#1B1F3B] text-white z-10", // selected start/end: dark blue with white number
+      (isInRange || isInHover) && !isStart && !isEnd && "bg-[#F2F2FA] text-[#222]", // range fill
+      (isStart || isEnd) && (roundedLeft || roundedRight),
+      isToday && "border border-[#ea384c]", // today: thin red border
+      !isStart && !isEnd && !isInRange && !isInHover && !disabled && "hover:bg-[#F2F2FA]",
     );
   };
 
-  const getDayKey = (date: Date) => {
-    return format(date, 'yyyy-MM-dd');
-  };
+  // get a YYYY-MM-DD string for key
+  const getDayKey = (date: Date) => format(date, 'yyyy-MM-dd');
 
-  const renderMonth = (monthDate: Date, label: string, timeValue: string, onTimeChange: (value: string) => void) => {
-    const firstDayOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-    const lastDayOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-    
-    // Get the day of week of the first day (0 = Sunday, 1 = Monday, etc.)
-    let firstDayOfWeek = firstDayOfMonth.getDay();
-    // Adjust for Monday as first day of week (convert Sunday from 0 to 7)
-    firstDayOfWeek = firstDayOfWeek === 0 ? 7 : firstDayOfWeek;
-    
-    // Create array for days of month plus empty slots for padding
-    const daysArray = [];
-    
-    // Add empty cells for days before the first day of month
-    for (let i = 1; i < firstDayOfWeek; i++) {
-      daysArray.push(null);
-    }
-    
-    // Add all days of the month
-    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
-      daysArray.push(new Date(monthDate.getFullYear(), monthDate.getMonth(), day));
-    }
-    
-    // Russian days of week (starting with Monday)
-    const daysOfWeek = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
-    
+  const renderMonth = (monthDate: Date, label: string, timeValue: string, setTime: (val:string) => void) => {
+    const month = monthDate.getMonth();
+    const year = monthDate.getFullYear();
+    const firstOfMonth = new Date(year, month, 1);
+    const lastOfMonth = new Date(year, month + 1, 0);
+
+    // firstDayOfWeek: 1=Mon (RU); JS getDay(): 0=Sun, so 1=Mon, ... 0=Sun
+    let firstJS = firstOfMonth.getDay();
+    firstJS = firstJS === 0 ? 7 : firstJS;
+    const daysGrid = [];
+    for (let i=1; i<firstJS; i++) daysGrid.push(null); // pad blanks
+    for (let day=1; day<=lastOfMonth.getDate(); day++) daysGrid.push(new Date(year, month, day));
+
     return (
-      <div className="flex flex-col">
-        <div className="text-center mb-4">
-          <h3 className="font-medium text-lg">{label}</h3>
+      <div className="flex flex-col items-center">
+        <h3 className="font-medium text-lg text-[#222] text-center mb-3">{format(monthDate, 'LLLL yyyy', {locale: ru})}</h3>
+        <div className="grid grid-cols-7 gap-y-2 gap-x-0 mb-2 w-full">
+          {daysOfWeek.map((d,i) => (
+            <span key={d+i} className="text-xs font-medium text-[#B1B1C7] text-center">{d}</span>
+          ))}
         </div>
-        <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
-          <div className="p-3">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-medium">
-                {format(monthDate, 'LLLL yyyy', { locale: ru })}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {daysOfWeek.map(day => (
-                <div key={day} className="text-center text-sm font-medium text-gray-500">
-                  {day}
-                </div>
+        <div className="grid grid-cols-7 gap-y-1 gap-x-0 w-full mb-2">
+          {daysGrid.map((d, idx) =>
+            d ? (
+              <button
+                key={getDayKey(d)}
+                type="button"
+                className={getDayClasses(d, month)}
+                onClick={() => handleDateClick(d)}
+                onMouseEnter={() => handleDateHover(d)}
+                onFocus={() => handleDateHover(d)}
+                onMouseLeave={() => handleDateHover(null)}
+                onBlur={() => handleDateHover(null)}
+              >
+                {d.getDate()}
+              </button>
+            ) : (
+              <span key={`empty${idx}`} className="w-10 h-10"/>
+            )
+          )}
+        </div>
+        {/* Time select below calendar */}
+        <div className="mt-2 flex items-center gap-2">
+          <Clock className="h-4 w-4 text-[#ea384c]" />
+          <span className="text-sm text-[#222]">Время:</span>
+          <Select
+            value={timeValue}
+            onValueChange={setTime}
+          >
+            <SelectTrigger className="w-[100px] bg-white border rounded px-2 py-1 h-8">
+              <SelectValue placeholder="Выберите время" />
+            </SelectTrigger>
+            <SelectContent>
+              {HOURS.map((hour) => (
+                <SelectItem key={hour.value} value={hour.value}>
+                  {hour.label}
+                </SelectItem>
               ))}
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1">
-              {daysArray.map((date, index) => (
-                <div key={date ? getDayKey(date) : `empty-${index}`} className="text-center">
-                  {date ? (
-                    <button
-                      type="button"
-                      className={getDateClasses(date)}
-                      onClick={() => handleDateClick(date)}
-                      onMouseEnter={() => handleDateHover(date)}
-                      disabled={isBefore(date, new Date())}
-                    >
-                      {date.getDate()}
-                    </button>
-                  ) : (
-                    <div className="w-10 h-10"></div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="p-4 border-t flex items-center">
-            <Clock className="h-4 w-4 mr-2 text-red-500" />
-            <span className="mr-2">Время:</span>
-            <Select 
-              value={timeValue} 
-              onValueChange={onTimeChange}
-            >
-              <SelectTrigger className="w-[110px]">
-                <SelectValue placeholder="Выберите время" />
-              </SelectTrigger>
-              <SelectContent>
-                {HOURS.map((hour) => (
-                  <SelectItem key={hour.value} value={hour.value}>
-                    {hour.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            </SelectContent>
+          </Select>
         </div>
       </div>
-    );
+    )
   };
 
-  // Update parent component with date/time selections
+  // Emit selected dates/times upwards
   useEffect(() => {
     if (!selection.from) {
       onChange({ start: null, end: null });
       return;
     }
-
     const start = new Date(selection.from);
     start.setHours(parseInt(startTime, 10), 0, 0, 0);
-
     let end: Date | null = null;
     if (selection.to) {
       end = new Date(selection.to);
       end.setHours(parseInt(endTime, 10), 0, 0, 0);
     }
-
     onChange({ start, end });
   }, [selection, startTime, endTime, onChange]);
 
+  // Responsive: stack on mobile
   return (
-    <div className={cn("space-y-6", className)}>
-      <div className="flex justify-between items-center">
-        <button 
-          onClick={handlePrevMonth}
-          className="p-2 hover:bg-gray-100 rounded-full"
-          aria-label="Previous month"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        
-        <div className="flex-1"></div>
-        
-        <button 
-          onClick={handleNextMonth}
-          className="p-2 hover:bg-gray-100 rounded-full"
-          aria-label="Next month"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
+    <div className={cn("w-full", className)}>
+      <div className="flex items-center justify-between border-b pb-2 mb-5">
+        <span className="font-medium text-base text-[#222]">Взять / Вернуть</span>
+        <div className="flex gap-3">
+          <button onClick={handlePrevMonth} className="p-2 rounded-full hover:bg-[#F2F2FA]" aria-label="Предыдущий месяц">
+            <ChevronLeft className="h-5 w-5 text-[#222]" />
+          </button>
+          <button onClick={handleNextMonth} className="p-2 rounded-full hover:bg-[#F2F2FA]" aria-label="Следующий месяц">
+            <ChevronRight className="h-5 w-5 text-[#222]" />
+          </button>
+        </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {renderMonth(leftMonth, "Взять", startTime, setStartTime)}
-        {renderMonth(rightMonth, "Вернуть", endTime, setEndTime)}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+        {/* Left month: "Взять" */}
+        <div>
+          {renderMonth(leftMonth, "Взять", startTime, setStartTime)}
+        </div>
+        {/* Right month: "Вернуть" */}
+        <div>
+          {renderMonth(rightMonth, "Вернуть", endTime, setEndTime)}
+        </div>
       </div>
-
       {selection.from && (
-        <div className="p-4 border rounded-lg bg-blue-50">
-          <h3 className="font-medium mb-2">Выбранный период:</h3>
+        <div className="p-4 mt-4 rounded-lg bg-[#F9FAFB] border text-[#1B1F3B]">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center">
-              <span className="font-medium">Взять:</span> 
+              <span className="font-medium">Взять:</span>
               <span className="ml-2">
-                {format(selection.from, 'dd MMMM yyyy', { locale: ru })} в {startTime}:00
+                {format(selection.from, 'dd MMMM yyyy', { locale: ru })} в {startTime.padStart(2, '0')}:00
               </span>
             </div>
-            
             {selection.to && (
               <div className="flex items-center">
                 <span className="font-medium sm:ml-4">Вернуть:</span>
                 <span className="ml-2">
-                  {format(selection.to, 'dd MMMM yyyy', { locale: ru })} в {endTime}:00
+                  {format(selection.to, 'dd MMMM yyyy', { locale: ru })} в {endTime.padStart(2, '0')}:00
                 </span>
               </div>
             )}
