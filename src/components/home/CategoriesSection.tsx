@@ -6,6 +6,7 @@ import { getCategories } from '@/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRightIcon, Layers, ChevronRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const categoryImages: Record<string, string> = {
   'Компьютеры': 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80',

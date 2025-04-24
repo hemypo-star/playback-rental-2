@@ -29,6 +29,15 @@ export default function AddCategorySection({
   setFileForCategory,
   isPending,
 }: Props) {
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) return;
+    
+    onAddCategory({
+      name: newCategoryName,
+      slug: newCategoryName.toLowerCase().replace(/\s+/g, "-"),
+    });
+  };
+
   return (
     <div className="flex gap-2 items-end">
       <Input
@@ -47,12 +56,7 @@ export default function AddCategorySection({
       <Button
         type="button"
         variant="outline"
-        onClick={() =>
-          onAddCategory({
-            name: newCategoryName,
-            slug: newCategoryName.toLowerCase().replace(/\s+/g, "-"),
-          })
-        }
+        onClick={handleAddCategory}
         size="sm"
         disabled={isPending}
       >

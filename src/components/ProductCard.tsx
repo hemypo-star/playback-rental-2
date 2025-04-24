@@ -23,6 +23,12 @@ const ProductCard = ({ product, selectedStartDate, selectedEndDate }: ProductCar
             src={product.imageUrl}
             alt={product.title}
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            onError={(e) => {
+              // If image fails to load, use placeholder
+              const target = e.target as HTMLImageElement;
+              target.onerror = null; // Prevent infinite loop
+              target.src = 'https://via.placeholder.com/300x200?text=No+Image';
+            }}
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-gray-200">

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { isDateRangeAvailable } from '@/utils/dateUtils';
 import { Category } from '@/types/product';
+import { supabase } from '@/integrations/supabase/client';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xwylatyyhqyfwsxfwzmn.supabase.co';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4';
@@ -182,10 +183,10 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
-    const { error: bucketCheckError, data: bucketExists } = await supabase.storage
-      .getBucket('categories');
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const categoriesBucketExists = buckets?.some(bucket => bucket.name === 'categories');
     
-    if (bucketCheckError && bucketCheckError.message.includes('not found')) {
+    if (!categoriesBucketExists) {
       console.log('Categories bucket not found, creating it');
       await supabase.storage.createBucket('categories', {
         public: true,
@@ -193,19 +194,30 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
       });
     }
 
+    if (categoriesBucketExists) {
+      await supabase.storage.updateBucket('categories', {
+        public: true,
+        fileSizeLimit: 5242880, // 5MB
+      });
+    }
+    
     const { error } = await supabase.storage
       .from('categories')
       .upload(filePath, file, { upsert: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error uploading category image:', error);
+      throw error;
+    }
 
     const { data: publicUrlData } = supabase.storage
       .from('categories')
       .getPublicUrl(filePath);
 
+    console.log('Successfully uploaded image, public URL:', publicUrlData.publicUrl);
     return publicUrlData.publicUrl;
   } catch (error) {
-    console.error('Error uploading category image:', error);
+    console.error('Error in uploadCategoryImage:', error);
     throw error;
   }
 };

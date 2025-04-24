@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -11,12 +12,16 @@ import { Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { Category } from '@/types/product';
 import * as supabaseService from '@/services/supabaseService';
 import { supabase } from '@/integrations/supabase/client';
+import AddCategorySection from '@/components/admin/AddCategorySection';
 
 const AdminCategories = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [openDialog, setOpenDialog] = useState(false);
   const [editCategory, setEditCategory] = useState<Category | null>(null);
+  const [showAddSection, setShowAddSection] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [fileForCategory, setFileForCategory] = useState<File | null>(null);
   const [formData, setFormData] = useState<{
     name: string;
     slug: string;
@@ -189,21 +194,62 @@ const AdminCategories = () => {
     setImageFile(null);
     setImagePreview('');
     setUploadType('file');
+    setNewCategoryName('');
+    setFileForCategory(null);
   };
 
   const handleAddNewCategory = async ({ name, slug, imageUrl }: { name: string; slug: string; imageUrl?: string }) => {
     try {
-      const categoryData = {
+      if (!name.trim()) {
+        toast({
+          title: "Ошибка",
+          description: "Название категории не может быть пустым",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      let finalImageUrl = imageUrl || '';
+      
+      if (fileForCategory) {
+        try {
+          finalImageUrl = await supabaseService.uploadCategoryImage(fileForCategory);
+          console.log("Uploaded image URL:", finalImageUrl);
+        } catch (error) {
+          console.error("Error uploading image:", error);
+          toast({
+            title: "Ошибка",
+            description: "Не удалось загрузить изображение",
+            variant: "destructive",
+          });
+        }
+      }
+      
+      await supabaseService.addCategory({
         name,
         slug,
         description: '',
-        imageUrl: '',
-      };
+        imageUrl: finalImageUrl,
+      });
       
-      await addCategoryMutation.mutateAsync(categoryData);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast({
+        title: 'Категория добавлена',
+        description: 'Категория успешно добавлена.'
+      });
+      
+      setNewCategoryName('');
+      setFileForCategory(null);
+      setShowAddSection(false);
+      
       return true;
     } catch (error) {
       console.error('Error adding category:', error);
+      toast({
+        title: "Ошибка",
+        description: `Не удалось добавить категорию: ${error}`,
+        variant: "destructive",
+      });
       return false;
     }
   };
@@ -212,148 +258,24 @@ const AdminCategories = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Управление категориями</h2>
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить категорию
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editCategory ? 'Редактировать категорию' : 'Добавить категорию'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Название категории</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="slug">Slug (для URL)</Label>
-                <Input
-                  id="slug"
-                  name="slug"
-                  value={formData.slug}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Описание</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={3}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Изображение категории</Label>
-                <div className="flex space-x-4 mb-2">
-                  <Button
-                    type="button"
-                    variant={uploadType === 'file' ? 'default' : 'outline'}
-                    onClick={() => setUploadType('file')}
-                  >
-                    Загрузить файл
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={uploadType === 'url' ? 'default' : 'outline'}
-                    onClick={() => setUploadType('url')}
-                  >
-                    Указать URL
-                  </Button>
-                </div>
-                
-                {uploadType === 'file' ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-center w-full">
-                      <label
-                        htmlFor="dropzone-file"
-                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted"
-                      >
-                        {imagePreview ? (
-                          <div className="relative w-full h-full">
-                            <img
-                              src={imagePreview}
-                              alt="Preview"
-                              className="object-cover w-full h-full rounded-lg"
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                            <p className="mb-2 text-sm text-gray-500">
-                              <span className="font-semibold">Нажмите для загрузки</span> или перетащите файл
-                            </p>
-                            <p className="text-xs text-gray-500">PNG, JPG до 5MB</p>
-                          </div>
-                        )}
-                        <input
-                          id="dropzone-file"
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={handleFileChange}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Input
-                      id="imageUrl"
-                      name="imageUrl"
-                      placeholder="https://example.com/image.jpg"
-                      value={formData.imageUrl}
-                      onChange={handleInputChange}
-                    />
-                    {formData.imageUrl && (
-                      <div className="relative w-full h-32 mt-2">
-                        <img
-                          src={formData.imageUrl}
-                          alt="Preview"
-                          className="object-cover w-full h-full rounded-lg"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x150?text=Invalid+Image+URL';
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setOpenDialog(false);
-                    resetForm();
-                  }}
-                >
-                  Отмена
-                </Button>
-                <Button type="submit" disabled={addCategoryMutation.isPending || updateCategoryMutation.isPending}>
-                  {editCategory ? 'Сохранить' : 'Добавить'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        {showAddSection ? (
+          <AddCategorySection 
+            form={{}}
+            onAddCategory={handleAddNewCategory}
+            show={showAddSection}
+            setShow={setShowAddSection}
+            newCategoryName={newCategoryName}
+            setNewCategoryName={setNewCategoryName}
+            fileForCategory={fileForCategory}
+            setFileForCategory={setFileForCategory}
+            isPending={addCategoryMutation.isPending}
+          />
+        ) : (
+          <Button onClick={() => setShowAddSection(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Добавить категорию
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -379,7 +301,9 @@ const AdminCategories = () => {
                     alt={category.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x150?text=No+Image';
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null; // Prevent infinite loop
+                      target.src = 'https://via.placeholder.com/300x150?text=No+Image';
                     }}
                   />
                 ) : (
@@ -416,6 +340,143 @@ const AdminCategories = () => {
           ))}
         </div>
       )}
+      
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editCategory ? 'Редактировать категорию' : 'Добавить категорию'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Название категории</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="slug">Slug (для URL)</Label>
+              <Input
+                id="slug"
+                name="slug"
+                value={formData.slug}
+                onChange={handleInputChange}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Описание</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Изображение категории</Label>
+              <div className="flex space-x-4 mb-2">
+                <Button
+                  type="button"
+                  variant={uploadType === 'file' ? 'default' : 'outline'}
+                  onClick={() => setUploadType('file')}
+                >
+                  Загрузить файл
+                </Button>
+                <Button
+                  type="button"
+                  variant={uploadType === 'url' ? 'default' : 'outline'}
+                  onClick={() => setUploadType('url')}
+                >
+                  Указать URL
+                </Button>
+              </div>
+              
+              {uploadType === 'file' ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center w-full">
+                    <label
+                      htmlFor="dropzone-file"
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted"
+                    >
+                      {imagePreview ? (
+                        <div className="relative w-full h-full">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="object-cover w-full h-full rounded-lg"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                          <p className="mb-2 text-sm text-gray-500">
+                            <span className="font-semibold">Нажмите для загрузки</span> или перетащите файл
+                          </p>
+                          <p className="text-xs text-gray-500">PNG, JPG до 5MB</p>
+                        </div>
+                      )}
+                      <input
+                        id="dropzone-file"
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Input
+                    id="imageUrl"
+                    name="imageUrl"
+                    placeholder="https://example.com/image.jpg"
+                    value={formData.imageUrl}
+                    onChange={handleInputChange}
+                  />
+                  {formData.imageUrl && (
+                    <div className="relative w-full h-32 mt-2">
+                      <img
+                        src={formData.imageUrl}
+                        alt="Preview"
+                        className="object-cover w-full h-full rounded-lg"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x150?text=Invalid+Image+URL';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setOpenDialog(false);
+                  resetForm();
+                }}
+              >
+                Отмена
+              </Button>
+              <Button type="submit" disabled={addCategoryMutation.isPending || updateCategoryMutation.isPending}>
+                {editCategory ? 'Сохранить' : 'Добавить'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
