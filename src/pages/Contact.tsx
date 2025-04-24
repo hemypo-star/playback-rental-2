@@ -3,8 +3,8 @@ import {
   MailIcon, 
   MapPinIcon, 
   Phone, 
-  Send, // Replace Telegram 
-  Facebook // Replace VK 
+  Send, 
+  Facebook 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -306,7 +306,7 @@ const Contact = () => {
                     </>
                   ) : (
                     <>
-                      <SendIcon className="h-4 w-4 mr-2" />
+                      <Send className="h-4 w-4 mr-2" />
                       Отправить
                     </>
                   )}
