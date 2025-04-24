@@ -1,5 +1,4 @@
 
-// This file now re-exports all services from their dedicated modules
 export * from './productService';
 export * from './categoryService';
 export * from './bookingService';
