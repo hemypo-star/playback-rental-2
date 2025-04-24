@@ -65,7 +65,7 @@ const HeroBannerSettings = () => {
       // Upload file to storage
       const fileName = `hero_banner_${Date.now()}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('products')
+        .from('hero-banners')
         .upload(fileName, imageFile);
       
       if (uploadError) {
@@ -74,7 +74,7 @@ const HeroBannerSettings = () => {
 
       // Get public URL
       const { data: publicUrlData } = supabase.storage
-        .from('products')
+        .from('hero-banners')
         .getPublicUrl(fileName);
 
       const publicUrl = publicUrlData.publicUrl;
