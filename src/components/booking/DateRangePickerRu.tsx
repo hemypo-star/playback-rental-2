@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ru } from "date-fns/locale";
 import {
@@ -28,6 +27,7 @@ interface DateRangePickerRuProps {
   initialStartDate?: Date;
   initialEndDate?: Date;
   className?: string;
+  onClose?: () => void;
 }
 
 const DateRangePickerRu = ({
@@ -35,6 +35,7 @@ const DateRangePickerRu = ({
   initialStartDate,
   initialEndDate,
   className,
+  onClose,
 }: DateRangePickerRuProps) => {
   const [leftMonth, setLeftMonth] = useState<Date>(
     initialStartDate
@@ -155,6 +156,9 @@ const DateRangePickerRu = ({
       end.setHours(parseInt(endTime, 10), 0, 0, 0);
     }
     onChange({ start, end });
+    if (onClose) {
+      onClose();
+    }
   };
 
   useEffect(() => {
