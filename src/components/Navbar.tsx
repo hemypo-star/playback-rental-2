@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { SearchIcon, MenuIcon, ShoppingCartIcon, XIcon } from 'lucide-react';
+import { SearchIcon, MenuIcon, ShoppingCartIcon, XIcon, Phone, Telegram, VK } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -56,6 +56,19 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-4 mr-4">
+              <a href="tel:+79001234567" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Phone className="h-4 w-4" />
+                +7 (900) 123-45-67
+              </a>
+              <a href="https://t.me/yourcompany" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                <Telegram className="h-4 w-4" />
+              </a>
+              <a href="https://vk.com/yourcompany" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                <VK className="h-4 w-4" />
+              </a>
+            </div>
+
             <AnimatedTransition show={isSearchOpen} type="slide-down" className="hidden md:flex items-center relative">
               <Input placeholder="Поиск оборудования..." className="w-60 bg-white/80 dark:bg-black/60 rounded-full pr-10" autoFocus={isSearchOpen} />
               <XIcon className="absolute right-3 h-4 w-4 text-muted-foreground cursor-pointer" onClick={() => setIsSearchOpen(false)} />
@@ -93,6 +106,20 @@ const Navbar = () => {
                         Админ-панель
                       </Link>}
                   </nav>
+                </div>
+                <div className="flex flex-col space-y-4 mt-4">
+                  <a href="tel:+79001234567" className="flex items-center gap-2 text-foreground hover:text-primary transition-colors">
+                    <Phone className="h-4 w-4" />
+                    +7 (900) 123-45-67
+                  </a>
+                  <div className="flex items-center gap-4">
+                    <a href="https://t.me/yourcompany" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition-colors">
+                      <Telegram className="h-4 w-4" />
+                    </a>
+                    <a href="https://vk.com/yourcompany" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition-colors">
+                      <VK className="h-4 w-4" />
+                    </a>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>

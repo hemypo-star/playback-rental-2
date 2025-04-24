@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MailIcon, MapPinIcon, PhoneIcon, SendIcon } from "lucide-react";
+import { MailIcon, MapPinIcon, Phone, Telegram, VK, SendIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -138,13 +138,41 @@ const Contact = () => {
                 
                 <div className="flex gap-4">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <PhoneIcon className="h-6 w-6 text-primary" />
+                    <Phone className="h-6 w-6 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium mb-1">Телефон</h3>
                     <p className="text-muted-foreground">
-                      <a href="tel:+79999999999" className="hover:text-primary transition-colors">
-                        +7 (999) 999-99-99
+                      <a href="tel:+79001234567" className="hover:text-primary transition-colors">
+                        +7 (900) 123-45-67
+                      </a>
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Telegram className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium mb-1">Telegram</h3>
+                    <p className="text-muted-foreground">
+                      <a href="https://t.me/yourcompany" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                        @yourcompany
+                      </a>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <VK className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium mb-1">VKontakte</h3>
+                    <p className="text-muted-foreground">
+                      <a href="https://vk.com/yourcompany" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                        /yourcompany
                       </a>
                     </p>
                   </div>
