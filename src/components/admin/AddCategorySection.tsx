@@ -8,7 +8,7 @@ import ImageUploadField from "@/components/ImageUploadField";
 
 type Props = {
   form: any;
-  onAddCategory: (payload: { name: string; imageUrl?: string; slug: string }) => void;
+  onAddCategory: (payload: { name: string; slug: string; imageUrl?: string }) => void;
   show: boolean;
   setShow: (show: boolean) => void;
   newCategoryName: string;
@@ -50,7 +50,6 @@ export default function AddCategorySection({
         onClick={() =>
           onAddCategory({
             name: newCategoryName,
-            imageUrl: fileForCategory ? URL.createObjectURL(fileForCategory) : undefined,
             slug: newCategoryName.toLowerCase().replace(/\s+/g, "-"),
           })
         }

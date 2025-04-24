@@ -182,6 +182,17 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
+    const { error: bucketCheckError, data: bucketExists } = await supabase.storage
+      .getBucket('categories');
+    
+    if (bucketCheckError && bucketCheckError.message.includes('not found')) {
+      console.log('Categories bucket not found, creating it');
+      await supabase.storage.createBucket('categories', {
+        public: true,
+        fileSizeLimit: 5242880, // 5MB
+      });
+    }
+
     const { error } = await supabase.storage
       .from('categories')
       .upload(filePath, file, { upsert: true });

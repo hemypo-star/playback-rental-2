@@ -1,74 +1,59 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/components/ui/use-toast';
-import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-
-import {
-  getProducts,
-  getCategories,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  exportProductsToCSV,
-  importProductsFromCSV,
-  addCategory,
-  uploadProductImage,
-  uploadCategoryImage
-} from '@/services/supabaseService';
-import { Product, Category } from '@/types/product';
-
-import ProductEditDialog from '@/components/admin/products/ProductEditDialog';
-import ProductTable from '@/components/admin/products/ProductTable';
-import CSVImportExportButtons from '@/components/admin/products/CSVImportExportButtons';
-import { Search } from "lucide-react";
+import * as z from 'zod';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Product } from '@/types/product';
+import * as supabaseService from '@/services/supabaseService';
+import ProductEditDialog from '@/components/admin/products/ProductEditDialog';
+import ProductTableRow from '@/components/admin/products/ProductTableRow';
+import { Download, Upload, Loader2 } from 'lucide-react';
 
-const productSchema = z.object({
-  title: z.string().min(1, { message: 'Название товара обязательно' }),
-  description: z.string().min(1, { message: 'Описание обязательно' }),
-  price: z.coerce.number().positive({ message: 'Цена должна быть положительным числом' }),
-  category: z.string().min(1, { message: 'Выберите категорию' }),
-  imageUrl: z.string().url({ message: 'Введите корректный URL изображения' }),
-  quantity: z.coerce.number().int().positive({ message: 'Количество должно быть положительным числом' }),
-  available: z.boolean().default(true)
+const formSchema = z.object({
+  title: z.string().min(2, {
+    message: 'Название должно содержать минимум 2 символа',
+  }),
+  description: z.string().optional(),
+  price: z.coerce.number().min(1, {
+    message: 'Цена должна быть больше 0',
+  }),
+  category: z.string().min(1, {
+    message: 'Выберите категорию',
+  }),
+  imageUrl: z.string().optional(),
+  quantity: z.coerce.number().min(1, {
+    message: 'Количество должно быть больше 0',
+  }),
+  available: z.boolean().default(true),
 });
 
-type ProductFormValues = z.infer<typeof productSchema>;
-
 const statusOptions = [
-  { value: "pending", label: "Ожидание" },
-  { value: "confirmed", label: "Подтвержден" },
-  { value: "cancelled", label: "Отменён" },
-  { value: "completed", label: "Завершён" },
+  { value: 'confirmed', label: 'Доступен' },
+  { value: 'cancelled', label: 'Недоступен' },
 ];
 
 const AdminProducts = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [open, setOpen] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
   const [showCategoryInput, setShowCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [fileForProduct, setFileForProduct] = useState<File | null>(null);
   const [fileForCategory, setFileForCategory] = useState<File | null>(null);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['admin-products'],
-    queryFn: getProducts
-  });
-
-  const { data: categories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: getCategories
-  });
-
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -76,214 +61,270 @@ const AdminProducts = () => {
       category: '',
       imageUrl: '',
       quantity: 1,
-      available: true
-    }
+      available: true,
+    },
   });
 
-  const createMutation = useMutation({
-    mutationFn: createProduct,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      toast({
-        title: 'Товар создан',
-        description: 'Новый товар успешно добавлен в каталог',
+  const { data: products, isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['products'],
+    queryFn: supabaseService.getProducts,
+  });
+
+  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: supabaseService.getCategories,
+  });
+
+  const createProductMutation = useMutation({
+    mutationFn: async (values: z.infer<typeof formSchema>) => {
+      let imageUrl = values.imageUrl || '';
+      
+      if (fileForProduct) {
+        imageUrl = await supabaseService.uploadProductImage(fileForProduct);
+      }
+      
+      return supabaseService.createProduct({
+        ...values,
+        imageUrl,
       });
-      setOpen(false);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({
+        title: 'Товар добавлен',
+        description: 'Товар успешно добавлен в каталог',
+      });
+      setOpenDialog(false);
       form.reset();
+      setFileForProduct(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось добавить товар: ${error}`,
+        variant: 'destructive',
+      });
     }
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (data: { id: string; product: Partial<Product> }) => 
-      updateProduct(data.id, data.product),
+  const updateProductMutation = useMutation({
+    mutationFn: async (values: { id: string; product: Partial<Product> }) => {
+      let imageUrl = values.product.imageUrl || '';
+      
+      if (fileForProduct) {
+        imageUrl = await supabaseService.uploadProductImage(fileForProduct);
+      }
+      
+      return supabaseService.updateProduct(values.id, {
+        ...values.product,
+        imageUrl,
+      });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'Товар обновлен',
         description: 'Товар успешно обновлен',
       });
-      setOpen(false);
-      setEditProduct(null);
+      setOpenDialog(false);
       form.reset();
+      setEditProduct(null);
+      setFileForProduct(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось обновить товар: ${error}`,
+        variant: 'destructive',
+      });
     }
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteProduct,
+  const deleteProductMutation = useMutation({
+    mutationFn: (id: string) => supabaseService.deleteProduct(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'Товар удален',
         description: 'Товар успешно удален из каталога',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось удалить товар: ${error}`,
+        variant: 'destructive',
       });
     }
   });
 
   const addCategoryMutation = useMutation({
-    mutationFn: (categoryData: Partial<Category>) => {
-      return addCategory(categoryData);
-    },
-    onSuccess: (data) => {
+    mutationFn: (categoryData: { name: string; slug: string; imageUrl?: string }) => 
+      supabaseService.addCategory(categoryData),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast({
-        title: 'Категория добавлена',
-        description: `Категория "${data.name}" успешно добавлена`,
-      });
-      setNewCategoryName('');
-      setShowCategoryInput(false);
-      form.setValue('category', data.name);
-    }
+    },
   });
 
-  const importMutation = useMutation({
-    mutationFn: importProductsFromCSV,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      toast({
-        title: 'Импорт завершен',
-        description: `Импортировано ${data.length} товаров`,
-      });
-      setIsUploading(false);
-    },
-    onError: () => {
-      toast({
-        variant: 'destructive',
-        title: 'Ошибка импорта',
-        description: 'Не удалось импортировать файл',
-      });
-      setIsUploading(false);
-    }
-  });
-
-  const filteredProducts = products?.filter(product => 
-    product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const onSubmit = async (values: ProductFormValues) => {
-    let imageUrl = values.imageUrl;
-
-    if (fileForProduct) {
-      try {
-        imageUrl = await uploadProductImage(fileForProduct);
-        setFileForProduct(null);
-      } catch (e) {
-        toast({ variant: "destructive", title: "Ошибка загрузки", description: "Не удалось загрузить изображение товара" });
-        return;
+  const handleAddCategory = async (payload: { name: string; slug: string; imageUrl?: string }) => {
+    setIsAddingCategory(true);
+    try {
+      // Upload the image file if it exists
+      let imageUrl = payload.imageUrl;
+      if (fileForCategory) {
+        imageUrl = await supabaseService.uploadCategoryImage(fileForCategory);
       }
-    }
-
-    const payload = { ...values, imageUrl };
-    if (editProduct) {
-      updateMutation.mutate({ id: editProduct.id, product: payload });
-    } else {
-      createMutation.mutate(payload as any);
-    }
-  };
-
-  const handleAddCategory = async ({ name, imageUrl, slug }: { name: string; imageUrl?: string; slug: string }) => {
-    let imageUrlReturned: string | undefined = imageUrl;
-    if (fileForCategory) {
-      try {
-        imageUrlReturned = await uploadCategoryImage(fileForCategory);
+      
+      const newCategory = await supabaseService.addCategory({
+        name: payload.name,
+        slug: payload.slug,
+        imageUrl: imageUrl || '',
+      });
+      
+      if (newCategory) {
+        queryClient.invalidateQueries({ queryKey: ['categories'] });
+        form.setValue('category', newCategory.name);
+        setShowCategoryInput(false);
+        setNewCategoryName('');
         setFileForCategory(null);
-      } catch (e) {
-        toast({ variant: "destructive", title: "Ошибка загрузки", description: "Не удалось загрузить изображение категории" });
-        return;
+        
+        toast({
+          title: 'Категория добавлена',
+          description: 'Новая категория успешно добавлена',
+        });
       }
-    }
-    if (name.trim()) {
-      addCategoryMutation.mutate({
-        name,
-        imageUrl: imageUrlReturned,
-        slug,
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось добавить категорию: ${error}`,
+        variant: 'destructive',
       });
+    } finally {
+      setIsAddingCategory(false);
     }
   };
 
-  const handleEdit = (product: Product) => {
+  const handleEditProduct = (product: Product) => {
     setEditProduct(product);
     form.reset({
       title: product.title,
-      description: product.description,
+      description: product.description || '',
       price: product.price,
       category: product.category,
-      imageUrl: product.imageUrl,
+      imageUrl: product.imageUrl || '',
       quantity: product.quantity,
-      available: product.available
+      available: product.available,
     });
-    setOpen(true);
+    setOpenDialog(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Вы уверены, что хотите удалить этот товар?')) {
-      deleteMutation.mutate(id);
+  const handleDeleteProduct = (id: string) => {
+    if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
+      deleteProductMutation.mutate(id);
     }
   };
 
-  const handleExport = async () => {
-    const csvContent = await exportProductsToCSV();
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'products.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (editProduct) {
+      updateProductMutation.mutate({
+        id: editProduct.id,
+        product: values,
+      });
+    } else {
+      createProductMutation.mutate(values);
+    }
   };
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      const csvContent = await supabaseService.exportProductsToCSV();
+      
+      // Create a blob and download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `products_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: 'Экспорт завершен',
+        description: 'Файл CSV успешно скачан',
+      });
+    } catch (error) {
+      toast({
+        title: 'Ошибка экспорта',
+        description: 'Не удалось экспортировать товары',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
-    setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      importMutation.mutate(content);
-    };
-    reader.readAsText(file);
+  const handleImportCSV = async () => {
+    if (!csvFile) {
+      toast({
+        title: 'Ошибка',
+        description: 'Выберите файл CSV для импорта',
+        variant: 'destructive',
+      });
+      return;
+    }
     
-    event.target.value = '';
+    setIsImporting(true);
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        await supabaseService.importProductsFromCSV(text);
+        
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+        toast({
+          title: 'Импорт завершен',
+          description: 'Товары успешно импортированы',
+        });
+        
+        setCsvFile(null);
+        setIsImporting(false);
+      };
+      
+      reader.onerror = () => {
+        toast({
+          title: 'Ошибка чтения файла',
+          description: 'Не удалось прочитать файл CSV',
+          variant: 'destructive',
+        });
+        setIsImporting(false);
+      };
+      
+      reader.readAsText(csvFile);
+    } catch (error) {
+      toast({
+        title: 'Ошибка импорта',
+        description: 'Не удалось импортировать товары',
+        variant: 'destructive',
+      });
+      setIsImporting(false);
+    }
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Товары</h1>
-          <p className="text-muted-foreground">
-            Управление каталогом товаров для проката
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <button 
-              type="button"
-              className="absolute left-0 top-0 h-9 w-9 border-0 flex items-center justify-center z-10"
-              tabIndex={-1}
-              aria-label="search"
-              style={{ background: "transparent" }}
-            >
-              <Search className="h-4 w-4" />
-            </button>
-            <Input
-              placeholder="Поиск товаров..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 w-[250px]"
-            />
-          </div>
-          
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-bold tracking-tight">Управление товарами</h2>
+        <div className="flex gap-2">
           <ProductEditDialog
-            open={open}
-            setOpen={setOpen}
+            open={openDialog}
+            setOpen={setOpenDialog}
             editProduct={editProduct}
             form={form}
-            categories={categories ?? []}
+            categories={categories || []}
             showCategoryInput={showCategoryInput}
             setShowCategoryInput={setShowCategoryInput}
             newCategoryName={newCategoryName}
@@ -295,25 +336,140 @@ const AdminProducts = () => {
             addCategoryMutation={addCategoryMutation}
             onSubmit={onSubmit}
             handleAddCategory={handleAddCategory}
-            createPending={createMutation.isPending}
-            updatePending={updateMutation.isPending}
-          />
-
-          <CSVImportExportButtons
-            isUploading={isUploading}
-            handleExport={handleExport}
-            handleImport={handleImport}
+            createPending={createProductMutation.isPending}
+            updatePending={updateProductMutation.isPending}
           />
         </div>
       </div>
-      <ProductTable
-        products={filteredProducts || []}
-        isLoading={isLoading}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        updateMutation={updateMutation}
-        statusOptions={statusOptions}
-      />
+
+      <Tabs defaultValue="products">
+        <TabsList>
+          <TabsTrigger value="products">Товары</TabsTrigger>
+          <TabsTrigger value="import-export">Импорт/Экспорт</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="products" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Список товаров</CardTitle>
+              <CardDescription>
+                Управляйте товарами в вашем каталоге. Вы можете добавлять, редактировать и удалять товары.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingProducts ? (
+                <div className="flex justify-center items-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead style={{ width: 50 }}>Фото</TableHead>
+                        <TableHead style={{ width: 100 }}>ID</TableHead>
+                        <TableHead>Название</TableHead>
+                        <TableHead>Категория</TableHead>
+                        <TableHead className="text-right">Цена</TableHead>
+                        <TableHead>Кол-во</TableHead>
+                        <TableHead>Статус</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products?.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="h-24 text-center">
+                            Нет товаров
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        products?.map((product) => (
+                          <ProductTableRow
+                            key={product.id}
+                            product={product}
+                            onEdit={handleEditProduct}
+                            onDelete={handleDeleteProduct}
+                            updateMutation={updateProductMutation}
+                            statusOptions={statusOptions}
+                          />
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="import-export">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Экспорт товаров</CardTitle>
+                <CardDescription>
+                  Экспортируйте все товары в формате CSV для резервного копирования или редактирования.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={handleExportCSV} 
+                  disabled={isExporting}
+                  className="w-full"
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Экспорт...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Экспортировать в CSV
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Импорт товаров</CardTitle>
+                <CardDescription>
+                  Импортируйте товары из CSV файла. Формат должен соответствовать экспортированному файлу.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                    disabled={isImporting}
+                  />
+                </div>
+                <Button 
+                  onClick={handleImportCSV} 
+                  disabled={!csvFile || isImporting}
+                  className="w-full"
+                >
+                  {isImporting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Импорт...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Импортировать из CSV
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

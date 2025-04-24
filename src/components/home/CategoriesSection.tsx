@@ -94,6 +94,12 @@ export const CategoriesSection = () => {
                     src={category.imageUrl || categoryImages[category.name] || categoryImages.default} 
                     alt={category.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    onError={(e) => {
+                      // If the image fails to load, use the default image
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null; // Prevent infinite loop
+                      target.src = categoryImages.default;
+                    }}
                   />
                 </div>
                 <CardContent className="relative bg-white p-4">
@@ -103,7 +109,7 @@ export const CategoriesSection = () => {
                       <h3 className="text-xl font-medium">{category.name}</h3>
                     </div>
                     <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
-                      {category.description}
+                      {category.description || 'Нет описания'}
                     </p>
                     <div 
                       className="w-fit group/btn p-0 h-auto text-primary flex items-center"

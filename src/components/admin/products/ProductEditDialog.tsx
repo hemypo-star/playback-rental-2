@@ -77,7 +77,15 @@ export default function ProductEditDialog({
                   {showCategoryInput ? (
                     <AddCategorySection
                       form={form}
-                      onAddCategory={handleAddCategory}
+                      onAddCategory={(payload) => {
+                        // Pass both name, slug, and the file to handleAddCategory
+                        handleAddCategory({
+                          name: payload.name,
+                          slug: payload.slug,
+                          // We don't pass URL.createObjectUrl here anymore since we'll do the upload in the handler
+                          imageUrl: undefined
+                        });
+                      }}
                       show={showCategoryInput}
                       setShow={setShowCategoryInput}
                       newCategoryName={newCategoryName}

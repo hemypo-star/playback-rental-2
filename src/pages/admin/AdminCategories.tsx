@@ -191,6 +191,23 @@ const AdminCategories = () => {
     setUploadType('file');
   };
 
+  const handleAddNewCategory = async ({ name, slug, imageUrl }: { name: string; slug: string; imageUrl?: string }) => {
+    try {
+      const categoryData = {
+        name,
+        slug,
+        description: '',
+        imageUrl: '',
+      };
+      
+      await addCategoryMutation.mutateAsync(categoryData);
+      return true;
+    } catch (error) {
+      console.error('Error adding category:', error);
+      return false;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
