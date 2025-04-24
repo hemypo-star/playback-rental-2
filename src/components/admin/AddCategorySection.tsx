@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { X, Plus } from "lucide-react";
 import { Category } from "@/types/product";
 import ImageUploadField from "@/components/ImageUploadField";
+import { uploadCategoryImage } from "@/services/supabaseService";
+import { toast } from "sonner";
 
 type Props = {
   form: any;
@@ -29,13 +31,38 @@ export default function AddCategorySection({
   setFileForCategory,
   isPending,
 }: Props) {
-  const handleAddCategory = () => {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
     
-    onAddCategory({
-      name: newCategoryName,
-      slug: newCategoryName.toLowerCase().replace(/\s+/g, "-"),
-    });
+    try {
+      setIsUploading(true);
+      let imageUrl;
+      
+      if (fileForCategory) {
+        imageUrl = await uploadCategoryImage(fileForCategory);
+      }
+      
+      onAddCategory({
+        name: newCategoryName,
+        slug: newCategoryName.toLowerCase().replace(/\s+/g, "-"),
+        imageUrl
+      });
+      
+      // Clear the file after successful upload
+      setFileForCategory(null);
+    } catch (error) {
+      console.error("Error uploading category image:", error);
+      toast.error("Failed to upload image. Category will be created without an image.");
+      
+      onAddCategory({
+        name: newCategoryName,
+        slug: newCategoryName.toLowerCase().replace(/\s+/g, "-")
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -45,28 +72,29 @@ export default function AddCategorySection({
         value={newCategoryName}
         onChange={(e) => setNewCategoryName(e.target.value)}
         className="flex-1"
-        disabled={isPending}
+        disabled={isPending || isUploading}
       />
       <ImageUploadField
         label=""
         previewUrl={fileForCategory ? URL.createObjectURL(fileForCategory) : null}
         onChange={f => setFileForCategory(f)}
-        disabled={isPending}
+        disabled={isPending || isUploading}
       />
       <Button
         type="button"
         variant="outline"
         onClick={handleAddCategory}
         size="sm"
-        disabled={isPending}
+        disabled={isPending || isUploading}
       >
-        Добавить
+        {isUploading ? "Загрузка..." : "Добавить"}
       </Button>
       <Button
         type="button"
         variant="ghost"
         size="sm"
         onClick={() => setShow(false)}
+        disabled={isUploading}
       >
         <X className="h-4 w-4" />
       </Button>

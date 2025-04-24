@@ -1,19 +1,21 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { isDateRangeAvailable } from '@/utils/dateUtils';
 import { Category } from '@/types/product';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xwylatyyhqyfwsxfwzmn.supabase.co';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Using the local client instead of creating a new one
+const supabaseServiceClient = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Get all products
  */
 export const getProducts = async () => {
   try {
-    const { data, error } = await supabase.from('products').select('*');
+    const { data, error } = await supabaseServiceClient.from('products').select('*');
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -27,7 +29,7 @@ export const getProducts = async () => {
  */
 export const getProductById = async (id: string) => {
   try {
-    const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
+    const { data, error } = await supabaseServiceClient.from('products').select('*').eq('id', id).single();
     if (error) throw error;
     return data || null;
   } catch (error) {
@@ -41,7 +43,7 @@ export const getProductById = async (id: string) => {
  */
 export const createProduct = async (product: any) => {
   try {
-    const { data, error } = await supabase.from('products').insert([product]).select().single();
+    const { data, error } = await supabaseServiceClient.from('products').insert([product]).select().single();
     if (error) throw error;
     return data;
   } catch (error) {
@@ -55,7 +57,7 @@ export const createProduct = async (product: any) => {
  */
 export const updateProduct = async (id: string, updates: any) => {
   try {
-    const { data, error } = await supabase.from('products').update(updates).eq('id', id).select().single();
+    const { data, error } = await supabaseServiceClient.from('products').update(updates).eq('id', id).select().single();
     if (error) throw error;
     return data;
   } catch (error) {
@@ -69,7 +71,7 @@ export const updateProduct = async (id: string, updates: any) => {
  */
 export const deleteProduct = async (id: string) => {
   try {
-    const { error } = await supabase.from('products').delete().eq('id', id);
+    const { error } = await supabaseServiceClient.from('products').delete().eq('id', id);
     if (error) throw error;
     return true;
   } catch (error) {
@@ -87,13 +89,13 @@ export const uploadProductImage = async (file: File): Promise<string> => {
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
-    const { error } = await supabase.storage
+    const { error } = await supabaseServiceClient.storage
       .from('products')
       .upload(filePath, file, { upsert: true });
 
     if (error) throw error;
 
-    const { data: publicUrlData } = supabase.storage
+    const { data: publicUrlData } = supabaseServiceClient.storage
       .from('products')
       .getPublicUrl(filePath);
 
@@ -109,7 +111,7 @@ export const uploadProductImage = async (file: File): Promise<string> => {
  */
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    const { data, error } = await supabase.from('categories').select('*');
+    const { data, error } = await supabaseServiceClient.from('categories').select('*');
     if (error) throw error;
     return data || [];
   } catch (error) {
@@ -123,7 +125,7 @@ export const getCategories = async (): Promise<Category[]> => {
  */
 export const getCategoryById = async (id: string): Promise<Category | null> => {
   try {
-    const { data, error } = await supabase.from('categories').select('*').eq('id', id).single();
+    const { data, error } = await supabaseServiceClient.from('categories').select('*').eq('id', id).single();
     if (error) throw error;
     return data;
   } catch (error) {
@@ -137,7 +139,7 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
  */
 export const addCategory = async (categoryData: Partial<Category>): Promise<Category | null> => {
   try {
-    const { data, error } = await supabase.from('categories').insert([categoryData]).select().single();
+    const { data, error } = await supabaseServiceClient.from('categories').insert([categoryData]).select().single();
     if (error) throw error;
     return data;
   } catch (error) {
@@ -151,7 +153,7 @@ export const addCategory = async (categoryData: Partial<Category>): Promise<Cate
  */
 export const updateCategory = async (id: string, updates: Partial<Category>): Promise<Category | null> => {
   try {
-    const { data, error } = await supabase.from('categories').update(updates).eq('id', id).select().single();
+    const { data, error } = await supabaseServiceClient.from('categories').update(updates).eq('id', id).select().single();
     if (error) throw error;
     return data;
   } catch (error) {
@@ -165,7 +167,7 @@ export const updateCategory = async (id: string, updates: Partial<Category>): Pr
  */
 export const deleteCategory = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase.from('categories').delete().eq('id', id);
+    const { error } = await supabaseServiceClient.from('categories').delete().eq('id', id);
     if (error) throw error;
     return true;
   } catch (error) {
@@ -183,25 +185,25 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
-    const { data: buckets } = await supabase.storage.listBuckets();
+    const { data: buckets } = await supabaseServiceClient.storage.listBuckets();
     const categoriesBucketExists = buckets?.some(bucket => bucket.name === 'categories');
     
     if (!categoriesBucketExists) {
       console.log('Categories bucket not found, creating it');
-      await supabase.storage.createBucket('categories', {
+      await supabaseServiceClient.storage.createBucket('categories', {
         public: true,
         fileSizeLimit: 5242880, // 5MB
       });
     }
 
     if (categoriesBucketExists) {
-      await supabase.storage.updateBucket('categories', {
+      await supabaseServiceClient.storage.updateBucket('categories', {
         public: true,
         fileSizeLimit: 5242880, // 5MB
       });
     }
     
-    const { error } = await supabase.storage
+    const { error } = await supabaseServiceClient.storage
       .from('categories')
       .upload(filePath, file, { upsert: true });
 
@@ -210,7 +212,7 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
       throw error;
     }
 
-    const { data: publicUrlData } = supabase.storage
+    const { data: publicUrlData } = supabaseServiceClient.storage
       .from('categories')
       .getPublicUrl(filePath);
 
