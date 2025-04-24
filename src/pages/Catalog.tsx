@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
@@ -11,9 +12,15 @@ const Catalog = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const categoryFromUrl = searchParams.get('category');
-  const locationState = location.state as { activeCategory?: string; startDate?: Date; endDate?: Date } | null;
+  const locationState = location.state as { 
+    activeCategory?: string; 
+    startDate?: Date; 
+    endDate?: Date; 
+    search?: string;
+    scrollTop?: boolean;
+  } | null;
   
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(locationState?.search || '');
   const [activeTab, setActiveTab] = useState(categoryFromUrl || locationState?.activeCategory || 'all');
   const [bookingDates, setBookingDates] = useState<{startDate?: Date, endDate?: Date}>({
     startDate: locationState?.startDate,
@@ -35,6 +42,15 @@ const Catalog = () => {
   useEffect(() => {
     if (categoryFromUrl || locationState?.activeCategory) {
       setActiveTab(categoryFromUrl || locationState?.activeCategory || 'all');
+    }
+    
+    if (locationState?.search) {
+      setSearch(locationState.search);
+    }
+    
+    // Reset scroll position when directed with scrollTop flag
+    if (locationState?.scrollTop) {
+      window.scrollTo(0, 0);
     }
   }, [categoryFromUrl, locationState]);
 

@@ -1,9 +1,11 @@
+
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getCategories } from '@/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRightIcon, Layers } from 'lucide-react';
+import { ArrowRightIcon, Layers, ChevronRight } from 'lucide-react';
 
 const categoryImages: Record<string, string> = {
   'Компьютеры': 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80',
@@ -14,21 +16,59 @@ const categoryImages: Record<string, string> = {
 };
 
 export const CategoriesSection = () => {
+  const navigate = useNavigate();
+  const [showAll, setShowAll] = useState(false);
   const { data: categories, isLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: getCategories,
   });
+  
+  const visibleCategories = showAll 
+    ? categories 
+    : categories?.slice(0, 8);
+    
+  const handleCategoryClick = (categoryName: string) => {
+    navigate('/catalog', { 
+      state: { 
+        activeCategory: categoryName,
+        scrollTop: true 
+      } 
+    });
+  };
+  
+  const handleShowAllClick = () => {
+    if (categories && categories.length > 8) {
+      if (!showAll) {
+        setShowAll(true);
+      } else {
+        navigate('/catalog', { state: { scrollTop: true } });
+      }
+    } else {
+      navigate('/catalog', { state: { scrollTop: true } });
+    }
+  };
 
   return (
     <section className="py-20">
       <div className="container px-4 mx-auto">
-        <div className="text-center mb-12">
-          <span className="chip mb-3">Наше оборудование</span>
-          <h2 className="heading-2">Категории оборудования</h2>
-          <p className="body-text max-w-2xl mx-auto">
-            Выберите из нашего широкого ассортимента профессионального оборудования для вашего следующего проекта
-          </p>
+        <div className="flex justify-between items-center mb-6">
+          <div className="text-center md:text-left">
+            <span className="chip mb-3">Наше оборудование</span>
+            <h2 className="heading-2">Категории оборудования</h2>
+          </div>
+          <Button 
+            variant="outline"
+            onClick={handleShowAllClick}
+            className="hidden md:flex items-center"
+          >
+            Посмотреть все
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
         </div>
+        
+        <p className="body-text max-w-2xl mx-auto md:mx-0 mb-8">
+          Выберите из нашего широкого ассортимента профессионального оборудования для вашего следующего проекта
+        </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {isLoading ? (
@@ -42,44 +82,50 @@ export const CategoriesSection = () => {
               </div>
             ))
           ) : (
-            categories?.map((category) => (
-              <Link 
+            visibleCategories?.map((category) => (
+              <Card 
                 key={category.id} 
-                to={`/catalog?category=${encodeURIComponent(category.name)}`}
-                state={{ activeCategory: category.name }}
-                className="group block"
+                className="overflow-hidden border-0 transition-all duration-300 hover:shadow-lg cursor-pointer"
+                onClick={() => handleCategoryClick(category.name)}
               >
-                <Card className="overflow-hidden border-0 transition-all duration-300 group-hover:shadow-lg">
-                  <div className="relative h-48 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
-                    <img 
-                      src={category.imageUrl || categoryImages[category.name] || categoryImages.default} 
-                      alt={category.name}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  </div>
-                  <CardContent className="relative bg-white p-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Layers className="h-4 w-4 text-primary" />
-                        <h3 className="text-xl font-medium">{category.name}</h3>
-                      </div>
-                      <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
-                        {category.description}
-                      </p>
-                      <Button 
-                        variant="ghost" 
-                        className="w-fit group/btn p-0 h-auto hover:bg-transparent text-primary"
-                      >
-                        Смотреть
-                        <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                      </Button>
+                <div className="relative h-48 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
+                  <img 
+                    src={category.imageUrl || categoryImages[category.name] || categoryImages.default} 
+                    alt={category.name}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+                <CardContent className="relative bg-white p-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Layers className="h-4 w-4 text-primary" />
+                      <h3 className="text-xl font-medium">{category.name}</h3>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
+                      {category.description}
+                    </p>
+                    <div 
+                      className="w-fit group/btn p-0 h-auto text-primary flex items-center"
+                    >
+                      Смотреть
+                      <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))
           )}
+        </div>
+        
+        <div className="mt-8 flex justify-center md:hidden">
+          <Button 
+            onClick={handleShowAllClick}
+            className="w-full sm:w-auto"
+          >
+            Посмотреть все
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </div>
     </section>

@@ -7,9 +7,10 @@ import AdminProducts from './admin/AdminProducts';
 import AdminBookings from './admin/AdminBookings';
 import AdminCalendar from './admin/AdminCalendar';
 import AdminCategories from './admin/AdminCategories';
+import AdminSettings from './AdminSettings';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -40,6 +41,7 @@ export default function Admin() {
           <TabsTrigger value="categories">Категории</TabsTrigger>
           <TabsTrigger value="bookings">Бронирования</TabsTrigger>
           <TabsTrigger value="calendar">Календарь</TabsTrigger>
+          <TabsTrigger value="settings">Настройки</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard">
@@ -60,6 +62,10 @@ export default function Admin() {
         
         <TabsContent value="calendar">
           <AdminCalendar />
+        </TabsContent>
+        
+        <TabsContent value="settings">
+          <AdminSettings />
         </TabsContent>
       </Tabs>
     </div>
