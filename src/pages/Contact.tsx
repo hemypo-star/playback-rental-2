@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { MailIcon, MapPinIcon, Phone, Telegram, VK, SendIcon } from "lucide-react";
+import { 
+  MailIcon, 
+  MapPinIcon, 
+  Phone, 
+  Send, // Replace Telegram 
+  Facebook // Replace VK 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -152,7 +158,7 @@ const Contact = () => {
                 
                 <div className="flex gap-4">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Telegram className="h-6 w-6 text-primary" />
+                    <Send className="h-6 w-6 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium mb-1">Telegram</h3>
@@ -166,7 +172,7 @@ const Contact = () => {
 
                 <div className="flex gap-4">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <VK className="h-6 w-6 text-primary" />
+                    <Facebook className="h-6 w-6 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium mb-1">VKontakte</h3>
