@@ -4,11 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRightIcon, SearchIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BookingCalendar } from '@/components/BookingCalendar';
-import { BookingPeriod } from '@/types/product';
-import { format } from 'date-fns';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import type { BookingPeriod } from '@/types/product';
 
 export const HeroSection = () => {
   const navigate = useNavigate();
@@ -22,11 +22,11 @@ export const HeroSection = () => {
       try {
         const { data, error } = await supabase
           .from('settings')
-          .select('value')
+          .select('*')
           .eq('key', 'hero_banner_image')
           .single();
         
-        if (data && data.value) {
+        if (!error && data?.value) {
           setBannerImage(data.value);
         }
       } catch (error) {
@@ -57,20 +57,19 @@ export const HeroSection = () => {
     e.preventDefault();
     navigate('/catalog', { 
       state: { 
-        search: searchQuery
+        search: searchQuery,
+        scrollTop: true
       } 
     });
   };
 
   return (
     <section className="relative h-screen max-h-[800px] flex items-center overflow-hidden">
-      <div className="absolute inset-0 z-0 bg-gradient-to-r from-black/70 to-black/40"></div>
+      <div className="absolute inset-0 z-0 bg-gradient-to-r from-black/70 to-black/40" />
       <div 
         className="absolute inset-0 z-0 bg-cover bg-center"
-        style={{ 
-          backgroundImage: `url('${bannerImage}')` 
-        }}
-      ></div>
+        style={{ backgroundImage: `url('${bannerImage}')` }}
+      />
       
       <div className="container relative z-10 px-4 py-16 mx-auto">
         <div className="max-w-xl">

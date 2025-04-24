@@ -21,7 +21,7 @@ const HeroBannerSettings = () => {
         setIsLoading(true);
         const { data, error } = await supabase
           .from('settings')
-          .select('value')
+          .select('*')
           .eq('key', 'hero_banner_image')
           .single();
 
@@ -30,7 +30,7 @@ const HeroBannerSettings = () => {
           return;
         }
 
-        if (data) {
+        if (data?.value) {
           setImageUrl(data.value);
         }
       } catch (error) {
@@ -62,7 +62,7 @@ const HeroBannerSettings = () => {
     try {
       setIsLoading(true);
       
-      // Загрузка файла в storage
+      // Upload file to storage
       const fileName = `hero_banner_${Date.now()}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('products')
@@ -72,19 +72,20 @@ const HeroBannerSettings = () => {
         throw new Error(uploadError.message);
       }
 
-      // Получение публичной ссылки
+      // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from('products')
         .getPublicUrl(fileName);
 
       const publicUrl = publicUrlData.publicUrl;
 
-      // Обновление настройки в базе данных
+      // Update setting in database
       const { error: settingsError } = await supabase
         .from('settings')
         .upsert({ 
           key: 'hero_banner_image',
-          value: publicUrl
+          value: publicUrl,
+          updated_at: new Date().toISOString()
         });
 
       if (settingsError) {
