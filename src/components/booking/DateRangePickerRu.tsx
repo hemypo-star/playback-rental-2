@@ -138,6 +138,23 @@ const DateRangePickerRu = ({
     return daysGrid;
   };
 
+  const handleConfirmTime = () => {
+    if (!selection.from) return;
+    
+    const start = new Date(selection.from);
+    start.setHours(parseInt(startTime, 10), 0, 0, 0);
+
+    let end: Date | null = null;
+    if (selection.to) {
+      end = new Date(selection.to);
+      end.setHours(parseInt(endTime, 10), 0, 0, 0);
+    } else {
+      end = new Date(selection.from);
+      end.setHours(parseInt(endTime, 10), 0, 0, 0);
+    }
+    onChange({ start, end });
+  };
+
   useEffect(() => {
     if (!selection.from) {
       onChange({ start: null, end: null });
@@ -193,6 +210,18 @@ const DateRangePickerRu = ({
           />
         </div>
       </div>
+
+      <div className="flex justify-center mt-6">
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="text-[#ea384c] border-[#ea384c] hover:bg-[#ea384c] hover:text-white"
+          onClick={handleConfirmTime}
+        >
+          Подтвердить время
+        </Button>
+      </div>
+
       <SelectedInfo
         from={selection.from}
         to={selection.to}

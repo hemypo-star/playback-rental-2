@@ -1,4 +1,3 @@
-
 import React from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -60,33 +59,23 @@ const CalendarMonthColumn = ({
         handleDateHover={handleDateHover}
         currentMonth={month}
       />
-      <div className="mt-2 flex flex-col items-center gap-2">
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-[#ea384c]" />
-          <span className="text-sm text-[#222] text-sec">
-            {label === "Взять" ? "Взять в:" : "Вернуть до:"}
-          </span>
-          <Select value={timeValue} onValueChange={setTime}>
-            <SelectTrigger className="w-[100px] bg-white border rounded px-2 py-1 h-8">
-              <SelectValue placeholder="Выберите время" />
-            </SelectTrigger>
-            <SelectContent>
-              {hours.map(hour => (
-                <SelectItem key={hour.value} value={hour.value}>
-                  {hour.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="text-[#ea384c] border-[#ea384c] hover:bg-[#ea384c] hover:text-white"
-          onClick={() => setTime(timeValue)}
-        >
-          Подтвердить время
-        </Button>
+      <div className="mt-2 flex items-center gap-2">
+        <Clock className="h-4 w-4 text-[#ea384c]" />
+        <span className="text-sm text-[#222] text-sec">
+          {label === "Взять" ? "Взять в:" : "Вернуть до:"}
+        </span>
+        <Select value={timeValue} onValueChange={setTime}>
+          <SelectTrigger className="w-[100px] bg-white border rounded px-2 py-1 h-8">
+            <SelectValue placeholder="Выберите время" />
+          </SelectTrigger>
+          <SelectContent>
+            {hours.map(hour => (
+              <SelectItem key={hour.value} value={hour.value}>
+                {hour.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
