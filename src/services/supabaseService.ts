@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { isDateRangeAvailable } from '@/utils/dateUtils';
 import { Category } from '@/types/product';
@@ -89,19 +88,41 @@ export const uploadProductImage = async (file: File): Promise<string> => {
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
+    const { data: buckets } = await supabaseServiceClient.storage.listBuckets();
+    const categoriesBucketExists = buckets?.some(bucket => bucket.name === 'categories');
+    
+    if (!categoriesBucketExists) {
+      console.log('Categories bucket not found, creating it');
+      await supabaseServiceClient.storage.createBucket('categories', {
+        public: true,
+        fileSizeLimit: 5242880, // 5MB
+      });
+    }
+
+    if (categoriesBucketExists) {
+      await supabaseServiceClient.storage.updateBucket('categories', {
+        public: true,
+        fileSizeLimit: 5242880, // 5MB
+      });
+    }
+    
     const { error } = await supabaseServiceClient.storage
-      .from('products')
+      .from('categories')
       .upload(filePath, file, { upsert: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error uploading category image:', error);
+      throw error;
+    }
 
     const { data: publicUrlData } = supabaseServiceClient.storage
-      .from('products')
+      .from('categories')
       .getPublicUrl(filePath);
 
+    console.log('Successfully uploaded image, public URL:', publicUrlData.publicUrl);
     return publicUrlData.publicUrl;
   } catch (error) {
-    console.error('Error uploading product image:', error);
+    console.error('Error in uploadCategoryImage:', error);
     throw error;
   }
 };
@@ -229,11 +250,11 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
  */
 export const getAvailableProducts = async (startDate: Date, endDate: Date) => {
   try {
-    const { data: products } = await supabase.from('products').select('*');
+    const { data: products } = await supabaseServiceClient.from('products').select('*');
     
     if (!products) return [];
     
-    const { data: bookings } = await supabase.from('bookings').select('*').not('status', 'eq', 'cancelled');
+    const { data: bookings } = await supabaseServiceClient.from('bookings').select('*').not('status', 'eq', 'cancelled');
     
     if (!bookings) return products;
     
@@ -271,7 +292,7 @@ export const getAvailableProducts = async (startDate: Date, endDate: Date) => {
  */
 export const getProductBookings = async (productId: string) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServiceClient
       .from('bookings')
       .select('*')
       .eq('product_id', productId);
@@ -302,7 +323,7 @@ export const getProductBookings = async (productId: string) => {
  */
 export const getBookings = async () => {
   try {
-    const { data, error } = await supabase.from('bookings').select(`
+    const { data, error } = await supabaseServiceClient.from('bookings').select(`
       id,
       product_id,
       customer_name,
@@ -407,7 +428,7 @@ export const importProductsFromCSV = async (csvContent: string) => {
     
     for (const product of products) {
       const { id, ...productData } = product;
-      await supabase.from('products').insert([productData]);
+      await supabaseServiceClient.from('products').insert([productData]);
     }
     
     return products;
@@ -422,7 +443,7 @@ export const importProductsFromCSV = async (csvContent: string) => {
  */
 export const createBooking = async (bookingData: any) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServiceClient
       .from('bookings')
       .insert([bookingData])
       .select()
@@ -441,7 +462,7 @@ export const createBooking = async (bookingData: any) => {
  */
 export const updateBookingStatus = async (bookingId: string, status: string) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServiceClient
       .from('bookings')
       .update({ status })
       .eq('id', bookingId)
