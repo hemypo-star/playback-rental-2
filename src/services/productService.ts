@@ -41,7 +41,33 @@ export const createProduct = async (product: Partial<Product>) => {
 
 export const updateProduct = async (id: string, updates: Partial<Product>) => {
   try {
-    const { data, error } = await supabaseServiceClient.from('products').update(updates).eq('id', id).select().single();
+    const { data: existingProduct, error: fetchError } = await supabaseServiceClient
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!existingProduct) throw new Error('Product not found');
+
+    const updateData = Object.entries(updates).reduce((acc, [key, value]) => {
+      if (value !== undefined && value !== null && value !== existingProduct[key as keyof Product]) {
+        acc[key as keyof Product] = value;
+      }
+      return acc;
+    }, {} as Partial<Product>);
+
+    if (Object.keys(updateData).length === 0) {
+      return existingProduct;
+    }
+
+    const { data, error } = await supabaseServiceClient
+      .from('products')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
     if (error) throw error;
     return data;
   } catch (error) {
