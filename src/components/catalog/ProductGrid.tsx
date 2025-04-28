@@ -1,64 +1,93 @@
 
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import AnimatedTransition from '@/components/AnimatedTransition';
+import { useState } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { Product } from '@/types/product';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-interface ProductGridProps {
+type ProductGridProps = {
   products: Product[];
   isLoading: boolean;
-  bookingDates: {
-    startDate?: Date;
-    endDate?: Date;
-  };
+  bookingDates: {startDate?: Date, endDate?: Date};
   onClearFilters: () => void;
-}
+};
 
-const ProductGrid = ({ products, isLoading, bookingDates, onClearFilters }: ProductGridProps) => {
+const ProductGrid = ({ 
+  products, 
+  isLoading,
+  bookingDates,
+  onClearFilters 
+}: ProductGridProps) => {
+  const [visibleProducts, setVisibleProducts] = useState(8);
+
+  const handleLoadMore = () => {
+    setVisibleProducts(prev => prev + 4);
+  };
+
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] w-full">
+        <Loader2 className="h-10 w-10 animate-spin text-gray-400" />
+        <p className="mt-4 text-gray-500">Загружаем оборудование...</p>
       </div>
     );
   }
 
-  if (!products || products.length === 0) {
+  if (!products.length) {
     return (
-      <div className="text-center py-20">
-        <p className="text-muted-foreground mb-4">По вашему запросу ничего не найдено</p>
-        <Button variant="outline" onClick={onClearFilters}>
-          Сбросить фильтры
+      <div className="flex flex-col items-center justify-center min-h-[400px] w-full text-center">
+        <div className="bg-gray-100 rounded-full p-6 mb-4">
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-10 w-10 text-gray-400"
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 14h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-xl font-medium mb-2">Ничего не найдено</h3>
+        <p className="text-gray-500 mb-4 max-w-md">
+          К сожалению, по вашему запросу ничего не найдено. Попробуйте изменить параметры поиска.
+        </p>
+        <Button onClick={onClearFilters} variant="outline">
+          Сбросить все фильтры
         </Button>
       </div>
     );
   }
 
+  const currentlyVisible = Math.min(visibleProducts, products.length);
+  const hasMoreToLoad = currentlyVisible < products.length;
+
   return (
-    <div className="flex-1">
-      {bookingDates.startDate && bookingDates.endDate && (
-        <div className="mb-6 p-3 bg-primary/10 rounded-md inline-flex items-center">
-          <CalendarIcon className="h-4 w-4 mr-2 text-primary" />
-          <span className="text-sm">
-            Показаны товары, доступные с {format(bookingDates.startDate, 'dd.MM.yyyy')} по {format(bookingDates.endDate, 'dd.MM.yyyy')}
-          </span>
+    <div className="flex-1 flex flex-col">
+      <div className="mb-6 flex justify-between items-center">
+        <h2 className="text-xl font-medium">
+          Найдено товаров: <span className="text-primary">{products.length}</span>
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {products.slice(0, visibleProducts).map(product => (
+          <ProductCard 
+            key={product.id}
+            product={product}
+            bookingDates={bookingDates}
+          />
+        ))}
+      </div>
+      {hasMoreToLoad && (
+        <div className="mt-10 text-center">
+          <Button 
+            onClick={handleLoadMore} 
+            variant="outline"
+            className="px-8"
+          >
+            Показать ещё ({products.length - currentlyVisible})
+          </Button>
         </div>
       )}
-      
-      <AnimatedTransition show={true} type="fade">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <ProductCard 
-              key={product.id} 
-              product={product}
-              selectedStartDate={bookingDates.startDate}
-              selectedEndDate={bookingDates.endDate}
-            />
-          ))}
-        </div>
-      </AnimatedTransition>
     </div>
   );
 };

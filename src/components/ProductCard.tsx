@@ -1,70 +1,118 @@
 
-import { Link } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/utils/pricingUtils';
+import { Link, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ShoppingCart, CalendarIcon } from 'lucide-react';
+import ProductImage from '@/components/product/ProductImage';
 import { Product } from '@/types/product';
+import { useCartContext } from '@/hooks/useCart';
+import { toast } from 'sonner';
+import { formatPriceRub } from '@/utils/pricingUtils';
 
-interface ProductCardProps {
+type ProductCardProps = {
   product: Product;
-  selectedStartDate?: Date;
-  selectedEndDate?: Date;
-}
+  bookingDates?: {
+    startDate?: Date;
+    endDate?: Date;
+  };
+  featured?: boolean;
+};
 
-const ProductCard = ({ product, selectedStartDate, selectedEndDate }: ProductCardProps) => {
+const ProductCard = ({ product, bookingDates, featured = false }: ProductCardProps) => {
+  const navigate = useNavigate();
+  const { addToCart } = useCartContext();
+  const hasBookingDates = bookingDates?.startDate && bookingDates?.endDate;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (hasBookingDates) {
+      addToCart({
+        product,
+        quantity: 1,
+        startDate: bookingDates.startDate!,
+        endDate: bookingDates.endDate!,
+      });
+      toast.success(`Товар "${product.title}" добавлен в корзину`);
+    } else {
+      navigate(`/product/${product.id}`, {
+        state: { scrollTop: true }
+      });
+    }
+  };
+
   return (
     <Link 
-      to={`/product/${product.id}`} 
-      state={{ startDate: selectedStartDate, endDate: selectedEndDate }}
-      className="group flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-transform hover:shadow-lg hover:-translate-y-1"
+      to={`/product/${product.id}`}
+      state={{ 
+        prevPath: window.location.pathname,
+        bookingDates,
+        scrollTop: true
+      }}
+      className="group"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.title}
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-            onError={(e) => {
-              // If image fails to load, use placeholder
-              const target = e.target as HTMLImageElement;
-              target.onerror = null; // Prevent infinite loop
-              target.src = 'https://via.placeholder.com/300x200?text=No+Image';
-            }}
+      <Card className={`overflow-hidden transition-all hover:shadow-md ${
+        featured ? 'border-primary/20' : ''
+      }`}>
+        <div className="relative aspect-square overflow-hidden bg-gray-100">
+          <ProductImage 
+            image={product.image} 
+            title={product.title} 
+            className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
           />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-gray-200">
-            <span className="text-gray-400">Нет изображения</span>
-          </div>
-        )}
-        
-        <div className="absolute top-2 left-2">
-          <Badge variant="secondary" className="bg-white/90 text-black font-medium">
-            {product.category}
-          </Badge>
+          {featured && (
+            <div className="absolute top-2 left-2 bg-primary text-white text-xs font-medium px-2 py-1 rounded">
+              Популярное
+            </div>
+          )}
+          {product.status === 'out_of_stock' && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <div className="bg-white/90 text-black font-medium px-3 py-1 rounded">
+                Нет в наличии
+              </div>
+            </div>
+          )}
         </div>
-        
-        {!product.available && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <Badge variant="destructive" className="px-3 py-1.5">Забронирован</Badge>
+        <CardContent className="p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground capitalize">
+              {product.category}
+            </span>
+            {product.quantity > 0 && product.quantity <= 3 && (
+              <span className="text-xs text-amber-600 font-medium">
+                Осталось {product.quantity} шт.
+              </span>
+            )}
           </div>
-        )}
-      </div>
-      
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="mb-1 font-medium text-lg line-clamp-1">{product.title}</h3>
-        <p className="mb-4 text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-        <div className="mt-auto flex items-center justify-between">
-          <p className="font-medium">
-            {formatCurrency(product.price)}
-            <span className="text-xs text-muted-foreground"> / в сутки</span>
-          </p>
-          <Badge 
-            variant={product.available ? "outline" : "secondary"} 
-            className={product.available ? "text-green-600 border-green-200 bg-green-50" : ""}
+          <h3 className="font-medium leading-tight mb-1 group-hover:text-primary transition-colors">
+            {product.title}
+          </h3>
+          <div className="text-xs text-muted-foreground h-[40px] overflow-hidden">
+            {product.description}
+          </div>
+        </CardContent>
+        <CardFooter className="p-4 pt-0 flex items-center justify-between">
+          <div>
+            <div className="font-semibold">
+              {formatPriceRub(product.price)} / сутки
+            </div>
+          </div>
+          <Button 
+            size="sm" 
+            variant={hasBookingDates ? "default" : "outline"} 
+            className="rounded-full"
+            onClick={handleAddToCart}
+            disabled={product.status === 'out_of_stock'}
           >
-            {product.available ? "Доступен" : "Недоступен"}
-          </Badge>
-        </div>
-      </div>
+            {hasBookingDates ? (
+              <ShoppingCart className="h-4 w-4" />
+            ) : (
+              <CalendarIcon className="h-4 w-4" />
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
     </Link>
   );
 };
