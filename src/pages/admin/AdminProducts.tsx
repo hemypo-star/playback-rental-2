@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -243,7 +244,7 @@ const AdminProducts = () => {
       if (formData.description !== undefined) cleanUpdates.description = formData.description;
       if (formData.price !== undefined) cleanUpdates.price = formData.price;
       if (formData.category && formData.category.trim() !== '') cleanUpdates.category = formData.category;
-      if (formData.imageUrl && formData.imageUrl.trim() !== '') cleanUpdates.imageurl = formData.imageUrl;
+      if (formData.imageUrl && formData.imageUrl.trim() !== '') cleanUpdates.imageUrl = formData.imageUrl; // Fixed property name from imageurl to imageUrl
       if (formData.available !== undefined) cleanUpdates.available = formData.available;
       if (formData.quantity !== undefined) cleanUpdates.quantity = formData.quantity;
   
@@ -251,7 +252,7 @@ const AdminProducts = () => {
   
       if (updatedProduct) {
         toast({ title: 'Товар успешно обновлён' });
-        queryClient.invalidateQueries(['admin-products']);
+        queryClient.invalidateQueries({ queryKey: ['admin-products'] }); // Fixed: Changed from array to object with queryKey property
         setOpenDialog(false);
       }
     } catch (error) {
