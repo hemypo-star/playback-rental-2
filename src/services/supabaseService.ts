@@ -49,11 +49,11 @@ export const addCategory = async (categoryData: Partial<Category>): Promise<Cate
     // Make sure we're using imageurl for the database column
     const dbData = {
       ...categoryData,
-      imageurl: categoryData.imageUrl || categoryData.imageurl
+      imageurl: categoryData.imageUrl // Use imageUrl from categoryData
     };
     
     // Remove duplicate imageUrl if it exists since the DB uses imageurl
-    if (dbData.imageUrl) {
+    if ('imageUrl' in dbData) {
       delete dbData.imageUrl;
     }
     
@@ -76,11 +76,11 @@ export const updateCategory = async (id: string, updates: Partial<Category>): Pr
     // Make sure we're using imageurl for the database column
     const dbUpdates = {
       ...updates,
-      imageurl: updates.imageUrl || updates.imageurl
+      imageurl: updates.imageUrl // Use imageUrl from updates
     };
     
     // Remove duplicate imageUrl if it exists since the DB uses imageurl
-    if (dbUpdates.imageUrl) {
+    if ('imageUrl' in dbUpdates) {
       delete dbUpdates.imageUrl;
     }
     
@@ -147,11 +147,11 @@ export const createProduct = async (product: Partial<Product>): Promise<Product 
     // Make sure we're using imageurl for the database column
     const dbProduct = {
       ...product,
-      imageurl: product.imageUrl || product.imageurl
+      imageurl: product.imageUrl // Use imageUrl from product
     };
     
     // Remove duplicate imageUrl if it exists since the DB uses imageurl
-    if (dbProduct.imageUrl) {
+    if ('imageUrl' in dbProduct) {
       delete dbProduct.imageUrl;
     }
     
@@ -174,11 +174,11 @@ export const updateProduct = async (id: string, updates: Partial<Product>): Prom
     // Make sure we're using imageurl for the database column
     const dbUpdates = {
       ...updates,
-      imageurl: updates.imageUrl || updates.imageurl
+      imageurl: updates.imageUrl // Use imageUrl from updates
     };
     
     // Remove duplicate imageUrl if it exists since the DB uses imageurl
-    if (dbUpdates.imageUrl) {
+    if ('imageUrl' in dbUpdates) {
       delete dbUpdates.imageUrl;
     }
     
@@ -204,6 +204,29 @@ export const deleteProduct = async (id: string): Promise<boolean> => {
   } catch (error) {
     console.error('Error deleting product:', error);
     return false;
+  }
+};
+
+// Add the missing getAvailableProducts function
+export const getAvailableProducts = async (startDate: Date, endDate: Date): Promise<Product[]> => {
+  try {
+    const products = await getProducts();
+    const bookings = await getBookings();
+    
+    // Filter out products that have bookings in the requested period
+    return products.filter(product => {
+      const productBookings = bookings.filter(
+        booking => booking.productId === product.id &&
+        booking.status !== 'cancelled' &&
+        !(new Date(booking.endDate) <= startDate || new Date(booking.startDate) >= endDate)
+      );
+      
+      // If the product has quantity > number of bookings, it's still available
+      return productBookings.length < product.quantity;
+    });
+  } catch (error) {
+    console.error('Error getting available products:', error);
+    return [];
   }
 };
 
@@ -308,10 +331,11 @@ export const exportProductsToCSV = async () => {
       headers.join(','),
       ...products.map(product => 
         headers.map(header => {
-          if (typeof product[header as keyof typeof product] === 'string' && product[header as keyof typeof product].includes(',')) {
-            return `"${product[header as keyof typeof product]}"`;
+          const value = product[header as keyof typeof product];
+          if (typeof value === 'string' && value.includes(',')) {
+            return `"${value}"`;
           }
-          return product[header as keyof typeof product];
+          return value;
         }).join(',')
       )
     ];
@@ -456,6 +480,18 @@ export const getBookings = async () => {
     return data || [];
   } catch (error) {
     console.error('Error getting bookings:', error);
+    return [];
+  }
+};
+
+// Add the missing getProductBookings function
+export const getProductBookings = async (productId: string) => {
+  try {
+    const { data, error } = await supabaseServiceClient.from('bookings').select('*').eq('product_id', productId);
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error getting product bookings:', error);
     return [];
   }
 };

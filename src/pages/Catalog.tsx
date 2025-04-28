@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
@@ -48,7 +47,6 @@ const Catalog = () => {
       setSearch(locationState.search);
     }
     
-    // Reset scroll position when directed with scrollTop flag
     if (locationState?.scrollTop) {
       window.scrollTo(0, 0);
     }

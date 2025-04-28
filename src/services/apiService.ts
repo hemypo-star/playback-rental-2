@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { BookingPeriod } from '@/types/product';
 
@@ -121,13 +120,12 @@ export const getBookings = async (): Promise<BookingPeriod[]> => {
   }
 };
 
-export const getProductBookings = async (productId: string): Promise<BookingPeriod[]> => {
+export const getProductBookings = async (productId: string) => {
   try {
-    const { getProductBookings } = await import('@/services/supabaseService');
-    return await getProductBookings(productId);
+    return await supabaseService.getProductBookings(productId);
   } catch (error) {
-    console.error(`Error fetching bookings for product ${productId}:`, error);
-    return [];
+    console.error("Error fetching product bookings:", error);
+    throw error;
   }
 };
 
