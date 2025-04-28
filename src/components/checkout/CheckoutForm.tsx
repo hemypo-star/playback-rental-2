@@ -1,11 +1,10 @@
-
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { usePhoneInputMask } from "@/hooks/usePhoneInputMask";
 import { isPhoneComplete, getPhoneRequirements } from "@/utils/phoneMask";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ExclamationTriangleIcon } from 'lucide-react';
+import { AlertTriangleIcon } from 'lucide-react';
 
 const nameRegex = /^[A-Za-zА-Яа-яЁё\s\-]+$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,20 +28,17 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
   const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
   const [showValidationAlert, setShowValidationAlert] = useState(false);
   
-  // Validate all fields when form data changes
   useEffect(() => {
     validateField('name', formData.name);
     validateField('email', formData.email);
     validateField('phone', formData.phone);
     
-    // Hide validation alert when all fields are valid
     if (formData.name && formData.email && isPhoneComplete(formData.phone) &&
         nameRegex.test(formData.name) && emailRegex.test(formData.email)) {
       setShowValidationAlert(false);
     }
   }, [formData]);
 
-  // Listen for form submission attempts
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       const isValid = validateAllFields();
@@ -51,7 +47,6 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
       }
     };
 
-    // Listen for submit button clicks on the parent form
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('button') && target.closest('button')?.textContent?.includes('Оформить заказ')) {
@@ -122,7 +117,7 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
       <CardContent>
         {showValidationAlert && (
           <Alert variant="destructive" className="mb-4">
-            <ExclamationTriangleIcon className="h-4 w-4" />
+            <AlertTriangleIcon className="h-4 w-4" />
             <AlertDescription>
               Пожалуйста, заполните все обязательные поля корректно перед оформлением заказа
             </AlertDescription>
