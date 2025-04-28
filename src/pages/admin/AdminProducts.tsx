@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -116,22 +115,27 @@ const AdminProducts = () => {
   const updateProductMutation = useMutation({
     mutationFn: async (values: { id: string; product: Partial<Product> }) => {
       try {
-        let imageUrl = values.product.imageUrl || '';
-        
         if (fileForProduct) {
-          imageUrl = await supabaseService.uploadProductImage(fileForProduct);
+          const imageUrl = await supabaseService.uploadProductImage(fileForProduct);
+          values.product.imageUrl = imageUrl;
         }
         
-        return supabaseService.updateProduct(values.id, {
-          ...values.product,
-          imageUrl,
-        });
+        return supabaseService.updateProduct(values.id, values.product);
       } catch (error) {
         console.error('Error in updateProductMutation:', error);
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (!data) {
+        toast({
+          title: 'Ошибка',
+          description: 'Не удалось обновить товар',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'Товар обновлен',
@@ -234,33 +238,61 @@ const AdminProducts = () => {
     }
   };
 
-  const onSubmit = async (formData: any) => {
+  const onSubmit = async (formData: z.infer<typeof formSchema>) => {
     if (!editProduct) return;
   
     try {
       const cleanUpdates: Partial<Product> = {};
   
-      if (formData.title && formData.title.trim() !== '') cleanUpdates.title = formData.title;
-      if (formData.description !== undefined) cleanUpdates.description = formData.description;
-      if (formData.price !== undefined) cleanUpdates.price = formData.price;
-      if (formData.category && formData.category.trim() !== '') cleanUpdates.category = formData.category;
-      if (formData.imageUrl && formData.imageUrl.trim() !== '') cleanUpdates.imageUrl = formData.imageUrl; // Fixed property name from imageurl to imageUrl
-      if (formData.available !== undefined) cleanUpdates.available = formData.available;
-      if (formData.quantity !== undefined) cleanUpdates.quantity = formData.quantity;
-  
-      const updatedProduct = await supabaseService.updateProduct(editProduct.id, cleanUpdates);
-  
-      if (updatedProduct) {
-        toast({ title: 'Товар успешно обновлён' });
-        queryClient.invalidateQueries({ queryKey: ['admin-products'] }); // Fixed: Changed from array to object with queryKey property
-        setOpenDialog(false);
+      if (formData.title && formData.title.trim() !== '') {
+        cleanUpdates.title = formData.title;
       }
+      
+      if (formData.description !== undefined) {
+        cleanUpdates.description = formData.description;
+      }
+      
+      if (formData.price !== undefined) {
+        cleanUpdates.price = formData.price;
+      }
+      
+      if (formData.category && formData.category.trim() !== '') {
+        cleanUpdates.category = formData.category;
+      }
+      
+      if (formData.imageUrl && formData.imageUrl.trim() !== '') {
+        cleanUpdates.imageUrl = formData.imageUrl;
+      }
+      
+      if (formData.available !== undefined) {
+        cleanUpdates.available = formData.available;
+      }
+      
+      if (formData.quantity !== undefined) {
+        cleanUpdates.quantity = formData.quantity;
+      }
+      
+      if (Object.keys(cleanUpdates).length === 0 && !fileForProduct) {
+        toast({ 
+          title: 'Нет изменений',
+          description: 'Вы не внесли никаких изменений в товар'
+        });
+        setOpenDialog(false);
+        return;
+      }
+  
+      const updatedProduct = await updateProductMutation.mutateAsync({
+        id: editProduct.id,
+        product: cleanUpdates
+      });
     } catch (error) {
       console.error('Ошибка при обновлении товара:', error);
-      toast({ title: 'Ошибка обновления товара', variant: 'destructive' });
+      toast({ 
+        title: 'Ошибка обновления товара', 
+        variant: 'destructive' 
+      });
     }
   };
-
 
   const handleExportCSV = async () => {
     setIsExporting(true);

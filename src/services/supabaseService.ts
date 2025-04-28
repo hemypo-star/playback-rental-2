@@ -171,19 +171,39 @@ export const createProduct = async (product: Partial<Product>): Promise<Product 
 
 export const updateProduct = async (id: string, updates: Partial<Product>): Promise<Product | null> => {
   try {
-    // Make sure we're using imageurl for the database column
-    const dbUpdates = {
-      ...updates,
-      imageurl: updates.imageUrl // Use imageUrl from updates
-    };
+    // Check if there's anything to update
+    if (Object.keys(updates).length === 0) {
+      // If there are no updates, return the existing product
+      return getProductById(id);
+    }
     
-    // Remove duplicate imageUrl if it exists since the DB uses imageurl
-    if ('imageUrl' in dbUpdates) {
+    // Make sure we're using imageurl for the database column
+    const dbUpdates: Record<string, any> = {};
+    
+    // Copy all updates to dbUpdates
+    Object.keys(updates).forEach(key => {
+      const productKey = key as keyof Partial<Product>;
+      dbUpdates[key] = updates[productKey];
+    });
+    
+    // Handle the imageUrl -> imageurl mapping specifically
+    if ('imageUrl' in updates && updates.imageUrl !== undefined) {
+      dbUpdates.imageurl = updates.imageUrl;
+      // Remove the camelCase version to avoid conflicts
       delete dbUpdates.imageUrl;
     }
     
-    const { data, error } = await supabaseServiceClient.from('products').update(dbUpdates).eq('id', id).select().single();
-    if (error) throw error;
+    const { data, error } = await supabaseServiceClient
+      .from('products')
+      .update(dbUpdates)
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error updating product:', error);
+      return null;
+    }
     
     // Map imageurl to imageUrl for consistency in the frontend
     return data ? {
@@ -265,8 +285,7 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
 
 export const uploadProductImage = async (file: File): Promise<string> => {
   try {
-    // Create the bucket if it doesn't exist
-    await createBucketIfNotExists('products');
+    // We assume the bucket already exists - removing createBucketIfNotExists logic
     
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
