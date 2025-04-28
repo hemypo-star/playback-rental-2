@@ -37,15 +37,20 @@ export const getProductById = async (id: string): Promise<Product | null> => {
 
 export const createProduct = async (product: Partial<Product>): Promise<Product | null> => {
   try {
-    // Make sure we're using imageurl for the database column
+    // Make sure we're using imageurl for the database column and all required fields are present
     const dbProduct = {
-      ...product,
-      imageurl: product.imageUrl // Use imageUrl from product
+      title: product.title || '',
+      description: product.description || '',
+      price: product.price || 0,
+      category: product.category || '',
+      imageurl: product.imageUrl || '',
+      quantity: product.quantity || 1,
+      available: product.available !== undefined ? product.available : true
     };
     
-    // Remove duplicate imageUrl if it exists since the DB uses imageurl
-    if ('imageUrl' in dbProduct) {
-      delete dbProduct.imageUrl;
+    // Validate that all required fields have values
+    if (!dbProduct.title || !dbProduct.description || !dbProduct.category) {
+      throw new Error("Product title, description, and category are required fields");
     }
     
     const { data, error } = await supabaseServiceClient.from('products').insert([dbProduct]).select().single();
@@ -73,18 +78,14 @@ export const updateProduct = async (id: string, updates: Partial<Product>): Prom
     // Make sure we're using imageurl for the database column
     const dbUpdates: Record<string, any> = {};
     
-    // Copy all updates to dbUpdates
-    Object.keys(updates).forEach(key => {
-      const productKey = key as keyof Partial<Product>;
-      dbUpdates[key] = updates[productKey];
-    });
-    
-    // Handle the imageUrl -> imageurl mapping specifically
-    if ('imageUrl' in updates && updates.imageUrl !== undefined) {
-      dbUpdates.imageurl = updates.imageUrl;
-      // Remove the camelCase version to avoid conflicts
-      delete dbUpdates.imageUrl;
-    }
+    // Copy specific updated properties to dbUpdates
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.description !== undefined) dbUpdates.description = updates.description;
+    if (updates.price !== undefined) dbUpdates.price = updates.price;
+    if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.available !== undefined) dbUpdates.available = updates.available;
+    if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
+    if (updates.imageUrl !== undefined) dbUpdates.imageurl = updates.imageUrl;
     
     const { data, error } = await supabaseServiceClient
       .from('products')
@@ -150,7 +151,7 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = fileName;
     
-    // Upload the file with product_id in metadata if available
+    // Upload options with optional metadata
     const uploadOptions: { upsert: boolean; metadata?: { product_id: string } } = { 
       upsert: true 
     };

@@ -36,15 +36,17 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
 
 export const addCategory = async (categoryData: Partial<Category>): Promise<Category | null> => {
   try {
-    // Make sure we're using imageurl for the database column
+    // Make sure we're using imageurl for the database column and required fields are present
     const dbData = {
-      ...categoryData,
-      imageurl: categoryData.imageUrl // Use imageUrl from categoryData
+      name: categoryData.name || '', // Ensure name is never undefined
+      imageurl: categoryData.imageUrl || '',
+      slug: categoryData.slug,
+      description: categoryData.description
     };
     
-    // Remove duplicate imageUrl if it exists since the DB uses imageurl
-    if ('imageUrl' in dbData) {
-      delete dbData.imageUrl;
+    // Validate that required fields exist
+    if (!dbData.name) {
+      throw new Error('Category name is required');
     }
     
     const { data, error } = await supabaseServiceClient.from('categories').insert([dbData]).select().single();
@@ -64,15 +66,13 @@ export const addCategory = async (categoryData: Partial<Category>): Promise<Cate
 export const updateCategory = async (id: string, updates: Partial<Category>): Promise<Category | null> => {
   try {
     // Make sure we're using imageurl for the database column
-    const dbUpdates = {
-      ...updates,
-      imageurl: updates.imageUrl // Use imageUrl from updates
-    };
+    const dbUpdates: Record<string, any> = {};
     
-    // Remove duplicate imageUrl if it exists since the DB uses imageurl
-    if ('imageUrl' in dbUpdates) {
-      delete dbUpdates.imageUrl;
-    }
+    // Only include defined properties in dbUpdates
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.slug !== undefined) dbUpdates.slug = updates.slug;
+    if (updates.description !== undefined) dbUpdates.description = updates.description;
+    if (updates.imageUrl !== undefined) dbUpdates.imageurl = updates.imageUrl;
     
     const { data, error } = await supabaseServiceClient.from('categories').update(dbUpdates).eq('id', id).select().single();
     if (error) throw error;

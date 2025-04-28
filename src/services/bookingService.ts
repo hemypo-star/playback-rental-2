@@ -1,9 +1,9 @@
 
-import { BookingPeriod } from '@/types/product';
+import { BookingPeriod, BookingFormData } from '@/types/product';
 import { supabaseServiceClient } from './supabaseClient';
 import { getProducts } from './productService';
 
-export const getBookings = async () => {
+export const getBookings = async (): Promise<BookingPeriod[]> => {
   try {
     const { data, error } = await supabaseServiceClient.from('bookings').select(`
       id,
@@ -29,10 +29,10 @@ export const getBookings = async () => {
       customerName: booking.customer_name,
       customerEmail: booking.customer_email,
       customerPhone: booking.customer_phone,
-      status: booking.status,
+      status: booking.status as BookingPeriod['status'],
       totalPrice: booking.total_price,
-      notes: booking.notes,
-      createdAt: new Date(booking.created_at)
+      notes: booking.notes || '',
+      createdAt: new Date(booking.created_at || Date.now())
     }));
   } catch (error) {
     console.error('Error getting bookings:', error);
@@ -40,7 +40,7 @@ export const getBookings = async () => {
   }
 };
 
-export const getProductBookings = async (productId: string) => {
+export const getProductBookings = async (productId: string): Promise<BookingPeriod[]> => {
   try {
     const { data, error } = await supabaseServiceClient
       .from('bookings')
@@ -57,10 +57,10 @@ export const getProductBookings = async (productId: string) => {
       customerName: booking.customer_name,
       customerEmail: booking.customer_email,
       customerPhone: booking.customer_phone,
-      status: booking.status,
+      status: booking.status as BookingPeriod['status'],
       totalPrice: booking.total_price,
-      notes: booking.notes,
-      createdAt: new Date(booking.created_at)
+      notes: booking.notes || '',
+      createdAt: new Date(booking.created_at || Date.now())
     }));
   } catch (error) {
     console.error('Error getting product bookings:', error);
@@ -68,11 +68,24 @@ export const getProductBookings = async (productId: string) => {
   }
 };
 
-export const createBooking = async (bookingData: any) => {
+export const createBooking = async (bookingData: BookingFormData) => {
   try {
+    // Convert from BookingFormData to the database structure format
+    const dbBooking = {
+      product_id: bookingData.productId,
+      customer_name: bookingData.name,
+      customer_email: bookingData.email,
+      customer_phone: bookingData.phone,
+      start_date: bookingData.startDate.toISOString(),
+      end_date: bookingData.endDate.toISOString(),
+      status: 'pending',  // Default status for new bookings
+      total_price: 0,      // This should be calculated based on product price and duration
+      notes: bookingData.notes || ''
+    };
+    
     const { data, error } = await supabaseServiceClient
       .from('bookings')
-      .insert([bookingData])
+      .insert([dbBooking])
       .select()
       .single();
     
@@ -84,7 +97,7 @@ export const createBooking = async (bookingData: any) => {
   }
 };
 
-export const updateBookingStatus = async (bookingId: string, status: string) => {
+export const updateBookingStatus = async (bookingId: string, status: BookingPeriod['status']) => {
   try {
     const { data, error } = await supabaseServiceClient
       .from('bookings')

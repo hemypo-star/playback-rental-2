@@ -62,20 +62,50 @@ const BitrixService = {
   },
   
   // Bookings
-  createBooking: (bookingData: BookingFormData): Promise<BookingPeriod> => {
-    return createBooking(bookingData);
+  createBooking: async (bookingData: BookingFormData): Promise<BookingPeriod> => {
+    const result = await createBooking(bookingData);
+    // Map the database result to BookingPeriod type
+    return {
+      id: result.id,
+      productId: result.product_id,
+      startDate: new Date(result.start_date),
+      endDate: new Date(result.end_date),
+      customerName: result.customer_name,
+      customerEmail: result.customer_email,
+      customerPhone: result.customer_phone,
+      status: result.status as BookingPeriod['status'],
+      totalPrice: result.total_price,
+      notes: result.notes || '',
+      createdAt: new Date(result.created_at || Date.now())
+    };
   },
   
-  getBookings: (): Promise<BookingPeriod[]> => {
-    return getBookings();
+  getBookings: async (): Promise<BookingPeriod[]> => {
+    const bookings = await getBookings();
+    return bookings;
   },
   
-  getProductBookings: (productId: string): Promise<BookingPeriod[]> => {
-    return getProductBookings(productId);
+  getProductBookings: async (productId: string): Promise<BookingPeriod[]> => {
+    const bookings = await getProductBookings(productId);
+    return bookings;
   },
   
-  updateBookingStatus: (id: string, status: BookingPeriod['status']): Promise<BookingPeriod> => {
-    return updateBookingStatus(id, status);
+  updateBookingStatus: async (id: string, status: BookingPeriod['status']): Promise<BookingPeriod> => {
+    const result = await updateBookingStatus(id, status);
+    // Map the database result to BookingPeriod type
+    return {
+      id: result.id,
+      productId: result.product_id,
+      startDate: new Date(result.start_date),
+      endDate: new Date(result.end_date),
+      customerName: result.customer_name,
+      customerEmail: result.customer_email,
+      customerPhone: result.customer_phone,
+      status: result.status as BookingPeriod['status'],
+      totalPrice: result.total_price,
+      notes: result.notes || '',
+      createdAt: new Date(result.created_at || Date.now())
+    };
   },
   
   // Admin functions

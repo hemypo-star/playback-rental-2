@@ -29,21 +29,14 @@ export const createBucketIfNotExists = async (bucketName: string) => {
       
       // Create the bucket
       const { data, error } = await supabaseServiceClient.storage.createBucket(bucketName, {
-        public: true
+        public: true,
+        fileSizeLimit: 50000000, // 50MB file size limit
+        allowedMimeTypes: ['image/*'] // Allow only image uploads
       });
       
       if (error) {
         console.error(`Error creating bucket ${bucketName}:`, error);
         throw error;
-      }
-      
-      // Create public policy for the bucket to allow downloads
-      const { error: policyError } = await supabaseServiceClient.rpc('create_public_bucket_policy', {
-        bucket_name: bucketName
-      });
-      
-      if (policyError) {
-        console.error(`Error setting policy for bucket ${bucketName}:`, policyError);
       }
       
       console.log(`Created ${bucketName} bucket with public access`);
