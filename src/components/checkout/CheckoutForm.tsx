@@ -1,3 +1,4 @@
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
@@ -27,29 +28,28 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
 
   const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
   const [showValidationAlert, setShowValidationAlert] = useState(false);
+  const [formSubmitAttempted, setFormSubmitAttempted] = useState(false);
   
   useEffect(() => {
-    validateField('name', formData.name);
-    validateField('email', formData.email);
-    validateField('phone', formData.phone);
+    // Only validate fields if the user has attempted to submit the form
+    if (formSubmitAttempted) {
+      validateField('name', formData.name);
+      validateField('email', formData.email);
+      validateField('phone', formData.phone);
+    }
     
-    if (formData.name && formData.email && isPhoneComplete(formData.phone) &&
+    // Hide validation alert when all fields are valid
+    if (formSubmitAttempted && formData.name && formData.email && isPhoneComplete(formData.phone) &&
         nameRegex.test(formData.name) && emailRegex.test(formData.email)) {
       setShowValidationAlert(false);
     }
-  }, [formData]);
+  }, [formData, formSubmitAttempted]);
 
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const isValid = validateAllFields();
-      if (!isValid) {
-        setShowValidationAlert(true);
-      }
-    };
-
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('button') && target.closest('button')?.textContent?.includes('Оформить заказ')) {
+        setFormSubmitAttempted(true);
         const isValid = validateAllFields();
         if (!isValid) {
           setShowValidationAlert(true);
@@ -105,7 +105,11 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    validateField(name, value);
+    
+    // Only validate on blur if the user has already attempted to submit the form
+    if (formSubmitAttempted) {
+      validateField(name, value);
+    }
   };
 
   return (
@@ -136,12 +140,12 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
                 onChange={onInputChange}
                 placeholder="Иван Иванов"
                 onBlur={handleBlur}
-                className={errors.name ? "border-destructive" : ""}
+                className={formSubmitAttempted && errors.name ? "border-destructive" : ""}
                 autoComplete="off"
                 pattern="[A-Za-zА-Яа-яЁё\s\-]+"
                 required
               />
-              {errors.name && <span className="text-destructive text-sm">{errors.name}</span>}
+              {formSubmitAttempted && errors.name && <span className="text-destructive text-sm">{errors.name}</span>}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="email">
@@ -155,12 +159,12 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
                 onChange={onInputChange}
                 placeholder="email@example.com"
                 onBlur={handleBlur}
-                className={errors.email ? "border-destructive" : ""}
+                className={formSubmitAttempted && errors.email ? "border-destructive" : ""}
                 autoComplete="off"
                 pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
                 required
               />
-              {errors.email && <span className="text-destructive text-sm">{errors.email}</span>}
+              {formSubmitAttempted && errors.email && <span className="text-destructive text-sm">{errors.email}</span>}
             </div>
           </div>
           <div className="space-y-2">
@@ -176,12 +180,12 @@ const CheckoutForm = ({ formData, onInputChange }: CheckoutFormProps) => {
               onPaste={handlePhonePaste}
               placeholder="+7 (___) ___-__-__"
               onBlur={handleBlur}
-              className={errors.phone ? "border-destructive" : ""}
+              className={formSubmitAttempted && errors.phone ? "border-destructive" : ""}
               autoComplete="off"
               maxLength={18}
               required
             />
-            {errors.phone && <span className="text-destructive text-sm">{errors.phone}</span>}
+            {formSubmitAttempted && errors.phone && <span className="text-destructive text-sm">{errors.phone}</span>}
           </div>
         </div>
       </CardContent>
