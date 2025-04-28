@@ -28,12 +28,11 @@ const ProductCard = ({ product, bookingDates, featured = false }: ProductCardPro
     e.stopPropagation();
     
     if (hasBookingDates) {
-      addToCart({
-        ...product,
-        quantity: 1,
-        startDate: bookingDates.startDate!,
-        endDate: bookingDates.endDate!,
-      });
+      addToCart(
+        product,
+        bookingDates.startDate,
+        bookingDates.endDate
+      );
       toast.success(`Товар "${product.title}" добавлен в корзину`);
     } else {
       navigate(`/product/${product.id}`, {
