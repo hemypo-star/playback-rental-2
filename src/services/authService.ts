@@ -1,11 +1,78 @@
 
-export const login = async (username: string, password: string) => {
-  if (username === 'admin' && password === 'admin123') {
-    localStorage.setItem('auth_token', 'demo_token');
-    localStorage.setItem('user', JSON.stringify({ username: 'admin', role: 'admin' }));
-    return { success: true, token: 'demo_token' };
+import { supabaseServiceClient } from './supabaseClient';
+
+export const login = async (email: string, password: string) => {
+  try {
+    const { data, error } = await supabaseServiceClient.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    localStorage.setItem('auth_token', data.session?.access_token || '');
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+    return data;
+  } catch (error: any) {
+    console.error('Error during login:', error.message);
+    throw error;
   }
-  return { success: false };
+};
+
+export const signupuser = async (email: string, password: string) => {
+  try {
+    const { data, error } = await supabaseServiceClient.auth.signUp({
+      email: email,
+      password: password,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    localStorage.setItem('auth_token', data.session?.access_token || '');
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+    return data;
+  } catch (error: any) {
+    console.error('Error during signup:', error.message);
+    throw error;
+  }
+};
+
+export const forgotPassword = async (email: string) => {
+  try {
+    const { data, error } = await supabaseServiceClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Error during forgot password:', error.message);
+    throw error;
+  }
+};
+
+export const resetPassword = async (password: string) => {
+  try {
+    const { data, error } = await supabaseServiceClient.auth.updateUser({ password: password });
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Error during reset password:', error.message);
+    throw error;
+  }
 };
 
 export const logout = () => {

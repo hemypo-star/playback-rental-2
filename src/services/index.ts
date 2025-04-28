@@ -1,11 +1,14 @@
 
-// Export all services individually instead of re-exporting everything
+// Export services from individual modules
 export * from './productService';
 export * from './categoryService';
 export * from './bookingService';
 export * from './authService';
+export * from './settingsService';
+export * from './supabaseClient';
 
-// Export the supabase service explicitly
+// Deprecated: Use individual service imports instead
+// This re-export is maintained for backward compatibility
 export { 
   getProducts,
   getProductById,
@@ -15,9 +18,36 @@ export {
   uploadProductImage,
   exportProductsToCSV,
   importProductsFromCSV
-} from './supabaseService';
+} from './productService';
 
-// Export the API service explicitly
 export {
-  // Add any specific exports from apiService if needed
-} from './apiService';
+  getCategories,
+  getCategoryById,
+  addCategory,
+  updateCategory,
+  deleteCategory,
+  uploadCategoryImage
+} from './categoryService';
+
+export {
+  getBookings,
+  getProductBookings,
+  createBooking,
+  updateBookingStatus,
+  getAvailableProducts
+} from './bookingService';
+
+export {
+  login,
+  signupuser,
+  forgotPassword,
+  resetPassword,
+  logout,
+  checkAuth,
+  getCurrentUser
+} from './authService';
+
+export {
+  getSettings,
+  updateSettings
+} from './settingsService';

@@ -1,51 +1,7 @@
 
-import { createClient } from '@supabase/supabase-js';
-import { isDateRangeAvailable } from '@/utils/dateUtils';
 import { BookingPeriod } from '@/types/product';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xwylatyyhqyfwsxfwzmn.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4';
-
-const supabaseServiceClient = createClient(supabaseUrl, supabaseKey);
-
-export const getAvailableProducts = async (startDate: Date, endDate: Date) => {
-  try {
-    const { data: products } = await supabaseServiceClient.from('products').select('*');
-    
-    if (!products) return [];
-    
-    const { data: bookings } = await supabaseServiceClient.from('bookings').select('*').not('status', 'eq', 'cancelled');
-    
-    if (!bookings) return products;
-    
-    console.log("Filtering products for availability between", startDate, "and", endDate);
-    console.log("Total bookings in system:", bookings.length);
-    
-    const availableProducts = products.filter(product => {
-      if (!product.available) return false;
-      
-      const productBookings = bookings.filter(booking => booking.product_id === product.id);
-      
-      if (productBookings.length === 0) {
-        return true;
-      }
-      
-      const productBookedRanges = productBookings.map(booking => ({
-        start: new Date(booking.start_date),
-        end: new Date(booking.end_date)
-      }));
-      
-      return isDateRangeAvailable(startDate, endDate, productBookedRanges);
-    });
-    
-    console.log("Available products count:", availableProducts.length);
-    
-    return availableProducts;
-  } catch (error) {
-    console.error('Error getting available products:', error);
-    return [];
-  }
-};
+import { supabaseServiceClient } from './supabaseClient';
+import { getProducts } from './productService';
 
 export const getBookings = async () => {
   try {
@@ -142,5 +98,41 @@ export const updateBookingStatus = async (bookingId: string, status: string) => 
   } catch (error) {
     console.error('Error updating booking status:', error);
     throw error;
+  }
+};
+
+export const getAvailableProducts = async (startDate: Date, endDate: Date) => {
+  try {
+    const products = await getProducts();
+    const bookings = await getBookings();
+    
+    console.log("Filtering products for availability between", startDate, "and", endDate);
+    console.log("Total bookings in system:", bookings.length);
+    
+    const availableProducts = products.filter(product => {
+      if (!product.available) return false;
+      
+      const productBookings = bookings.filter(booking => booking.productId === product.id);
+      
+      if (productBookings.length === 0) {
+        return true;
+      }
+      
+      const productBookedRanges = productBookings.map(booking => ({
+        start: new Date(booking.startDate),
+        end: new Date(booking.endDate)
+      }));
+      
+      // Import this function dynamically to avoid circular dependencies
+      const { isDateRangeAvailable } = require('@/utils/dateUtils');
+      return isDateRangeAvailable(startDate, endDate, productBookedRanges);
+    });
+    
+    console.log("Available products count:", availableProducts.length);
+    
+    return availableProducts;
+  } catch (error) {
+    console.error('Error getting available products:', error);
+    return [];
   }
 };

@@ -1,83 +1,115 @@
-import { createClient } from '@supabase/supabase-js';
+
 import { Product } from '@/types/product';
+import { supabaseServiceClient } from './supabaseClient';
+import { getProductImageUrl } from '@/utils/imageUtils';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xwylatyyhqyfwsxfwzmn.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4';
-
-const supabaseServiceClient = createClient(supabaseUrl, supabaseKey);
-
-export const getProducts = async () => {
+export const getProducts = async (): Promise<Product[]> => {
   try {
     const { data, error } = await supabaseServiceClient.from('products').select('*');
     if (error) throw error;
-    return data || [];
+    
+    // Map imageurl to imageUrl for consistency in the frontend
+    return data?.map(product => ({
+      ...product,
+      imageUrl: product.imageurl
+    })) || [];
   } catch (error) {
     console.error('Error getting products:', error);
     return [];
   }
 };
 
-export const getProductById = async (id: string) => {
+export const getProductById = async (id: string): Promise<Product | null> => {
   try {
     const { data, error } = await supabaseServiceClient.from('products').select('*').eq('id', id).single();
     if (error) throw error;
-    return data || null;
+    
+    // Map imageurl to imageUrl for consistency in the frontend
+    return data ? {
+      ...data,
+      imageUrl: data.imageurl
+    } : null;
   } catch (error) {
     console.error('Error getting product by ID:', error);
     return null;
   }
 };
 
-export const createProduct = async (product: Partial<Product>) => {
+export const createProduct = async (product: Partial<Product>): Promise<Product | null> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('products').insert([product]).select().single();
+    // Make sure we're using imageurl for the database column
+    const dbProduct = {
+      ...product,
+      imageurl: product.imageUrl // Use imageUrl from product
+    };
+    
+    // Remove duplicate imageUrl if it exists since the DB uses imageurl
+    if ('imageUrl' in dbProduct) {
+      delete dbProduct.imageUrl;
+    }
+    
+    const { data, error } = await supabaseServiceClient.from('products').insert([dbProduct]).select().single();
     if (error) throw error;
-    return data;
+    
+    // Map imageurl to imageUrl for consistency in the frontend
+    return data ? {
+      ...data,
+      imageUrl: data.imageurl
+    } : null;
   } catch (error) {
     console.error('Error creating product:', error);
     return null;
   }
 };
 
-export const updateProduct = async (id: string, updates: Partial<Product>) => {
+export const updateProduct = async (id: string, updates: Partial<Product>): Promise<Product | null> => {
   try {
-    const { data: existingProduct, error: fetchError } = await supabaseServiceClient
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) throw fetchError;
-    if (!existingProduct) throw new Error('Product not found');
-
-    const updateData = Object.entries(updates).reduce<Record<keyof Product, any>>((acc, [key, value]) => {
-      const productKey = key as keyof Product;
-      if (value !== undefined && value !== null && value !== existingProduct[productKey]) {
-        acc[productKey] = value;
-      }
-      return acc;
-    }, {} as Record<keyof Product, any>);
-
-    if (Object.keys(updateData).length === 0) {
-      return existingProduct;
+    // Check if there's anything to update
+    if (Object.keys(updates).length === 0) {
+      // If there are no updates, return the existing product
+      return getProductById(id);
     }
-
+    
+    // Make sure we're using imageurl for the database column
+    const dbUpdates: Record<string, any> = {};
+    
+    // Copy all updates to dbUpdates
+    Object.keys(updates).forEach(key => {
+      const productKey = key as keyof Partial<Product>;
+      dbUpdates[key] = updates[productKey];
+    });
+    
+    // Handle the imageUrl -> imageurl mapping specifically
+    if ('imageUrl' in updates && updates.imageUrl !== undefined) {
+      dbUpdates.imageurl = updates.imageUrl;
+      // Remove the camelCase version to avoid conflicts
+      delete dbUpdates.imageUrl;
+    }
+    
     const { data, error } = await supabaseServiceClient
       .from('products')
-      .update(updateData)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single();
-
-    if (error) throw error;
-    return data;
+      
+    if (error) {
+      console.error('Error updating product:', error);
+      return null;
+    }
+    
+    // Map imageurl to imageUrl for consistency in the frontend
+    return data ? {
+      ...data,
+      imageUrl: data.imageurl
+    } : null;
   } catch (error) {
     console.error('Error updating product:', error);
     return null;
   }
 };
 
-export const deleteProduct = async (id: string) => {
+export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
     const { error } = await supabaseServiceClient.from('products').delete().eq('id', id);
     if (error) throw error;
@@ -88,17 +120,72 @@ export const deleteProduct = async (id: string) => {
   }
 };
 
+// Add the missing getAvailableProducts function
+export const getAvailableProducts = async (startDate: Date, endDate: Date): Promise<Product[]> => {
+  try {
+    const products = await getProducts();
+    const { getBookings } = await import('./bookingService');
+    const bookings = await getBookings();
+    
+    // Filter out products that have bookings in the requested period
+    return products.filter(product => {
+      const productBookings = bookings.filter(
+        booking => booking.productId === product.id &&
+        booking.status !== 'cancelled' &&
+        !(new Date(booking.endDate) <= startDate || new Date(booking.startDate) >= endDate)
+      );
+      
+      // If the product has quantity > number of bookings, it's still available
+      return productBookings.length < product.quantity;
+    });
+  } catch (error) {
+    console.error('Error getting available products:', error);
+    return [];
+  }
+};
+
 export const uploadProductImage = async (file: File, productId?: string): Promise<string> => {
   try {
-    const { uploadProductImage: supabaseUploadProductImage } = await import('@/utils/imageUtils');
-    const fileName = await supabaseUploadProductImage(file, productId);
-    return fileName;
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = fileName;
+    
+    // Upload the file with product_id in metadata if available
+    const uploadOptions: { upsert: boolean; metadata?: { product_id: string } } = { 
+      upsert: true 
+    };
+    
+    // Add metadata if productId is provided
+    if (productId) {
+      uploadOptions.metadata = { 
+        product_id: productId 
+      };
+    }
+    
+    // Upload the file
+    const { error: uploadError } = await supabaseServiceClient.storage
+      .from('products')
+      .upload(filePath, file, uploadOptions);
+
+    if (uploadError) {
+      console.error('Error uploading product image:', uploadError);
+      throw uploadError;
+    }
+
+    // Get the public URL
+    const { data: publicUrlData } = supabaseServiceClient.storage
+      .from('products')
+      .getPublicUrl(filePath);
+
+    console.log('Successfully uploaded product image, public URL:', publicUrlData.publicUrl);
+    return publicUrlData.publicUrl;
   } catch (error) {
     console.error('Error in uploadProductImage:', error);
     throw error;
   }
 };
 
+// CSV operations
 export const exportProductsToCSV = async () => {
   try {
     const products = await getProducts();
@@ -108,10 +195,11 @@ export const exportProductsToCSV = async () => {
       headers.join(','),
       ...products.map(product => 
         headers.map(header => {
-          if (typeof product[header as keyof typeof product] === 'string' && product[header as keyof typeof product].includes(',')) {
-            return `"${product[header as keyof typeof product]}"`;
+          const value = product[header as keyof typeof product];
+          if (typeof value === 'string' && value.includes(',')) {
+            return `"${value}"`;
           }
-          return product[header as keyof typeof product];
+          return value;
         }).join(',')
       )
     ];

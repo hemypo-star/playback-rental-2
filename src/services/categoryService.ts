@@ -1,21 +1,17 @@
-import { createClient } from '@supabase/supabase-js';
+
 import { Category } from '@/types/product';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xwylatyyhqyfwsxfwzmn.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4';
-
-const supabaseServiceClient = createClient(supabaseUrl, supabaseKey);
+import { supabaseServiceClient, createBucketIfNotExists } from './supabaseClient';
 
 export const getCategories = async (): Promise<Category[]> => {
   try {
     const { data, error } = await supabaseServiceClient.from('categories').select('*');
     if (error) throw error;
     
-    // Map imageurl to imageUrl for consistency
-    return (data || []).map(category => ({
+    // Map imageurl to imageUrl for consistency in the frontend
+    return data?.map(category => ({
       ...category,
-      imageUrl: category.imageurl,
-    }));
+      imageUrl: category.imageurl
+    })) || [];
   } catch (error) {
     console.error('Error getting categories:', error);
     return [];
@@ -26,7 +22,12 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
   try {
     const { data, error } = await supabaseServiceClient.from('categories').select('*').eq('id', id).single();
     if (error) throw error;
-    return data;
+    
+    // Map imageurl to imageUrl for consistency in the frontend
+    return data ? {
+      ...data,
+      imageUrl: data.imageurl
+    } : null;
   } catch (error) {
     console.error('Error getting category by ID:', error);
     return null;
@@ -35,9 +36,25 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
 
 export const addCategory = async (categoryData: Partial<Category>): Promise<Category | null> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('categories').insert([categoryData]).select().single();
+    // Make sure we're using imageurl for the database column
+    const dbData = {
+      ...categoryData,
+      imageurl: categoryData.imageUrl // Use imageUrl from categoryData
+    };
+    
+    // Remove duplicate imageUrl if it exists since the DB uses imageurl
+    if ('imageUrl' in dbData) {
+      delete dbData.imageUrl;
+    }
+    
+    const { data, error } = await supabaseServiceClient.from('categories').insert([dbData]).select().single();
     if (error) throw error;
-    return data;
+    
+    // Map imageurl to imageUrl for consistency in the frontend
+    return data ? {
+      ...data,
+      imageUrl: data.imageurl
+    } : null;
   } catch (error) {
     console.error('Error adding category:', error);
     return null;
@@ -46,9 +63,25 @@ export const addCategory = async (categoryData: Partial<Category>): Promise<Cate
 
 export const updateCategory = async (id: string, updates: Partial<Category>): Promise<Category | null> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('categories').update(updates).eq('id', id).select().single();
+    // Make sure we're using imageurl for the database column
+    const dbUpdates = {
+      ...updates,
+      imageurl: updates.imageUrl // Use imageUrl from updates
+    };
+    
+    // Remove duplicate imageUrl if it exists since the DB uses imageurl
+    if ('imageUrl' in dbUpdates) {
+      delete dbUpdates.imageUrl;
+    }
+    
+    const { data, error } = await supabaseServiceClient.from('categories').update(dbUpdates).eq('id', id).select().single();
     if (error) throw error;
-    return data;
+    
+    // Map imageurl to imageUrl for consistency in the frontend
+    return data ? {
+      ...data,
+      imageUrl: data.imageurl
+    } : null;
   } catch (error) {
     console.error('Error updating category:', error);
     return null;
@@ -68,42 +101,29 @@ export const deleteCategory = async (id: string): Promise<boolean> => {
 
 export const uploadCategoryImage = async (file: File): Promise<string> => {
   try {
+    // Create the bucket if it doesn't exist
+    await createBucketIfNotExists('categories');
+    
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    // First check if the categories bucket exists, if not create it
-    const { data: buckets } = await supabaseServiceClient.storage.listBuckets();
-    const categoriesBucketExists = buckets?.some(bucket => bucket.name === 'categories');
+    const filePath = fileName;
     
-    if (!categoriesBucketExists) {
-      console.log('Categories bucket not found, creating it');
-      await supabaseServiceClient.storage.createBucket('categories', {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB limit
-      });
-    } else {
-      // Ensure bucket is public
-      await supabaseServiceClient.storage.updateBucket('categories', {
-        public: true,
-        fileSizeLimit: 5242880,
-      });
-    }
-    
-    const { error } = await supabaseServiceClient.storage
+    // Upload the file
+    const { error: uploadError } = await supabaseServiceClient.storage
       .from('categories')
       .upload(filePath, file, { upsert: true });
 
-    if (error) {
-      console.error('Error uploading category image:', error);
-      throw error;
+    if (uploadError) {
+      console.error('Error uploading category image:', uploadError);
+      throw uploadError;
     }
 
+    // Get the public URL
     const { data: publicUrlData } = supabaseServiceClient.storage
       .from('categories')
       .getPublicUrl(filePath);
 
-    console.log('Successfully uploaded image, public URL:', publicUrlData.publicUrl);
+    console.log('Successfully uploaded category image, public URL:', publicUrlData.publicUrl);
     return publicUrlData.publicUrl;
   } catch (error) {
     console.error('Error in uploadCategoryImage:', error);

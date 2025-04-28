@@ -1,6 +1,8 @@
 
 // This is a wrapper around our Supabase service to maintain backward compatibility
-import * as supabaseService from './supabaseService';
+import { getProducts, getProductById, getBookings, getCategories, 
+         getProductBookings, createBooking, updateBookingStatus, 
+         exportProductsToCSV, importProductsFromCSV } from './index';
 import { Product, BookingPeriod, Category, BookingFormData } from "@/types/product";
 
 type ProductFilterParams = {
@@ -11,7 +13,7 @@ type ProductFilterParams = {
 const BitrixService = {
   // Products
   getProducts: async (params?: ProductFilterParams): Promise<Product[]> => {
-    const products = await supabaseService.getProducts();
+    const products = await getProducts();
     
     if (!params) return products;
     
@@ -33,13 +35,13 @@ const BitrixService = {
   },
   
   getProductById: (id: string): Promise<Product> => {
-    return supabaseService.getProductById(id);
+    return getProductById(id);
   },
   
   // Get available products for a specific date range
   getAvailableProducts: async (startDate: Date, endDate: Date): Promise<Product[]> => {
-    const products = await supabaseService.getProducts();
-    const bookings = await supabaseService.getBookings();
+    const products = await getProducts();
+    const bookings = await getBookings();
     
     // Filter out products that have bookings in the requested period
     return products.filter(product => {
@@ -56,33 +58,33 @@ const BitrixService = {
   
   // Categories
   getCategories: (): Promise<Category[]> => {
-    return supabaseService.getCategories();
+    return getCategories();
   },
   
   // Bookings
   createBooking: (bookingData: BookingFormData): Promise<BookingPeriod> => {
-    return supabaseService.createBooking(bookingData);
+    return createBooking(bookingData);
   },
   
   getBookings: (): Promise<BookingPeriod[]> => {
-    return supabaseService.getBookings();
+    return getBookings();
   },
   
   getProductBookings: (productId: string): Promise<BookingPeriod[]> => {
-    return supabaseService.getProductBookings(productId);
+    return getProductBookings(productId);
   },
   
   updateBookingStatus: (id: string, status: BookingPeriod['status']): Promise<BookingPeriod> => {
-    return supabaseService.updateBookingStatus(id, status);
+    return updateBookingStatus(id, status);
   },
   
   // Admin functions
   exportProductsToCSV: (): Promise<string> => {
-    return supabaseService.exportProductsToCSV();
+    return exportProductsToCSV();
   },
   
   importProductsFromCSV: (csvContent: string): Promise<Product[]> => {
-    return supabaseService.importProductsFromCSV(csvContent);
+    return importProductsFromCSV(csvContent);
   }
 };
 
