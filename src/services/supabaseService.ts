@@ -233,12 +233,12 @@ export const getAvailableProducts = async (startDate: Date, endDate: Date): Prom
 // File uploads
 export const uploadCategoryImage = async (file: File): Promise<string> => {
   try {
-    // Ensure the storage bucket exists
-    await ensureBucketExists('categories');
-
+    // Create the bucket if it doesn't exist
+    await createBucketIfNotExists('categories');
+    
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const filePath = fileName;
     
     // Upload the file
     const { error: uploadError } = await supabaseServiceClient.storage
@@ -265,12 +265,12 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
 
 export const uploadProductImage = async (file: File): Promise<string> => {
   try {
-    // Ensure the storage bucket exists
-    await ensureBucketExists('products');
-
+    // Create the bucket if it doesn't exist
+    await createBucketIfNotExists('products');
+    
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const filePath = fileName;
     
     // Upload the file
     const { error: uploadError } = await supabaseServiceClient.storage
@@ -295,28 +295,63 @@ export const uploadProductImage = async (file: File): Promise<string> => {
   }
 };
 
-// Utility to ensure bucket exists
-const ensureBucketExists = async (bucketName: string) => {
+// Utility to properly create a bucket with public access
+const createBucketIfNotExists = async (bucketName: string) => {
   try {
-    // Check if bucket exists
-    const { data: buckets } = await supabaseServiceClient.storage.listBuckets();
+    // Check if the bucket exists
+    const { data: buckets, error: listError } = await supabaseServiceClient.storage.listBuckets();
+    
+    if (listError) {
+      console.error(`Error checking if bucket ${bucketName} exists:`, listError);
+      throw listError;
+    }
+    
     const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
     
     if (!bucketExists) {
       console.log(`${bucketName} bucket not found, creating it`);
-      await supabaseServiceClient.storage.createBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB limit
+      
+      // Create the bucket
+      const { data, error } = await supabaseServiceClient.storage.createBucket(bucketName, {
+        public: true
       });
+      
+      if (error) {
+        console.error(`Error creating bucket ${bucketName}:`, error);
+        throw error;
+      }
+      
+      // Create public policy for the bucket to allow downloads
+      const { error: policyError } = await supabaseServiceClient.rpc('create_public_bucket_policy', {
+        bucket_name: bucketName
+      });
+      
+      if (policyError) {
+        console.error(`Error setting policy for bucket ${bucketName}:`, policyError);
+      }
+      
+      console.log(`Created ${bucketName} bucket with public access`);
     } else {
-      // Ensure bucket is public
-      await supabaseServiceClient.storage.updateBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB limit
-      });
+      console.log(`${bucketName} bucket already exists`);
     }
   } catch (error) {
     console.error(`Error ensuring bucket ${bucketName} exists:`, error);
+    throw error;
+  }
+};
+
+// Utility to create storage policies (we'll call this function once through RPC)
+const createPublicPolicy = async (bucketName: string) => {
+  try {
+    // Make sure bucket is public
+    await supabaseServiceClient.storage.updateBucket(bucketName, {
+      public: true
+    });
+    console.log(`Updated ${bucketName} bucket to be public`);
+    
+    return true;
+  } catch (error) {
+    console.error(`Error creating public policy for ${bucketName}:`, error);
     throw error;
   }
 };

@@ -77,16 +77,21 @@ const AdminProducts = () => {
 
   const createProductMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      let imageUrl = values.imageUrl || '';
-      
-      if (fileForProduct) {
-        imageUrl = await supabaseService.uploadProductImage(fileForProduct);
+      try {
+        let imageUrl = values.imageUrl || '';
+        
+        if (fileForProduct) {
+          imageUrl = await supabaseService.uploadProductImage(fileForProduct);
+        }
+        
+        return supabaseService.createProduct({
+          ...values,
+          imageUrl,
+        });
+      } catch (error) {
+        console.error('Error in createProductMutation:', error);
+        throw error;
       }
-      
-      return supabaseService.createProduct({
-        ...values,
-        imageUrl,
-      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -109,16 +114,21 @@ const AdminProducts = () => {
 
   const updateProductMutation = useMutation({
     mutationFn: async (values: { id: string; product: Partial<Product> }) => {
-      let imageUrl = values.product.imageUrl || '';
-      
-      if (fileForProduct) {
-        imageUrl = await supabaseService.uploadProductImage(fileForProduct);
+      try {
+        let imageUrl = values.product.imageUrl || '';
+        
+        if (fileForProduct) {
+          imageUrl = await supabaseService.uploadProductImage(fileForProduct);
+        }
+        
+        return supabaseService.updateProduct(values.id, {
+          ...values.product,
+          imageUrl,
+        });
+      } catch (error) {
+        console.error('Error in updateProductMutation:', error);
+        throw error;
       }
-      
-      return supabaseService.updateProduct(values.id, {
-        ...values.product,
-        imageUrl,
-      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -169,7 +179,6 @@ const AdminProducts = () => {
   const handleAddCategory = async (payload: { name: string; slug: string; imageUrl?: string }) => {
     setIsAddingCategory(true);
     try {
-      // Upload the image file if it exists
       let imageUrl = payload.imageUrl;
       if (fileForCategory) {
         imageUrl = await supabaseService.uploadCategoryImage(fileForCategory);
@@ -240,7 +249,6 @@ const AdminProducts = () => {
     try {
       const csvContent = await supabaseService.exportProductsToCSV();
       
-      // Create a blob and download link
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');

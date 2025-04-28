@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Product } from '@/types/product';
 
@@ -64,43 +63,8 @@ export const deleteProduct = async (id: string) => {
 
 export const uploadProductImage = async (file: File): Promise<string> => {
   try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    // First check if the products bucket exists, if not create it
-    const { data: buckets } = await supabaseServiceClient.storage.listBuckets();
-    const productsBucketExists = buckets?.some(bucket => bucket.name === 'products');
-    
-    if (!productsBucketExists) {
-      console.log('Products bucket not found, creating it');
-      await supabaseServiceClient.storage.createBucket('products', {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB limit
-      });
-    } else {
-      // Ensure bucket is public
-      await supabaseServiceClient.storage.updateBucket('products', {
-        public: true,
-        fileSizeLimit: 5242880,
-      });
-    }
-    
-    const { error } = await supabaseServiceClient.storage
-      .from('products')
-      .upload(filePath, file, { upsert: true });
-
-    if (error) {
-      console.error('Error uploading product image:', error);
-      throw error;
-    }
-
-    const { data: publicUrlData } = supabaseServiceClient.storage
-      .from('products')
-      .getPublicUrl(filePath);
-
-    console.log('Successfully uploaded image, public URL:', publicUrlData.publicUrl);
-    return publicUrlData.publicUrl;
+    const { uploadProductImage: supabaseUploadProductImage } = await import('@/services/supabaseService');
+    return await supabaseUploadProductImage(file);
   } catch (error) {
     console.error('Error in uploadProductImage:', error);
     throw error;
