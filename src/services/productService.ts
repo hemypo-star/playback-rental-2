@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { Product } from '@/types/product';
 
@@ -50,7 +51,8 @@ export const updateProduct = async (id: string, updates: Partial<Product>) => {
     if (fetchError) throw fetchError;
     if (!existingProduct) throw new Error('Product not found');
 
-    const updateData = Object.entries(updates).reduce((acc, [key, value]) => {
+    // Fix: Explicitly specify the correct type for the accumulator
+    const updateData = Object.entries(updates).reduce<Partial<Product>>((acc, [key, value]) => {
       if (value !== undefined && value !== null && value !== existingProduct[key as keyof Product]) {
         acc[key as keyof Product] = value;
       }
