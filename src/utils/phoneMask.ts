@@ -1,6 +1,6 @@
 
 /**
- * Форматирует строку в формат телефона "+7 (999) 999-99-99"
+ * Форматирует строку в формат телефона "+7 (XXX) XXX-XX-XX"
  * @param value чистое числовое значение
  */
 export const formatPhone = (value: string) => {
@@ -11,11 +11,11 @@ export const formatPhone = (value: string) => {
   // Добавляем пробел и скобку после +7
   result += " (";
 
-  // Форматируем ровно 9 цифр после +7
+  // Форматируем ровно 10 цифр после +7
   if (digits.length >= 1) result += digits.substring(0, 3);
   if (digits.length >= 4) result += ") " + digits.substring(3, 6);
   if (digits.length >= 7) result += "-" + digits.substring(6, 8);
-  if (digits.length >= 9) result += "-" + digits.substring(8, 9);
+  if (digits.length >= 9) result += "-" + digits.substring(8, 10);
 
   return result;
 };
@@ -33,7 +33,7 @@ export const cleanPhoneInput = (input: string) => {
     digits = digits.substring(1);
   }
   
-  // Оставляем ровно 9 цифр после +7
-  return digits.substring(0, 9);
+  // Оставляем ровно 10 цифр после +7
+  return digits.substring(0, 10);
 };
 
