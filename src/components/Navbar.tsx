@@ -72,8 +72,10 @@ const Navbar = () => {
               <a href="https://t.me/yourcompany" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                 <Send className="h-4 w-4" />
               </a>
-              <a href="https://vk.com/yourcompany" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-                <Facebook className="h-4 w-4" />
+              <a href="https://vk.com/playbackkem" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                    <path d="M12.001 2C6.478 2 2 6.478 2 12s4.478 10 10.001 10C17.523 22 22 17.522 22 12S17.523 2 12.001 2zm5.996 14.564h-1.548c-.649 0-.843-.526-2.055-1.726-1.039-1.03-1.484-.877-1.748-.877-.289 0-.371.082-.371.472v1.342c0 .338-.099.568-.89.568-1.592 0-3.415-1.125-4.634-3.24-1.278-2.204-1.487-3.864-1.487-3.864s-.049-.407.254-.407h1.657c.371 0 .497.18.624.478.582 1.38 1.58 3.208 1.907 3.449.371.289.541.239.541-.17v-1.337c-.118-.847-.712-.912-.712-1.232 0-.144.13-.338.396-.338h2.572c.326 0 .443.131.443.452v2.17c0 .225.097.303.312.303.178 0 .487-.131.944-.576 1.332-1.324 2.324-3.448 2.324-3.448s.078-.18.223-.18h1.688c.293 0 .381.177.305.406-.129.404-1.38 2.828-3.013 4.303-.299.275-.422.422 0 .793.305.258 1.001.939 1.455 1.547.396.539.762 1.043 1.038 1.445.221.332.064.589-.32.589z"/>
+                  </svg>
               </a>
             </div>
 
