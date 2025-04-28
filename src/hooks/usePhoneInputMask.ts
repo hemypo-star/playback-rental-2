@@ -9,26 +9,41 @@ import { formatPhone, cleanPhoneInput } from "@/utils/phoneMask";
 export const usePhoneInputMask = (onMaskedChange: (value: string) => void) => {
   const handlePhoneChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      // Удаляем все нецифры кроме +7
-      let input = e.target.value;
-      // очистим так, чтобы +7 не пропало, но цифры дальше шли без мусора
+      // Получаем текущее значение из поля
+      const input = e.target.value;
+      
+      // Очищаем так, чтобы +7 не пропало, но цифры дальше шли без мусора
       const cleanInput = cleanPhoneInput(input);
+      
+      // Форматируем согласно маске "+7 (XXX) XXX-XX-XX"
       const masked = formatPhone(cleanInput);
+      
+      // Передаем отформатированное значение в родительский компонент
       onMaskedChange(masked);
     },
     [onMaskedChange]
   );
-  // Запрет на удаление +7
+  
+  // Обработка вставки из буфера обмена
   const handlePhonePaste = useCallback(
     (e: React.ClipboardEvent<HTMLInputElement>) => {
-      let pasted = e.clipboardData.getData("Text");
-      // Чистим вставленное
+      // Получаем вставленный текст
+      const pasted = e.clipboardData.getData("Text");
+      
+      // Очищаем вставленный текст
       const clean = cleanPhoneInput(pasted);
+      
+      // Форматируем согласно маске
       const masked = formatPhone(clean);
+      
+      // Передаем отформатированное значение
       onMaskedChange(masked);
+      
+      // Предотвращаем стандартную вставку
       e.preventDefault();
     },
     [onMaskedChange]
   );
+  
   return { handlePhoneChange, handlePhonePaste };
 };

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -6,6 +7,7 @@ import {
   ShieldCheckIcon, 
   TrashIcon,
   Clock,
+  AlertTriangleIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,16 +23,18 @@ import {
 import { formatDateRange } from '@/utils/dateUtils';
 import { useCartContext } from '@/hooks/useCart';
 import { createBooking } from '@/services/apiService';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import BookingCalendar from '@/components/BookingCalendar';
 import { BookingPeriod } from '@/types/product';
 import { calculateRentalPrice, calculateRentalDetails, formatCurrency } from '@/utils/pricingUtils';
+import { isPhoneComplete } from '@/utils/phoneMask';
 import CartList from '@/components/checkout/CartList';
 import CartRentalPeriodEditor from '@/components/checkout/CartRentalPeriodEditor';
 import CheckoutForm from '@/components/checkout/CheckoutForm';
 import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
 import CheckoutSuccess from '@/components/checkout/CheckoutSuccess';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Checkout = () => {
   const [loading, setLoading] = useState(false);
@@ -40,6 +44,7 @@ const Checkout = () => {
     email: '',
     phone: ''
   });
+  const [formErrors, setFormErrors] = useState<string[]>([]);
   const [selectedBookingTime, setSelectedBookingTime] = useState<BookingPeriod | null>(null);
 
   const { 
@@ -64,24 +69,44 @@ const Checkout = () => {
       updateCartDates(booking.startDate, booking.endDate);
     }
   };
+
+  const validateForm = () => {
+    const errors: string[] = [];
+    
+    if (!formData.name.trim()) {
+      errors.push('Имя не должно быть пустым');
+    }
+    
+    if (!/^[A-Za-zА-Яа-яЁё\s\-]+$/.test(formData.name.trim())) {
+      errors.push('Имя может содержать только буквы');
+    }
+    
+    if (!formData.email.trim()) {
+      errors.push('Email не должен быть пустым');
+    }
+    
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errors.push('Введите корректный email');
+    }
+    
+    if (!isPhoneComplete(formData.phone)) {
+      errors.push('Телефон должен содержать 10 цифр в формате +7 (XXX) XXX-XX-XX');
+    }
+    
+    if (cartItems.length === 0) {
+      errors.push('Корзина пуста');
+    }
+    
+    setFormErrors(errors);
+    return errors.length === 0;
+  };
   
   const handleCheckout = async () => {
-    if (!formData.name || !formData.email || !formData.phone) {
-      toast({
-        title: "Необходимо заполнить все поля",
-        description: "Пожалуйста, заполните все поля формы для оформления заказа",
-        variant: "destructive",
-      });
+    if (!validateForm()) {
+      toast.error('Пожалуйста, заполните все поля формы корректно');
       return;
     }
-    if (cartItems.length === 0) {
-      toast({
-        title: "Корзина пуста",
-        description: "Добавьте товары в корзину перед оформлением заказа",
-        variant: "destructive",
-      });
-      return;
-    }
+    
     setLoading(true);
     try {
       for (const item of cartItems) {
@@ -105,17 +130,14 @@ const Checkout = () => {
       }
       clearCart();
       setOrderComplete(true);
+      toast.success('Заказ оформлен успешно!');
       console.log('Booking completed successfully:', {
         items: cartItems.length,
         totalValue: getCartTotal()
       });
     } catch (error) {
       console.error('Error during checkout:', error);
-      toast({
-        title: "Ошибка при оформлении заказа",
-        description: "Пожалуйста, попробуйте еще раз позже",
-        variant: "destructive",
-      });
+      toast.error('Ошибка при оформлении заказа');
     } finally {
       setLoading(false);
     }
@@ -134,6 +156,19 @@ const Checkout = () => {
         </Link>
       </div>
       <h1 className="heading-2 mb-8">Корзина</h1>
+      {formErrors.length > 0 && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangleIcon className="h-4 w-4" />
+          <AlertDescription>
+            <div className="font-medium">Пожалуйста, исправьте следующие ошибки:</div>
+            <ul className="list-disc pl-5 mt-2">
+              {formErrors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <CartList />
