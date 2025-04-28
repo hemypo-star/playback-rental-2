@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Category } from '@/types/product';
 
@@ -11,7 +10,12 @@ export const getCategories = async (): Promise<Category[]> => {
   try {
     const { data, error } = await supabaseServiceClient.from('categories').select('*');
     if (error) throw error;
-    return data || [];
+    
+    // Map imageurl to imageUrl for consistency
+    return (data || []).map(category => ({
+      ...category,
+      imageUrl: category.imageurl,
+    }));
   } catch (error) {
     console.error('Error getting categories:', error);
     return [];
@@ -68,6 +72,7 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
+    // First check if the categories bucket exists, if not create it
     const { data: buckets } = await supabaseServiceClient.storage.listBuckets();
     const categoriesBucketExists = buckets?.some(bucket => bucket.name === 'categories');
     
@@ -75,11 +80,10 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
       console.log('Categories bucket not found, creating it');
       await supabaseServiceClient.storage.createBucket('categories', {
         public: true,
-        fileSizeLimit: 5242880,
+        fileSizeLimit: 5242880, // 5MB limit
       });
-    }
-
-    if (categoriesBucketExists) {
+    } else {
+      // Ensure bucket is public
       await supabaseServiceClient.storage.updateBucket('categories', {
         public: true,
         fileSizeLimit: 5242880,

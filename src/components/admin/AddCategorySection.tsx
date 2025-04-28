@@ -34,7 +34,10 @@ export default function AddCategorySection({
   const [isUploading, setIsUploading] = useState(false);
 
   const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return;
+    if (!newCategoryName.trim()) {
+      toast.error("Название категории не может быть пустым");
+      return;
+    }
     
     try {
       setIsUploading(true);
@@ -54,7 +57,7 @@ export default function AddCategorySection({
       setFileForCategory(null);
     } catch (error) {
       console.error("Error uploading category image:", error);
-      toast.error("Failed to upload image. Category will be created without an image.");
+      toast.error("Не удалось загрузить изображение. Категория будет создана без изображения.");
       
       onAddCategory({
         name: newCategoryName,
