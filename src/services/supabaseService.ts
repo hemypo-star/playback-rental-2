@@ -283,18 +283,28 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
   }
 };
 
-export const uploadProductImage = async (file: File): Promise<string> => {
+export const uploadProductImage = async (file: File, productId?: string): Promise<string> => {
   try {
-    // We assume the bucket already exists - removing createBucketIfNotExists logic
-    
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = fileName;
     
+    // Upload the file with product_id in metadata if available
+    const uploadOptions: { upsert: boolean; metadata?: { product_id: string } } = { 
+      upsert: true 
+    };
+    
+    // Add metadata if productId is provided
+    if (productId) {
+      uploadOptions.metadata = { 
+        product_id: productId 
+      };
+    }
+    
     // Upload the file
     const { error: uploadError } = await supabaseServiceClient.storage
       .from('products')
-      .upload(filePath, file, { upsert: true });
+      .upload(filePath, file, uploadOptions);
 
     if (uploadError) {
       console.error('Error uploading product image:', uploadError);

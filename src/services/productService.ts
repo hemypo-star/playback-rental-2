@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Product } from '@/types/product';
 
@@ -51,7 +50,6 @@ export const updateProduct = async (id: string, updates: Partial<Product>) => {
     if (fetchError) throw fetchError;
     if (!existingProduct) throw new Error('Product not found');
 
-    // Fixed: Correct typing for the reduce operation
     const updateData = Object.entries(updates).reduce<Record<keyof Product, any>>((acc, [key, value]) => {
       const productKey = key as keyof Product;
       if (value !== undefined && value !== null && value !== existingProduct[productKey]) {
@@ -90,10 +88,10 @@ export const deleteProduct = async (id: string) => {
   }
 };
 
-export const uploadProductImage = async (file: File): Promise<string> => {
+export const uploadProductImage = async (file: File, productId?: string): Promise<string> => {
   try {
     const { uploadProductImage: supabaseUploadProductImage } = await import('@/utils/imageUtils');
-    const fileName = await supabaseUploadProductImage(file);
+    const fileName = await supabaseUploadProductImage(file, productId);
     return fileName;
   } catch (error) {
     console.error('Error in uploadProductImage:', error);

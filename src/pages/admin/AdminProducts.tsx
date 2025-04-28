@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -52,14 +51,18 @@ const AdminProducts = () => {
       try {
         let imageUrl = values.imageUrl || '';
         
-        if (fileForProduct) {
-          imageUrl = await supabaseService.uploadProductImage(fileForProduct);
-        }
-        
-        return supabaseService.createProduct({
+        const newProduct = await supabaseService.createProduct({
           ...values,
           imageUrl,
         });
+        
+        if (fileForProduct && newProduct?.id) {
+          imageUrl = await supabaseService.uploadProductImage(fileForProduct, newProduct.id);
+          
+          return supabaseService.updateProduct(newProduct.id, { imageUrl });
+        }
+        
+        return newProduct;
       } catch (error) {
         console.error('Error in createProductMutation:', error);
         throw error;
@@ -88,7 +91,7 @@ const AdminProducts = () => {
     mutationFn: async (values: { id: string; product: Partial<Product> }) => {
       try {
         if (fileForProduct) {
-          const imageUrl = await supabaseService.uploadProductImage(fileForProduct);
+          const imageUrl = await supabaseService.uploadProductImage(fileForProduct, values.id);
           values.product.imageUrl = imageUrl;
         }
         
