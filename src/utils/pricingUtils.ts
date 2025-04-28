@@ -1,3 +1,4 @@
+
 // Calculate rental price based on number of days
 export const calculateRentalPrice = (
   basePrice: number,
@@ -96,6 +97,11 @@ export const formatCurrency = (amount: number, currency: string = 'RUB'): string
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(amount);
+};
+
+// Format price specifically in rubles (common function used across the app)
+export const formatPriceRub = (amount: number): string => {
+  return formatCurrency(amount, 'RUB');
 };
 
 // Calculate hourly rates based on daily price

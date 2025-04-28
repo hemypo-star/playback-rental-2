@@ -7,7 +7,6 @@ import ProductImage from '@/components/product/ProductImage';
 import { Product } from '@/types/product';
 import { useCartContext } from '@/hooks/useCart';
 import { toast } from 'sonner';
-import { formatPriceRub } from '@/utils/pricingUtils';
 
 type ProductCardProps = {
   product: Product;
@@ -16,6 +15,16 @@ type ProductCardProps = {
     endDate?: Date;
   };
   featured?: boolean;
+};
+
+// Helper function for formatting price in rubles
+const formatPriceRub = (price: number): string => {
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
 };
 
 const ProductCard = ({ product, bookingDates, featured = false }: ProductCardProps) => {
@@ -29,7 +38,7 @@ const ProductCard = ({ product, bookingDates, featured = false }: ProductCardPro
     
     if (hasBookingDates) {
       addToCart({
-        product,
+        productId: product.id,
         quantity: 1,
         startDate: bookingDates.startDate!,
         endDate: bookingDates.endDate!,
@@ -57,7 +66,7 @@ const ProductCard = ({ product, bookingDates, featured = false }: ProductCardPro
       }`}>
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <ProductImage 
-            image={product.image} 
+            imageUrl={product.imageUrl} 
             title={product.title} 
             className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
           />
@@ -66,7 +75,7 @@ const ProductCard = ({ product, bookingDates, featured = false }: ProductCardPro
               Популярное
             </div>
           )}
-          {product.status === 'out_of_stock' && (
+          {product.available === false && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <div className="bg-white/90 text-black font-medium px-3 py-1 rounded">
                 Нет в наличии
@@ -103,7 +112,7 @@ const ProductCard = ({ product, bookingDates, featured = false }: ProductCardPro
             variant={hasBookingDates ? "default" : "outline"} 
             className="rounded-full"
             onClick={handleAddToCart}
-            disabled={product.status === 'out_of_stock'}
+            disabled={product.available === false}
           >
             {hasBookingDates ? (
               <ShoppingCart className="h-4 w-4" />
