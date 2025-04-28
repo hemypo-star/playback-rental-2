@@ -51,13 +51,14 @@ export const updateProduct = async (id: string, updates: Partial<Product>) => {
     if (fetchError) throw fetchError;
     if (!existingProduct) throw new Error('Product not found');
 
-    // Fix: Explicitly specify the correct type for the accumulator
-    const updateData = Object.entries(updates).reduce<Partial<Product>>((acc, [key, value]) => {
-      if (value !== undefined && value !== null && value !== existingProduct[key as keyof Product]) {
-        acc[key as keyof Product] = value;
+    // Fixed: Correct typing for the reduce operation
+    const updateData = Object.entries(updates).reduce<Record<keyof Product, any>>((acc, [key, value]) => {
+      const productKey = key as keyof Product;
+      if (value !== undefined && value !== null && value !== existingProduct[productKey]) {
+        acc[productKey] = value;
       }
       return acc;
-    }, {} as Partial<Product>);
+    }, {} as Record<keyof Product, any>);
 
     if (Object.keys(updateData).length === 0) {
       return existingProduct;
