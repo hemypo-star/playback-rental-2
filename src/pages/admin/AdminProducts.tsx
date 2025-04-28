@@ -233,16 +233,33 @@ const AdminProducts = () => {
     }
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (editProduct) {
-      updateProductMutation.mutate({
-        id: editProduct.id,
-        product: values,
-      });
-    } else {
-      createProductMutation.mutate(values);
+  const onSubmit = async (formData: any) => {
+    if (!editProduct) return;
+  
+    try {
+      const cleanUpdates: Partial<Product> = {};
+  
+      if (formData.title && formData.title.trim() !== '') cleanUpdates.title = formData.title;
+      if (formData.description !== undefined) cleanUpdates.description = formData.description;
+      if (formData.price !== undefined) cleanUpdates.price = formData.price;
+      if (formData.category && formData.category.trim() !== '') cleanUpdates.category = formData.category;
+      if (formData.imageUrl && formData.imageUrl.trim() !== '') cleanUpdates.imageurl = formData.imageUrl;
+      if (formData.available !== undefined) cleanUpdates.available = formData.available;
+      if (formData.quantity !== undefined) cleanUpdates.quantity = formData.quantity;
+  
+      const updatedProduct = await supabaseService.updateProduct(editProduct.id, cleanUpdates);
+  
+      if (updatedProduct) {
+        toast({ title: 'Товар успешно обновлён' });
+        queryClient.invalidateQueries(['admin-products']);
+        setOpenDialog(false);
+      }
+    } catch (error) {
+      console.error('Ошибка при обновлении товара:', error);
+      toast({ title: 'Ошибка обновления товара', variant: 'destructive' });
     }
   };
+
 
   const handleExportCSV = async () => {
     setIsExporting(true);
