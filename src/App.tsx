@@ -13,7 +13,7 @@ import RequireAuth from "./components/RequireAuth";
 
 // Pages
 import Index from "./pages/Index";
-const Catalog = lazy(() => import("./pages/Catalog"));
+import Catalog from "./pages/Catalog"; // Direct import instead of lazy loading
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Admin = lazy(() => import("./pages/Admin"));

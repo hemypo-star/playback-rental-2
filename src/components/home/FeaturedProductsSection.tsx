@@ -4,13 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRightIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
-import { getProducts } from '@/services/apiService';
+import { getProducts } from '@/services/supabaseService'; // Updated import path
 
 export const FeaturedProductsSection = () => {
   const { data: featuredProducts, isLoading: productsLoading } = useQuery({
     queryKey: ['featuredProducts'],
     queryFn: () => getProducts(),
-    select: (data) => data.slice(0, 8), // Changed from 4 to 8
+    select: (data) => data.slice(0, 8),
   });
 
   return (
@@ -31,7 +31,7 @@ export const FeaturedProductsSection = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {productsLoading ? (
-            Array(8).fill(0).map((_, i) => ( // Changed from 4 to 8
+            Array(8).fill(0).map((_, i) => (
               <div key={i} className="animate-pulse h-72 rounded-xl bg-white"></div>
             ))
           ) : (
@@ -44,4 +44,3 @@ export const FeaturedProductsSection = () => {
     </section>
   );
 };
-
