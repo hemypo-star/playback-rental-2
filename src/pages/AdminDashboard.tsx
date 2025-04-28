@@ -156,7 +156,7 @@ const AdminDashboard = () => {
                         <p className="text-sm text-muted-foreground">{booking.customerPhone}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{booking.totalPrice.toLocaleString()} ₽</p>
+                        <p className="font-medium">{booking.totalPrice ? booking.totalPrice.toLocaleString() : '0'} ₽</p>
                         <Badge className={formatStatus(booking.status)}>
                           {booking.status === 'confirmed' 
                             ? 'Подтверждено' 
