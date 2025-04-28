@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -119,7 +118,7 @@ const ProductDetail = () => {
         </Breadcrumb>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <ProductImage product={product} />
+          <ProductImage imageUrl={product.imageUrl} title={product.title} />
 
           <div className="space-y-6">
             <ProductHeader product={product} />
@@ -157,9 +156,7 @@ const ProductDetail = () => {
                   </>
                 ) : (
                   <>
-                    <CalendarIcon className="mr
-
--2 h-4 w-4" />
+                    <CalendarIcon className="mr-2 h-4 w-4" />
                     {bookingDates.startDate && bookingDates.endDate ? 'Добавить в корзину' : 'Выберите даты'}
                   </>
                 )}

@@ -7,6 +7,7 @@ import ProductImage from '@/components/product/ProductImage';
 import { Product } from '@/types/product';
 import { useCartContext } from '@/hooks/useCart';
 import { toast } from 'sonner';
+import { formatPriceRub } from '@/utils/pricingUtils';
 
 type ProductCardProps = {
   product: Product;
@@ -15,16 +16,6 @@ type ProductCardProps = {
     endDate?: Date;
   };
   featured?: boolean;
-};
-
-// Helper function for formatting price in rubles
-const formatPriceRub = (price: number): string => {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(price);
 };
 
 const ProductCard = ({ product, bookingDates, featured = false }: ProductCardProps) => {
@@ -38,7 +29,7 @@ const ProductCard = ({ product, bookingDates, featured = false }: ProductCardPro
     
     if (hasBookingDates) {
       addToCart({
-        productId: product.id,
+        ...product,
         quantity: 1,
         startDate: bookingDates.startDate!,
         endDate: bookingDates.endDate!,

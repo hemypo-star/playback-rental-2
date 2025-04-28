@@ -1,4 +1,3 @@
-
 // Calculate rental price based on number of days
 export const calculateRentalPrice = (
   basePrice: number,

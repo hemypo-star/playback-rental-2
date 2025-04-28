@@ -1,19 +1,28 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Product } from '@/types/product';
 
 type ProductImageProps = {
   imageUrl: string;
   title: string;
   className?: string;
+} | {
+  product: Product;
+  className?: string;
 };
 
-const ProductImage = ({ imageUrl, title, className }: ProductImageProps) => {
+const ProductImage = (props: ProductImageProps) => {
   const [isError, setIsError] = useState(false);
 
   const handleError = () => {
     setIsError(true);
   };
+
+  // Extract imageUrl and title from props based on whether we receive a product or direct values
+  const imageUrl = 'product' in props ? props.product.imageUrl : props.imageUrl;
+  const title = 'product' in props ? props.product.title : props.title;
+  const className = props.className;
 
   return (
     <>
