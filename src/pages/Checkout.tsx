@@ -145,10 +145,12 @@ const Checkout = () => {
               selectedBookingTime={selectedBookingTime}
             />
           )}
-          <CheckoutForm formData={formData} onInputChange={handleInputChange} />
         </div>
         <div>
-          <CheckoutOrderSummary onCheckout={handleCheckout} loading={loading} />
+          <CheckoutForm formData={formData} onInputChange={handleInputChange} />
+          <div className="mt-6">
+            <CheckoutOrderSummary onCheckout={handleCheckout} loading={loading} />
+          </div>
         </div>
       </div>
     </div>
