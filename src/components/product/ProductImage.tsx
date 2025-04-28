@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Product } from '@/types/product';
 import { Image } from 'lucide-react';
+import { getProductImageUrl } from '@/utils/imageUtils';
 
 type ProductImageProps = {
   imageUrl: string;
@@ -25,11 +26,13 @@ const ProductImage = (props: ProductImageProps) => {
   const title = 'product' in props ? props.product.title : props.title;
   const className = props.className;
 
+  const publicUrl = getProductImageUrl(imageUrl);
+
   return (
     <>
-      {imageUrl && !isError ? (
+      {publicUrl && !isError ? (
         <img
-          src={imageUrl}
+          src={publicUrl}
           alt={title}
           className={cn("object-cover", className)}
           onError={handleError}

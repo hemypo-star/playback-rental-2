@@ -63,8 +63,9 @@ export const deleteProduct = async (id: string) => {
 
 export const uploadProductImage = async (file: File): Promise<string> => {
   try {
-    const { uploadProductImage: supabaseUploadProductImage } = await import('@/services/supabaseService');
-    return await supabaseUploadProductImage(file);
+    const { uploadProductImage: supabaseUploadProductImage } = await import('@/utils/imageUtils');
+    const fileName = await supabaseUploadProductImage(file);
+    return fileName;
   } catch (error) {
     console.error('Error in uploadProductImage:', error);
     throw error;
