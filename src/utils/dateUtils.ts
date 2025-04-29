@@ -10,7 +10,12 @@ export interface DateRange {
 /**
  * Format a date range as a string
  */
-export const formatDateRange = (start: Date, end: Date, showTime: boolean = false): string => {
+export const formatDateRange = (start: Date | undefined | null, end: Date | undefined | null, showTime: boolean = false): string => {
+  // Check if dates are valid before processing
+  if (!start || !end) {
+    return 'Дата не указана';
+  }
+
   const sameDay = start.getDate() === end.getDate() && 
                   start.getMonth() === end.getMonth() && 
                   start.getFullYear() === end.getFullYear();

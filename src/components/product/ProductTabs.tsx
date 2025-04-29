@@ -19,6 +19,9 @@ interface ProductTabsProps {
 }
 
 const ProductTabs = ({ product, bookings, onBookingChange, bookingDates }: ProductTabsProps) => {
+  // Ensure bookings is always an array, even if undefined
+  const validBookings = bookings || [];
+  
   return (
     <>
       <TabsContent value="details" className="space-y-6">
@@ -74,13 +77,15 @@ const ProductTabs = ({ product, bookings, onBookingChange, bookingDates }: Produ
             )}
             
             <div className="text-sm text-muted-foreground">
-              {bookings && bookings.length > 0 ? (
+              {validBookings.length > 0 ? (
                 <div>
                   <p className="mb-2">Предстоящее бронирование:</p>
                   <ul className="space-y-2">
-                    {bookings.slice(0, 3).map((booking: BookingPeriod, index: number) => (
+                    {validBookings.slice(0, 3).map((booking: BookingPeriod, index: number) => (
                       <li key={index} className="text-xs bg-secondary p-2 rounded">
-                        {formatDateRange(booking.startDate, booking.endDate)}
+                        {booking && booking.startDate && booking.endDate
+                          ? formatDateRange(booking.startDate, booking.endDate)
+                          : 'Дата не указана'}
                       </li>
                     ))}
                   </ul>
@@ -113,7 +118,7 @@ const ProductTabs = ({ product, bookings, onBookingChange, bookingDates }: Produ
               <div className="max-w-md mx-auto">
                 <BookingCalendar
                   onBookingChange={onBookingChange}
-                  bookedPeriods={bookings}
+                  bookedPeriods={validBookings}
                 />
               </div>
             </div>
