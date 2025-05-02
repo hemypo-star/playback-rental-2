@@ -1,7 +1,7 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RefreshCw } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { BookingWithProduct } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
 
@@ -14,6 +14,16 @@ interface BookingsTableProps {
 }
 
 export const BookingsTable = ({ bookings, isLoading, isError, onViewDetails, onStatusUpdate }: BookingsTableProps) => {
+  
+  // Helper function to safely format dates
+  const formatSafeDate = (dateValue: string | Date | undefined | null, formatStr: string): string => {
+    if (!dateValue) return 'Недействительная дата';
+    
+    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+    
+    return isValid(date) ? format(date, formatStr) : 'Недействительная дата';
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -57,10 +67,22 @@ export const BookingsTable = ({ bookings, isLoading, isError, onViewDetails, onS
               <TableCell>{booking.customerEmail}</TableCell>
               <TableCell>{booking.customerPhone}</TableCell>
               <TableCell>
-                {format(new Date(booking.startDate), 'PPP')} {format(new Date(booking.startDate), 'HH:00')}
+                {booking.startDate && isValid(new Date(booking.startDate)) ? (
+                  <>
+                    {formatSafeDate(booking.startDate, 'PPP')} {formatSafeDate(booking.startDate, 'HH:00')}
+                  </>
+                ) : (
+                  'Недействительная дата'
+                )}
               </TableCell>
               <TableCell>
-                {format(new Date(booking.endDate), 'PPP')} {format(new Date(booking.endDate), 'HH:00')}
+                {booking.endDate && isValid(new Date(booking.endDate)) ? (
+                  <>
+                    {formatSafeDate(booking.endDate, 'PPP')} {formatSafeDate(booking.endDate, 'HH:00')}
+                  </>
+                ) : (
+                  'Недействительная дата'
+                )}
               </TableCell>
               <TableCell>
                 <BookingStatusSelect
