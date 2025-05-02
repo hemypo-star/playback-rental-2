@@ -79,19 +79,22 @@ const ProductTabs = ({
                   const nearest = [...validBookings].sort(
                     (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
                   )[0];
-                  return (
+                  
+                  return nearest ? (
                     <div>
-                      <p className="mb-2 font-medium">Nearest booking:</p>
+                      <p className="mb-2 font-medium">Ближайшее бронирование:</p>
                       <div className="text-sm bg-secondary p-2 rounded">
-                        {nearest && nearest.startDate && nearest.endDate ? 
+                        {nearest.startDate && nearest.endDate ? 
                           formatDateRange(nearest.startDate, nearest.endDate) : 
                           'Дата не указана'}
                       </div>
                     </div>
+                  ) : (
+                    <p>Нет предстоящих бронирований.</p>
                   );
                 })()
               ) : (
-                <p>No upcoming bookings.</p>
+                <p>Нет предстоящих бронирований.</p>
               )}
             </div>
           </div>
