@@ -1,4 +1,3 @@
-
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
@@ -104,8 +103,6 @@ const ProductTabs = ({
             </div>
           </div>
         </div>
-        
-        
       </TabsContent>
       
       <TabsContent value="availability">
@@ -117,38 +114,25 @@ const ProductTabs = ({
                 Посмотрите календарь бронирования для выбора свободной даты.
               </p>
               
-              {validBookings && validBookings.length > 0 ? (
-                (() => {
-                  // Filter out bookings with undefined dates first
-                  const validDatesBookings = validBookings.filter(
-                    booking => booking.startDate instanceof Date && booking.endDate instanceof Date
-                  );
-                  
-                  // Only sort if we have valid bookings
-                  const last = validDatesBookings.length > 0 
-                    ? [...validDatesBookings].sort(
-                        (a, b) => b.startDate.getTime() - a.startDate.getTime()
-                      )[0]
-                    : null;
-                    
-                  return last ? (
-                    <p className="mb-4">
-                      <strong>Последнее бронирование:</strong>{' '}
-                      {formatDateRange(last.startDate, last.endDate)}
-                    </p>
-                  ) : (
-                    <p className="mb-4">Нет предыдущих бронирований.</p>
-                  );
-                })()
-              ) : (
+              {validBookings.length > 0 ? (() => {
+                const last = [...validBookings]
+                  .filter(b => b.startDate && b.endDate)
+                  .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())[0];
+                return (
+                  <p className="mb-4">
+                    <strong>Последнее бронирование:</strong>{' '}
+                    {formatDateRange(last.startDate, last.endDate)}
+                  </p>
+                );
+              })() : (
                 <p className="mb-4">Нет предыдущих бронирований.</p>
               )}
 
               {bookingDates.startDate && bookingDates.endDate && (() => {
                 const conflict = validBookings.some(b =>
-                  b.startDate instanceof Date && b.endDate instanceof Date && 
-                  bookingDates.startDate.getTime() <= b.endDate.getTime() &&
-                  bookingDates.endDate.getTime() >= b.startDate.getTime()
+                  b.startDate && b.endDate &&
+                  b.startDate.getTime() <= bookingDates.endDate.getTime() &&
+                  b.endDate.getTime() >= bookingDates.startDate.getTime()
                 );
                 return (
                   <p className={`font-semibold ${conflict ? 'text-red-600' : 'text-green-600'}`}>
