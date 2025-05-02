@@ -1,4 +1,3 @@
-
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
@@ -7,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import BookingCalendar from '@/components/BookingCalendar';
 import RentalFeatures from './RentalFeatures';
-
 interface ProductTabsProps {
   product: Product;
   bookings?: BookingPeriod[];
@@ -17,13 +15,15 @@ interface ProductTabsProps {
     endDate?: Date;
   };
 }
-
-const ProductTabs = ({ product, bookings, onBookingChange, bookingDates }: ProductTabsProps) => {
+const ProductTabs = ({
+  product,
+  bookings,
+  onBookingChange,
+  bookingDates
+}: ProductTabsProps) => {
   // Ensure bookings is always an array, even if undefined
   const validBookings = bookings || [];
-  
-  return (
-    <>
+  return <>
       <TabsContent value="details" className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <RentalFeatures />
@@ -67,63 +67,40 @@ const ProductTabs = ({ product, bookings, onBookingChange, bookingDates }: Produ
               </div>
               <h3 className="font-medium">Доступность</h3>
             </div>
-            {product.available ? (
-              <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
+            {product.available ? <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
                 <CheckIcon className="h-4 w-4" />
                 <span>Доступно для аренды</span>
-              </div>
-            ) : (
-              <div className="text-red-500 font-medium mb-4">Забронирован</div>
-            )}
+              </div> : <div className="text-red-500 font-medium mb-4">Забронирован</div>}
             
             <div className="text-sm text-muted-foreground">
-              {validBookings.length > 0 ? (
-                <div>
+              {validBookings.length > 0 ? <div>
                   <p className="mb-2">Предстоящее бронирование:</p>
                   <ul className="space-y-2">
-                    {validBookings.slice(0, 3).map((booking: BookingPeriod, index: number) => (
-                      <li key={index} className="text-xs bg-secondary p-2 rounded">
-                        {booking && booking.startDate && booking.endDate
-                          ? formatDateRange(booking.startDate, booking.endDate)
-                          : 'Дата не указана'}
-                      </li>
-                    ))}
+                    {validBookings.slice(0, 3).map((booking: BookingPeriod, index: number) => <li key={index} className="text-xs bg-secondary p-2 rounded">
+                        {booking && booking.startDate && booking.endDate ? formatDateRange(booking.startDate, booking.endDate) : 'Дата не указана'}
+                      </li>)}
                   </ul>
-                </div>
-              ) : (
-                <p>Нет предстоящего бронирования.</p>
-              )}
+                </div> : <p>Нет предстоящего бронирования.</p>}
             </div>
           </div>
         </div>
         
-        <div className="p-6 rounded-xl glass-card">
-          <h3 className="font-medium mb-4">Описание</h3>
-          <p className="text-muted-foreground">
-            {product.description}
-          </p>
-        </div>
+        
       </TabsContent>
       
       <TabsContent value="availability">
         <div className="p-6 rounded-xl glass-card">
           <h3 className="font-medium mb-6">Календарь бронирования</h3>
           
-          {product.available ? (
-            <div className="space-y-6">
+          {product.available ? <div className="space-y-6">
               <p className="text-muted-foreground">
                 Посмотрите календарь бронирования для выбора свободной даты.
               </p>
               
               <div className="max-w-md mx-auto">
-                <BookingCalendar
-                  onBookingChange={onBookingChange}
-                  bookedPeriods={validBookings}
-                />
+                <BookingCalendar onBookingChange={onBookingChange} bookedPeriods={validBookings} />
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-10">
+            </div> : <div className="text-center py-10">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CalendarIcon className="h-8 w-8 text-red-500" />
               </div>
@@ -134,12 +111,9 @@ const ProductTabs = ({ product, bookings, onBookingChange, bookingDates }: Produ
               <Button asChild>
                 <Link to="/catalog">Просмотрите альтернативные варианты</Link>
               </Button>
-            </div>
-          )}
+            </div>}
         </div>
       </TabsContent>
-    </>
-  );
+    </>;
 };
-
 export default ProductTabs;
