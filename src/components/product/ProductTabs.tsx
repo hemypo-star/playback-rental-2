@@ -1,3 +1,4 @@
+
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
@@ -115,9 +116,17 @@ const ProductTabs = ({
               </p>
               
               {validBookings.length > 0 ? (() => {
-                const last = [...validBookings]
-                  .filter(b => b.startDate && b.endDate)
-                  .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())[0];
+                const filteredBookings = [...validBookings]
+                  .filter(b => b.startDate && b.endDate);
+                
+                if (filteredBookings.length === 0) {
+                  return <p className="mb-4">Нет предыдущих бронирований.</p>;
+                }
+                
+                const last = filteredBookings.sort((a, b) => 
+                  b.startDate.getTime() - a.startDate.getTime()
+                )[0];
+                
                 return (
                   <p className="mb-4">
                     <strong>Последнее бронирование:</strong>{' '}
