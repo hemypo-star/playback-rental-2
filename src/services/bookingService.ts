@@ -5,38 +5,28 @@ import { getProducts } from './productService';
 
 export const getBookings = async (): Promise<BookingPeriod[]> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('bookings').select(`
-      id,
-      product_id,
-      customer_name,
-      customer_email,
-      customer_phone,
-      start_date,
-      end_date,
-      total_price,
-      status,
-      notes,
-      created_at
-    `);
+    const { data, error } = await supabaseServiceClient
+      .from('bookings')
+      .select('*');
     
     if (error) throw error;
     
-    return data.map(booking => ({
-      id: booking.id,
-      productId: booking.product_id,
-      startDate: new Date(booking.start_date),
-      endDate: new Date(booking.end_date),
-      customerName: booking.customer_name,
-      customerEmail: booking.customer_email,
-      customerPhone: booking.customer_phone,
-      status: booking.status as BookingPeriod['status'],
-      totalPrice: booking.total_price,
-      notes: booking.notes || '',
-      createdAt: new Date(booking.created_at || Date.now())
+    return data.map(b => ({
+      id: b.id,
+      productId: b.product_id,
+      customerName: b.customer_name,
+      customerEmail: b.customer_email,
+      customerPhone: b.customer_phone,
+      startDate: new Date(b.start_date),
+      endDate: new Date(b.end_date),
+      status: b.status,
+      totalPrice: b.total_price,
+      notes: b.notes || '',
+      createdAt: new Date(b.created_at || Date.now())
     }));
   } catch (error) {
     console.error('Error getting bookings:', error);
-    return [];
+    throw error;
   }
 };
 
@@ -68,29 +58,49 @@ export const getProductBookings = async (productId: string): Promise<BookingPeri
   }
 };
 
-export const createBooking = async (bookingData: BookingFormData) => {
+export const createBooking = async (booking: {
+  productId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  totalPrice: number;
+  notes?: string;
+}): Promise<BookingPeriod> => {
   try {
-    // Convert from BookingFormData to the database structure format
-    const dbBooking = {
-      product_id: bookingData.productId,
-      customer_name: bookingData.name,
-      customer_email: bookingData.email,
-      customer_phone: bookingData.phone,
-      start_date: bookingData.startDate.toISOString(),
-      end_date: bookingData.endDate.toISOString(),
-      status: 'pending',  // Default status for new bookings
-      total_price: 0,      // This should be calculated based on product price and duration
-      notes: bookingData.notes || ''
-    };
-    
     const { data, error } = await supabaseServiceClient
       .from('bookings')
-      .insert([dbBooking])
+      .insert({
+        product_id: booking.productId,
+        customer_name: booking.customerName,
+        customer_email: booking.customerEmail,
+        customer_phone: booking.customerPhone,
+        start_date: booking.startDate,
+        end_date: booking.endDate,
+        status: booking.status,
+        total_price: booking.totalPrice,
+        notes: booking.notes || ''
+      })
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      productId: data.product_id,
+      customerName: data.customer_name,
+      customerEmail: data.customer_email,
+      customerPhone: data.customer_phone,
+      startDate: new Date(data.start_date),
+      endDate: new Date(data.end_date),
+      status: data.status,
+      totalPrice: data.total_price,
+      notes: data.notes || '',
+      createdAt: new Date(data.created_at || Date.now())
+    };
   } catch (error) {
     console.error('Error creating booking:', error);
     throw error;

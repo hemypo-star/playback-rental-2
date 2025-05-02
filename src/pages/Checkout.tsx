@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -22,7 +21,7 @@ import {
 } from '@/components/ui/card';
 import { formatDateRange } from '@/utils/dateUtils';
 import { useCartContext } from '@/hooks/useCart';
-import { createBooking } from '@/services/apiService';
+import { createBooking } from '@/services/bookingService';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import BookingCalendar from '@/components/BookingCalendar';
@@ -110,24 +109,19 @@ const Checkout = () => {
     setLoading(true);
     try {
       for (const item of cartItems) {
-        const { data, error } = await supabase
-          .from('bookings')
-          .insert({
-            product_id: item.productId,
-            customer_name: formData.name,
-            customer_email: formData.email,
-            customer_phone: formData.phone,
-            start_date: item.startDate.toISOString(),
-            end_date: item.endDate.toISOString(),
-            status: 'pending',
-            total_price: calculateRentalPrice(item.price, item.startDate, item.endDate),
-            notes: `Бронирование из корзины: ${item.title}`
-          });
-        if (error) {
-          console.error("Booking error:", error);
-          throw error;
-        }
+        await createBooking({
+          productId: item.productId,
+          customerName: formData.name,
+          customerEmail: formData.email,
+          customerPhone: formData.phone,
+          startDate: item.startDate.toISOString(),
+          endDate: item.endDate.toISOString(),
+          status: 'pending',
+          totalPrice: calculateRentalPrice(item.price, item.startDate, item.endDate),
+          notes: `Бронирование из корзины: ${item.title}`
+        });
       }
+      
       clearCart();
       setOrderComplete(true);
       toast.success('Заказ оформлен успешно!');
