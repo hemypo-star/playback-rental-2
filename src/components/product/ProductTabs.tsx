@@ -1,3 +1,4 @@
+
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
@@ -73,14 +74,25 @@ const ProductTabs = ({
               </div> : <div className="text-red-500 font-medium mb-4">Забронирован</div>}
             
             <div className="text-sm text-muted-foreground">
-              {validBookings.length > 0 ? <div>
-                  <p className="mb-2">Предстоящее бронирование:</p>
-                  <ul className="space-y-2">
-                    {validBookings.slice(0, 3).map((booking: BookingPeriod, index: number) => <li key={index} className="text-xs bg-secondary p-2 rounded">
-                        {booking && booking.startDate && booking.endDate ? formatDateRange(booking.startDate, booking.endDate) : 'Дата не указана'}
-                      </li>)}
-                  </ul>
-                </div> : <p>Нет предстоящего бронирования.</p>}
+              {validBookings.length > 0 ? (
+                (() => {
+                  const nearest = [...validBookings].sort(
+                    (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+                  )[0];
+                  return (
+                    <div>
+                      <p className="mb-2 font-medium">Nearest booking:</p>
+                      <div className="text-sm bg-secondary p-2 rounded">
+                        {nearest && nearest.startDate && nearest.endDate ? 
+                          formatDateRange(nearest.startDate, nearest.endDate) : 
+                          'Дата не указана'}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <p>No upcoming bookings.</p>
+              )}
             </div>
           </div>
         </div>
