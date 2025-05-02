@@ -79,9 +79,11 @@ const ProductTabs = ({
             <div className="text-sm text-muted-foreground">
               {validBookings.length > 0 ? (
                 (() => {
-                  const nearest = [...validBookings].sort(
-                    (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-                  )[0];
+                  const nearest = [...validBookings]
+                    .filter(booking => booking.startDate && booking.endDate) // Filter out bookings with undefined dates
+                    .sort((a, b) => 
+                      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+                    )[0];
                   
                   return nearest ? (
                     <div>
@@ -115,16 +117,27 @@ const ProductTabs = ({
                 Посмотрите календарь бронирования для выбора свободной даты.
               </p>
               
-              {bookings && bookings.length > 0 ? (
+              {validBookings && validBookings.length > 0 ? (
                 (() => {
-                  const last = [...bookings].sort(
-                    (a, b) => b.startDate.getTime() - a.startDate.getTime()
-                  )[0];
-                  return (
+                  // Filter out bookings with undefined dates first
+                  const validDatesBookings = validBookings.filter(
+                    booking => booking.startDate instanceof Date && booking.endDate instanceof Date
+                  );
+                  
+                  // Only sort if we have valid bookings
+                  const last = validDatesBookings.length > 0 
+                    ? [...validDatesBookings].sort(
+                        (a, b) => b.startDate.getTime() - a.startDate.getTime()
+                      )[0]
+                    : null;
+                    
+                  return last ? (
                     <p className="mb-4">
                       <strong>Последнее бронирование:</strong>{' '}
                       {formatDateRange(last.startDate, last.endDate)}
                     </p>
+                  ) : (
+                    <p className="mb-4">Нет предыдущих бронирований.</p>
                   );
                 })()
               ) : (
@@ -132,7 +145,8 @@ const ProductTabs = ({
               )}
 
               {bookingDates.startDate && bookingDates.endDate && (() => {
-                const conflict = bookings.some(b =>
+                const conflict = validBookings.some(b =>
+                  b.startDate instanceof Date && b.endDate instanceof Date && 
                   bookingDates.startDate.getTime() <= b.endDate.getTime() &&
                   bookingDates.endDate.getTime() >= b.startDate.getTime()
                 );
