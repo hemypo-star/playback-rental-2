@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import BookingCalendar from '@/components/BookingCalendar';
 import RentalFeatures from './RentalFeatures';
+
 interface ProductTabsProps {
   product: Product;
   bookings?: BookingPeriod[];
@@ -16,6 +17,7 @@ interface ProductTabsProps {
     endDate?: Date;
   };
 }
+
 const ProductTabs = ({
   product,
   bookings,
@@ -24,6 +26,7 @@ const ProductTabs = ({
 }: ProductTabsProps) => {
   // Ensure bookings is always an array, even if undefined
   const validBookings = bookings || [];
+  
   return <>
       <TabsContent value="details" className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -112,6 +115,34 @@ const ProductTabs = ({
                 Посмотрите календарь бронирования для выбора свободной даты.
               </p>
               
+              {bookings && bookings.length > 0 ? (
+                (() => {
+                  const last = [...bookings].sort(
+                    (a, b) => b.startDate.getTime() - a.startDate.getTime()
+                  )[0];
+                  return (
+                    <p className="mb-4">
+                      <strong>Последнее бронирование:</strong>{' '}
+                      {formatDateRange(last.startDate, last.endDate)}
+                    </p>
+                  );
+                })()
+              ) : (
+                <p className="mb-4">Нет предыдущих бронирований.</p>
+              )}
+
+              {bookingDates.startDate && bookingDates.endDate && (() => {
+                const conflict = bookings.some(b =>
+                  bookingDates.startDate.getTime() <= b.endDate.getTime() &&
+                  bookingDates.endDate.getTime() >= b.startDate.getTime()
+                );
+                return (
+                  <p className={`font-semibold ${conflict ? 'text-red-600' : 'text-green-600'}`}>
+                    {conflict ? 'Бронирование недоступно' : 'Бронирование доступно'}
+                  </p>
+                );
+              })()}
+              
               <div className="max-w-md mx-auto">
                 <BookingCalendar onBookingChange={onBookingChange} bookedPeriods={validBookings} />
               </div>
@@ -131,4 +162,5 @@ const ProductTabs = ({
       </TabsContent>
     </>;
 };
+
 export default ProductTabs;
