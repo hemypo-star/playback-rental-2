@@ -19,7 +19,7 @@ export const getBookings = async (): Promise<BookingPeriod[]> => {
       customerPhone: b.customer_phone,
       startDate: new Date(b.start_date),
       endDate: new Date(b.end_date),
-      status: b.status,
+      status: b.status as BookingPeriod['status'],
       totalPrice: b.total_price,
       notes: b.notes || '',
       createdAt: new Date(b.created_at || Date.now())
@@ -65,7 +65,7 @@ export const createBooking = async (booking: {
   customerPhone: string;
   startDate: string;
   endDate: string;
-  status: string;
+  status: BookingPeriod['status'];
   totalPrice: number;
   notes?: string;
 }): Promise<BookingPeriod> => {
@@ -96,7 +96,7 @@ export const createBooking = async (booking: {
       customerPhone: data.customer_phone,
       startDate: new Date(data.start_date),
       endDate: new Date(data.end_date),
-      status: data.status,
+      status: data.status as BookingPeriod['status'],
       totalPrice: data.total_price,
       notes: data.notes || '',
       createdAt: new Date(data.created_at || Date.now())

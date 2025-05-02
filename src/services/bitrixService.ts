@@ -63,21 +63,21 @@ const BitrixService = {
   
   // Bookings
   createBooking: async (bookingData: BookingFormData): Promise<BookingPeriod> => {
-    const result = await createBooking(bookingData);
-    // Map the database result to BookingPeriod type
-    return {
-      id: result.id,
-      productId: result.product_id,
-      startDate: new Date(result.start_date),
-      endDate: new Date(result.end_date),
-      customerName: result.customer_name,
-      customerEmail: result.customer_email,
-      customerPhone: result.customer_phone,
-      status: result.status as BookingPeriod['status'],
-      totalPrice: result.total_price,
-      notes: result.notes || '',
-      createdAt: new Date(result.created_at || Date.now())
+    // Transform BookingFormData to match the expected createBooking parameter structure
+    const bookingParams = {
+      productId: bookingData.productId,
+      customerName: bookingData.name,
+      customerEmail: bookingData.email,
+      customerPhone: bookingData.phone,
+      startDate: bookingData.startDate.toISOString(),
+      endDate: bookingData.endDate.toISOString(),
+      status: 'pending' as BookingPeriod['status'],
+      totalPrice: bookingData.notes ? parseFloat(bookingData.notes) : 0, // Assuming notes might contain price info
+      notes: bookingData.address || ''
     };
+    
+    const result = await createBooking(bookingParams);
+    return result;
   },
   
   getBookings: async (): Promise<BookingPeriod[]> => {
