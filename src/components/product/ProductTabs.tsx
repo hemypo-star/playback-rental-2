@@ -1,4 +1,3 @@
-
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
@@ -71,10 +70,36 @@ const ProductTabs = ({
               </div>
               <h3 className="font-medium">Доступность</h3>
             </div>
-            {product.available ? <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
-                <CheckIcon className="h-4 w-4" />
-                <span>Доступно для аренды</span>
-              </div> : <div className="text-red-500 font-medium mb-4">Забронирован</div>}
+            {product.available ? (
+              // Dynamic availability block:
+              bookingDates.startDate && bookingDates.endDate ? (
+                // If dates selected, check for conflicts
+                validBookings.some(b =>
+                  b.startDate.getTime() <= bookingDates.endDate.getTime() &&
+                  b.endDate.getTime()   >= bookingDates.startDate.getTime()
+                ) ? (
+                  // Conflict: show red "unavailable"
+                  <p className="mb-4 text-red-600 font-medium">
+                    Товар недоступен для выбранных дат
+                  </p>
+                ) : (
+                  // No conflict: show green with selected range
+                  <div className="text-green-600 font-medium mb-4">
+                    Доступно для аренды с{' '}
+                    {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
+                  </div>
+                )
+              ) : (
+                // No dates selected: default green label
+                <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
+                  <CheckIcon className="h-4 w-4" />
+                  <span>Доступно для аренды</span>
+                </div>
+              )
+            ) : (
+              // If product.available is false, keep the "Забронирован" red label
+              <div className="text-red-500 font-medium mb-4">Забронирован</div>
+            )}
             
             <div className="text-sm text-muted-foreground">
               {bookingDates.startDate && bookingDates.endDate && validBookings.some(b =>
