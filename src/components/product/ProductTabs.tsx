@@ -86,28 +86,27 @@ const ProductTabs = ({
               </div> : <div className="text-red-500 font-medium mb-4">Забронирован</div>}
             
             <div className="text-sm text-muted-foreground">
-              {validBookings.length > 0 ? (
-                (() => {
-                  const nearest = [...validBookings]
-                    .filter(booking => booking.startDate && booking.endDate) // Filter out bookings with undefined dates
-                    .sort((a, b) => 
-                      new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-                    )[0];
-                  
-                  return nearest ? (
-                    <div>
-                      <p className="mb-2 font-medium">Ближайшее бронирование:</p>
-                      <div className="text-sm bg-secondary p-2 rounded">
-                        {nearest.startDate && nearest.endDate ? 
-                          formatDateRange(nearest.startDate, nearest.endDate) : 
-                          'Дата не указана'}
-                      </div>
+              {validBookings.length > 0 ? (() => {
+                const nearest = [...validBookings]
+                  .filter(booking => booking.startDate && booking.endDate) // Filter out bookings with undefined dates
+                  .sort((a, b) => 
+                    new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+                  )[0];
+                
+                return nearest ? (
+                  <div>
+                    <p className="mb-2 font-medium">Ближайшее бронирование:</p>
+                    <div className="text-sm bg-secondary p-2 rounded">
+                      {nearest.startDate && nearest.endDate ? 
+                        formatDateRange(nearest.startDate, nearest.endDate) : 
+                        'Дата не указана'}
                     </div>
-                  ) : (
-                    <p>Нет предстоящих бронирований.</p>
-                  );
-                })()
-              ) : (
+                  </div>
+                ) : (
+                  <p>Нет предстоящих бронирований.</p>
+                );
+              })()
+              : (
                 <p>Нет предстоящих бронирований.</p>
               )}
             </div>
