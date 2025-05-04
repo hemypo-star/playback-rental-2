@@ -110,6 +110,26 @@ const ProductTabs = ({
                 Посмотрите календарь бронирования для выбора свободной даты.
               </p>
               
+              {/* Dynamic availability label based on selected dates */}
+              {bookingDates.startDate && bookingDates.endDate ? (
+                !validBookings.some(b =>
+                  b.startDate.getTime() <= bookingDates.endDate.getTime() &&
+                  b.endDate.getTime()   >= bookingDates.startDate.getTime()
+                ) ? (
+                  <div className="text-green-600 font-medium mb-4">
+                    Доступно для аренды с{' '}
+                    {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
+                  </div>
+                ) : (
+                  <p className="mb-4 text-red-600 font-medium">Товар недоступен для выбранных дат</p>
+                )
+              ) : (
+                <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
+                  <CheckIcon className="h-4 w-4" />
+                  <span>Доступно для аренды</span>
+                </div>
+              )}
+              
               {validBookings.length > 0 ? (() => {
                 const filteredBookings = [...validBookings]
                   .filter(b => b.startDate && b.endDate);
