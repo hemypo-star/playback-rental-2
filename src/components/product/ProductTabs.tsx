@@ -27,6 +27,15 @@ const ProductTabs = ({
   // Ensure bookings is always an array, even if undefined
   const validBookings = bookings || [];
   
+  console.log('💡 validBookings:', validBookings);
+  console.log('💡 bookingDates:', bookingDates);
+  console.log(
+    '💡 nearest:',
+    validBookings
+      .filter(b => b.startDate && b.endDate)
+      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0]
+  );
+  
   return <>
       <TabsContent value="details" className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
