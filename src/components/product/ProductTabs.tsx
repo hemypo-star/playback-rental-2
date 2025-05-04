@@ -27,15 +27,6 @@ const ProductTabs = ({
   // Ensure bookings is always an array, even if undefined
   const validBookings = bookings || [];
   
-  console.log('💡 validBookings:', validBookings);
-  console.log('💡 bookingDates:', bookingDates);
-  console.log(
-    '💡 nearest:',
-    validBookings
-      .filter(b => b.startDate && b.endDate)
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0]
-  );
-  
   return <>
       <TabsContent value="details" className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -86,23 +77,24 @@ const ProductTabs = ({
               </div> : <div className="text-red-500 font-medium mb-4">Забронирован</div>}
             
             <div className="text-sm text-muted-foreground">
-              {validBookings.length > 0 ? (() => {
-                const nearest = [...validBookings]
-                  .filter(booking => booking.startDate && booking.endDate)
-                  .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())[0];
-                
-                return nearest ? (
-                  <div>
-                    <p className="mb-2 font-medium">Ближайшее бронирование:</p>
-                    <div className="text-sm bg-secondary p-2 rounded">
-                      {formatDateRange(nearest.startDate, nearest.endDate)}
+              {bookingDates.startDate && bookingDates.endDate && validBookings.some(b =>
+                b.startDate.getTime() <= bookingDates.endDate.getTime() &&
+                b.endDate.getTime()   >= bookingDates.startDate.getTime()
+              ) ? (
+                <p className="mb-4 text-red-600 font-medium">Товар недоступен для выбранных дат</p>
+              ) : validBookings.length > 0 ? (() => {
+                  const nearest = [...validBookings]
+                    .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())[0];
+                  return (
+                    <div>
+                      <p className="mb-2 font-medium">Ближайшее бронирование:</p>
+                      <div className="text-sm bg-secondary p-2 rounded">
+                        {formatDateRange(nearest.startDate, nearest.endDate)}
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <p>Нет предстоящих бронирований.</p>
-                );
-              })() : (
-                <p>Нет предстоящих бронирований.</p>
+                  );
+                })() : (
+                  <p className="mb-4">Нет предстоящих бронирований.</p>
               )}
             </div>
           </div>
