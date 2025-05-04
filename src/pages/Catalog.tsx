@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import * as supabaseService from '@/services/supabaseService';
+import * as productService from '@/services/productService';
+import * as categoryService from '@/services/categoryService';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import CategorySidebar from '@/components/catalog/CategorySidebar';
 import ProductGrid from '@/components/catalog/ProductGrid';
@@ -28,14 +30,14 @@ const Catalog = () => {
   
   const { data: categories } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => supabaseService.getCategories(),
+    queryFn: () => categoryService.getCategories(),
   });
   
   const { data: products, isLoading } = useQuery({
     queryKey: ['products', bookingDates],
     queryFn: () => bookingDates.startDate && bookingDates.endDate 
-      ? supabaseService.getAvailableProducts(bookingDates.startDate, bookingDates.endDate)
-      : supabaseService.getProducts(),
+      ? productService.getAvailableProducts(bookingDates.startDate, bookingDates.endDate)
+      : productService.getProducts(),
   });
 
   useEffect(() => {

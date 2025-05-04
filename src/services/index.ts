@@ -17,7 +17,8 @@ export {
   deleteProduct,
   uploadProductImage,
   exportProductsToCSV,
-  importProductsFromCSV
+  importProductsFromCSV,
+  getAvailableProducts
 } from './productService';
 
 export {
@@ -33,8 +34,7 @@ export {
   getBookings,
   getProductBookings,
   createBooking,
-  updateBookingStatus,
-  getAvailableProducts
+  updateBookingStatus
 } from './bookingService';
 
 export {
