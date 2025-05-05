@@ -80,9 +80,9 @@ const ProductTabs = ({
                   b.endDate.getTime()   >= bookingDates.startDate.getTime()
                 ) ? (
                   // Conflict: show red "unavailable" WITH the date range
-                  <p className="mb-4 text-red-600 font-medium">
+                  <div className="text-red-600 font-medium mb-4">
                     Товар недоступен для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
-                  </p>
+                  </div>
                 ) : (
                   // No conflict: show green with selected range
                   <div className="text-green-600 font-medium mb-4">
@@ -107,7 +107,8 @@ const ProductTabs = ({
                 b.startDate.getTime() <= bookingDates.endDate.getTime() &&
                 b.endDate.getTime()   >= bookingDates.startDate.getTime()
               ) ? (
-                <p className="mb-4 text-red-600 font-medium">Товар недоступен для выбранных дат</p>
+                // Empty element as we already show the unavailable message above
+                <></>
               ) : validBookings.length > 0 ? (() => {
                   const nearest = [...validBookings]
                     .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())[0];
@@ -147,9 +148,9 @@ const ProductTabs = ({
                     {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
                   </div>
                 ) : (
-                  <p className="mb-4 text-red-600 font-medium">
+                  <div className="text-red-600 font-medium mb-4">
                     Товар недоступен для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
-                  </p>
+                  </div>
                 )
               ) : (
                 <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
