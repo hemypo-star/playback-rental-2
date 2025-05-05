@@ -2,7 +2,7 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
-import BookingCalendar from '@/components/BookingCalendar';
+import { BookingCalendar } from '@/components/BookingCalendar';
 import { format } from 'date-fns';
 import SearchBar from './SearchBar';
 

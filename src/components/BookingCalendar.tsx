@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,7 +22,10 @@ const BookingCalendar = ({
   isCompact = false,
   className
 }: BookingCalendarProps) => {
-  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
+  const [dateRange, setDateRange] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>({
     start: initialStartDate || null,
     end: initialEndDate || null
   });
@@ -29,8 +33,22 @@ const BookingCalendar = ({
   const handleDateRangeChange = (newRange: { start: Date | null; end: Date | null }) => {
     setDateRange(newRange);
     
-    // Only update the parent component's state
-    // The actual booking action will be triggered by the red button elsewhere
+    if (newRange.start && newRange.end) {
+      const newBooking: BookingPeriod = {
+        id: 'temp-id',
+        productId: 'temp-product',
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        startDate: newRange.start,
+        endDate: newRange.end,
+        status: 'pending',
+        totalPrice: 0,
+        createdAt: new Date(),
+        notes: ''
+      };
+      onBookingChange(newBooking);
+    }
   };
 
   return (
@@ -41,7 +59,8 @@ const BookingCalendar = ({
           <h3 className="font-medium">Выберите даты аренды</h3>
         </div>
       </div>
-      <div className="p-4 flex-1 overflow-auto">
+      
+      <div className="p-4 flex-1">
         <DateRangePickerRu
           onChange={handleDateRangeChange}
           initialStartDate={initialStartDate}
@@ -53,4 +72,5 @@ const BookingCalendar = ({
   );
 };
 
+export { BookingCalendar };
 export default BookingCalendar;

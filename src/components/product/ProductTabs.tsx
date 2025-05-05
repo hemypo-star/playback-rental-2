@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import BookingCalendar from '@/components/BookingCalendar';
 import RentalFeatures from './RentalFeatures';
-import TimeSelect from '../booking/TimeSelect';
 
 interface ProductTabsProps {
   product: Product;
@@ -27,25 +26,6 @@ const ProductTabs = ({
 }: ProductTabsProps) => {
   // Ensure bookings is always an array, even if undefined
   const validBookings = bookings || [];
-  
-  // Handle the confirm click for the red button
-  const handleConfirm = () => {
-    if (bookingDates.startDate && bookingDates.endDate) {
-      onBookingChange({
-        id: 'temp-id',
-        productId: product.id,
-        customerName: '',
-        customerEmail: '',
-        customerPhone: '',
-        startDate: bookingDates.startDate,
-        endDate: bookingDates.endDate,
-        status: 'pending',
-        totalPrice: 0,
-        createdAt: new Date(),
-        notes: ''
-      });
-    }
-  };
   
   return <>
       <TabsContent value="details" className="space-y-6">
@@ -217,24 +197,7 @@ const ProductTabs = ({
               })()}
               
               <div className="max-w-md mx-auto">
-                <BookingCalendar 
-                  onBookingChange={onBookingChange} 
-                  bookedPeriods={validBookings}
-                  initialStartDate={bookingDates.startDate}
-                  initialEndDate={bookingDates.endDate}
-                />
-                
-                {/* New aligned row with time selectors and red confirm button */}
-                <div className="flex items-center gap-4 mt-4">
-                  {/* Time selectors will go here - we're assuming they already exist elsewhere */}
-                  <button
-                    type="button"
-                    className="px-4 py-2 border border-red-500 text-red-500 rounded-md ml-auto"
-                    onClick={handleConfirm}
-                  >
-                    Подтвердить время
-                  </button>
-                </div>
+                <BookingCalendar onBookingChange={onBookingChange} bookedPeriods={validBookings} />
               </div>
             </div> : <div className="text-center py-10">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
