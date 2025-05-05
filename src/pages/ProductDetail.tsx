@@ -144,10 +144,9 @@ const ProductDetail = () => {
           <Tabs defaultValue="details">
             <TabsList className="mb-8">
               <TabsTrigger value="details">Подробности</TabsTrigger>
-              <TabsTrigger value="availability">Доступность</TabsTrigger>
             </TabsList>
             
-            <ProductTabs product={product} bookings={bookings || []} onBookingChange={handleBookingChange} bookingDates={bookingDates} />
+            <ProductTabs product={product}[]} onBookingChange={handleBookingChange} bookingDates={bookingDates} />
           </Tabs>
         </div>
       </div>
