@@ -1,9 +1,10 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookingPeriod } from '@/types/product';
 import DateRangePickerRu from './booking/DateRangePickerRu';
+import { Button } from '@/components/ui/button';
 
 interface BookingCalendarProps {
   onBookingChange: (booking: BookingPeriod) => void;
@@ -30,7 +31,11 @@ const BookingCalendar = ({
     end: initialEndDate || null
   });
 
-  useEffect(() => {
+  const handleDateRangeChange = (newRange: { start: Date | null; end: Date | null }) => {
+    setDateRange(newRange);
+  };
+
+  const handleConfirm = () => {
     if (dateRange.start && dateRange.end) {
       const newBooking: BookingPeriod = {
         id: 'temp-id',
@@ -47,14 +52,10 @@ const BookingCalendar = ({
       };
       onBookingChange(newBooking);
     }
-  }, [dateRange, onBookingChange]);
-
-  const handleDateRangeChange = (newRange: { start: Date | null; end: Date | null }) => {
-    setDateRange(newRange);
   };
 
   return (
-    <div className={cn("border rounded-lg shadow-sm bg-card", className)}>
+    <div className={cn("border rounded-lg shadow-sm bg-card flex flex-col h-full", className)}>
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-5 w-5 text-primary" />
@@ -62,13 +63,22 @@ const BookingCalendar = ({
         </div>
       </div>
       
-      <div className="p-4">
+      <div className="p-4 flex-1">
         <DateRangePickerRu
           onChange={handleDateRangeChange}
           initialStartDate={initialStartDate}
           initialEndDate={initialEndDate}
           className={cn(isCompact && "scale-[0.95] origin-top")}
         />
+      </div>
+
+      <div className="p-4 border-t flex justify-end mt-auto">
+        <Button 
+          type="button"
+          onClick={handleConfirm}
+        >
+          Подтвердить время
+        </Button>
       </div>
     </div>
   );
