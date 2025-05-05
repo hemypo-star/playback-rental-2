@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,24 +28,9 @@ const BookingCalendar = ({
 
   const handleDateRangeChange = (newRange: { start: Date | null; end: Date | null }) => {
     setDateRange(newRange);
-  };
-
-  const handleConfirm = () => {
-    if (dateRange.start && dateRange.end) {
-      onBookingChange({
-        id: 'temp-id',
-        productId: 'temp-product',
-        customerName: '',
-        customerEmail: '',
-        customerPhone: '',
-        startDate: dateRange.start,
-        endDate: dateRange.end,
-        status: 'pending',
-        totalPrice: 0,
-        createdAt: new Date(),
-        notes: ''
-      });
-    }
+    
+    // Only update the parent component's state
+    // The actual booking action will be triggered by the red button elsewhere
   };
 
   return (
@@ -64,15 +48,6 @@ const BookingCalendar = ({
           initialEndDate={initialEndDate}
           className={cn(isCompact && "scale-[0.95] origin-top")}
         />
-      </div>
-      <div className="p-4 border-t flex justify-end mt-auto">
-        <button
-          type="button"
-          className="px-4 py-2 bg-primary text-white rounded-md"
-          onClick={handleConfirm}
-        >
-          Подтвердить
-        </button>
       </div>
     </div>
   );
