@@ -1,3 +1,4 @@
+
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
@@ -78,9 +79,9 @@ const ProductTabs = ({
                   b.startDate.getTime() <= bookingDates.endDate.getTime() &&
                   b.endDate.getTime()   >= bookingDates.startDate.getTime()
                 ) ? (
-                  // Conflict: show red "unavailable"
+                  // Conflict: show red "unavailable" WITH the date range
                   <p className="mb-4 text-red-600 font-medium">
-                    Товар недоступен для выбранных дат
+                    Товар недоступен для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
                   </p>
                 ) : (
                   // No conflict: show green with selected range
@@ -146,7 +147,9 @@ const ProductTabs = ({
                     {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
                   </div>
                 ) : (
-                  <p className="mb-4 text-red-600 font-medium">Товар недоступен для выбранных дат</p>
+                  <p className="mb-4 text-red-600 font-medium">
+                    Товар недоступен для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
+                  </p>
                 )
               ) : (
                 <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
