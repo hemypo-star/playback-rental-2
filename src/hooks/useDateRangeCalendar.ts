@@ -64,7 +64,7 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
   
   const handleDateHover = (date: Date | null) => setHoverDate(date);
 
-  // Fixed to ensure all return types are string | false (not true)
+  // Fixed to ensure all return types are string | false (not true or boolean)
   const getDayClasses = (date: Date, currentMonth: number) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
