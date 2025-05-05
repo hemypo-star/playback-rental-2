@@ -1,9 +1,7 @@
 import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, MessageSquare, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
 export const Footer = () => {
-  return (
-    <footer className="bg-secondary mt-auto">
+  return <footer className="bg-secondary mt-auto">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
@@ -25,16 +23,16 @@ export const Footer = () => {
                   <Instagram className="h-5 w-5" />
                 </a>
                 <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                  <Linkedin className="h-5 w-5" />
+                  
                 </a>
                 <a href="https://vk.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                   <div className="relative flex items-center justify-center h-5 w-5">
-                    <Share2 className="h-5 w-5" />
-                    <span className="absolute text-xs font-bold" style={{ marginTop: '-1px' }}>VK</span>
+                    
+                    
                   </div>
                 </a>
                 <a href="https://t.me/playbackrental" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                  <MessageSquare className="h-5 w-5" />
+                  
                 </a>
               </div>
             </div>
@@ -62,6 +60,5 @@ export const Footer = () => {
           <p>© {new Date().getFullYear()} PlayBack Rental. Все права защищены.</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
