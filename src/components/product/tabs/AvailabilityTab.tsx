@@ -6,6 +6,7 @@ import { formatDateRange } from "@/utils/dateUtils";
 import BookingCalendar from "@/components/BookingCalendar";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import TimeSelect from "@/components/booking/TimeSelect";
 
 interface AvailabilityTabProps {
   product: Product;
@@ -15,6 +16,10 @@ interface AvailabilityTabProps {
     startDate?: Date;
     endDate?: Date;
   };
+  startTime: string;
+  endTime: string;
+  onStartTimeChange: (value: string) => void;
+  onEndTimeChange: (value: string) => void;
   onConfirmTime: () => void;
 }
 
@@ -23,6 +28,10 @@ const AvailabilityTab = ({
   bookings = [], 
   onBookingChange, 
   bookingDates,
+  startTime,
+  endTime,
+  onStartTimeChange,
+  onEndTimeChange,
   onConfirmTime
 }: AvailabilityTabProps) => {
   // Ensure bookings is always an array
@@ -87,16 +96,35 @@ const AvailabilityTab = ({
             initialEndDate={bookingDates.endDate}
           />
           
-          {/* Button for confirming time */}
-          <div className="flex items-center gap-4 mt-4">
-            <button
-              type="button"
-              className="px-4 py-2 border border-red-500 text-red-500 rounded-md ml-auto"
-              onClick={onConfirmTime}
-            >
-              Подтвердить время
-            </button>
-          </div>
+          {/* Time selection fields */}
+          {bookingDates.startDate && bookingDates.endDate && (
+            <div className="mt-6 bg-muted/50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium mb-3">Выберите время аренды:</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <TimeSelect 
+                  label="Взять в" 
+                  value={startTime} 
+                  onValueChange={onStartTimeChange} 
+                />
+                <TimeSelect 
+                  label="Вернуть до" 
+                  value={endTime} 
+                  onValueChange={onEndTimeChange} 
+                />
+              </div>
+              
+              {/* Button for confirming time */}
+              <div className="mt-4 flex justify-end">
+                <Button
+                  onClick={onConfirmTime}
+                  variant="outline"
+                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                >
+                  Подтвердить время
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

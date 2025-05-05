@@ -4,6 +4,7 @@ import { Product, BookingPeriod } from "@/types/product";
 import RentalFeatures from "../RentalFeatures";
 import { Clock, CalendarIcon, CheckIcon, XIcon } from "lucide-react";
 import { formatDateRange } from "@/utils/dateUtils";
+import TimeSelect from "@/components/booking/TimeSelect";
 
 interface DetailsTabProps {
   product: Product;
@@ -12,9 +13,21 @@ interface DetailsTabProps {
     startDate?: Date;
     endDate?: Date;
   };
+  startTime: string;
+  endTime: string;
+  onStartTimeChange: (value: string) => void;
+  onEndTimeChange: (value: string) => void;
 }
 
-const DetailsTab = ({ product, bookings = [], bookingDates }: DetailsTabProps) => {
+const DetailsTab = ({ 
+  product, 
+  bookings = [], 
+  bookingDates,
+  startTime,
+  endTime,
+  onStartTimeChange,
+  onEndTimeChange
+}: DetailsTabProps) => {
   // Ensure bookings is always an array, even if undefined
   const validBookings = bookings || [];
   
@@ -51,6 +64,25 @@ const DetailsTab = ({ product, bookings = [], bookingDates }: DetailsTabProps) =
             <span className="text-xs text-green-600">(-30%)</span>
           </li>
         </ul>
+        
+        {/* Time Selection */}
+        {bookingDates.startDate && bookingDates.endDate && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <h4 className="font-medium mb-3">Время аренды</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <TimeSelect 
+                label="Взять в" 
+                value={startTime} 
+                onValueChange={onStartTimeChange} 
+              />
+              <TimeSelect 
+                label="Вернуть до" 
+                value={endTime} 
+                onValueChange={onEndTimeChange} 
+              />
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Availability Section */}
