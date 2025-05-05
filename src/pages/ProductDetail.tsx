@@ -55,8 +55,15 @@ const ProductDetail = () => {
     });
   };
 
+  // Check if selected dates conflict with any booking
+  const hasDateConflict = bookingDates.startDate && bookingDates.endDate && bookings && 
+    bookings.some(booking => 
+      booking.startDate.getTime() <= bookingDates.endDate!.getTime() && 
+      booking.endDate.getTime() >= bookingDates.startDate!.getTime()
+    );
+
   const handleAddToCart = () => {
-    if (!product || !bookingDates.startDate || !bookingDates.endDate) return;
+    if (!product || !bookingDates.startDate || !bookingDates.endDate || hasDateConflict) return;
     setAddingToCart(true);
     const success = addToCart(product, bookingDates.startDate, bookingDates.endDate);
     if (success) {
@@ -137,13 +144,18 @@ const ProductDetail = () => {
               <Button 
                 size="lg" 
                 className="w-full" 
-                disabled={!product.available || !bookingDates.startDate || !bookingDates.endDate || addingToCart}
+                disabled={!product.available || !bookingDates.startDate || !bookingDates.endDate || addingToCart || hasDateConflict}
                 onClick={handleAddToCart}
               >
                 {addingToCart ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                     В процессе...
+                  </>
+                ) : hasDateConflict ? (
+                  <>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    Даты недоступны
                   </>
                 ) : (
                   <>
