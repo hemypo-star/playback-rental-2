@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { ru } from 'date-fns/locale';
 import { format, isAfter, isBefore, addMonths, startOfMonth, setHours } from 'date-fns';
@@ -124,7 +125,7 @@ const BookingDateRangePicker = ({
           onTimeChange={setStartTime}
           hours={HOURS}
           modifiersStyles={modifiersStyles}
-          disabled={date => isBefore(date, new Date()) ? "opacity-50" : false}
+          disabled={(date) => isBefore(date, new Date()) ? "opacity-50" : false}
         />
         <BookingCalendarColumn
           label="Вернуть"
@@ -136,7 +137,7 @@ const BookingDateRangePicker = ({
           onTimeChange={setEndTime}
           hours={HOURS}
           modifiersStyles={modifiersStyles}
-          disabled={date => isBefore(date, new Date()) ? "opacity-50" : false}
+          disabled={(date) => isBefore(date, new Date()) ? "opacity-50" : false}
         />
       </div>
 
