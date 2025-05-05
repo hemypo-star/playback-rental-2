@@ -4,7 +4,6 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookingPeriod } from '@/types/product';
 import DateRangePickerRu from './booking/DateRangePickerRu';
-import { Button } from '@/components/ui/button';
 
 interface BookingCalendarProps {
   onBookingChange: (booking: BookingPeriod) => void;
@@ -33,18 +32,16 @@ const BookingCalendar = ({
 
   const handleDateRangeChange = (newRange: { start: Date | null; end: Date | null }) => {
     setDateRange(newRange);
-  };
-
-  const handleConfirm = () => {
-    if (dateRange.start && dateRange.end) {
+    
+    if (newRange.start && newRange.end) {
       const newBooking: BookingPeriod = {
         id: 'temp-id',
         productId: 'temp-product',
         customerName: '',
         customerEmail: '',
         customerPhone: '',
-        startDate: dateRange.start,
-        endDate: dateRange.end,
+        startDate: newRange.start,
+        endDate: newRange.end,
         status: 'pending',
         totalPrice: 0,
         createdAt: new Date(),
@@ -70,15 +67,6 @@ const BookingCalendar = ({
           initialEndDate={initialEndDate}
           className={cn(isCompact && "scale-[0.95] origin-top")}
         />
-      </div>
-
-      <div className="p-4 border-t flex justify-end mt-auto">
-        <Button 
-          type="button"
-          onClick={handleConfirm}
-        >
-          Подтвердить время
-        </Button>
       </div>
     </div>
   );
