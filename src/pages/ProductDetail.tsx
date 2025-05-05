@@ -15,7 +15,6 @@ import { useCartContext } from '@/hooks/useCart';
 import ProductImage from '@/components/product/ProductImage';
 import ProductHeader from '@/components/product/ProductHeader';
 import ProductTabs from '@/components/product/ProductTabs';
-
 const ProductDetail = () => {
   const {
     id
@@ -57,14 +56,12 @@ const ProductDetail = () => {
     queryFn: () => getProductBookings(id || ''),
     enabled: !!id
   });
-
   const handleBookingChange = (bookingPeriod: BookingPeriod) => {
     setBookingDates({
       startDate: bookingPeriod.startDate,
       endDate: bookingPeriod.endDate
     });
   };
-
   const handleAddToCart = () => {
     if (!product || !bookingDates.startDate || !bookingDates.endDate) return;
     setAddingToCart(true);
@@ -78,7 +75,6 @@ const ProductDetail = () => {
       setAddingToCart(false);
     }
   };
-
   if (isLoading) {
     return <div className="container mx-auto px-4 py-12 flex justify-center items-center min-h-[60vh]">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -93,7 +89,6 @@ const ProductDetail = () => {
         </Button>
       </div>;
   }
-  
   return <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <Breadcrumb className="mb-8">
@@ -144,7 +139,7 @@ const ProductDetail = () => {
           <Tabs defaultValue="details">
             <TabsList className="mb-8">
               <TabsTrigger value="details">Подробности</TabsTrigger>
-              <TabsTrigger value="availability">Доступность</TabsTrigger>
+              
             </TabsList>
             
             <ProductTabs product={product} bookings={bookings || []} onBookingChange={handleBookingChange} bookingDates={bookingDates} />
