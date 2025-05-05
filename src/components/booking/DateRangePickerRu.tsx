@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { ru } from "date-fns/locale";
 import {
@@ -161,24 +162,8 @@ const DateRangePickerRu = ({
     }
   };
 
-  useEffect(() => {
-    if (!selection.from) {
-      onChange({ start: null, end: null });
-      return;
-    }
-    const start = new Date(selection.from);
-    start.setHours(parseInt(startTime, 10), 0, 0, 0);
-
-    let end: Date | null = null;
-    if (selection.to) {
-      end = new Date(selection.to);
-      end.setHours(parseInt(endTime, 10), 0, 0, 0);
-    } else {
-      end = new Date(selection.from);
-      end.setHours(parseInt(endTime, 10), 0, 0, 0);
-    }
-    onChange({ start, end });
-  }, [selection, startTime, endTime, onChange]);
+  // Removing the effect that automatically updates dates when selection changes
+  // Now dates will only be updated when the confirm button is clicked
 
   return (
     <div className={cn("w-full", className)}>
