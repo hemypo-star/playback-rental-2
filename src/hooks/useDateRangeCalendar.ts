@@ -64,18 +64,32 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
   
   const handleDateHover = (date: Date | null) => setHoverDate(date);
 
+  // Fixed to always return an object with the expected structure
   const getDayClasses = (date: Date, currentMonth: number) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const disabled = isBefore(date, today) && !isSameDay(date, today);
-    if (date.getMonth() !== currentMonth)
-      return "invisible pointer-events-none";
+    
+    // For days outside the current month, return object with appropriate classes
+    if (date.getMonth() !== currentMonth) {
+      return {
+        base: "w-10 h-10 flex items-center justify-center text-sm font-medium transition-colors duration-100 select-none invisible pointer-events-none",
+        disabled: false,
+        selected: false,
+        range: false,
+        rounded: false,
+        today: false,
+        hover: false
+      };
+    }
+    
     const isToday = isSameDay(date, today);
     const isStart = selection.from && isSameDay(date, selection.from);
     const isEnd = selection.to && isSameDay(date, selection.to);
 
-    let isInRange = false,
-      isInHover = false;
+    let isInRange = false;
+    let isInHover = false;
+    
     if (selection.from && selection.to) {
       isInRange = isWithinInterval(date, {
         start: selection.from,
@@ -93,12 +107,12 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
 
     return {
       base: "w-10 h-10 flex items-center justify-center text-sm font-medium transition-colors duration-100 select-none",
-      disabled: disabled && "opacity-40 pointer-events-none",
-      selected: (isStart || isEnd) && "bg-[#1B1F3B] text-white z-10",
-      range: (isInRange || isInHover) && !isStart && !isEnd && "bg-[#F2F2FA] text-[#222]",
-      rounded: (isStart || isEnd) && (roundedLeft || roundedRight),
-      today: isToday && "border border-[#ea384c]",
-      hover: !isStart && !isEnd && !isInRange && !isInHover && !disabled && "hover:bg-[#F2F2FA]"
+      disabled: disabled ? "opacity-40 pointer-events-none" : false,
+      selected: (isStart || isEnd) ? "bg-[#1B1F3B] text-white z-10" : false,
+      range: (isInRange || isInHover) && !isStart && !isEnd ? "bg-[#F2F2FA] text-[#222]" : false,
+      rounded: (isStart || isEnd) ? (roundedLeft || roundedRight) : false,
+      today: isToday ? "border border-[#ea384c]" : false,
+      hover: !isStart && !isEnd && !isInRange && !isInHover && !disabled ? "hover:bg-[#F2F2FA]" : false
     };
   };
 
