@@ -64,7 +64,15 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
   
   const handleDateHover = (date: Date | null) => setHoverDate(date);
 
-  const getDayClasses = (date: Date, currentMonth: number) => {
+  const getDayClasses = (date: Date, currentMonth: number): {
+    base: string;
+    disabled: string | false;
+    selected: string | false;
+    range: string | false;
+    rounded: string | false;
+    today: string | false;
+    hover: string | false;
+  } => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const disabled = isBefore(date, today) && !isSameDay(date, today);
