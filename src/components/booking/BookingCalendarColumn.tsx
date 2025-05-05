@@ -1,6 +1,8 @@
 
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
-import { Clock } from 'lucide-react';
 import { 
   Select,
   SelectContent,
@@ -8,22 +10,20 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
-import { ru } from 'date-fns/locale';
+import { Clock } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 
 interface BookingCalendarColumnProps {
   label: string;
   month: Date;
-  onMonthChange: (date: Date) => void;
+  onMonthChange: (month: Date) => void;
   selected: DateRange | undefined;
   onSelect: (range: DateRange | undefined) => void;
   timeValue: string;
-  onTimeChange: (time: string) => void;
+  onTimeChange: (value: string) => void;
   hours: { value: string; label: string }[];
-  modifiersStyles: any;
+  modifiersStyles?: Record<string, React.CSSProperties>;
   disabled: (date: Date) => boolean;
-  className?: string;
 }
 
 const BookingCalendarColumn = ({
@@ -36,45 +36,39 @@ const BookingCalendarColumn = ({
   onTimeChange,
   hours,
   modifiersStyles,
-  disabled,
-  className
+  disabled
 }: BookingCalendarColumnProps) => {
   return (
-    <div className={cn("space-y-2", className)}>
-      <h3 className="font-medium text-center">{label}</h3>
-      <div className="border rounded-lg shadow-sm bg-card overflow-hidden">
-        <Calendar
-          mode="range"
-          defaultMonth={month}
-          month={month}
-          onMonthChange={onMonthChange}
-          selected={selected}
-          onSelect={onSelect}
-          numberOfMonths={1}
-          locale={ru}
-          modifiersStyles={modifiersStyles}
-          disabled={disabled}
-          className="border-0"
-        />
-        <div className="p-4 border-t flex items-center">
-          <Clock className="h-4 w-4 mr-2 text-blue-500" />
-          <span className="mr-2">Время:</span>
-          <Select 
-            value={timeValue} 
-            onValueChange={onTimeChange}
-          >
-            <SelectTrigger className="w-[110px]">
-              <SelectValue placeholder="Выберите время" />
-            </SelectTrigger>
-            <SelectContent>
-              {hours.map((hour) => (
-                <SelectItem key={hour.value} value={hour.value}>
-                  {hour.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="flex flex-col p-4 border rounded-lg shadow-sm">
+      <h3 className="font-medium mb-3">{label}</h3>
+      <Calendar
+        mode="range"
+        month={month}
+        onMonthChange={onMonthChange}
+        selected={selected}
+        onSelect={onSelect}
+        locale={ru}
+        className="rounded-md border"
+        modifiersStyles={modifiersStyles}
+        disabled={disabled}
+      />
+      <div className="mt-2 flex items-center">
+        <Clock className="h-4 w-4 mr-2 text-gray-500" />
+        <span className="text-sm text-gray-600 mr-2">
+          {label === "Взять" ? "Время получения:" : "Время возврата:"}
+        </span>
+        <Select value={timeValue} onValueChange={onTimeChange}>
+          <SelectTrigger className="w-24 h-8">
+            <SelectValue placeholder="Время" />
+          </SelectTrigger>
+          <SelectContent>
+            {hours.map(hour => (
+              <SelectItem key={hour.value} value={hour.value}>
+                {hour.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

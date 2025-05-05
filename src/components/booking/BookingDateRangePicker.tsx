@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ru } from 'date-fns/locale';
 import { format, isAfter, isBefore, addMonths, startOfMonth, setHours } from 'date-fns';
@@ -112,6 +111,11 @@ const BookingDateRangePicker = ({
     }
   };
 
+  // Fix: Modify the disabled prop to return boolean instead of string | boolean
+  const isDateDisabled = (date: Date): boolean => {
+    return isBefore(date, new Date());
+  };
+
   return (
     <div className={cn("space-y-4", className)}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -125,7 +129,7 @@ const BookingDateRangePicker = ({
           onTimeChange={setStartTime}
           hours={HOURS}
           modifiersStyles={modifiersStyles}
-          disabled={(date) => isBefore(date, new Date()) ? "opacity-50" : false}
+          disabled={isDateDisabled}
         />
         <BookingCalendarColumn
           label="Вернуть"
@@ -137,7 +141,7 @@ const BookingDateRangePicker = ({
           onTimeChange={setEndTime}
           hours={HOURS}
           modifiersStyles={modifiersStyles}
-          disabled={(date) => isBefore(date, new Date()) ? "opacity-50" : false}
+          disabled={isDateDisabled}
         />
       </div>
 
