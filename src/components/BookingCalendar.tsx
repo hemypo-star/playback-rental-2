@@ -22,32 +22,30 @@ const BookingCalendar = ({
   isCompact = false,
   className
 }: BookingCalendarProps) => {
-  const [dateRange, setDateRange] = useState<{
-    start: Date | null;
-    end: Date | null;
-  }>({
+  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
     start: initialStartDate || null,
     end: initialEndDate || null
   });
 
   const handleDateRangeChange = (newRange: { start: Date | null; end: Date | null }) => {
     setDateRange(newRange);
-    
-    if (newRange.start && newRange.end) {
-      const newBooking: BookingPeriod = {
+  };
+
+  const handleConfirm = () => {
+    if (dateRange.start && dateRange.end) {
+      onBookingChange({
         id: 'temp-id',
         productId: 'temp-product',
         customerName: '',
         customerEmail: '',
         customerPhone: '',
-        startDate: newRange.start,
-        endDate: newRange.end,
+        startDate: dateRange.start,
+        endDate: dateRange.end,
         status: 'pending',
         totalPrice: 0,
         createdAt: new Date(),
         notes: ''
-      };
-      onBookingChange(newBooking);
+      });
     }
   };
 
@@ -59,8 +57,7 @@ const BookingCalendar = ({
           <h3 className="font-medium">Выберите даты аренды</h3>
         </div>
       </div>
-      
-      <div className="p-4 flex-1">
+      <div className="p-4 flex-1 overflow-auto">
         <DateRangePickerRu
           onChange={handleDateRangeChange}
           initialStartDate={initialStartDate}
@@ -68,9 +65,17 @@ const BookingCalendar = ({
           className={cn(isCompact && "scale-[0.95] origin-top")}
         />
       </div>
+      <div className="p-4 border-t flex justify-end mt-auto">
+        <button
+          type="button"
+          className="px-4 py-2 bg-primary text-white rounded-md"
+          onClick={handleConfirm}
+        >
+          Подтвердить
+        </button>
+      </div>
     </div>
   );
 };
 
-export { BookingCalendar };
 export default BookingCalendar;
