@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ru } from 'date-fns/locale';
-import { format, isAfter, isBefore, addMonths, startOfMonth, setHours } from 'date-fns';
+import { format, isBefore } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { 
   Select,
@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
 import { Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import BookingCalendarColumn from './BookingCalendarColumn';
 
 interface BookingDateRangePickerProps {
@@ -37,7 +38,7 @@ const BookingDateRangePicker = ({
   className
 }: BookingDateRangePickerProps) => {
   const [leftMonth, setLeftMonth] = useState<Date>(initialStartDate ? new Date(initialStartDate) : new Date());
-  const [rightMonth, setRightMonth] = useState<Date>(addMonths(leftMonth, 1));
+  const [rightMonth, setRightMonth] = useState<Date>(initialStartDate ? new Date(initialStartDate) : new Date());
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>(
     initialStartDate && initialEndDate 
@@ -62,15 +63,15 @@ const BookingDateRangePicker = ({
 
   const handleLeftMonthChange = (month: Date) => {
     setLeftMonth(month);
-    setRightMonth(addMonths(month, 1));
+    setRightMonth(month);
   };
 
   const handleRightMonthChange = (month: Date) => {
     setRightMonth(month);
-    setLeftMonth(addMonths(month, -1));
+    setLeftMonth(month);
   };
 
-  useEffect(() => {
+  const handleConfirmDates = () => {
     if (!dateRange?.from) return;
 
     const start = new Date(dateRange.from);
@@ -80,39 +81,31 @@ const BookingDateRangePicker = ({
     if (dateRange.to) {
       end = new Date(dateRange.to);
       end.setHours(parseInt(endTime, 10), 0, 0, 0);
-      
-      if (isBefore(end, start)) {
-        if (format(dateRange.from, 'yyyy-MM-dd') === format(dateRange.to, 'yyyy-MM-dd')) {
-          setEndTime(startTime);
-          end.setHours(parseInt(startTime, 10), 0, 0, 0);
-        }
-      }
     }
 
     onChange({ start, end });
-  }, [dateRange, startTime, endTime, onChange]);
+  };
 
   const modifiersStyles = {
     range_start: {
       color: 'white',
-      backgroundColor: '#ea384c', // Red accent
+      backgroundColor: '#ea384c',
       borderTopLeftRadius: '50%',
       borderBottomLeftRadius: '50%',
     },
     range_end: {
       color: 'white',
-      backgroundColor: '#ea384c', // Red accent
+      backgroundColor: '#ea384c',
       borderTopRightRadius: '50%',
       borderBottomRightRadius: '50%',
     },
     range_middle: {
       color: 'black',
-      backgroundColor: '#0EA5E9', // Dark blue with opacity
+      backgroundColor: '#0EA5E9',
       opacity: 0.2
     }
   };
 
-  // Fix: Ensure the function returns a boolean
   const isDateDisabled = (date: Date): boolean => {
     return isBefore(date, new Date());
   };
@@ -144,6 +137,51 @@ const BookingDateRangePicker = ({
           modifiersStyles={modifiersStyles}
           disabled={isDateDisabled}
         />
+      </div>
+
+      <div className="flex justify-center items-center gap-8 mt-6">
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-[#ea384c]" />
+          <span className="text-sm">Взять в:</span>
+          <Select value={startTime} onValueChange={setStartTime}>
+            <SelectTrigger className="w-[90px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {HOURS.map(hour => (
+                <SelectItem key={hour.value} value={hour.value}>
+                  {hour.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-[#ea384c]" />
+          <span className="text-sm">Вернуть до:</span>
+          <Select value={endTime} onValueChange={setEndTime}>
+            <SelectTrigger className="w-[90px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {HOURS.map(hour => (
+                <SelectItem key={hour.value} value={hour.value}>
+                  {hour.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="text-[#ea384c] border-[#ea384c] hover:bg-[#ea384c] hover:text-white"
+          onClick={handleConfirmDates}
+        >
+          Подтвердить время
+        </Button>
       </div>
 
       {dateRange?.from && (

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,8 +30,21 @@ const BookingCalendar = ({
   const handleDateRangeChange = (newRange: { start: Date | null; end: Date | null }) => {
     setDateRange(newRange);
     
-    // Only update the parent component's state
-    // The actual booking action will be triggered by the red button elsewhere
+    if (newRange.start && newRange.end) {
+      onBookingChange({
+        id: 'temp-id',
+        productId: '',
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        startDate: newRange.start,
+        endDate: newRange.end,
+        status: 'pending',
+        totalPrice: 0,
+        createdAt: new Date(),
+        notes: ''
+      });
+    }
   };
 
   return (
