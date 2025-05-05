@@ -1,15 +1,10 @@
-
 import React from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import DaysGrid from "./DaysGrid";
-
-type TimeOption = {
-  value: string;
-  label: string;
-};
 
 interface CalendarMonthColumnProps {
   label: string;
@@ -17,20 +12,15 @@ interface CalendarMonthColumnProps {
   daysOfWeek: string[];
   daysGrid: (Date | null)[];
   getDayKey: (d: Date) => string;
-  getDayClasses: (d: Date, currentMonth: number) => {
-    base: string;
-    disabled: string | false;
-    selected: string | false;
-    range: string | false;
-    rounded: string | false;
-    today: string | false;
-    hover: string | false;
-  };
+  getDayClasses: (d: Date, currentMonth: number) => string;
   handleDateClick: (d: Date) => void;
   handleDateHover: (d: Date | null) => void;
   timeValue: string;
   setTime: (v: string) => void;
-  hours: TimeOption[];
+  hours: {
+    value: string;
+    label: string;
+  }[];
 }
 
 const CalendarMonthColumn = ({

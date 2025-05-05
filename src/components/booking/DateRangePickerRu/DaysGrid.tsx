@@ -1,19 +1,12 @@
 
 import React from "react";
+import { format, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface DaysGridProps {
   daysGrid: (Date | null)[];
   getDayKey: (d: Date) => string;
-  getDayClasses: (d: Date, currentMonth: number) => {
-    base: string;
-    disabled: string | false;
-    selected: string | false;
-    range: string | false;
-    rounded: string | false;
-    today: string | false;
-    hover: string | false;
-  };
+  getDayClasses: (d: Date, currentMonth: number) => string;
   handleDateClick: (d: Date) => void;
   handleDateHover: (d: Date | null) => void;
   currentMonth: number;
@@ -33,15 +26,7 @@ const DaysGrid = ({
         <button
           key={getDayKey(d)}
           type="button"
-          className={cn(
-            getDayClasses(d, currentMonth).base,
-            getDayClasses(d, currentMonth).disabled,
-            getDayClasses(d, currentMonth).selected,
-            getDayClasses(d, currentMonth).range,
-            getDayClasses(d, currentMonth).rounded,
-            getDayClasses(d, currentMonth).today,
-            getDayClasses(d, currentMonth).hover
-          )}
+          className={getDayClasses(d, currentMonth)}
           onClick={() => handleDateClick(d)}
           onMouseEnter={() => handleDateHover(d)}
           onFocus={() => handleDateHover(d)}
