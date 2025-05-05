@@ -68,8 +68,21 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const disabled = isBefore(date, today) && !isSameDay(date, today);
-    if (date.getMonth() !== currentMonth)
-      return "invisible pointer-events-none";
+    const isOutsideCurrentMonth = date.getMonth() !== currentMonth;
+    
+    // Instead of returning a string, always return an object with the expected properties
+    if (isOutsideCurrentMonth) {
+      return {
+        base: "w-10 h-10 flex items-center justify-center text-sm font-medium transition-colors duration-100 select-none invisible pointer-events-none",
+        disabled: false,
+        selected: false,
+        range: false,
+        rounded: false,
+        today: false,
+        hover: false
+      };
+    }
+
     const isToday = isSameDay(date, today);
     const isStart = selection.from && isSameDay(date, selection.from);
     const isEnd = selection.to && isSameDay(date, selection.to);
