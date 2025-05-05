@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { ru } from 'date-fns/locale';
 import { format, isAfter, isBefore, addMonths, startOfMonth, setHours } from 'date-fns';
@@ -111,7 +112,7 @@ const BookingDateRangePicker = ({
     }
   };
 
-  // Fix: Modify the disabled prop to return boolean instead of string | boolean
+  // Fix: Ensure the function returns a boolean
   const isDateDisabled = (date: Date): boolean => {
     return isBefore(date, new Date());
   };
