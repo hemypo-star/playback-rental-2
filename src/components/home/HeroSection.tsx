@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRightIcon, SearchIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { BookingCalendar } from '@/components/BookingCalendar';
+import BookingCalendar from '@/components/BookingCalendar';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
