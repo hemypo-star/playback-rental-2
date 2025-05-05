@@ -2,7 +2,7 @@
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
-import { Clock, CalendarIcon, CheckIcon } from 'lucide-react';
+import { Clock, CalendarIcon, CheckIcon, XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import BookingCalendar from '@/components/BookingCalendar';
@@ -80,14 +80,15 @@ const ProductTabs = ({
                   b.endDate.getTime()   >= bookingDates.startDate.getTime()
                 ) ? (
                   // Conflict: show red "unavailable" WITH the date range
-                  <div className="text-red-600 font-medium mb-4">
-                    Товар недоступен для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
+                  <div className="text-red-600 font-medium flex items-center gap-2 mb-4">
+                    <XIcon className="h-4 w-4" />
+                    <span>Недоступно для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}</span>
                   </div>
                 ) : (
                   // No conflict: show green with selected range
-                  <div className="text-green-600 font-medium mb-4">
-                    Доступно для аренды с{' '}
-                    {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
+                  <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
+                    <CheckIcon className="h-4 w-4" />
+                    <span>Доступно для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}</span>
                   </div>
                 )
               ) : (
@@ -143,13 +144,14 @@ const ProductTabs = ({
                   b.startDate.getTime() <= bookingDates.endDate.getTime() &&
                   b.endDate.getTime()   >= bookingDates.startDate.getTime()
                 ) ? (
-                  <div className="text-green-600 font-medium mb-4">
-                    Доступно для аренды с{' '}
-                    {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
+                  <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
+                    <CheckIcon className="h-4 w-4" />
+                    <span>Доступно для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}</span>
                   </div>
                 ) : (
-                  <div className="text-red-600 font-medium mb-4">
-                    Товар недоступен для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}
+                  <div className="text-red-600 font-medium flex items-center gap-2 mb-4">
+                    <XIcon className="h-4 w-4" />
+                    <span>Недоступно для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}</span>
                   </div>
                 )
               ) : (
