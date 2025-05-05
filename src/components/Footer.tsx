@@ -1,4 +1,5 @@
-import { Mail, Phone, MapPin } from 'lucide-react';
+
+import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Footer = () => {
@@ -17,6 +18,17 @@ export const Footer = () => {
                 <Phone className="h-4 w-4" />
                 +7 (900) 123-45-67
               </a>
+              <div className="flex items-center gap-3 pt-2">
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                  <Facebook className="h-5 w-5" />
+                </a>
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                  <Instagram className="h-5 w-5" />
+                </a>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                  <Linkedin className="h-5 w-5" />
+                </a>
+              </div>
             </div>
           </div>
           
