@@ -22,18 +22,19 @@ const PopoverContent = React.forwardRef<
         className
       )}
       onInteractOutside={(e) => {
-        // Only close if clicking outside, not on calendar content, select or buttons
-        if (props.onInteractOutside) {
-          const target = e.target as HTMLElement;
-          if (
-            !target.closest('.react-day-picker') && 
-            !target.closest('.select') &&
-            !target.closest('button')
-          ) {
-            props.onInteractOutside(e);
-          } else {
-            e.preventDefault();
-          }
+        const target = e.target as HTMLElement;
+        
+        // Only close if clicking outside, not on calendar content, select, buttons, or UI elements that might be part of the calendar
+        if (
+          target.closest('.react-day-picker') || 
+          target.closest('.select') ||
+          target.closest('button') ||
+          target.closest('[role="dialog"]') ||
+          target.closest('[data-radix-popper-content-wrapper]')
+        ) {
+          e.preventDefault();
+        } else if (props.onInteractOutside) {
+          props.onInteractOutside(e);
         }
       }}
       {...props}

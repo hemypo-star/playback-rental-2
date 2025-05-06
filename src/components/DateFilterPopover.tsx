@@ -39,6 +39,12 @@ const DateFilterPopover = ({
   const handleBookingChange = (booking: BookingPeriod) => {
     setTempStartDate(booking.startDate);
     setTempEndDate(booking.endDate);
+    
+    // Apply the date range changes immediately
+    onDateRangeChange(booking.startDate, booking.endDate);
+    
+    // Close the popover after applying the date
+    setIsOpen(false);
   };
   
   const handleClear = (e: React.MouseEvent) => {
@@ -57,6 +63,10 @@ const DateFilterPopover = ({
   
   const handlePopoverInteraction = (e: React.MouseEvent) => {
     e.stopPropagation();
+  };
+  
+  const handleClose = () => {
+    setIsOpen(false);
   };
   
   return (
@@ -85,6 +95,7 @@ const DateFilterPopover = ({
             initialEndDate={tempEndDate}
             isCompact={false}
             className="w-full"
+            onClose={handleClose}
           />
           
           <div className="pt-2 flex gap-2">

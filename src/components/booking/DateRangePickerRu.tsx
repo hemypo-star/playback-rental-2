@@ -56,8 +56,12 @@ const DateRangePickerRu = ({
     const dateRange = getFormattedDateRange();
     if (dateRange) {
       onChange(dateRange);
+      
+      // Ensure we call onClose after a slight delay to allow state updates to complete
       if (onClose) {
-        onClose();
+        setTimeout(() => {
+          onClose();
+        }, 10);
       }
     }
   };
