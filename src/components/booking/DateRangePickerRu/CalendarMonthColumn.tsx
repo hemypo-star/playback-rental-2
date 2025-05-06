@@ -51,7 +51,7 @@ const CalendarMonthColumn = ({
   const year = monthDate.getFullYear();
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center h-full">
       <h3 className="font-medium text-lg text-[#222] text-center mb-3">
         {format(monthDate, "LLLL yyyy", { locale: ru })}
       </h3>
@@ -62,15 +62,17 @@ const CalendarMonthColumn = ({
           </span>
         ))}
       </div>
-      <DaysGrid
-        daysGrid={daysGrid}
-        getDayKey={getDayKey}
-        getDayClasses={getDayClasses}
-        handleDateClick={handleDateClick}
-        handleDateHover={handleDateHover}
-        currentMonth={month}
-      />
-      <div className="mt-2 flex items-center gap-2">
+      <div className="flex-grow w-full">
+        <DaysGrid
+          daysGrid={daysGrid}
+          getDayKey={getDayKey}
+          getDayClasses={getDayClasses}
+          handleDateClick={handleDateClick}
+          handleDateHover={handleDateHover}
+          currentMonth={month}
+        />
+      </div>
+      <div className="mt-auto pt-2 flex items-center gap-2 self-start">
         <Clock className="h-4 w-4 text-[#ea384c]" />
         <span className="text-sm text-[#222] text-sec">
           {label === "Взять" ? "Взять в:" : "Вернуть до:"}

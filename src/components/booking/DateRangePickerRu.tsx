@@ -67,7 +67,7 @@ const DateRangePickerRu = ({
       <CalendarHeader onPrev={handlePrevMonth} onNext={handleNextMonth} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
-        <div>
+        <div className="flex flex-col h-full">
           <CalendarMonthColumn
             label="Взять"
             monthDate={leftMonth}
@@ -82,7 +82,7 @@ const DateRangePickerRu = ({
             hours={HOURS}
           />
         </div>
-        <div>
+        <div className="flex flex-col h-full">
           <CalendarMonthColumn
             label="Вернуть"
             monthDate={rightMonth}
