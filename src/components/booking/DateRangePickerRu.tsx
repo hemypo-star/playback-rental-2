@@ -57,11 +57,13 @@ const DateRangePickerRu = ({
     if (dateRange) {
       onChange(dateRange);
       
-      // Ensure we call onClose after a slight delay to allow state updates to complete
+      // Force close popup with higher priority
       if (onClose) {
-        setTimeout(() => {
+        // Use immediate close call and also a delayed call for reliability
+        onClose();
+        requestAnimationFrame(() => {
           onClose();
-        }, 10);
+        });
       }
     }
   };

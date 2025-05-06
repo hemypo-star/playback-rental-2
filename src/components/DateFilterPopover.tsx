@@ -43,7 +43,7 @@ const DateFilterPopover = ({
     // Apply the date range changes immediately
     onDateRangeChange(booking.startDate, booking.endDate);
     
-    // Close the popover after applying the date
+    // Force close the popover
     setIsOpen(false);
   };
   
@@ -66,6 +66,7 @@ const DateFilterPopover = ({
   };
   
   const handleClose = () => {
+    // Ensure the popover closes
     setIsOpen(false);
   };
   
@@ -85,6 +86,7 @@ const DateFilterPopover = ({
         align="start"
         onClickCapture={handlePopoverInteraction}
         sideOffset={8}
+        forceMount={true}
       >
         <div className="p-4 space-y-4 w-full">
           <h3 className="font-medium">Выберите дату и время</h3>

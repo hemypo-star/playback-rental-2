@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookingPeriod } from '@/types/product';
@@ -29,7 +29,8 @@ const BookingCalendar = ({
     end: initialEndDate || null
   });
 
-  const handleDateRangeChange = (newRange: { start: Date | null; end: Date | null }) => {
+  // Use useCallback to avoid unnecessary re-renders
+  const handleDateRangeChange = useCallback((newRange: { start: Date | null; end: Date | null }) => {
     setDateRange(newRange);
     
     if (newRange.start && newRange.end) {
@@ -46,8 +47,19 @@ const BookingCalendar = ({
         createdAt: new Date(),
         notes: ''
       });
+      
+      // Call onClose if provided
+      if (onClose) {
+        onClose();
+      }
     }
-  };
+  }, [onBookingChange, onClose]);
+
+  const handleClose = useCallback(() => {
+    if (onClose) {
+      onClose();
+    }
+  }, [onClose]);
 
   return (
     <div className={cn("border rounded-lg shadow-sm bg-card flex flex-col h-full", className)}>
@@ -63,7 +75,7 @@ const BookingCalendar = ({
           initialStartDate={initialStartDate}
           initialEndDate={initialEndDate}
           className={cn(isCompact && "scale-[0.95] origin-top")}
-          onClose={onClose}
+          onClose={handleClose}
         />
       </div>
     </div>

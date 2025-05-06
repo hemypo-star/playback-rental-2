@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Clock } from "lucide-react";
 import { formatDateRange } from "@/utils/dateUtils";
 import { BookingPeriod } from "@/types/product";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface CartRentalPeriodEditorProps {
   initialStartDate?: Date;
@@ -24,7 +24,7 @@ const CartRentalPeriodEditor = ({
   const [lastBooking, setLastBooking] = useState<string | null>(null);
 
   // Create a memoized handler to prevent multiple calls with the same data
-  const handleBookingChange = (booking: BookingPeriod) => {
+  const handleBookingChange = useCallback((booking: BookingPeriod) => {
     // Create a unique signature for this booking to detect duplicates
     const bookingSignature = `${booking.startDate.getTime()}-${booking.endDate.getTime()}`;
     
@@ -32,8 +32,20 @@ const CartRentalPeriodEditor = ({
     if (bookingSignature !== lastBooking) {
       setLastBooking(bookingSignature);
       onBookingChange(booking);
+      
+      // Close the dialog/modal if onClose is provided
+      if (onClose) {
+        onClose();
+      }
     }
-  };
+  }, [lastBooking, onBookingChange, onClose]);
+
+  // Handle closing
+  const handleCalendarClose = useCallback(() => {
+    if (onClose) {
+      onClose();
+    }
+  }, [onClose]);
 
   if (!initialStartDate || !initialEndDate) return null;
 
@@ -49,7 +61,7 @@ const CartRentalPeriodEditor = ({
           initialStartDate={initialStartDate}
           initialEndDate={initialEndDate}
           isCompact={false}
-          onClose={onClose}
+          onClose={handleCalendarClose}
         />
         {selectedBookingTime && (
           <div className="mt-4 p-3 bg-primary/10 rounded-md">
