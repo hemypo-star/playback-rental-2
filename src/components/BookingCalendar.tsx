@@ -4,6 +4,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookingPeriod } from '@/types/product';
 import DateRangePickerRu from './booking/DateRangePickerRu';
+import { isDateRangeAvailable } from '@/utils/dateUtils';
 
 interface BookingCalendarProps {
   onBookingChange: (booking: BookingPeriod) => void;
@@ -18,7 +19,7 @@ const BookingCalendar = ({
   onBookingChange,
   initialStartDate,
   initialEndDate,
-  bookedPeriods,
+  bookedPeriods = [],
   isCompact = false,
   className
 }: BookingCalendarProps) => {
@@ -47,6 +48,17 @@ const BookingCalendar = ({
     }
   };
 
+  // Function to check if a date is unavailable due to booking
+  const isDateUnavailable = (date: Date) => {
+    if (!bookedPeriods || bookedPeriods.length === 0) return false;
+    
+    // Check if the date is within any booking period
+    return bookedPeriods.some(booking => 
+      date >= new Date(booking.startDate) && 
+      date <= new Date(booking.endDate)
+    );
+  };
+
   return (
     <div className={cn("border rounded-lg shadow-sm bg-card flex flex-col h-full", className)}>
       <div className="p-4 border-b flex items-center justify-between">
@@ -61,6 +73,8 @@ const BookingCalendar = ({
           initialStartDate={initialStartDate}
           initialEndDate={initialEndDate}
           className={cn(isCompact && "scale-[0.95] origin-top")}
+          isDateUnavailable={isDateUnavailable}
+          bookedPeriods={bookedPeriods}
         />
       </div>
     </div>
