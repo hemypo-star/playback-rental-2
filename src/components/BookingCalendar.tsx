@@ -12,6 +12,7 @@ interface BookingCalendarProps {
   bookedPeriods?: BookingPeriod[];
   isCompact?: boolean;
   className?: string;
+  onClose?: () => void;
 }
 
 const BookingCalendar = ({
@@ -20,7 +21,8 @@ const BookingCalendar = ({
   initialEndDate,
   bookedPeriods,
   isCompact = false,
-  className
+  className,
+  onClose
 }: BookingCalendarProps) => {
   const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
     start: initialStartDate || null,
@@ -61,6 +63,7 @@ const BookingCalendar = ({
           initialStartDate={initialStartDate}
           initialEndDate={initialEndDate}
           className={cn(isCompact && "scale-[0.95] origin-top")}
+          onClose={onClose}
         />
       </div>
     </div>

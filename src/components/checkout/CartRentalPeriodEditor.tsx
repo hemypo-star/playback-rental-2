@@ -11,13 +11,15 @@ interface CartRentalPeriodEditorProps {
   initialEndDate?: Date;
   onBookingChange: (booking: BookingPeriod) => void;
   selectedBookingTime: BookingPeriod | null;
+  onClose?: () => void;
 }
 
 const CartRentalPeriodEditor = ({
   initialStartDate,
   initialEndDate,
   onBookingChange,
-  selectedBookingTime
+  selectedBookingTime,
+  onClose
 }: CartRentalPeriodEditorProps) => {
   const [lastBooking, setLastBooking] = useState<string | null>(null);
 
@@ -47,6 +49,7 @@ const CartRentalPeriodEditor = ({
           initialStartDate={initialStartDate}
           initialEndDate={initialEndDate}
           isCompact={false}
+          onClose={onClose}
         />
         {selectedBookingTime && (
           <div className="mt-4 p-3 bg-primary/10 rounded-md">
