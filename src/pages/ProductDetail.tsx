@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -143,7 +142,7 @@ const ProductDetail = () => {
 
               <Button 
                 size="lg" 
-                className="w-full" 
+                className={`w-full ${hasDateConflict ? 'bg-[#ea384c] hover:bg-[#ea384c]/90' : ''}`}
                 disabled={!product.available || !bookingDates.startDate || !bookingDates.endDate || addingToCart || hasDateConflict}
                 onClick={handleAddToCart}
               >
