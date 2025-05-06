@@ -72,6 +72,7 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
     rounded: string | false;
     today: string | false;
     hover: string | false;
+    unavailable: string | false;
   } => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -86,7 +87,8 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
         range: false,
         rounded: false,
         today: false,
-        hover: false
+        hover: false,
+        unavailable: false
       };
     }
     
@@ -119,7 +121,8 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
       range: (isInRange || isInHover) && !isStart && !isEnd ? "bg-[#F2F2FA] text-[#222]" : false,
       rounded: (isStart || isEnd) ? (roundedLeft || roundedRight) : false,
       today: isToday ? "border border-[#ea384c]" : false,
-      hover: !isStart && !isEnd && !isInRange && !isInHover && !disabled ? "hover:bg-[#F2F2FA]" : false
+      hover: !isStart && !isEnd && !isInRange && !isInHover && !disabled ? "hover:bg-[#F2F2FA]" : false,
+      unavailable: false // Add the missing property
     };
   };
 
