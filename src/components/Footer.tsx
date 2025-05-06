@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, MessageSquare, Share2 } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, MessageSquare, Send, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 export const Footer = () => {
   return <footer className="bg-secondary mt-auto">
@@ -22,7 +22,7 @@ export const Footer = () => {
                   </svg>
                 </a>
                 <a href="https://t.me/playbackrental" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                 
+                 <Send className="h-4 w-4" />
                 </a>
               </div>
             </div>
