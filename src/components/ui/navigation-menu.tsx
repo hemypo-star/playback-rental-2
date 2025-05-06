@@ -1,9 +1,25 @@
+
 import * as React from "react"
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
 import { cva } from "class-variance-authority"
 import { ChevronDown } from "lucide-react"
+import { Link as RouterLink, useLocation } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
+
+// Create a custom Link component that handles scrolling
+const ScrollToTopLink = React.forwardRef<
+  HTMLAnchorElement,
+  React.ComponentPropsWithoutRef<typeof RouterLink>
+>(({ to, onClick, ...props }, ref) => {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (onClick) onClick(e);
+  };
+
+  return <RouterLink to={to} onClick={handleClick} {...props} ref={ref as any} />;
+});
+ScrollToTopLink.displayName = "ScrollToTopLink";
 
 const NavigationMenu = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Root>,
@@ -125,4 +141,5 @@ export {
   NavigationMenuLink,
   NavigationMenuIndicator,
   NavigationMenuViewport,
+  ScrollToTopLink, // Export the new ScrollToTopLink component
 }

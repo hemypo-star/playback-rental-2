@@ -8,6 +8,7 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { Category } from '@/types/product';
+import { useEffect } from 'react';
 
 interface CategorySidebarProps {
   categories?: Category[];
@@ -16,6 +17,12 @@ interface CategorySidebarProps {
 }
 
 const CategorySidebar = ({ categories, activeTab, onCategoryChange }: CategorySidebarProps) => {
+  // Add a method to handle category selection that also scrolls to top
+  const handleCategoryChange = (category: string) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    onCategoryChange(category);
+  };
+
   return (
     <Sidebar variant="inset" collapsible="none" className="w-1/4 min-w-[240px] pr-6">
       <SidebarContent>
@@ -23,7 +30,7 @@ const CategorySidebar = ({ categories, activeTab, onCategoryChange }: CategorySi
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => onCategoryChange('all')}
+              onClick={() => handleCategoryChange('all')}
               isActive={activeTab === 'all'}
               className="w-full text-left justify-start font-medium"
             >
@@ -35,7 +42,7 @@ const CategorySidebar = ({ categories, activeTab, onCategoryChange }: CategorySi
           {categories?.map((category) => (
             <SidebarMenuItem key={category.id}>
               <SidebarMenuButton
-                onClick={() => onCategoryChange(category.name)}
+                onClick={() => handleCategoryChange(category.name)}
                 isActive={activeTab === category.name}
                 className="w-full text-left justify-start"
               >

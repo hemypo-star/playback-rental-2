@@ -48,15 +48,21 @@ const BookingCalendar = ({
         notes: ''
       });
       
-      // Call onClose if provided
+      // Scroll to top and close popover
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Call onClose with a slight delay to ensure calendar selection completes
       if (onClose) {
-        onClose();
+        setTimeout(() => {
+          onClose();
+        }, 100);
       }
     }
   }, [onBookingChange, onClose]);
 
   const handleClose = useCallback(() => {
     if (onClose) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       onClose();
     }
   }, [onClose]);

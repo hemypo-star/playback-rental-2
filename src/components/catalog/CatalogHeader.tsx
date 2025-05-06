@@ -5,6 +5,7 @@ import { CalendarIcon } from 'lucide-react';
 import BookingCalendar from '@/components/BookingCalendar';
 import { format } from 'date-fns';
 import SearchBar from './SearchBar';
+import { useEffect } from 'react';
 
 interface CatalogHeaderProps {
   onSearch: (query: string) => void;
@@ -18,7 +19,13 @@ interface CatalogHeaderProps {
 
 const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }: CatalogHeaderProps) => {
   const handleBookingChange = (booking: any) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     onBookingChange(booking.startDate, booking.endDate);
+  };
+  
+  const handleSearch = (query: string) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    onSearch(query);
   };
 
   return (
@@ -26,7 +33,7 @@ const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }:
       <div className="container mx-auto px-4 py-16">
         <h1 className="heading-1 text-white mb-6">Каталог техники</h1>
         <div className="flex flex-col sm:flex-row items-center gap-4 max-w-4xl">
-          <SearchBar onSubmit={onSearch} defaultValue={searchValue} />
+          <SearchBar onSubmit={handleSearch} defaultValue={searchValue} />
           
           <Popover>
             <PopoverTrigger asChild>
