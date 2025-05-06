@@ -60,6 +60,7 @@ const DateRangePickerRu = ({
     
     return {
       ...baseClasses,
+      // Explicitly return 'false' instead of a boolean to match the expected type
       unavailable: isUnavailable ? 'bg-red-100 hover:bg-red-200 text-red-800' : false,
     };
   };
