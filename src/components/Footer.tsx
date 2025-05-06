@@ -22,7 +22,7 @@ export const Footer = () => {
                   </svg>
                 </a>
                 <a href="https://t.me/playbackrental" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                 <Send className="h-4 w-4" />
+                 
                 </a>
               </div>
             </div>
