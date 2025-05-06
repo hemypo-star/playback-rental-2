@@ -13,7 +13,6 @@ interface DaysGridProps {
     rounded: string | false;
     today: string | false;
     hover: string | false;
-    unavailable: string | false;
   };
   handleDateClick: (d: Date) => void;
   handleDateHover: (d: Date | null) => void;
@@ -41,8 +40,7 @@ const DaysGrid = ({
             getDayClasses(d, currentMonth).range,
             getDayClasses(d, currentMonth).rounded,
             getDayClasses(d, currentMonth).today,
-            getDayClasses(d, currentMonth).hover,
-            getDayClasses(d, currentMonth).unavailable
+            getDayClasses(d, currentMonth).hover
           )}
           onClick={() => handleDateClick(d)}
           onMouseEnter={() => handleDateHover(d)}

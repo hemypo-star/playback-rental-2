@@ -7,7 +7,6 @@ import CalendarMonthColumn from "./DateRangePickerRu/CalendarMonthColumn";
 import CalendarHeader from "./DateRangePickerRu/CalendarHeader";
 import SelectedInfo from "./DateRangePickerRu/SelectedInfo";
 import { useDateRangeCalendar } from "@/hooks/useDateRangeCalendar";
-import { BookingPeriod } from "@/types/product";
 
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 10).map((hour) => ({
   value: hour.toString(),
@@ -20,8 +19,6 @@ interface DateRangePickerRuProps {
   initialEndDate?: Date;
   className?: string;
   onClose?: () => void;
-  isDateUnavailable?: (date: Date) => boolean;
-  bookedPeriods?: BookingPeriod[];
 }
 
 const DateRangePickerRu = ({
@@ -30,8 +27,6 @@ const DateRangePickerRu = ({
   initialEndDate,
   className,
   onClose,
-  isDateUnavailable,
-  bookedPeriods = [],
 }: DateRangePickerRuProps) => {
   const {
     leftMonth,
@@ -43,27 +38,13 @@ const DateRangePickerRu = ({
     handleNextMonth,
     handleDateClick,
     handleDateHover,
-    getDayClasses: getBaseDayClasses,
+    getDayClasses,
     getDayKey,
     buildDaysGrid,
     setStartTime,
     setEndTime,
     getFormattedDateRange,
   } = useDateRangeCalendar(initialStartDate, initialEndDate);
-
-  // Extend the day classes with the unavailable style
-  const getDayClasses = (date: Date, currentMonth: number) => {
-    const baseClasses = getBaseDayClasses(date, currentMonth);
-    
-    // Check if the date is unavailable
-    const isUnavailable = isDateUnavailable ? isDateUnavailable(date) : false;
-    
-    return {
-      ...baseClasses,
-      // Return string or false, never a boolean true
-      unavailable: isUnavailable ? 'bg-red-100 hover:bg-red-200 text-red-800' : false,
-    };
-  };
 
   const daysOfWeek = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"].map((d) =>
     d.toUpperCase()
