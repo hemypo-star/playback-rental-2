@@ -26,15 +26,43 @@ const ProductTabs = ({
     a.startDate.getTime() - b.startDate.getTime()
   );
   
+  // Function to find overlapping booking or the nearest upcoming booking
+  const findRelevantBooking = (): BookingPeriod | null => {
+    if (!bookingDates.startDate || !bookingDates.endDate) {
+      // If no dates selected, just return the nearest upcoming booking
+      const now = new Date();
+      const upcomingBookings = sortedBookings.filter(booking => 
+        booking.startDate.getTime() > now.getTime()
+      );
+      return upcomingBookings.length > 0 ? upcomingBookings[0] : null;
+    }
+    
+    // First check for conflicts with selected dates
+    const conflictingBooking = sortedBookings.find(booking => 
+      booking.startDate.getTime() <= bookingDates.endDate!.getTime() && 
+      booking.endDate.getTime() >= bookingDates.startDate!.getTime()
+    );
+    
+    if (conflictingBooking) return conflictingBooking;
+    
+    // If no conflict, find the nearest upcoming booking
+    const selectedEndDate = bookingDates.endDate.getTime();
+    const upcomingBookings = sortedBookings.filter(booking => 
+      booking.startDate.getTime() > selectedEndDate
+    );
+    
+    return upcomingBookings.length > 0 ? upcomingBookings[0] : null;
+  };
+  
+  // Get the relevant booking based on selection
+  const relevantBooking = findRelevantBooking();
+  
   // Check if selected dates conflict with any booking
   const hasDateConflict = bookingDates.startDate && bookingDates.endDate && 
     sortedBookings.some(booking => 
       booking.startDate.getTime() <= bookingDates.endDate!.getTime() && 
       booking.endDate.getTime() >= bookingDates.startDate!.getTime()
     );
-  
-  // Get the nearest booking if any
-  const nearestBooking = sortedBookings.length > 0 ? sortedBookings[0] : null;
   
   return (
     <TabsContent value="details" className="space-y-6">
@@ -103,14 +131,22 @@ const ProductTabs = ({
               )}
               
               <div className="text-sm text-muted-foreground">
-                {nearestBooking ? (
+                {relevantBooking && (
                   <div>
-                    <p className="mb-2 font-medium">Ближайшее бронирование:</p>
+                    <p className="mb-2 font-medium">
+                      {hasDateConflict ? "Конфликтующее бронирование:" : "Ближайшее бронирование:"}
+                    </p>
                     <div className="text-sm bg-secondary p-2 rounded">
-                      {formatDateRange(nearestBooking.startDate, nearestBooking.endDate)}
+                      {formatDateRange(relevantBooking.startDate, relevantBooking.endDate)}
+                      {hasDateConflict && (
+                        <div className="mt-1 text-red-500">
+                          Эти даты уже забронированы. Пожалуйста, выберите другой период.
+                        </div>
+                      )}
                     </div>
                   </div>
-                ) : (
+                )}
+                {!relevantBooking && (
                   <p className="mb-4">Нет предстоящих бронирований.</p>
                 )}
               </div>
