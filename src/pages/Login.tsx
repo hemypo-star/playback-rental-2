@@ -22,8 +22,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
-import { login } from '@/services/apiService';
+import { useToast } from '@/hooks/use-toast';
+import { login } from '@/services/authService';
 
 const formSchema = z.object({
   username: z.string().min(1, { message: 'Логин обязателен' }),
@@ -62,14 +62,14 @@ const Login = () => {
         toast({
           variant: 'destructive',
           title: 'Ошибка входа',
-          description: 'Неверный логин или пароль. Пожалуйста, попробуйте снова.',
+          description: result.error || 'Неверный логин или пароль. Пожалуйста, попробуйте снова.',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Ошибка входа',
-        description: 'Произошла ошибка при попытке входа.',
+        description: error.message || 'Произошла ошибка при попытке входа.',
       });
     } finally {
       setIsLoading(false);
@@ -122,7 +122,7 @@ const Login = () => {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-sm text-muted-foreground mt-2">
-            Для тестового доступа используйте: admin / admin123
+            Для доступа используйте: admin / admin123
           </p>
         </CardFooter>
       </Card>

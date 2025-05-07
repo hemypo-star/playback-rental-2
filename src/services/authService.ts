@@ -3,81 +3,49 @@ import { supabaseServiceClient } from './supabaseClient';
 
 export const login = async (email: string, password: string) => {
   try {
-    const { data, error } = await supabaseServiceClient.auth.signInWithPassword({
-      email: email,
-      password: password,
+    // Call the admin_login database function
+    const { data, error } = await supabaseServiceClient.rpc('admin_login', {
+      login_input: email,
+      password_input: password,
     });
 
     if (error) {
       throw error;
     }
 
-    localStorage.setItem('auth_token', data.session?.access_token || '');
-    localStorage.setItem('user', JSON.stringify(data.user));
+    if (!data.success) {
+      throw new Error(data.message || 'Authentication failed');
+    }
 
-    return data;
+    // Store the token in localStorage
+    localStorage.setItem('auth_token', data.token || '');
+    localStorage.setItem('admin_login', email);
+
+    return { success: true };
   } catch (error: any) {
     console.error('Error during login:', error.message);
-    throw error;
+    return { success: false, error: error.message };
   }
 };
 
 export const signupuser = async (email: string, password: string) => {
-  try {
-    const { data, error } = await supabaseServiceClient.auth.signUp({
-      email: email,
-      password: password,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    localStorage.setItem('auth_token', data.session?.access_token || '');
-    localStorage.setItem('user', JSON.stringify(data.user));
-
-    return data;
-  } catch (error: any) {
-    console.error('Error during signup:', error.message);
-    throw error;
-  }
+  // This functionality is disabled as admin users are created via database seeding
+  return { success: false, error: 'Admin signup is disabled' };
 };
 
 export const forgotPassword = async (email: string) => {
-  try {
-    const { data, error } = await supabaseServiceClient.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  } catch (error: any) {
-    console.error('Error during forgot password:', error.message);
-    throw error;
-  }
+  // This functionality would require additional backend implementation
+  return { success: false, error: 'Password reset not available' };
 };
 
 export const resetPassword = async (password: string) => {
-  try {
-    const { data, error } = await supabaseServiceClient.auth.updateUser({ password: password });
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  } catch (error: any) {
-    console.error('Error during reset password:', error.message);
-    throw error;
-  }
+  // This functionality would require additional backend implementation
+  return { success: false, error: 'Password reset not available' };
 };
 
 export const logout = () => {
   localStorage.removeItem('auth_token');
-  localStorage.removeItem('user');
+  localStorage.removeItem('admin_login');
 };
 
 export const checkAuth = () => {
@@ -85,9 +53,10 @@ export const checkAuth = () => {
 };
 
 export const getCurrentUser = () => {
-  const userString = localStorage.getItem('user');
-  if (userString) {
-    return JSON.parse(userString);
-  }
-  return null;
+  // For our simplified admin system, we just return the login name
+  return {
+    id: 'admin', // We don't store the actual ID
+    email: localStorage.getItem('admin_login') || '',
+    role: 'admin',
+  };
 };

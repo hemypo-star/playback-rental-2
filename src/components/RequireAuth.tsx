@@ -1,6 +1,6 @@
 
 import { Navigate, useLocation } from 'react-router-dom';
-import { checkAuth } from '@/services/apiService';
+import { checkAuth } from '@/services/authService';
 
 interface RequireAuthProps {
   children: JSX.Element;

@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { checkAuth } from '@/services/supabaseService';
+import { checkAuth, logout, getCurrentUser } from '@/services/authService';
 import AdminDashboard from './AdminDashboard';
 import AdminProducts from './admin/AdminProducts';
 import AdminBookings from './admin/AdminBookings';
@@ -10,28 +10,54 @@ import AdminCategories from './admin/AdminCategories';
 import AdminSettings from './AdminSettings';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, User } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [currentUser, setCurrentUser] = useState<{email: string} | null>(null);
+  
+  useEffect(() => {
+    // Check authentication on component mount
+    if (!checkAuth()) {
+      navigate('/login');
+      return;
+    }
+    
+    // Set current user
+    setCurrentUser(getCurrentUser());
+  }, [navigate]);
   
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    logout();
+    toast({
+      title: 'Выход выполнен',
+      description: 'Вы успешно вышли из системы'
+    });
     navigate('/login');
   };
 
-  const isAuthenticated = checkAuth();
+  // If not authenticated, don't render anything
+  if (!checkAuth()) {
+    return null;
+  }
 
   return (
     <div className="container mx-auto px-4 py-10">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Панель администратора</h1>
-        <Button variant="outline" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Выйти
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <User className="h-4 w-4" />
+            <span>{currentUser?.email}</span>
+          </div>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Выйти
+          </Button>
+        </div>
       </div>
       
       <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab}>
