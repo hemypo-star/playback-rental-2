@@ -1,6 +1,12 @@
 
 import { supabaseServiceClient } from './supabaseClient';
 
+interface AdminLoginResponse {
+  success: boolean;
+  message?: string;
+  token?: string;
+}
+
 export const login = async (email: string, password: string) => {
   try {
     // Call the admin_login database function
@@ -13,12 +19,15 @@ export const login = async (email: string, password: string) => {
       throw error;
     }
 
-    if (!data.success) {
-      throw new Error(data.message || 'Authentication failed');
+    // Parse the response to ensure we have the right types
+    const response = data as AdminLoginResponse;
+    
+    if (!response.success) {
+      throw new Error(response.message || 'Authentication failed');
     }
 
     // Store the token in localStorage
-    localStorage.setItem('auth_token', data.token || '');
+    localStorage.setItem('auth_token', response.token || '');
     localStorage.setItem('admin_login', email);
 
     return { success: true };
