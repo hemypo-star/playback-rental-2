@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { login } from '@/services/authService';
 
 const formSchema = z.object({
-  username: z.string().min(1, { message: 'Логин обязателен' }),
+  username: z.string().email({ message: 'Введите правильный email' }),
   password: z.string().min(1, { message: 'Пароль обязателен' }),
 });
 
@@ -93,9 +93,9 @@ const Login = () => {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Логин</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="admin" {...field} />
+                      <Input type="email" placeholder="admin@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -122,7 +122,7 @@ const Login = () => {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-sm text-muted-foreground mt-2">
-            Для доступа используйте: admin / admin123
+            Войдите используя email и пароль, созданные в Supabase Auth
           </p>
         </CardFooter>
       </Card>

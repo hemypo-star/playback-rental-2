@@ -9,7 +9,7 @@ interface AdminLoginResponse {
 
 export const login = async (email: string, password: string) => {
   try {
-    // Use Supabase's built-in authentication instead of the custom function
+    // Use Supabase's built-in authentication
     const { data: authData, error: authError } = await supabaseServiceClient.auth.signInWithPassword({
       email: email,
       password: password,
