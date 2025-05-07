@@ -1,6 +1,6 @@
 
 import { Category } from '@/types/product';
-import { supabaseServiceClient, createBucketIfNotExists } from './supabaseClient';
+import { supabaseServiceClient } from './supabaseClient';
 
 export const getCategories = async (): Promise<Category[]> => {
   try {
@@ -101,9 +101,6 @@ export const deleteCategory = async (id: string): Promise<boolean> => {
 
 export const uploadCategoryImage = async (file: File): Promise<string> => {
   try {
-    // Create the bucket if it doesn't exist
-    await createBucketIfNotExists('categories');
-    
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = fileName;
