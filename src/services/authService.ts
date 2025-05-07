@@ -20,7 +20,7 @@ export const login = async (email: string, password: string) => {
     }
 
     // Parse the response to ensure we have the right types
-    const response = data as AdminLoginResponse;
+    const response = data as unknown as AdminLoginResponse;
     
     if (!response.success) {
       throw new Error(response.message || 'Authentication failed');
