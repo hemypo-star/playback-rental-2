@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -10,8 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Label } from '@/components/ui/label';
 import { Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { Category } from '@/types/product';
-import * as supabaseService from '@/services/supabaseService';
-import { supabase } from '@/integrations/supabase/client';
+import * as categoryService from '@/services/categoryService';
 import AddCategorySection from '@/components/admin/AddCategorySection';
 
 const AdminCategories = () => {
@@ -39,7 +37,7 @@ const AdminCategories = () => {
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ['categories'],
-    queryFn: supabaseService.getCategories,
+    queryFn: categoryService.getCategories,
   });
 
   const addCategoryMutation = useMutation({
@@ -47,10 +45,10 @@ const AdminCategories = () => {
       let imageUrl = formData.imageUrl;
       
       if (uploadType === 'file' && imageFile) {
-        imageUrl = await supabaseService.uploadCategoryImage(imageFile);
+        imageUrl = await categoryService.uploadCategoryImage(imageFile);
       }
       
-      return supabaseService.addCategory({
+      return categoryService.addCategory({
         name: categoryData.name!,
         slug: categoryData.slug,
         description: categoryData.description,
@@ -80,10 +78,10 @@ const AdminCategories = () => {
       let imageUrl = formData.imageUrl;
       
       if (uploadType === 'file' && imageFile) {
-        imageUrl = await supabaseService.uploadCategoryImage(imageFile);
+        imageUrl = await categoryService.uploadCategoryImage(imageFile);
       }
       
-      return supabaseService.updateCategory(category.id!, {
+      return categoryService.updateCategory(category.id!, {
         ...category,
         imageUrl,
       });
@@ -107,7 +105,7 @@ const AdminCategories = () => {
   });
 
   const deleteCategoryMutation = useMutation({
-    mutationFn: (id: string) => supabaseService.deleteCategory(id),
+    mutationFn: (id: string) => categoryService.deleteCategory(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast({
@@ -213,7 +211,7 @@ const AdminCategories = () => {
       
       if (fileForCategory) {
         try {
-          finalImageUrl = await supabaseService.uploadCategoryImage(fileForCategory);
+          finalImageUrl = await categoryService.uploadCategoryImage(fileForCategory);
           console.log("Uploaded image URL:", finalImageUrl);
         } catch (error) {
           console.error("Error uploading image:", error);
@@ -225,7 +223,7 @@ const AdminCategories = () => {
         }
       }
       
-      await supabaseService.addCategory({
+      await categoryService.addCategory({
         name,
         slug,
         description: '',

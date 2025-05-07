@@ -105,7 +105,7 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = fileName;
     
-    // Upload the file
+    // Use supabaseServiceClient for uploading files to bypass RLS restrictions
     const { error: uploadError } = await supabaseServiceClient.storage
       .from('categories')
       .upload(filePath, file, { upsert: true });

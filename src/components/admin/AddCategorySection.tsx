@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { X, Plus } from "lucide-react";
 import { Category } from "@/types/product";
 import ImageUploadField from "@/components/ImageUploadField";
-import { uploadCategoryImage } from "@/services/supabaseService";
+import { uploadCategoryImage } from "@/services/categoryService"; // Use categoryService directly
 import { toast } from "sonner";
 
 type Props = {
