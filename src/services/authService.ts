@@ -9,25 +9,22 @@ interface AdminLoginResponse {
 
 export const login = async (email: string, password: string) => {
   try {
-    // Call the admin_login database function
-    const { data, error } = await supabaseServiceClient.rpc('admin_login', {
-      login_input: email,
-      password_input: password,
+    // Use Supabase's built-in authentication instead of the custom function
+    const { data: authData, error: authError } = await supabaseServiceClient.auth.signInWithPassword({
+      email: email,
+      password: password,
     });
 
-    if (error) {
-      throw error;
+    if (authError) {
+      throw authError;
     }
 
-    // Parse the response to ensure we have the right types
-    const response = data as unknown as AdminLoginResponse;
-    
-    if (!response.success) {
-      throw new Error(response.message || 'Authentication failed');
+    if (!authData || !authData.session) {
+      throw new Error('Authentication failed');
     }
 
-    // Store the token in localStorage
-    localStorage.setItem('auth_token', response.token || '');
+    // Store the session token in localStorage
+    localStorage.setItem('auth_token', authData.session.access_token);
     localStorage.setItem('admin_login', email);
 
     return { success: true };
@@ -43,16 +40,27 @@ export const signupuser = async (email: string, password: string) => {
 };
 
 export const forgotPassword = async (email: string) => {
-  // This functionality would require additional backend implementation
-  return { success: false, error: 'Password reset not available' };
+  try {
+    const { error } = await supabaseServiceClient.auth.resetPasswordForEmail(email);
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 };
 
 export const resetPassword = async (password: string) => {
-  // This functionality would require additional backend implementation
-  return { success: false, error: 'Password reset not available' };
+  try {
+    const { error } = await supabaseServiceClient.auth.updateUser({ password });
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 };
 
 export const logout = () => {
+  supabaseServiceClient.auth.signOut();
   localStorage.removeItem('auth_token');
   localStorage.removeItem('admin_login');
 };

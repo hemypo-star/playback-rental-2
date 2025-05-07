@@ -5,26 +5,17 @@ import type { Database } from '../integrations/supabase/types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xwylatyyhqyfwsxfwzmn.supabase.co';
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4';
 
-// Helper to get authenticated client with admin token if available
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    return {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    };
-  }
-  return {};
-};
-
-// Create a Supabase client with authentication if available
+// Create a Supabase client with authentication configuration
 export const supabaseServiceClient = createClient<Database>(
   supabaseUrl, 
   supabaseKey,
-  getAuthHeaders()
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      storage: localStorage
+    }
+  }
 );
 
 export const checkAuth = () => {
