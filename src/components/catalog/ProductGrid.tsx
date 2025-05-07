@@ -21,7 +21,7 @@ const ProductGrid = ({
   const [visibleProducts, setVisibleProducts] = useState(8);
 
   const handleLoadMore = () => {
-    setVisibleProducts(prev => prev + 4);
+    setVisibleProducts(prev => prev + 16);
   };
 
   if (isLoading) {
