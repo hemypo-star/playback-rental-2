@@ -1,6 +1,10 @@
+
 import { supabaseServiceClient } from './supabaseClient';
 import { Product, Category } from '@/types/product';
-import { uploadProductImage, uploadCategoryImage } from '@/utils/imageUtils';
+import { uploadProductImage, uploadCategoryImage as uploadCategoryImageUtil } from '@/utils/imageUtils';
+
+// Re-export the uploadCategoryImage function
+export const uploadCategoryImage = uploadCategoryImageUtil;
 
 // Products
 export const getProducts = async (): Promise<Product[]> => {

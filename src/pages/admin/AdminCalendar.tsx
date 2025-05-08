@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { addDays } from 'date-fns';
 import { getBookings } from '@/services/bookingService';
-import { getProducts, getCategories } from '@/services/productService';
+import { getProducts } from '@/services/productService';
+import { getCategories } from '@/services/categoryService';
 import CalendarHeader from '@/components/admin/calendar/CalendarHeader';
 import CalendarTable from '@/components/admin/calendar/CalendarTable';
 import StatusLegend from '@/components/admin/calendar/StatusLegend';
@@ -32,7 +33,7 @@ const AdminCalendar = () => {
     queryFn: getProducts
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: getCategories
   });

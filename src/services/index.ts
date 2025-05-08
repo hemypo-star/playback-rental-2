@@ -53,4 +53,4 @@ export {
 
 export {
   uploadProductImage
-} from './utils/imageUtils';
+} from '@/utils/imageUtils';

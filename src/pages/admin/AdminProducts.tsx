@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Product } from '@/types/product';
 import * as supabaseService from '@/services/supabaseService';
+import { uploadCategoryImage } from '@/utils/imageUtils';
 import ProductEditDialog from '@/components/admin/products/ProductEditDialog';
 import ProductList from '@/components/admin/products/ProductList';
 import ImportExport from '@/components/admin/products/ImportExport';
@@ -135,7 +136,7 @@ const AdminProducts = () => {
   const addCategoryMutation = useMutation({
     mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
       if (fileForCategory) {
-        const imageUrl = await supabaseService.uploadCategoryImage(fileForCategory, categoryData.name);
+        const imageUrl = await uploadCategoryImage(fileForCategory, categoryData.name);
         categoryData.imageUrl = imageUrl;
       }
       return supabaseService.addCategory(categoryData);
@@ -149,7 +150,7 @@ const AdminProducts = () => {
     try {
       let imageUrl = payload.imageUrl;
       if (fileForCategory) {
-        imageUrl = await supabaseService.uploadCategoryImage(fileForCategory);
+        imageUrl = await uploadCategoryImage(fileForCategory);
       }
       
       const newCategory = await supabaseService.addCategory({
