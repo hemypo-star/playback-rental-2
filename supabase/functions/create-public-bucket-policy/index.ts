@@ -23,11 +23,11 @@ serve(async (req) => {
       )
     }
 
-    // Create authenticated Supabase client (using the edge function's SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+    // Create authenticated Supabase client with service role key for admin privileges
     const supabaseClient = createClient(
       // Supabase API URL - env var exported by default.
       Deno.env.get('SUPABASE_URL') ?? '',
-      // Supabase API ANON KEY - env var exported by default.
+      // Supabase API SERVICE_ROLE_KEY - env var exported by default.
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { 
         auth: { 
@@ -37,22 +37,45 @@ serve(async (req) => {
       }
     )
     
-    // Make sure bucket is public
-    const { error: updateError } = await supabaseClient.storage
-      .updateBucket(bucketName, { public: true })
+    // Check if bucket exists, create if it doesn't
+    try {
+      const { data: bucket, error: getBucketError } = await supabaseClient.storage
+        .getBucket(bucketName)
       
-    if (updateError) {
-      throw updateError
+      if (getBucketError && getBucketError.message.includes('not found')) {
+        // Create bucket if it doesn't exist
+        const { error: createError } = await supabaseClient.storage
+          .createBucket(bucketName, { public: true })
+        
+        if (createError) {
+          throw createError
+        }
+        
+        console.log(`Created bucket ${bucketName}`)
+      } else if (getBucketError) {
+        throw getBucketError
+      } else {
+        // Update existing bucket to ensure it's public
+        const { error: updateError } = await supabaseClient.storage
+          .updateBucket(bucketName, { public: true })
+          
+        if (updateError) {
+          throw updateError
+        }
+        
+        console.log(`Updated bucket ${bucketName} to public`)
+      }
+    } catch (error) {
+      console.error(`Error with bucket operation:`, error)
+      throw error
     }
 
-    // For service role we can skip any operations as it has admin privileges
-
     return new Response(
-      JSON.stringify({ success: true, message: `Public access enabled for bucket ${bucketName}` }),
+      JSON.stringify({ success: true, message: `Public bucket ${bucketName} is ready` }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error(`Error creating bucket policy:`, error)
+    console.error(`Error creating or updating bucket:`, error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

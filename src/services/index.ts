@@ -6,6 +6,7 @@ export * from './bookingService';
 export * from './authService';
 export * from './settingsService';
 export * from './supabaseClient';
+export * from './storageService';
 
 // Deprecated: Use individual service imports instead
 // This re-export is maintained for backward compatibility
@@ -54,3 +55,4 @@ export {
 export {
   uploadProductImage
 } from '@/utils/imageUtils';
+
