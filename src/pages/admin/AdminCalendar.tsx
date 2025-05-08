@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { addDays } from 'date-fns';
-import * as supabaseService from '@/services/supabaseService';
+import { getBookings } from '@/services/bookingService';
+import { getProducts, getCategories } from '@/services/productService';
 import CalendarHeader from '@/components/admin/calendar/CalendarHeader';
 import CalendarTable from '@/components/admin/calendar/CalendarTable';
 import StatusLegend from '@/components/admin/calendar/StatusLegend';
@@ -23,17 +24,17 @@ const AdminCalendar = () => {
   // Fetch data
   const { data: bookings, isLoading: isLoadingBookings } = useQuery({
     queryKey: ['admin-bookings'],
-    queryFn: supabaseService.getBookings
+    queryFn: getBookings
   });
 
   const { data: products, isLoading: isLoadingProducts } = useQuery({
     queryKey: ['admin-products'],
-    queryFn: supabaseService.getProducts
+    queryFn: getProducts
   });
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
-    queryFn: supabaseService.getCategories
+    queryFn: getCategories
   });
 
   // Combine bookings with product names

@@ -2,10 +2,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Plus } from "lucide-react";
-import { Category } from "@/types/product";
+import { X } from "lucide-react";
 import ImageUploadField from "@/components/ImageUploadField";
-import { uploadCategoryImage } from "@/services/categoryService"; // Use categoryService directly
+import { uploadCategoryImage } from "@/services/categoryService";
 import { toast } from "sonner";
 
 type Props = {

@@ -15,7 +15,6 @@ export {
   createProduct,
   updateProduct,
   deleteProduct,
-  uploadProductImage,
   exportProductsToCSV,
   importProductsFromCSV,
   getAvailableProducts
@@ -51,3 +50,7 @@ export {
   getSettings,
   updateSettings
 } from './settingsService';
+
+export {
+  uploadProductImage
+} from './utils/imageUtils';

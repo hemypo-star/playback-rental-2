@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import * as supabaseService from '@/services/supabaseService';
-import { getBookings } from '@/services/bookingService';
+import { getProducts } from '@/services/productService';
+import { getBookings, updateBookingStatus } from '@/services/bookingService';
 import { BookingWithProduct } from '@/components/admin/bookings/types';
 import { BookingFilters } from '@/components/admin/bookings/BookingFilters';
 import { BookingsTable } from '@/components/admin/bookings/BookingsTable';
@@ -20,7 +20,7 @@ const AdminBookings = () => {
 
   const { data: products } = useQuery({
     queryKey: ['admin-products'],
-    queryFn: supabaseService.getProducts
+    queryFn: getProducts
   });
 
   const {
@@ -65,7 +65,7 @@ const AdminBookings = () => {
 
   const handleStatusUpdate = async (id: string, status: BookingPeriod['status']) => {
     try {
-      await supabaseService.updateBookingStatus(id, status);
+      await updateBookingStatus(id, status);
       toast({
         title: 'Успех',
         description: 'Статус бронирования успешно обновлен.'
