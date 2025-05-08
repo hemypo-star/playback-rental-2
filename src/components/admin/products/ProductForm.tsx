@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +12,6 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import ImageUploadField from "@/components/ImageUploadField";
 import { Category } from "@/types/product";
-import { UseMutationResult } from "@tanstack/react-query";
 
 export const productFormSchema = z.object({
   title: z.string().min(2, {
@@ -39,7 +37,7 @@ type ProductFormProps = {
   editProduct: Product | null;
   categories: Category[];
   isSubmitting: boolean;
-  onSubmit: (values: ProductFormValues) => void;
+  onSubmit: (values: ProductFormValues, imageFile: File | null) => void;
   onCancel: () => void;
 };
 
@@ -107,22 +105,7 @@ export default function ProductForm({
   };
 
   const handleFormSubmit = (values: ProductFormValues) => {
-    if (!editProduct) {
-      toast({
-        title: 'Ошибка',
-        description: 'Не выбран товар для редактирования',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    // Pass the file along with the form values to the parent component
-    const formData = {
-      ...values,
-      file: fileForProduct,
-    };
-    
-    onSubmit(values);
+    onSubmit(values, fileForProduct);
   };
 
   return (

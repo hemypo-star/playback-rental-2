@@ -1,7 +1,6 @@
-
 import { Product } from '@/types/product';
 import { supabaseServiceClient } from './supabaseClient';
-import { getProductImageUrl } from '@/utils/imageUtils';
+import { getProductImageUrl, uploadProductImage } from '@/utils/imageUtils';
 
 export const getProducts = async (): Promise<Product[]> => {
   try {
@@ -35,7 +34,7 @@ export const getProductById = async (id: string): Promise<Product | null> => {
   }
 };
 
-export const createProduct = async (product: Partial<Product>): Promise<Product | null> => {
+export const createProduct = async (product: Partial<Product>, imageFile?: File): Promise<Product | null> => {
   try {
     // Make sure we're using imageurl for the database column and all required fields are present
     const dbProduct = {
@@ -53,26 +52,53 @@ export const createProduct = async (product: Partial<Product>): Promise<Product 
       throw new Error("Product title, description, and category are required fields");
     }
     
+    // Insert the product first to get an ID
     const { data, error } = await supabaseServiceClient.from('products').insert([dbProduct]).select().single();
+    
     if (error) throw error;
     
+    if (!data) return null;
+    
+    // If we have an image file, upload it and update the product
+    if (imageFile) {
+      const imageUrl = await uploadProductImage(imageFile, data.id);
+      
+      // Update the product with the image URL
+      const { data: updatedData, error: updateError } = await supabaseServiceClient
+        .from('products')
+        .update({ imageurl: imageUrl })
+        .eq('id', data.id)
+        .select()
+        .single();
+        
+      if (updateError) throw updateError;
+      
+      if (updatedData) {
+        // Map imageurl to imageUrl for consistency in the frontend
+        return {
+          ...updatedData,
+          imageUrl: updatedData.imageurl
+        };
+      }
+    }
+    
     // Map imageurl to imageUrl for consistency in the frontend
-    return data ? {
+    return {
       ...data,
       imageUrl: data.imageurl
-    } : null;
+    };
   } catch (error) {
     console.error('Error creating product:', error);
     return null;
   }
 };
 
-export const updateProduct = async (id: string, updates: Partial<Product>): Promise<Product | null> => {
+export const updateProduct = async (id: string, updates: Partial<Product>, imageFile?: File): Promise<Product | null> => {
   try {
-    // Check if there's anything to update
-    if (Object.keys(updates).length === 0) {
-      // If there are no updates, return the existing product
-      return getProductById(id);
+    // If there's an image file, upload it first and add the URL to updates
+    if (imageFile) {
+      const imageUrl = await uploadProductImage(imageFile, id);
+      updates.imageUrl = imageUrl;
     }
     
     // Make sure we're using imageurl for the database column
@@ -86,6 +112,12 @@ export const updateProduct = async (id: string, updates: Partial<Product>): Prom
     if (updates.available !== undefined) dbUpdates.available = updates.available;
     if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
     if (updates.imageUrl !== undefined) dbUpdates.imageurl = updates.imageUrl;
+    
+    // Check if there's anything to update
+    if (Object.keys(dbUpdates).length === 0) {
+      // If there are no updates, return the existing product
+      return getProductById(id);
+    }
     
     const { data, error } = await supabaseServiceClient
       .from('products')
@@ -142,47 +174,6 @@ export const getAvailableProducts = async (startDate: Date, endDate: Date): Prom
   } catch (error) {
     console.error('Error getting available products:', error);
     return [];
-  }
-};
-
-export const uploadProductImage = async (file: File, productId?: string): Promise<string> => {
-  try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = fileName;
-    
-    // Upload options with optional metadata
-    const uploadOptions: { upsert: boolean; metadata?: { product_id: string } } = { 
-      upsert: true 
-    };
-    
-    // Add metadata if productId is provided
-    if (productId) {
-      uploadOptions.metadata = { 
-        product_id: productId 
-      };
-    }
-    
-    // Upload the file
-    const { error: uploadError } = await supabaseServiceClient.storage
-      .from('products')
-      .upload(filePath, file, uploadOptions);
-
-    if (uploadError) {
-      console.error('Error uploading product image:', uploadError);
-      throw uploadError;
-    }
-
-    // Get the public URL
-    const { data: publicUrlData } = supabaseServiceClient.storage
-      .from('products')
-      .getPublicUrl(filePath);
-
-    console.log('Successfully uploaded product image, public URL:', publicUrlData.publicUrl);
-    return publicUrlData.publicUrl;
-  } catch (error) {
-    console.error('Error in uploadProductImage:', error);
-    throw error;
   }
 };
 

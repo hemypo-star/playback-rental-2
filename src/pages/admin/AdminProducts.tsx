@@ -49,20 +49,9 @@ const AdminProducts = () => {
   const createProductMutation = useMutation({
     mutationFn: async (values: ProductFormValues) => {
       try {
-        let imageUrl = values.imageUrl || '';
-        
-        const newProduct = await supabaseService.createProduct({
+        return supabaseService.createProduct({
           ...values,
-          imageUrl,
-        });
-        
-        if (fileForProduct && newProduct?.id) {
-          imageUrl = await supabaseService.uploadProductImage(fileForProduct, newProduct.id);
-          
-          return supabaseService.updateProduct(newProduct.id, { imageUrl });
-        }
-        
-        return newProduct;
+        }, fileForProduct);
       } catch (error) {
         console.error('Error in createProductMutation:', error);
         throw error;
@@ -90,12 +79,7 @@ const AdminProducts = () => {
   const updateProductMutation = useMutation({
     mutationFn: async (values: { id: string; product: Partial<Product> }) => {
       try {
-        if (fileForProduct) {
-          const imageUrl = await supabaseService.uploadProductImage(fileForProduct, values.id);
-          values.product.imageUrl = imageUrl;
-        }
-        
-        return supabaseService.updateProduct(values.id, values.product);
+        return supabaseService.updateProduct(values.id, values.product, fileForProduct);
       } catch (error) {
         console.error('Error in updateProductMutation:', error);
         throw error;
@@ -149,8 +133,13 @@ const AdminProducts = () => {
   });
 
   const addCategoryMutation = useMutation({
-    mutationFn: (categoryData: { name: string; slug: string; imageUrl?: string }) => 
-      supabaseService.addCategory(categoryData),
+    mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
+      if (fileForCategory) {
+        const imageUrl = await supabaseService.uploadCategoryImage(fileForCategory, categoryData.name);
+        categoryData.imageUrl = imageUrl;
+      }
+      return supabaseService.addCategory(categoryData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
@@ -202,6 +191,7 @@ const AdminProducts = () => {
       available: product.available,
     });
     setOpenDialog(true);
+    setFileForProduct(null); // Reset file when editing
   };
 
   const handleDeleteProduct = (id: string) => {
@@ -210,8 +200,10 @@ const AdminProducts = () => {
     }
   };
 
-  const onSubmit = async (formData: ProductFormValues) => {
+  const onSubmit = async (formData: ProductFormValues, imageFile: File | null) => {
     if (!editProduct) return;
+    
+    setFileForProduct(imageFile);
   
     try {
       const cleanUpdates: Partial<Product> = {};
@@ -244,7 +236,7 @@ const AdminProducts = () => {
         cleanUpdates.quantity = formData.quantity;
       }
       
-      if (Object.keys(cleanUpdates).length === 0 && !fileForProduct) {
+      if (Object.keys(cleanUpdates).length === 0 && !imageFile) {
         toast({ 
           title: 'Нет изменений',
           description: 'Вы не внесли никаких изменений в товар'

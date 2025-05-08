@@ -22,7 +22,7 @@ type ProductEditDialogProps = {
   fileForCategory: File | null;
   setFileForCategory: (file: File | null) => void;
   addCategoryMutation: UseMutationResult<any, unknown, any, unknown>;
-  onSubmit: (values: ProductFormValues) => void;
+  onSubmit: (values: ProductFormValues, imageFile: File | null) => void;
   handleAddCategory: (values: any) => void;
   createPending: boolean;
   updatePending: boolean;
@@ -33,6 +33,8 @@ export default function ProductEditDialog({
   setOpen,
   editProduct,
   categories,
+  fileForProduct,
+  setFileForProduct,
   createPending,
   updatePending,
   onSubmit,
@@ -41,6 +43,11 @@ export default function ProductEditDialog({
   
   const handleCancel = () => {
     setOpen(false);
+    setFileForProduct(null);
+  };
+
+  const handleSubmit = (values: ProductFormValues) => {
+    onSubmit(values, fileForProduct);
   };
 
   return (
@@ -60,7 +67,7 @@ export default function ProductEditDialog({
               editProduct={editProduct}
               categories={categories || []}
               isSubmitting={isSubmitting}
-              onSubmit={onSubmit}
+              onSubmit={handleSubmit}
               onCancel={handleCancel}
             />
           )}

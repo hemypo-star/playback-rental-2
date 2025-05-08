@@ -29,7 +29,7 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
   const fileExt = file.name.split('.').pop();
   const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-  // Upload options with optional metadata
+  // Upload options with metadata to link to product
   const uploadOptions: { upsert: boolean; metadata?: { product_id: string } } = { 
     upsert: true 
   };
@@ -58,7 +58,7 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
   return publicUrlData.publicUrl;
 };
 
-export const uploadCategoryImage = async (file: File): Promise<string> => {
+export const uploadCategoryImage = async (file: File, categoryId?: string): Promise<string> => {
   // Create the bucket if it doesn't exist (though we've already done this in SQL)
   try {
     await supabase.storage.getBucket('categories');
@@ -70,10 +70,22 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
 
+  // Upload options with metadata to link to category
+  const uploadOptions: { upsert: boolean; metadata?: { category_id: string } } = { 
+    upsert: true 
+  };
+  
+  // Add metadata if categoryId is provided
+  if (categoryId) {
+    uploadOptions.metadata = { 
+      category_id: categoryId 
+    };
+  }
+
   // Upload the file
   const { error: uploadError } = await supabase.storage
     .from('categories')
-    .upload(fileName, file, { upsert: true });
+    .upload(fileName, file, uploadOptions);
 
   if (uploadError) {
     console.error('Error uploading category image:', uploadError);

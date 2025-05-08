@@ -1,61 +1,31 @@
 
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '../integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xwylatyyhqyfwsxfwzmn.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4';
-
-// Create a Supabase client with authentication configuration
-export const supabaseServiceClient = createClient<Database>(
-  supabaseUrl, 
-  supabaseKey,
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      storage: localStorage
-    }
-  }
-);
-
-export const checkAuth = () => {
-  return localStorage.getItem('auth_token') ? true : false;
-};
-
-// Utility to properly create a bucket with public access
-export const createBucketIfNotExists = async (bucketName: string) => {
+// Create a bucket if it doesn't exist already
+export const createBucketIfNotExists = async (name: string, isPublic: boolean = true) => {
   try {
-    // Check if the bucket exists
-    const { data: buckets, error: listError } = await supabaseServiceClient.storage.listBuckets();
+    // Try to get the bucket first to see if it exists
+    const { data, error } = await supabase.storage.getBucket(name);
     
-    if (listError) {
-      console.error(`Error checking if bucket ${bucketName} exists:`, listError);
-      throw listError;
-    }
-    
-    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-    
-    if (!bucketExists) {
-      console.log(`${bucketName} bucket not found, creating it`);
-      
-      // Create the bucket
-      const { data, error } = await supabaseServiceClient.storage.createBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 50000000, // 50MB file size limit
-        allowedMimeTypes: ['image/*'] // Allow only image uploads
+    if (error) {
+      // Bucket doesn't exist, create it
+      console.log(`Creating ${name} bucket`);
+      const { error: createError } = await supabase.storage.createBucket(name, {
+        public: isPublic,
       });
       
-      if (error) {
-        console.error(`Error creating bucket ${bucketName}:`, error);
-        throw error;
+      if (createError) {
+        throw createError;
       }
       
-      console.log(`Created ${bucketName} bucket with public access`);
+      console.log(`Created ${name} bucket successfully`);
     } else {
-      console.log(`${bucketName} bucket already exists`);
+      console.log(`${name} bucket already exists`);
     }
+    
+    return true;
   } catch (error) {
-    console.error(`Error ensuring bucket ${bucketName} exists:`, error);
+    console.error(`Error creating bucket ${name}:`, error);
     throw error;
   }
 };
