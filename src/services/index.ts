@@ -55,5 +55,5 @@ export {
 export {
   uploadProductImage,
   getProductImageUrl
-} from './utils/imageUtils';
+} from '@/utils/imageUtils';
 
