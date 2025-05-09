@@ -2,6 +2,7 @@
 import { SearchIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { FormEvent } from 'react';
 
 interface SearchBarProps {
   onSubmit: (searchQuery: string) => void;
@@ -9,10 +10,10 @@ interface SearchBarProps {
 }
 
 const SearchBar = ({ onSubmit, defaultValue = '' }: SearchBarProps) => {
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const searchInput = (document.getElementById('search-input') as HTMLInputElement)?.value;
-    onSubmit(searchInput || '');
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    onSubmit(searchInput?.value || '');
   };
 
   return (

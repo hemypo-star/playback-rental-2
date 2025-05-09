@@ -12,8 +12,9 @@ import RequireAuth from "./components/RequireAuth";
 
 // Pages
 import Index from "./pages/Index";
-// Change from direct import to lazy loading
-const Catalog = lazy(() => import("./pages/Catalog"));
+// Direct import for Catalog instead of lazy loading
+import Catalog from "./pages/Catalog";
+// Keep lazy loading for other pages
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Admin = lazy(() => import("./pages/Admin"));

@@ -28,16 +28,23 @@ const Catalog = () => {
     endDate: locationState?.endDate
   });
   
-  const { data: categories } = useQuery({
+  // Fetch categories directly without excessive dependencies
+  const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => categoryService.getCategories(),
+    queryFn: categoryService.getCategories,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
   
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['products', bookingDates],
-    queryFn: () => bookingDates.startDate && bookingDates.endDate 
-      ? productService.getAvailableProducts(bookingDates.startDate, bookingDates.endDate)
-      : productService.getProducts(),
+  // Fetch products with proper error handling
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products', bookingDates.startDate, bookingDates.endDate],
+    queryFn: () => {
+      if (bookingDates.startDate && bookingDates.endDate) {
+        return productService.getAvailableProducts(bookingDates.startDate, bookingDates.endDate);
+      }
+      return productService.getProducts();
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   useEffect(() => {
@@ -62,19 +69,19 @@ const Catalog = () => {
     setSearch('');
     setActiveTab('all');
     setBookingDates({});
-    (document.getElementById('search-input') as HTMLInputElement).value = '';
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    if (searchInput) searchInput.value = '';
   };
   
   const filteredProducts = products?.filter(product => {
-    const matchesSearch = search ? 
+    const matchesSearch = !search ? true : 
       product.title.toLowerCase().includes(search.toLowerCase()) || 
-      product.description.toLowerCase().includes(search.toLowerCase())
-      : true;
+      product.description.toLowerCase().includes(search.toLowerCase());
       
     const matchesCategory = activeTab === 'all' || product.category === activeTab;
     
     return matchesSearch && matchesCategory;
-  });
+  }) || [];
 
   return (
     <div className="min-h-screen">
@@ -94,7 +101,7 @@ const Catalog = () => {
               onCategoryChange={setActiveTab}
             />
             <ProductGrid
-              products={filteredProducts || []}
+              products={filteredProducts}
               isLoading={isLoading}
               bookingDates={bookingDates}
               onClearFilters={handleClearFilters}

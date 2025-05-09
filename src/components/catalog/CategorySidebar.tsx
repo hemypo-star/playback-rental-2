@@ -8,7 +8,6 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { Category } from '@/types/product';
-import { useEffect } from 'react';
 
 interface CategorySidebarProps {
   categories?: Category[];
@@ -16,8 +15,8 @@ interface CategorySidebarProps {
   onCategoryChange: (category: string) => void;
 }
 
-const CategorySidebar = ({ categories, activeTab, onCategoryChange }: CategorySidebarProps) => {
-  // Add a method to handle category selection that also scrolls to top
+const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: CategorySidebarProps) => {
+  // Method to handle category selection that also scrolls to top
   const handleCategoryChange = (category: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     onCategoryChange(category);
