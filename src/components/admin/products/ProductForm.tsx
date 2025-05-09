@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import ImageUploadField from "@/components/ImageUploadField";
 import { Category } from "@/types/product";
+import { resetStoragePermissions } from "@/services/storageService";
 
 export const productFormSchema = z.object({
   title: z.string().min(2, {
@@ -54,6 +56,19 @@ export default function ProductForm({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [fileForCategory, setFileForCategory] = useState<File | null>(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+
+  // Initialize storage buckets when the form loads
+  useEffect(() => {
+    const initStorage = async () => {
+      try {
+        await resetStoragePermissions();
+      } catch (error) {
+        console.error("Error initializing storage:", error);
+      }
+    };
+    
+    initStorage();
+  }, []);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),

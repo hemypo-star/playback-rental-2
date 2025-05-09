@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { ProductFormValues } from '@/components/admin/products/ProductForm';
 import { productFormSchema } from '@/components/admin/products/ProductForm';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { resetStoragePermissions } from '@/services/storageService';
 
 const AdminProducts = () => {
   const { toast } = useToast();
@@ -258,6 +259,22 @@ const AdminProducts = () => {
       });
     }
   };
+
+  // Initialize storage buckets when the page loads
+  useEffect(() => {
+    const initStorage = async () => {
+      try {
+        const result = await resetStoragePermissions();
+        if (result) {
+          console.log("Storage buckets initialized successfully");
+        }
+      } catch (error) {
+        console.error("Error initializing storage:", error);
+      }
+    };
+    
+    initStorage();
+  }, []);
 
   return (
     <div className="space-y-6">

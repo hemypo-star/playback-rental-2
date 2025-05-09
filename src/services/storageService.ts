@@ -5,19 +5,31 @@ import { supabase } from '@/integrations/supabase/client';
 // This uses the SERVICE_ROLE_KEY which has admin privileges
 export const ensurePublicBucket = async (bucketName: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase.functions.invoke('create-public-bucket-policy', {
-      body: { bucketName }
-    });
+    // Check if bucket exists first
+    const { data: bucketExists, error: checkError } = await supabase
+      .storage
+      .getBucket(bucketName);
 
-    if (error) {
-      console.error(`Error ensuring public bucket ${bucketName}:`, error);
-      throw error;
+    // If bucket doesn't exist, create it
+    if (!bucketExists && checkError) {
+      const { data, error } = await supabase
+        .storage
+        .createBucket(bucketName, {
+          public: true,
+          fileSizeLimit: 10485760, // 10MB
+        });
+
+      if (error) {
+        console.error(`Error creating ${bucketName} bucket:`, error);
+        return false;
+      }
+      
+      console.log(`Created ${bucketName} storage bucket`);
     }
 
-    console.log(`Storage bucket operation result:`, data);
     return true;
   } catch (error) {
-    console.error(`Failed to ensure public bucket ${bucketName}:`, error);
+    console.error(`Error ensuring public bucket ${bucketName}:`, error);
     return false;
   }
 };
