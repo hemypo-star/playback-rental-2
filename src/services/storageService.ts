@@ -63,3 +63,23 @@ export const getPublicUrl = (bucketName: string, filePath: string): string | nul
     
   return data.publicUrl;
 };
+
+// List all files in a bucket
+export const listBucketFiles = async (bucketName: string) => {
+  try {
+    const { data, error } = await supabase
+      .storage
+      .from(bucketName)
+      .list();
+    
+    if (error) {
+      console.error(`Error listing files in ${bucketName}:`, error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error(`Error in listBucketFiles for ${bucketName}:`, error);
+    return [];
+  }
+};

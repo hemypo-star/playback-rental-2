@@ -10,8 +10,9 @@ import AdminCategories from './admin/AdminCategories';
 import AdminSettings from './AdminSettings';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, Settings, User } from 'lucide-react';
+import { LogOut, Settings, User, FolderOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import FileExplorer from '@/components/admin/FileExplorer';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -67,6 +68,7 @@ export default function Admin() {
           <TabsTrigger value="categories">Категории</TabsTrigger>
           <TabsTrigger value="bookings">Бронирования</TabsTrigger>
           <TabsTrigger value="calendar">Календарь</TabsTrigger>
+          <TabsTrigger value="storage">Файлы</TabsTrigger>
           <TabsTrigger value="settings">Настройки</TabsTrigger>
         </TabsList>
         
@@ -88,6 +90,10 @@ export default function Admin() {
         
         <TabsContent value="calendar">
           <AdminCalendar />
+        </TabsContent>
+        
+        <TabsContent value="storage">
+          <FileExplorer />
         </TabsContent>
         
         <TabsContent value="settings">
