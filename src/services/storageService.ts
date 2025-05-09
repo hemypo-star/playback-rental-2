@@ -34,3 +34,20 @@ export const resetStoragePermissions = async (): Promise<boolean> => {
     return false;
   }
 };
+
+// Get the public URL for a file in a bucket
+export const getPublicUrl = (bucketName: string, filePath: string): string | null => {
+  if (!filePath) return null;
+  
+  // If it's already a full URL, return it
+  if (filePath.startsWith('http')) {
+    return filePath;
+  }
+  
+  // Get public URL from storage
+  const { data } = supabase.storage
+    .from(bucketName)
+    .getPublicUrl(filePath);
+    
+  return data.publicUrl;
+};

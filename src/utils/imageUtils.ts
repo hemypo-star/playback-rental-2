@@ -1,20 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { getPublicUrl } from '@/services/storageService';
 
 export const getProductImageUrl = (imageUrl: string) => {
-  if (!imageUrl) return null;
-  
-  // If it's already a full URL, return it
-  if (imageUrl.startsWith('http')) {
-    return imageUrl;
-  }
-  
-  // Get public URL from storage
-  const { data } = supabase.storage
-    .from('products')
-    .getPublicUrl(imageUrl);
-    
-  return data.publicUrl;
+  return getPublicUrl('products', imageUrl);
 };
 
 export const uploadProductImage = async (file: File, productId?: string): Promise<string> => {
@@ -51,12 +40,7 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
       throw uploadError;
     }
 
-    // Get and return the public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('products')
-      .getPublicUrl(fileName);
-      
-    return publicUrlData.publicUrl;
+    return fileName;  // Return just the filename, not the full URL
   } catch (error) {
     console.error('Error in uploadProductImage:', error);
     throw error;
@@ -98,12 +82,7 @@ export const uploadCategoryImage = async (file: File, categoryId?: string): Prom
       throw uploadError;
     }
 
-    // Get and return the public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('categories')
-      .getPublicUrl(fileName);
-      
-    return publicUrlData.publicUrl;
+    return fileName; // Return just the filename, not the full URL
   } catch (error) {
     console.error('Error in uploadCategoryImage:', error);
     throw error;

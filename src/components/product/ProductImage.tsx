@@ -26,6 +26,7 @@ const ProductImage = (props: ProductImageProps) => {
   const title = 'product' in props ? props.product.title : props.title;
   const className = props.className;
 
+  // Get the public URL for the image
   const publicUrl = getProductImageUrl(imageUrl);
 
   return (

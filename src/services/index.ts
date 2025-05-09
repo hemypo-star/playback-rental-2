@@ -53,6 +53,7 @@ export {
 } from './settingsService';
 
 export {
-  uploadProductImage
-} from '@/utils/imageUtils';
+  uploadProductImage,
+  getProductImageUrl
+} from './utils/imageUtils';
 

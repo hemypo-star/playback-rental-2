@@ -61,12 +61,12 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
     
     // If we have an image file, upload it and update the product
     if (imageFile) {
-      const imageUrl = await uploadProductImage(imageFile, data.id);
+      const imageFileName = await uploadProductImage(imageFile, data.id);
       
-      // Update the product with the image URL
+      // Update the product with the image file name (not the full URL)
       const { data: updatedData, error: updateError } = await supabaseServiceClient
         .from('products')
-        .update({ imageurl: imageUrl })
+        .update({ imageurl: imageFileName })
         .eq('id', data.id)
         .select()
         .single();
@@ -95,10 +95,10 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
 
 export const updateProduct = async (id: string, updates: Partial<Product>, imageFile?: File): Promise<Product | null> => {
   try {
-    // If there's an image file, upload it first and add the URL to updates
+    // If there's an image file, upload it first and add the filename to updates (not the full URL)
+    let fileName = null;
     if (imageFile) {
-      const imageUrl = await uploadProductImage(imageFile, id);
-      updates.imageUrl = imageUrl;
+      fileName = await uploadProductImage(imageFile, id);
     }
     
     // Make sure we're using imageurl for the database column
@@ -111,7 +111,8 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.available !== undefined) dbUpdates.available = updates.available;
     if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
-    if (updates.imageUrl !== undefined) dbUpdates.imageurl = updates.imageUrl;
+    if (fileName !== null) dbUpdates.imageurl = fileName;
+    else if (updates.imageUrl !== undefined) dbUpdates.imageurl = updates.imageUrl;
     
     // Check if there's anything to update
     if (Object.keys(dbUpdates).length === 0) {
