@@ -4,6 +4,7 @@ import StatusDropdown from "@/components/admin/StatusDropdown";
 import { Badge } from "@/components/ui/badge";
 import { Image } from "lucide-react";
 import { Product } from "@/types/product";
+import { getProductImageUrl } from "@/utils/imageUtils";
 
 type Props = {
   product: Product;
@@ -16,13 +17,15 @@ type Props = {
 export default function ProductTableRow({
   product, onEdit, onDelete, updateMutation, statusOptions,
 }: Props) {
+  const imageUrl = getProductImageUrl(product.imageUrl);
+
   return (
     <TableRow key={product.id}>
       <TableCell>
-        {product.imageUrl ? (
+        {imageUrl ? (
           <div 
             className="w-10 h-10 rounded bg-center bg-cover"
-            style={{ backgroundImage: `url(${product.imageUrl})` }}
+            style={{ backgroundImage: `url(${imageUrl})` }}
           />
         ) : (
           <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
