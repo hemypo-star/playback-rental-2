@@ -29,8 +29,22 @@ export const ensurePublicBucket = async (bucketName: string): Promise<boolean> =
 export const resetStoragePermissions = async (): Promise<boolean> => {
   try {
     console.log("Resetting storage permissions for all buckets...");
+    
+    // First, ensure the products bucket exists
     const productsResult = await ensurePublicBucket('products');
+    
+    if (!productsResult) {
+      console.error("Failed to ensure products bucket exists");
+      return false;
+    }
+    
+    // Then, ensure the categories bucket exists
     const categoriesResult = await ensurePublicBucket('categories');
+    
+    if (!categoriesResult) {
+      console.error("Failed to ensure categories bucket exists");
+      return false;
+    }
     
     console.log("Storage reset results:", { products: productsResult, categories: categoriesResult });
     return productsResult && categoriesResult;

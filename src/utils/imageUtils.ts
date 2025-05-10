@@ -42,6 +42,7 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
 
     console.log(`Uploading file ${fileName} to products bucket...`);
     
+    // Use .upload() with explicit bucket name 'products'
     const { error: uploadError, data } = await supabase.storage
       .from('products')
       .upload(fileName, file, uploadOptions);

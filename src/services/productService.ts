@@ -36,6 +36,8 @@ export const getProductById = async (id: string): Promise<Product | null> => {
 
 export const createProduct = async (product: Partial<Product>, imageFile?: File): Promise<Product | null> => {
   try {
+    console.log("Creating product:", product, "with image file:", imageFile?.name);
+    
     // Make sure we're using imageurl for the database column and all required fields are present
     const dbProduct = {
       title: product.title || '',
@@ -55,29 +57,53 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
     // Insert the product first to get an ID
     const { data, error } = await supabaseServiceClient.from('products').insert([dbProduct]).select().single();
     
-    if (error) throw error;
+    if (error) {
+      console.error("Error inserting product:", error);
+      throw error;
+    }
     
-    if (!data) return null;
+    if (!data) {
+      console.error("No data returned from product insertion");
+      return null;
+    }
+    
+    console.log("Product created:", data);
     
     // If we have an image file, upload it and update the product
     if (imageFile) {
-      const imageFileName = await uploadProductImage(imageFile, data.id);
-      
-      // Update the product with the image file name (not the full URL)
-      const { data: updatedData, error: updateError } = await supabaseServiceClient
-        .from('products')
-        .update({ imageurl: imageFileName })
-        .eq('id', data.id)
-        .select()
-        .single();
+      console.log("Uploading image for product:", data.id);
+      try {
+        // Upload the image and get the filename (not URL)
+        const imageFileName = await uploadProductImage(imageFile, data.id);
+        console.log("Image uploaded, filename:", imageFileName);
         
-      if (updateError) throw updateError;
-      
-      if (updatedData) {
-        // Map imageurl to imageUrl for consistency in the frontend
+        // Update the product with the image file name
+        const { data: updatedData, error: updateError } = await supabaseServiceClient
+          .from('products')
+          .update({ imageurl: imageFileName })
+          .eq('id', data.id)
+          .select()
+          .single();
+          
+        if (updateError) {
+          console.error("Error updating product with image URL:", updateError);
+          throw updateError;
+        }
+        
+        if (updatedData) {
+          console.log("Product updated with image:", updatedData);
+          // Map imageurl to imageUrl for consistency in the frontend
+          return {
+            ...updatedData,
+            imageUrl: updatedData.imageurl
+          };
+        }
+      } catch (uploadError) {
+        console.error("Error in image upload process:", uploadError);
+        // Return the product even if the image upload fails
         return {
-          ...updatedData,
-          imageUrl: updatedData.imageurl
+          ...data,
+          imageUrl: data.imageurl
         };
       }
     }
@@ -89,16 +115,25 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
     };
   } catch (error) {
     console.error('Error creating product:', error);
-    return null;
+    throw error;
   }
 };
 
 export const updateProduct = async (id: string, updates: Partial<Product>, imageFile?: File): Promise<Product | null> => {
   try {
+    console.log("Updating product:", id, "with updates:", updates, "and image file:", imageFile?.name);
+    
     // If there's an image file, upload it first and add the filename to updates (not the full URL)
     let fileName = null;
     if (imageFile) {
-      fileName = await uploadProductImage(imageFile, id);
+      console.log("Uploading new image for product:", id);
+      try {
+        fileName = await uploadProductImage(imageFile, id);
+        console.log("Image uploaded, filename:", fileName);
+      } catch (uploadError) {
+        console.error("Error uploading image:", uploadError);
+        // Continue with the update even if the image upload fails
+      }
     }
     
     // Make sure we're using imageurl for the database column
@@ -116,9 +151,11 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
     
     // Check if there's anything to update
     if (Object.keys(dbUpdates).length === 0) {
-      // If there are no updates, return the existing product
+      console.log("No updates to apply, returning existing product");
       return getProductById(id);
     }
+    
+    console.log("Updating product with:", dbUpdates);
     
     const { data, error } = await supabaseServiceClient
       .from('products')
@@ -129,8 +166,10 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
       
     if (error) {
       console.error('Error updating product:', error);
-      return null;
+      throw error;
     }
+    
+    console.log("Product updated:", data);
     
     // Map imageurl to imageUrl for consistency in the frontend
     return data ? {
@@ -139,7 +178,7 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
     } : null;
   } catch (error) {
     console.error('Error updating product:', error);
-    return null;
+    throw error;
   }
 };
 

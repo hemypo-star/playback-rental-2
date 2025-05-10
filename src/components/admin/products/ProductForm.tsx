@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import ImageUploadField from "@/components/ImageUploadField";
 import { Category } from "@/types/product";
 import { resetStoragePermissions } from "@/services/storageService";
+import { uploadProductImage } from "@/utils/imageUtils";
 
 export const productFormSchema = z.object({
   title: z.string().min(2, {
@@ -56,19 +57,35 @@ export default function ProductForm({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [fileForCategory, setFileForCategory] = useState<File | null>(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [bucketInitialized, setBucketInitialized] = useState(false);
 
   // Initialize storage buckets when the form loads
   useEffect(() => {
     const initStorage = async () => {
       try {
-        await resetStoragePermissions();
+        const success = await resetStoragePermissions();
+        console.log("Storage buckets initialized:", success);
+        setBucketInitialized(true);
+        
+        if (!success) {
+          toast({
+            title: "Предупреждение",
+            description: "Не удалось инициализировать хранилище для изображений",
+            variant: "destructive"
+          });
+        }
       } catch (error) {
         console.error("Error initializing storage:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось инициализировать хранилище",
+          variant: "destructive"
+        });
       }
     };
     
     initStorage();
-  }, []);
+  }, [toast]);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -120,6 +137,19 @@ export default function ProductForm({
   };
 
   const handleFormSubmit = (values: ProductFormValues) => {
+    console.log("Form submitted with values:", values);
+    console.log("File for product:", fileForProduct);
+    
+    // Check if the storage buckets are ready
+    if (fileForProduct && !bucketInitialized) {
+      toast({
+        title: 'Ошибка',
+        description: 'Хранилище для изображений не инициализировано',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     onSubmit(values, fileForProduct);
   };
 
@@ -258,6 +288,7 @@ export default function ProductForm({
                 <div>
                   <ImageUploadField
                     onChange={(file) => {
+                      console.log("New file selected:", file.name);
                       setFileForProduct(file);
                     }}
                     previewUrl={fileForProduct ? URL.createObjectURL(fileForProduct) : field.value || null}

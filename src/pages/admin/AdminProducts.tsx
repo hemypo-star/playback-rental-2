@@ -264,12 +264,25 @@ const AdminProducts = () => {
   useEffect(() => {
     const initStorage = async () => {
       try {
+        console.log("Initializing storage buckets...");
         const result = await resetStoragePermissions();
         if (result) {
           console.log("Storage buckets initialized successfully");
+        } else {
+          console.error("Failed to initialize storage buckets");
+          toast({
+            title: 'Предупреждение',
+            description: 'Не удалось инициализировать хранилище для изображений',
+            variant: 'warning'
+          });
         }
       } catch (error) {
         console.error("Error initializing storage:", error);
+        toast({
+          title: 'Ошибка',
+          description: 'Ошибка инициализации хранилища',
+          variant: 'destructive'
+        });
       }
     };
     
