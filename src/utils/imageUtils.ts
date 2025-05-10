@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { getPublicUrl } from '@/services/storageService';
-import { ensurePublicBucket } from '@/services/storageService';
+import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
 
 export const getProductImageUrl = (imageUrl: string) => {
   return getPublicUrl('products', imageUrl);
@@ -10,7 +9,11 @@ export const getProductImageUrl = (imageUrl: string) => {
 export const uploadProductImage = async (file: File, productId?: string): Promise<string> => {
   try {
     // Ensure the products bucket exists and is public
-    await ensurePublicBucket('products');
+    const bucketReady = await ensurePublicBucket('products');
+    
+    if (!bucketReady) {
+      throw new Error('Could not ensure products bucket exists and is public');
+    }
     
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -46,7 +49,11 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
 export const uploadCategoryImage = async (file: File, categoryId?: string): Promise<string> => {
   try {
     // Ensure the categories bucket exists and is public
-    await ensurePublicBucket('categories');
+    const bucketReady = await ensurePublicBucket('categories');
+    
+    if (!bucketReady) {
+      throw new Error('Could not ensure categories bucket exists and is public');
+    }
     
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;

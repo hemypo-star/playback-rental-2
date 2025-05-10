@@ -6,9 +6,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { seedDatabase } from "./utils/seedDatabase";
 import { CartProvider } from "./hooks/useCart";
-import { supabase } from "./integrations/supabase/client";
 import Navbar from "./components/Navbar";
 import RequireAuth from "./components/RequireAuth";
+import { resetStoragePermissions } from "./services/storageService";
 
 // Pages
 import Index from "./pages/Index";
@@ -42,23 +42,13 @@ const queryClient = new QueryClient({
 
 const App = () => {
   useEffect(() => {
+    // Initialize the database with seed data
     seedDatabase().catch(console.error);
-
-    const createProductsBucket = async () => {
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === 'products');
-      
-      if (!bucketExists) {
-        await supabase.storage.createBucket('products', {
-          public: true,
-          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
-          fileSizeLimit: 5 * 1024 * 1024, // 5MB
-        });
-        console.log("Created products storage bucket");
-      }
-    };
     
-    createProductsBucket().catch(console.error);
+    // Initialize storage buckets
+    resetStoragePermissions().catch(error => {
+      console.error("Error initializing storage buckets:", error);
+    });
   }, []);
 
   return (
