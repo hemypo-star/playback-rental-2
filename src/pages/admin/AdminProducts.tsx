@@ -14,6 +14,7 @@ import { productFormSchema } from '@/components/admin/products/ProductForm';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { resetStoragePermissions } from '@/services/storageService';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const AdminProducts = () => {
   const { toast } = useToast();
@@ -273,7 +274,7 @@ const AdminProducts = () => {
           toast({
             title: 'Предупреждение',
             description: 'Не удалось инициализировать хранилище для изображений',
-            variant: 'warning'
+            variant: 'destructive'
           });
         }
       } catch (error) {
