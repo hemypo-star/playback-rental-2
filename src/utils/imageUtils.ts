@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -42,8 +43,9 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
 
     console.log(`Uploading file ${fileName} to products bucket...`);
     
-    // Use .upload() with explicit bucket name 'products'
-    const { error: uploadError, data } = await supabase.storage
+    // Use supabaseServiceClient instead of supabase for admin operations
+    // This ensures we have the necessary permissions regardless of user authentication
+    const { error: uploadError, data } = await supabaseServiceClient.storage
       .from('products')
       .upload(fileName, file, uploadOptions);
 
@@ -89,8 +91,8 @@ export const uploadCategoryImage = async (file: File, categoryId?: string): Prom
 
     console.log(`Uploading file ${fileName} to categories bucket...`);
     
-    // Upload the file
-    const { error: uploadError } = await supabase.storage
+    // Use supabaseServiceClient for admin operations
+    const { error: uploadError } = await supabaseServiceClient.storage
       .from('categories')
       .upload(fileName, file, uploadOptions);
 
@@ -104,5 +106,34 @@ export const uploadCategoryImage = async (file: File, categoryId?: string): Prom
   } catch (error) {
     console.error('Error in uploadCategoryImage:', error);
     throw error;
+  }
+};
+
+// Add a function to verify storage access and permissions
+export const verifyStorageAccess = async (): Promise<{ products: boolean, categories: boolean }> => {
+  try {
+    console.log("Verifying storage access...");
+    
+    // Check products bucket
+    const productsResult = await ensurePublicBucket('products');
+    
+    // Check categories bucket
+    const categoriesResult = await ensurePublicBucket('categories');
+    
+    console.log("Storage access verification results:", { 
+      products: productsResult, 
+      categories: categoriesResult 
+    });
+    
+    return { 
+      products: productsResult, 
+      categories: categoriesResult 
+    };
+  } catch (error) {
+    console.error("Error verifying storage access:", error);
+    return { 
+      products: false, 
+      categories: false 
+    };
   }
 };

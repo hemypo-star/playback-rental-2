@@ -10,11 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import ImageUploadField from "@/components/ImageUploadField";
 import { Category } from "@/types/product";
-import { resetStoragePermissions } from "@/services/storageService";
-import { uploadProductImage } from "@/utils/imageUtils";
+import { resetStoragePermissions, testStorageConnection } from "@/services/storageService";
+import { verifyStorageAccess } from "@/utils/imageUtils";
+import { AlertVariant, AlertTitle, AlertDescription } from "@/components/ui/alert-variant";
 
 export const productFormSchema = z.object({
   title: z.string().min(2, {
@@ -57,35 +58,130 @@ export default function ProductForm({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [fileForCategory, setFileForCategory] = useState<File | null>(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [bucketInitialized, setBucketInitialized] = useState(false);
+  const [storageStatus, setStorageStatus] = useState<{
+    initialized: boolean;
+    error: string | null;
+    products: boolean;
+    categories: boolean;
+  }>({
+    initialized: false,
+    error: null,
+    products: false,
+    categories: false
+  });
+  const [isCheckingStorage, setIsCheckingStorage] = useState(false);
 
   // Initialize storage buckets when the form loads
   useEffect(() => {
     const initStorage = async () => {
       try {
-        const success = await resetStoragePermissions();
-        console.log("Storage buckets initialized:", success);
-        setBucketInitialized(true);
+        setIsCheckingStorage(true);
+        console.log("Initializing storage buckets...");
         
-        if (!success) {
+        // First reset/ensure buckets
+        const reset = await resetStoragePermissions();
+        console.log("Storage reset result:", reset);
+        
+        if (!reset) {
+          setStorageStatus({
+            initialized: false,
+            error: "Не удалось инициализировать хранилище для изображений",
+            products: false,
+            categories: false
+          });
+          
           toast({
             title: "Предупреждение",
             description: "Не удалось инициализировать хранилище для изображений",
             variant: "destructive"
           });
+          return;
+        }
+        
+        // Then verify access
+        const access = await verifyStorageAccess();
+        
+        setStorageStatus({
+          initialized: access.products && access.categories,
+          error: !access.products || !access.categories ? 
+            "Не удалось получить доступ к хранилищу изображений" : null,
+          products: access.products,
+          categories: access.categories
+        });
+        
+        if (!access.products || !access.categories) {
+          toast({
+            title: "Предупреждение",
+            description: "Проблемы с доступом к хранилищу изображений",
+            variant: "warning"
+          });
+        } else {
+          console.log("Storage buckets initialized successfully");
         }
       } catch (error) {
         console.error("Error initializing storage:", error);
+        
+        setStorageStatus({
+          initialized: false,
+          error: "Ошибка инициализации хранилища",
+          products: false,
+          categories: false
+        });
+        
         toast({
           title: "Ошибка",
           description: "Не удалось инициализировать хранилище",
           variant: "destructive"
         });
+      } finally {
+        setIsCheckingStorage(false);
       }
     };
     
     initStorage();
   }, [toast]);
+
+  // Test storage connection to diagnose issues
+  const checkStorageConnection = async () => {
+    try {
+      setIsCheckingStorage(true);
+      toast({
+        title: "Проверка хранилища",
+        description: "Выполняется проверка соединения с хранилищем...",
+      });
+      
+      const productsTest = await testStorageConnection('products');
+      const categoriesTest = await testStorageConnection('categories');
+      
+      console.log("Storage connection test results:", { products: productsTest, categories: categoriesTest });
+      
+      setStorageStatus({
+        initialized: productsTest.success && categoriesTest.success,
+        error: !productsTest.success || !categoriesTest.success ? 
+          `Проблемы с доступом к хранилищу: ${!productsTest.success ? productsTest.message : ''} ${!categoriesTest.success ? categoriesTest.message : ''}` : null,
+        products: productsTest.success,
+        categories: categoriesTest.success
+      });
+      
+      toast({
+        title: productsTest.success && categoriesTest.success ? "Хранилище доступно" : "Проблемы с хранилищем",
+        description: productsTest.success && categoriesTest.success ? 
+          "Соединение с хранилищем успешно установлено" : 
+          "Обнаружены проблемы с хранилищем. Проверьте консоль для деталей.",
+        variant: productsTest.success && categoriesTest.success ? "default" : "destructive"
+      });
+    } catch (error) {
+      console.error("Error checking storage connection:", error);
+      
+      toast({
+        title: "Ошибка",
+        description: "Не удалось проверить соединение с хранилищем",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCheckingStorage(false);
+    }
+  };
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -141,13 +237,12 @@ export default function ProductForm({
     console.log("File for product:", fileForProduct);
     
     // Check if the storage buckets are ready
-    if (fileForProduct && !bucketInitialized) {
+    if (fileForProduct && !storageStatus.initialized) {
       toast({
-        title: 'Ошибка',
-        description: 'Хранилище для изображений не инициализировано',
-        variant: 'destructive',
+        title: 'Предупреждение',
+        description: 'Хранилище для изображений не готово. Изображение может не быть загружено.',
+        variant: 'warning',
       });
-      return;
     }
     
     onSubmit(values, fileForProduct);
@@ -156,6 +251,33 @@ export default function ProductForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+        {storageStatus.error && (
+          <AlertVariant variant="warning" className="mb-4">
+            <AlertTitle>Проблема с хранилищем изображений</AlertTitle>
+            <AlertDescription>
+              {storageStatus.error}
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={checkStorageConnection}
+                  disabled={isCheckingStorage}
+                >
+                  {isCheckingStorage ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Проверка...
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="mr-2 h-4 w-4" /> Проверить соединение
+                    </>
+                  )}
+                </Button>
+              </div>
+            </AlertDescription>
+          </AlertVariant>
+        )}
+
         <FormField
           control={form.control}
           name="title"
@@ -291,8 +413,8 @@ export default function ProductForm({
                       console.log("New file selected:", file.name);
                       setFileForProduct(file);
                     }}
-                    previewUrl={fileForProduct ? URL.createObjectURL(fileForProduct) : field.value || null}
-                    disabled={isSubmitting}
+                    previewUrl={fileForProduct ? URL.createObjectURL(fileForProduct) : (field.value || null)}
+                    disabled={isSubmitting || isCheckingStorage}
                   />
                   <Input 
                     type="hidden"

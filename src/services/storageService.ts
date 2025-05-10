@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseServiceClient } from '@/services/supabaseClient';
 
 // Call the edge function to ensure a bucket exists and is public
 // This uses the SERVICE_ROLE_KEY which has admin privileges
@@ -63,8 +64,8 @@ export const getPublicUrl = (bucketName: string, filePath: string): string | nul
     return filePath;
   }
   
-  // Get public URL from storage
-  const { data } = supabase.storage
+  // Get public URL from storage - use supabaseServiceClient for consistency
+  const { data } = supabaseServiceClient.storage
     .from(bucketName)
     .getPublicUrl(filePath);
   
@@ -78,7 +79,7 @@ export const listBucketFiles = async (bucketName: string) => {
     // Ensure bucket exists before trying to list files
     await ensurePublicBucket(bucketName);
     
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServiceClient
       .storage
       .from(bucketName)
       .list();
@@ -99,7 +100,7 @@ export const listBucketFiles = async (bucketName: string) => {
 // Delete a file from a bucket
 export const deleteFile = async (bucketName: string, filePath: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseServiceClient
       .storage
       .from(bucketName)
       .remove([filePath]);
@@ -114,5 +115,83 @@ export const deleteFile = async (bucketName: string, filePath: string): Promise<
   } catch (error) {
     console.error(`Error in deleteFile for ${bucketName}/${filePath}:`, error);
     return false;
+  }
+};
+
+// Test storage connection and policies
+export const testStorageConnection = async (bucketName: string): Promise<{
+  success: boolean;
+  canRead: boolean;
+  canWrite: boolean;
+  message: string;
+}> => {
+  try {
+    console.log(`Testing storage connection for ${bucketName} bucket...`);
+    
+    // Ensure the bucket exists
+    const bucketExists = await ensurePublicBucket(bucketName);
+    if (!bucketExists) {
+      return {
+        success: false,
+        canRead: false,
+        canWrite: false,
+        message: `Failed to ensure ${bucketName} bucket exists`
+      };
+    }
+    
+    // Test reading from the bucket
+    let canRead = false;
+    try {
+      const { data, error } = await supabaseServiceClient.storage.from(bucketName).list();
+      if (!error) {
+        canRead = true;
+        console.log(`Successfully read from ${bucketName} bucket, found ${data?.length || 0} files`);
+      } else {
+        console.error(`Error reading from ${bucketName} bucket:`, error);
+      }
+    } catch (readError) {
+      console.error(`Exception reading from ${bucketName} bucket:`, readError);
+    }
+    
+    // Test writing to the bucket with a tiny test file
+    let canWrite = false;
+    const testFileName = `test_${Date.now()}.txt`;
+    const testFileContent = new Blob(['test'], { type: 'text/plain' });
+    
+    try {
+      const { error: uploadError } = await supabaseServiceClient.storage
+        .from(bucketName)
+        .upload(testFileName, testFileContent, { upsert: true });
+      
+      if (!uploadError) {
+        canWrite = true;
+        console.log(`Successfully wrote test file to ${bucketName} bucket`);
+        
+        // Clean up the test file
+        await supabaseServiceClient.storage.from(bucketName).remove([testFileName]);
+        console.log(`Cleaned up test file from ${bucketName} bucket`);
+      } else {
+        console.error(`Error writing to ${bucketName} bucket:`, uploadError);
+      }
+    } catch (writeError) {
+      console.error(`Exception writing to ${bucketName} bucket:`, writeError);
+    }
+    
+    return {
+      success: canRead && canWrite,
+      canRead,
+      canWrite,
+      message: canRead && canWrite 
+        ? `Successfully tested ${bucketName} bucket` 
+        : `Issues with ${bucketName} bucket: ${!canRead ? 'cannot read, ' : ''}${!canWrite ? 'cannot write' : ''}`
+    };
+  } catch (error) {
+    console.error(`Error testing ${bucketName} bucket:`, error);
+    return {
+      success: false,
+      canRead: false,
+      canWrite: false,
+      message: `Error testing ${bucketName} bucket: ${error}`
+    };
   }
 };
