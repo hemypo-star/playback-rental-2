@@ -2,7 +2,7 @@
 "use client";
 
 import { useToastContext } from "./toast-context";
-import type { ToasterToast, ToastProps, ToastActionElement } from "./toast-types";
+import type { ToasterToast, ToastProps, ToastActionElement, ToastVariants } from "./toast-types";
 
 // Main hook for component use
 export function useToast() {
@@ -26,4 +26,4 @@ export function toast(props: Omit<ToasterToast, "id">) {
   return "";
 }
 
-export type { ToasterToast, ToastProps, ToastActionElement };
+export type { ToasterToast, ToastProps, ToastActionElement, ToastVariants };
