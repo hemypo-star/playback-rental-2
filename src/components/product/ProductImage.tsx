@@ -27,17 +27,25 @@ const ProductImage = (props: ProductImageProps) => {
   // Get the public URL for the image
   useEffect(() => {
     if (rawImageUrl) {
-      const publicUrl = getProductImageUrl(rawImageUrl);
-      setImageUrl(publicUrl);
-      setIsLoading(false);
+      try {
+        const publicUrl = getProductImageUrl(rawImageUrl);
+        console.log(`ProductImage: Converting raw URL "${rawImageUrl}" to public URL "${publicUrl}"`);
+        setImageUrl(publicUrl);
+        setIsLoading(false);
+      } catch (error) {
+        console.error(`Error getting product image URL for "${rawImageUrl}":`, error);
+        setIsLoading(false);
+        setIsError(true);
+      }
     } else {
+      console.log('ProductImage: No raw image URL provided');
       setIsLoading(false);
       setIsError(true);
     }
   }, [rawImageUrl]);
 
   const handleError = () => {
-    console.log("Image failed to load:", rawImageUrl);
+    console.error(`Image failed to load: ${imageUrl} (raw: ${rawImageUrl})`);
     setIsError(true);
     setIsLoading(false);
   };

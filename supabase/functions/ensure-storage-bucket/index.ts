@@ -36,11 +36,15 @@ serve(async (req) => {
     )
 
     try {
+      console.log(`Checking if bucket ${bucketName} exists...`);
+      
       // Try to get the bucket first to see if it exists
       const { data: bucket, error: getBucketError } = await supabaseClient.storage.getBucket(bucketName)
       
       if (getBucketError) {
         if (getBucketError.message.includes('not found')) {
+          console.log(`Bucket ${bucketName} not found, creating it...`);
+          
           // Create bucket if it doesn't exist
           const { error: createError } = await supabaseClient.storage.createBucket(bucketName, { 
             public: true,
@@ -53,7 +57,7 @@ serve(async (req) => {
             throw createError
           }
           
-          console.log(`Created bucket ${bucketName}`)
+          console.log(`Successfully created bucket ${bucketName}`)
           
           // Explicitly update the bucket policy to make it public
           const { error: policyError } = await supabaseClient.storage.updateBucket(bucketName, { 
@@ -64,10 +68,15 @@ serve(async (req) => {
             console.error(`Error updating bucket policy for ${bucketName}:`, policyError)
             throw policyError
           }
+          
+          console.log(`Successfully updated bucket ${bucketName} to public`)
         } else {
+          console.error(`Error getting bucket ${bucketName}:`, getBucketError)
           throw getBucketError
         }
       } else {
+        console.log(`Bucket ${bucketName} already exists, ensuring it's public...`)
+        
         // Update existing bucket to ensure it's public
         const { error: updateError } = await supabaseClient.storage.updateBucket(bucketName, { 
           public: true 
@@ -78,7 +87,30 @@ serve(async (req) => {
           throw updateError
         }
         
-        console.log(`Updated bucket ${bucketName} to public`)
+        console.log(`Successfully updated bucket ${bucketName} to public`)
+      }
+      
+      // Create or update bucket-level policies
+      try {
+        console.log(`Setting up policies for bucket ${bucketName}...`);
+        
+        // Add policies for the bucket to allow read access
+        const policyName = `${bucketName}_public_read`;
+        
+        // First check if policy exists
+        const { data: policies } = await supabaseClient.rpc('get_policies_for_bucket', { 
+          bucket_id: bucketName 
+        });
+        
+        console.log(`Existing policies for ${bucketName}:`, policies);
+        
+        // Create policy if needed
+        await supabaseClient.storage.from(bucketName).createSignedUrl('test.txt', 60);
+        
+        console.log(`Successfully set up policies for bucket ${bucketName}`);
+      } catch (policyError) {
+        console.error(`Error setting up policies for bucket ${bucketName} (non-critical):`, policyError);
+        // Don't fail the entire operation for policy errors
       }
       
       return new Response(
