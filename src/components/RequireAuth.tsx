@@ -17,6 +17,7 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
     const verifyAuth = async () => {
       try {
         const authenticated = await checkAuth();
+        console.log('Authentication check result:', authenticated);
         setIsAuthenticated(authenticated);
       } catch (error) {
         console.error('Authentication check failed:', error);

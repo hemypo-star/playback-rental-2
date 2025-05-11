@@ -79,24 +79,29 @@ export const logout = () => {
 };
 
 export const checkAuth = async () => {
-  // Check if token exists
-  const token = localStorage.getItem('auth_token');
-  if (!token) {
-    console.log('No auth token found in localStorage');
+  try {
+    // Check if token exists
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      console.log('No auth token found in localStorage');
+      return false;
+    }
+    
+    // Verify the session is still valid
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session) {
+      // Clear invalid tokens
+      console.log('Invalid session, clearing tokens');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_email');
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error checking authentication:', error);
     return false;
   }
-  
-  // Verify the session is still valid
-  const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session) {
-    // Clear invalid tokens
-    console.log('Invalid session, clearing tokens');
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_email');
-    return false;
-  }
-  
-  return true;
 };
 
 export const getCurrentUser = () => {

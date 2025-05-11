@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut, Settings, User, FolderOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import FileExplorer from '@/components/admin/FileExplorer';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -29,8 +30,16 @@ export default function Admin() {
         return;
       }
       
-      // Set current user
-      setCurrentUser(getCurrentUser());
+      // Get current user
+      const user = getCurrentUser();
+      setCurrentUser(user);
+
+      // Also ensure Supabase session is valid
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        logout();
+        navigate('/login');
+      }
     };
     
     verifyAuth();
