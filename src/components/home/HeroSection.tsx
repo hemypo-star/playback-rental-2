@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRightIcon, SearchIcon } from 'lucide-react';
@@ -8,12 +9,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import type { BookingPeriod } from '@/types/product';
+
 export const HeroSection = () => {
   const navigate = useNavigate();
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [searchQuery, setSearchQuery] = useState('');
   const [bannerImage, setBannerImage] = useState('public/BG.svg');
+  
   useEffect(() => {
     const fetchBannerImage = async () => {
       try {
@@ -30,10 +33,12 @@ export const HeroSection = () => {
     };
     fetchBannerImage();
   }, []);
+  
   const handleBookingChange = (bookingData: BookingPeriod) => {
     setStartDate(bookingData.startDate);
     setEndDate(bookingData.endDate);
   };
+  
   const handleSearchClick = () => {
     if (startDate && endDate) {
       navigate('/catalog', {
@@ -44,6 +49,7 @@ export const HeroSection = () => {
       });
     }
   };
+  
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     navigate('/catalog', {
@@ -53,6 +59,7 @@ export const HeroSection = () => {
       }
     });
   };
+  
   return <section className="relative h-screen max-h-[800px] flex items-center overflow-hidden">
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-black/70 to-black/40" />
       <div className="absolute inset-0 z-0 bg-cover bg-center" style={{
@@ -78,7 +85,9 @@ export const HeroSection = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" sideOffset={5} className="w-auto p-2 mx-[-18px]">
-                  <BookingCalendar onBookingChange={handleBookingChange} initialStartDate={startDate} initialEndDate={endDate} isCompact={true} />
+                  <div className="w-full md:w-[700px] max-w-full">
+                    <BookingCalendar onBookingChange={handleBookingChange} initialStartDate={startDate} initialEndDate={endDate} isCompact={true} />
+                  </div>
                 </PopoverContent>
               </Popover>
               

@@ -109,7 +109,7 @@ const DateRangePickerRu = ({
         <Button 
           variant="outline" 
           size="sm"
-          className="text-[#ea384c] border-[#ea384c] hover:bg-[#ea384c] hover:text-white"
+          className="text-[#ea384c] border-[#ea384c] hover:bg-[#ea384c] hover:text-white w-full max-w-xs"
           onClick={handleConfirmTime}
         >
           Подтвердить время

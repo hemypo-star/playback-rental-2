@@ -68,14 +68,14 @@ const BookingCalendar = ({
   }, [onClose]);
 
   return (
-    <div className={cn("border rounded-lg shadow-sm bg-card flex flex-col h-full", className)}>
+    <div className={cn("border rounded-lg shadow-sm bg-card flex flex-col h-full w-full", className)}>
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-5 w-5 text-primary" />
           <h3 className="font-medium">Выберите даты аренды</h3>
         </div>
       </div>
-      <div className="p-4 flex-1 overflow-auto">
+      <div className="p-4 flex-1 overflow-auto w-full">
         <DateRangePickerRu
           onChange={handleDateRangeChange}
           initialStartDate={initialStartDate}
