@@ -1,6 +1,7 @@
 
 import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getProductImageUrl, uploadProductImage } from '@/utils/imageUtils';
 
 export const getProducts = async (): Promise<Product[]> => {

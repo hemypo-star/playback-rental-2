@@ -41,6 +41,23 @@ export const getPublicUrl = (bucketName: string, fileName: string): string | nul
   }
 };
 
+// List all files in a bucket
+export const listBucketFiles = async (bucketName: string): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase.storage.from(bucketName).list();
+    
+    if (error) {
+      console.error(`Error listing files in ${bucketName}:`, error);
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error(`Error in listBucketFiles for ${bucketName}:`, error);
+    return [];
+  }
+};
+
 // Test storage connection
 export const testStorageConnection = async (bucketName: string): Promise<{success: boolean; message: string}> => {
   try {
