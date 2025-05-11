@@ -73,13 +73,6 @@ serve(async (req) => {
       // Set up policies to allow full access
       console.log(`Setting up policies for bucket ${bucketName}...`)
       
-      // Get existing policies
-      const { data: policies } = await supabaseClient.rpc('get_policies_for_bucket', { 
-        bucket_id: bucketName 
-      })
-      
-      console.log(`Existing policies for ${bucketName}: ${policies}`)
-      
       // Create policies for the bucket if not already present
       // This ensures public access and admin write access
       

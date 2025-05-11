@@ -167,11 +167,11 @@ export type Database = {
     }
     Functions: {
       admin_login: {
-        Args: { login_input: string; password_input: string }
-        Returns: Json
+        Args: { login: string; pass: string }
+        Returns: boolean
       }
       is_admin: {
-        Args: Record<PropertyKey, never>
+        Args: Record<PropertyKey, never> | { jwt: Json }
         Returns: boolean
       }
     }

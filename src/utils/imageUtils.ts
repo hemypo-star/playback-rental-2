@@ -2,7 +2,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
-import { useToast } from '@/hooks/use-toast';
 
 export const getProductImageUrl = (imageUrl: string) => {
   if (!imageUrl) return null;
@@ -43,8 +42,7 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
 
     console.log(`Uploading file ${fileName} to products bucket...`);
     
-    // Use supabaseServiceClient instead of supabase for admin operations
-    // This ensures we have the necessary permissions regardless of user authentication
+    // Use supabaseServiceClient for admin operations
     const { error: uploadError, data } = await supabaseServiceClient.storage
       .from('products')
       .upload(fileName, file, uploadOptions);

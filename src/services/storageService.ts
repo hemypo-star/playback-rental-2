@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
 
 // Call the edge function to ensure a bucket exists and is public
-// This uses the SERVICE_ROLE_KEY which has admin privileges
 export const ensurePublicBucket = async (bucketName: string): Promise<boolean> => {
   try {
     console.log(`Ensuring public bucket ${bucketName} exists...`);
