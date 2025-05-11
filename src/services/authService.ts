@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from './supabaseClient';
 
@@ -9,13 +10,19 @@ interface AdminLoginResponse {
   debug?: any; // Add debug info for troubleshooting
 }
 
-export const login = async (email: string, password: string): Promise<AdminLoginResponse> => {
+export const login = async (usernameOrEmail: string, password: string): Promise<AdminLoginResponse> => {
   try {
-    console.log('Attempting login for:', email);
+    console.log('Attempting login for:', usernameOrEmail);
     
-    // Step 1: Use Supabase's built-in authentication with the anon key (not service key)
+    // Try to find if the input is a valid admin login first
+    const isAdminLogin = usernameOrEmail === 'admin';
+    
+    // If it's "admin", we'll use a default email for Supabase auth
+    const authEmail = isAdminLogin ? 'admin@example.com' : usernameOrEmail;
+    
+    // Step 1: Use Supabase's built-in authentication
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: email,
+      email: authEmail,
       password: password,
     });
 
@@ -33,28 +40,47 @@ export const login = async (email: string, password: string): Promise<AdminLogin
 
     // Step 2: After successful authentication, verify if the user is an admin
     try {
-      // First try to find an admin user with the login matching the email
-      console.log('Checking if email matches admin login:', email);
-      let { data: adminData, error: adminError } = await supabaseServiceClient
-        .from('admin_users')
-        .select('login, id')
-        .eq('login', email)
-        .maybeSingle();
-
-      // If not found, try with "admin" as the login (common default)
-      if (!adminData) {
-        console.log('Email login not found, trying with default admin login');
-        const { data: defaultAdminData, error: defaultAdminError } = await supabaseServiceClient
+      // Check if user is using "admin" as login directly
+      console.log('Checking admin login:', isAdminLogin ? 'admin' : usernameOrEmail);
+      
+      let adminData;
+      let adminError;
+      
+      if (isAdminLogin) {
+        // If using "admin" login, check for that directly
+        const result = await supabaseServiceClient
           .from('admin_users')
           .select('login, id')
           .eq('login', 'admin')
           .maybeSingle();
-          
-        // Update variables with results from second query
-        adminData = defaultAdminData;
-        adminError = defaultAdminError;
         
-        console.log('Default admin check result:', adminData ? 'Found' : 'Not found');
+        adminData = result.data;
+        adminError = result.error;
+      } else {
+        // Try with the email first
+        const result = await supabaseServiceClient
+          .from('admin_users')
+          .select('login, id')
+          .eq('login', usernameOrEmail)
+          .maybeSingle();
+          
+        adminData = result.data;
+        adminError = result.error;
+        
+        // If not found with email, try with "admin" as fallback
+        if (!adminData) {
+          console.log('Email login not found, trying with default admin login');
+          const fallbackResult = await supabaseServiceClient
+            .from('admin_users')
+            .select('login, id')
+            .eq('login', 'admin')
+            .maybeSingle();
+            
+          adminData = fallbackResult.data;
+          adminError = fallbackResult.error;
+          
+          console.log('Default admin check result:', adminData ? 'Found' : 'Not found');
+        }
       }
 
       if (!adminData) {
@@ -63,7 +89,7 @@ export const login = async (email: string, password: string): Promise<AdminLogin
         await supabase.auth.signOut();
         return { 
           success: false, 
-          error: 'Unauthorized: Not an admin user. No matching record found in admin_users table.' 
+          error: 'Unauthorized: Не найдено учетной записи администратора. Убедитесь, что в таблице admin_users есть запись с логином "admin".'
         };
       }
 

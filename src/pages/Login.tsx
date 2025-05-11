@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label';
 import { AlertVariant, AlertTitle, AlertDescription } from '@/components/ui/alert-variant';
 
 const formSchema = z.object({
-  username: z.string().email({ message: 'Введите правильный email' }),
+  username: z.string().min(1, { message: 'Email обязателен' }),
   password: z.string().min(1, { message: 'Пароль обязателен' }),
 });
 
@@ -108,9 +108,9 @@ const Login = () => {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email/логин</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="admin@example.com" {...field} />
+                      <Input placeholder="admin@example.com или admin" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -137,7 +137,7 @@ const Login = () => {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-sm text-muted-foreground mt-2">
-            Войдите используя email из Supabase Auth
+            Вы можете использовать как email из Supabase Auth, так и логин 'admin'
           </p>
           <Button 
             variant="ghost" 
@@ -154,8 +154,8 @@ const Login = () => {
                 <p className="mb-2">Для входа требуется:</p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li>Аккаунт в Supabase Authentication</li>
-                  <li>Запись в таблице admin_users</li>
-                  <li>В таблице admin_users должна быть запись с login="admin" или login=ваш_email</li>
+                  <li>Запись в таблице admin_users со значением "admin" в поле login</li>
+                  <li>Введите "admin" в поле Email/логин и ваш пароль для входа</li>
                 </ul>
               </AlertDescription>
             </AlertVariant>
