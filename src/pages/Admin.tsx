@@ -22,13 +22,18 @@ export default function Admin() {
   
   useEffect(() => {
     // Check authentication on component mount
-    if (!checkAuth()) {
-      navigate('/login');
-      return;
-    }
+    const verifyAuth = async () => {
+      const isAuthenticated = await checkAuth();
+      if (!isAuthenticated) {
+        navigate('/login');
+        return;
+      }
+      
+      // Set current user
+      setCurrentUser(getCurrentUser());
+    };
     
-    // Set current user
-    setCurrentUser(getCurrentUser());
+    verifyAuth();
   }, [navigate]);
   
   const handleLogout = () => {
@@ -39,11 +44,6 @@ export default function Admin() {
     });
     navigate('/login');
   };
-
-  // If not authenticated, don't render anything
-  if (!checkAuth()) {
-    return null;
-  }
 
   return (
     <div className="container mx-auto px-4 py-10">
@@ -102,4 +102,4 @@ export default function Admin() {
       </Tabs>
     </div>
   );
-}
+};

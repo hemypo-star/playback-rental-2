@@ -24,11 +24,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { login } from '@/services/authService';
-import { Label } from '@/components/ui/label';
 import { AlertVariant, AlertTitle, AlertDescription } from '@/components/ui/alert-variant';
 
 const formSchema = z.object({
-  username: z.string().min(1, { message: 'Email обязателен' }),
+  email: z.string().email({ message: 'Введите корректный email' }),
   password: z.string().min(1, { message: 'Пароль обязателен' }),
 });
 
@@ -37,7 +36,7 @@ const Login = () => {
   const location = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [adminHelp, setAdminHelp] = useState(false);
+  const [loginHelp, setLoginHelp] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Get the return URL from location state
@@ -46,7 +45,7 @@ const Login = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: '',
+      email: '',
       password: '',
     },
   });
@@ -56,7 +55,7 @@ const Login = () => {
     setLoginError(null);
     
     try {
-      const result = await login(values.username, values.password);
+      const result = await login(values.email, values.password);
       
       if (result.success) {
         toast({
@@ -65,11 +64,11 @@ const Login = () => {
         });
         navigate(from, { replace: true });
       } else {
-        setLoginError(result.error || 'Неверный логин или пароль. Пожалуйста, попробуйте снова.');
+        setLoginError(result.error || 'Неверный email или пароль. Пожалуйста, попробуйте снова.');
         toast({
           variant: 'destructive',
           title: 'Ошибка входа',
-          description: result.error || 'Неверный логин или пароль. Пожалуйста, попробуйте снова.',
+          description: result.error || 'Неверный email или пароль. Пожалуйста, попробуйте снова.',
         });
       }
     } catch (error: any) {
@@ -105,12 +104,12 @@ const Login = () => {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="username"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email/логин</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="admin@example.com или admin" {...field} />
+                      <Input placeholder="your@email.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -137,25 +136,24 @@ const Login = () => {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-sm text-muted-foreground mt-2">
-            Вы можете использовать как email из Supabase Auth, так и логин 'admin'
+            Используйте email и пароль зарегистрированные в Supabase Auth
           </p>
           <Button 
             variant="ghost" 
             className="text-sm text-muted-foreground mt-2"
-            onClick={() => setAdminHelp(!adminHelp)}
+            onClick={() => setLoginHelp(!loginHelp)}
           >
             Нужна помощь?
           </Button>
           
-          {adminHelp && (
+          {loginHelp && (
             <AlertVariant variant="info" className="mt-3">
               <AlertTitle>Информация об авторизации</AlertTitle>
               <AlertDescription>
                 <p className="mb-2">Для входа требуется:</p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li>Аккаунт в Supabase Authentication</li>
-                  <li>Запись в таблице admin_users со значением "admin" в поле login</li>
-                  <li>Введите "admin" в поле Email/логин и ваш пароль для входа</li>
+                  <li>Введите ваш email и пароль для входа</li>
                 </ul>
               </AlertDescription>
             </AlertVariant>

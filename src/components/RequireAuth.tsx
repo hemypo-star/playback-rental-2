@@ -2,7 +2,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { checkAuth } from '@/services/authService';
 import { useEffect, useState } from 'react';
-import { Spinner } from '@/components/ui/spinner'; // Make sure you have a spinner component
 import { AlertVariant, AlertTitle, AlertDescription } from '@/components/ui/alert-variant';
 
 interface RequireAuthProps {
