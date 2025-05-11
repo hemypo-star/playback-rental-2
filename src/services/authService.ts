@@ -1,4 +1,5 @@
 
+import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from './supabaseClient';
 
 interface AdminLoginResponse {
@@ -10,8 +11,8 @@ interface AdminLoginResponse {
 
 export const login = async (email: string, password: string): Promise<AdminLoginResponse> => {
   try {
-    // Use Supabase's built-in authentication
-    const { data: authData, error: authError } = await supabaseServiceClient.auth.signInWithPassword({
+    // Use Supabase's built-in authentication with the anon key (not service key)
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
@@ -37,14 +38,14 @@ export const login = async (email: string, password: string): Promise<AdminLogin
       if (adminError) {
         console.error('Admin verification error:', adminError.message);
         // Sign out on error
-        await supabaseServiceClient.auth.signOut();
+        await supabase.auth.signOut();
         return { success: false, error: 'Unauthorized: Admin verification failed' };
       }
 
       if (!adminData) {
         // If no matching admin user found, sign out
         console.error('Not an admin user');
-        await supabaseServiceClient.auth.signOut();
+        await supabase.auth.signOut();
         return { success: false, error: 'Unauthorized: Not an admin user' };
       }
 
@@ -56,7 +57,7 @@ export const login = async (email: string, password: string): Promise<AdminLogin
     } catch (adminCheckError: any) {
       // If admin check throws an exception
       console.error('Error during admin verification:', adminCheckError.message);
-      await supabaseServiceClient.auth.signOut();
+      await supabase.auth.signOut();
       return { success: false, error: `Admin verification error: ${adminCheckError.message}` };
     }
   } catch (error: any) {
@@ -72,7 +73,7 @@ export const signupuser = async (email: string, password: string) => {
 
 export const forgotPassword = async (email: string) => {
   try {
-    const { error } = await supabaseServiceClient.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
     return { success: true };
   } catch (error: any) {
@@ -82,7 +83,7 @@ export const forgotPassword = async (email: string) => {
 
 export const resetPassword = async (password: string) => {
   try {
-    const { error } = await supabaseServiceClient.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
     return { success: true };
   } catch (error: any) {
@@ -91,7 +92,7 @@ export const resetPassword = async (password: string) => {
 };
 
 export const logout = () => {
-  supabaseServiceClient.auth.signOut();
+  supabase.auth.signOut();
   localStorage.removeItem('auth_token');
   localStorage.removeItem('admin_login');
 };
@@ -102,7 +103,7 @@ export const checkAuth = async () => {
   if (!token) return false;
   
   // Verify the session is still valid
-  const { data, error } = await supabaseServiceClient.auth.getSession();
+  const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) {
     // Clear invalid tokens
     localStorage.removeItem('auth_token');
