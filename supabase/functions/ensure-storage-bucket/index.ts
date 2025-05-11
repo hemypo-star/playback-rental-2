@@ -96,8 +96,23 @@ serve(async (req) => {
     
     console.log(`Bucket ${bucketName} is now public.`);
     
-    // Add public policy for downloading if needed
-    await ensurePublicPolicy(supabaseAdmin, bucketName);
+    // Try to create a public policy directly using SQL
+    try {
+      // Execute SQL to ensure public access
+      const { error: policyError } = await supabaseAdmin.rpc('create_public_bucket_policy', { 
+        bucket_name: bucketName 
+      });
+      
+      if (policyError) {
+        console.error(`Warning: Could not create policy via RPC: ${policyError.message}`);
+        // Continue despite this error, bucket should still be public
+      } else {
+        console.log(`Public access policy created or verified for ${bucketName}`);
+      }
+    } catch (policyError) {
+      console.error(`Error with policy creation: ${policyError.message}`);
+      // Continue despite this error, bucket should still be public
+    }
     
     return new Response(
       JSON.stringify({ 
@@ -120,54 +135,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Helper function to ensure public policy for the bucket
-async function ensurePublicPolicy(supabase: any, bucketName: string) {
-  try {
-    // First get existing policies
-    const { data: policies, error: getPoliciesError } = await supabase.storage.from(bucketName).getPolicies();
-    
-    if (getPoliciesError) {
-      console.error(`Error getting policies for ${bucketName}:`, getPoliciesError);
-      return;
-    }
-    
-    // Define the public policy
-    const publicPolicy = {
-      name: `${bucketName}_public_select`,
-      definition: {
-        statements: [
-          {
-            operation: 'SELECT',
-            actions: ['object_info', 'object_get'],
-            role: 'anon',
-          },
-        ],
-      }
-    };
-    
-    // Check if a similar public policy already exists
-    const hasPublicPolicy = policies.some((p: any) => {
-      return p.name === `${bucketName}_public_select` || 
-             (p.statements && p.statements.some((s: any) => 
-               s.actions.includes('object_get') && s.role === 'anon'));
-    });
-    
-    if (!hasPublicPolicy) {
-      console.log(`Creating public policy for ${bucketName}...`);
-      
-      // Create the policy
-      await supabase.rpc('create_storage_policy', {
-        bucket_name: bucketName,
-        policy_name: publicPolicy.name,
-        definition: publicPolicy.definition
-      });
-      
-      console.log(`Public policy created for ${bucketName}.`);
-    } else {
-      console.log(`Public policy already exists for ${bucketName}.`);
-    }
-  } catch (error) {
-    console.error(`Error ensuring public policy for ${bucketName}:`, error);
-  }
-}

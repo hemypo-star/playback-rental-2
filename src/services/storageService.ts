@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseServiceClient } from '@/services/supabaseClient';
 import { createBucketIfNotExists } from '@/services/supabaseClient';
 
 // Ensure a storage bucket exists and is public

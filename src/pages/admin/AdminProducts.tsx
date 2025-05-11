@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +14,7 @@ import { ProductFormValues } from '@/components/admin/products/ProductForm';
 import { productFormSchema } from '@/components/admin/products/ProductForm';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { resetStoragePermissions } from '@/services/storageService';
+import InitializeStorage from '@/components/admin/InitializeStorage';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const AdminProducts = () => {
@@ -25,6 +26,7 @@ const AdminProducts = () => {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [fileForProduct, setFileForProduct] = useState<File | null>(null);
   const [fileForCategory, setFileForCategory] = useState<File | null>(null);
+  const [storageInitialized, setStorageInitialized] = useState<boolean | null>(null);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -261,34 +263,9 @@ const AdminProducts = () => {
     }
   };
 
-  // Initialize storage buckets when the page loads
-  useEffect(() => {
-    const initStorage = async () => {
-      try {
-        console.log("Initializing storage buckets...");
-        const result = await resetStoragePermissions();
-        if (result) {
-          console.log("Storage buckets initialized successfully");
-        } else {
-          console.error("Failed to initialize storage buckets");
-          toast({
-            title: 'Предупреждение',
-            description: 'Не удалось инициализировать хранилище для изображений',
-            variant: 'destructive'
-          });
-        }
-      } catch (error) {
-        console.error("Error initializing storage:", error);
-        toast({
-          title: 'Ошибка',
-          description: 'Ошибка инициализации хранилища',
-          variant: 'destructive'
-        });
-      }
-    };
-    
-    initStorage();
-  }, []);
+  const handleStorageInitialized = (success: boolean) => {
+    setStorageInitialized(success);
+  };
 
   return (
     <div className="space-y-6">
@@ -317,6 +294,18 @@ const AdminProducts = () => {
           />
         </div>
       </div>
+
+      <InitializeStorage onComplete={handleStorageInitialized} />
+
+      {storageInitialized === false && (
+        <Alert variant="destructive">
+          <AlertTitle>Storage initialization problem</AlertTitle>
+          <AlertDescription>
+            There are issues with storage initialization. You may have problems uploading or displaying images.
+            Try reloading the page or contact your administrator.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="products">
         <TabsList>

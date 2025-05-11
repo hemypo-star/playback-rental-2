@@ -18,6 +18,7 @@ port = 54322
 
 [functions]
 ensure-storage-bucket = { verify_jwt = false }
+create-public-bucket-policy = { verify_jwt = false }
 
 [inbucket]
 enabled = false

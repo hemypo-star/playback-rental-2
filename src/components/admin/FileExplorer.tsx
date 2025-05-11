@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { listBucketFiles, getPublicUrl } from '@/services/storageService';
+import { listBucketFiles, getPublicUrl, testStorageConnection, resetStoragePermissions } from '@/services/storageService';
 import { Button } from '@/components/ui/button';
-import { Loader2, FolderOpen, Image, File, FileX } from 'lucide-react';
+import { Loader2, FolderOpen, Image, File, RefreshCw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 type FileItem = {
   id: string;
@@ -16,17 +17,105 @@ type FileItem = {
 }
 
 const FileExplorer = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('products');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{
+    products: boolean;
+    categories: boolean;
+    loading: boolean;
+  }>({
+    products: false,
+    categories: false,
+    loading: true
+  });
+  
+  // Check initial storage connection status
+  useEffect(() => {
+    checkStorageConnections();
+  }, []);
+  
+  const checkStorageConnections = async () => {
+    setConnectionStatus(prev => ({ ...prev, loading: true }));
+    
+    try {
+      const productsResult = await testStorageConnection('products');
+      const categoriesResult = await testStorageConnection('categories');
+      
+      setConnectionStatus({
+        products: productsResult.success,
+        categories: categoriesResult.success,
+        loading: false
+      });
+      
+      if (!productsResult.success || !categoriesResult.success) {
+        toast({
+          title: "Проблема с хранилищем",
+          description: "Некоторые хранилища недоступны. Попробуйте сбросить разрешения.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error checking storage connections:", error);
+      setConnectionStatus({
+        products: false,
+        categories: false,
+        loading: false
+      });
+    }
+  };
+  
+  const resetPermissions = async () => {
+    setIsResetting(true);
+    try {
+      const result = await resetStoragePermissions();
+      
+      if (result) {
+        toast({
+          title: "Успешно",
+          description: "Разрешения хранилища успешно сброшены",
+        });
+        
+        // Verify connections again
+        await checkStorageConnections();
+        
+        // Reload files for current tab
+        await fetchFiles(activeTab);
+      } else {
+        toast({
+          title: "Ошибка",
+          description: "Не удалось сбросить разрешения хранилища",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error resetting storage permissions:", error);
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при сбросе разрешений",
+        variant: "destructive"
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
   
   const fetchFiles = async (bucketName: string) => {
     setIsLoading(true);
     try {
       const filesList = await listBucketFiles(bucketName);
+      console.log(`Files from ${bucketName}:`, filesList);
       setFiles(filesList);
     } catch (error) {
       console.error(`Error fetching files from ${bucketName}:`, error);
+      toast({
+        title: "Ошибка",
+        description: `Не удалось загрузить файлы из хранилища ${bucketName}`,
+        variant: "destructive"
+      });
+      setFiles([]);
     } finally {
       setIsLoading(false);
     }
@@ -62,9 +151,43 @@ const FileExplorer = () => {
             <CardTitle>Файловый менеджер</CardTitle>
             <CardDescription>Просмотр и управление файлами в хранилище</CardDescription>
           </div>
-          <Button variant="outline" onClick={handleRefresh} disabled={isLoading}>
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Обновить'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={resetPermissions}
+              disabled={isResetting || connectionStatus.loading}
+            >
+              {isResetting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Сбросить разрешения
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh} 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Обновить'
+              )}
+            </Button>
+          </div>
+        </div>
+        
+        {/* Connection status indicators */}
+        <div className="flex gap-4 mt-2">
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${connectionStatus.products ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="text-sm">Products: {connectionStatus.products ? 'Доступно' : 'Недоступно'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${connectionStatus.categories ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="text-sm">Categories: {connectionStatus.categories ? 'Доступно' : 'Недоступно'}</span>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
