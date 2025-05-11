@@ -29,6 +29,7 @@ export const login = async (email: string, password: string): Promise<AdminLogin
 
     // After successful authentication, verify if the user is an admin
     try {
+      // Use the service client for admin check (has permissions to query admin_users table)
       const { data: adminData, error: adminError } = await supabaseServiceClient
         .from('admin_users')
         .select('login')
