@@ -1,10 +1,8 @@
-
 import { useState, useCallback } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookingPeriod } from '@/types/product';
 import DateRangePickerRu from './booking/DateRangePickerRu';
-
 interface BookingCalendarProps {
   onBookingChange: (booking: BookingPeriod) => void;
   initialStartDate?: Date;
@@ -14,7 +12,6 @@ interface BookingCalendarProps {
   className?: string;
   onClose?: () => void;
 }
-
 const BookingCalendar = ({
   onBookingChange,
   initialStartDate,
@@ -24,15 +21,20 @@ const BookingCalendar = ({
   className,
   onClose
 }: BookingCalendarProps) => {
-  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null }>({
+  const [dateRange, setDateRange] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>({
     start: initialStartDate || null,
     end: initialEndDate || null
   });
 
   // Use useCallback to avoid unnecessary re-renders
-  const handleDateRangeChange = useCallback((newRange: { start: Date | null; end: Date | null }) => {
+  const handleDateRangeChange = useCallback((newRange: {
+    start: Date | null;
+    end: Date | null;
+  }) => {
     setDateRange(newRange);
-    
     if (newRange.start && newRange.end) {
       onBookingChange({
         id: 'temp-id',
@@ -47,10 +49,13 @@ const BookingCalendar = ({
         createdAt: new Date(),
         notes: ''
       });
-      
+
       // Scroll to top and close popover
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+
       // Call onClose with a slight delay to ensure calendar selection completes
       if (onClose) {
         setTimeout(() => {
@@ -59,33 +64,25 @@ const BookingCalendar = ({
       }
     }
   }, [onBookingChange, onClose]);
-
   const handleClose = useCallback(() => {
     if (onClose) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
       onClose();
     }
   }, [onClose]);
-
-  return (
-    <div className={cn("border rounded-lg shadow-sm bg-card flex flex-col h-full", className)}>
+  return <div className={cn("border rounded-lg shadow-sm bg-card flex flex-col h-full w-full", className)}>
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-5 w-5 text-primary" />
           <h3 className="font-medium">Выберите даты аренды</h3>
         </div>
       </div>
-      <div className="p-4 flex-1 overflow-auto">
-        <DateRangePickerRu
-          onChange={handleDateRangeChange}
-          initialStartDate={initialStartDate}
-          initialEndDate={initialEndDate}
-          className={cn(isCompact && "scale-[0.95] origin-top")}
-          onClose={handleClose}
-        />
+      <div className="p-4 flex-1 overflow-auto w-full py-[6px]">
+        <DateRangePickerRu onChange={handleDateRangeChange} initialStartDate={initialStartDate} initialEndDate={initialEndDate} className={cn(isCompact && "scale-[0.95] origin-top")} onClose={handleClose} />
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default BookingCalendar;

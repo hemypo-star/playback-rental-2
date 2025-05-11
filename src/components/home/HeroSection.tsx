@@ -16,16 +16,14 @@ export const HeroSection = () => {
   const [endDate, setEndDate] = useState<Date>();
   const [searchQuery, setSearchQuery] = useState('');
   const [bannerImage, setBannerImage] = useState('public/BG.svg');
-
+  
   useEffect(() => {
     const fetchBannerImage = async () => {
       try {
-        const { data, error } = await supabase
-          .from('settings')
-          .select('*')
-          .eq('key', 'hero_banner_image')
-          .single();
-        
+        const {
+          data,
+          error
+        } = await supabase.from('settings').select('*').eq('key', 'hero_banner_image').single();
         if (!error && data?.value) {
           setBannerImage(data.value);
         }
@@ -33,43 +31,40 @@ export const HeroSection = () => {
         console.error('Error fetching banner image:', error);
       }
     };
-
     fetchBannerImage();
   }, []);
-
+  
   const handleBookingChange = (bookingData: BookingPeriod) => {
     setStartDate(bookingData.startDate);
     setEndDate(bookingData.endDate);
   };
-
+  
   const handleSearchClick = () => {
     if (startDate && endDate) {
-      navigate('/catalog', { 
-        state: { 
-          startDate, 
-          endDate 
-        } 
+      navigate('/catalog', {
+        state: {
+          startDate,
+          endDate
+        }
       });
     }
   };
-
+  
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/catalog', { 
-      state: { 
+    navigate('/catalog', {
+      state: {
         search: searchQuery,
         scrollTop: true
-      } 
+      }
     });
   };
-
-  return (
-    <section className="relative h-screen max-h-[800px] flex items-center overflow-hidden">
+  
+  return <section className="relative h-screen max-h-[800px] flex items-center overflow-hidden">
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-black/70 to-black/40" />
-      <div 
-        className="absolute inset-0 z-0 bg-cover bg-center"
-        style={{ backgroundImage: `url('${bannerImage}')` }}
-      />
+      <div className="absolute inset-0 z-0 bg-cover bg-center" style={{
+      backgroundImage: `url('${bannerImage}')`
+    }} />
       
       <div className="container relative z-10 px-4 py-16 mx-auto">
         <div className="max-w-xl">
@@ -84,56 +79,31 @@ export const HeroSection = () => {
             <div className="flex flex-wrap items-center gap-3 mb-3">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="flex-grow md:flex-grow-0 bg-white/90 text-foreground min-w-[240px] justify-between h-10"
-                  >
-                    {startDate && endDate 
-                      ? `${format(startDate, 'dd.MM.yyyy HH:00')} - ${format(endDate, 'dd.MM.yyyy HH:00')}`
-                      : "Выберите дату и время"}
+                  <Button variant="outline" className="flex-grow md:flex-grow-0 bg-white/90 text-foreground min-w-[240px] justify-between h-10">
+                    {startDate && endDate ? `${format(startDate, 'dd.MM.yyyy HH:00')} - ${format(endDate, 'dd.MM.yyyy HH:00')}` : "Выберите дату и время"}
                     <ArrowRightIcon className="ml-2 h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-2" align="start" sideOffset={5}>
-                  <BookingCalendar
-                    onBookingChange={handleBookingChange}
-                    initialStartDate={startDate}
-                    initialEndDate={endDate}
-                    isCompact={true}
-                  />
+                <PopoverContent align="start" sideOffset={5} className="w-auto p-2 mx-[-18px]">
+                  <div className="w-full md:w-[700px] max-w-full">
+                    <BookingCalendar onBookingChange={handleBookingChange} initialStartDate={startDate} initialEndDate={endDate} isCompact={true} />
+                  </div>
                 </PopoverContent>
               </Popover>
               
-              {startDate && endDate && (
-                <Button 
-                  className="flex-grow md:flex-grow-0 bg-primary text-primary-foreground hover:bg-primary/90" 
-                  onClick={handleSearchClick}
-                >
+              {startDate && endDate && <Button className="flex-grow md:flex-grow-0 bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleSearchClick}>
                   Перейти в каталог
-                </Button>
-              )}
+                </Button>}
             </div>
             
             <form onSubmit={handleSearchSubmit} className="relative">
-              <Input
-                type="text"
-                placeholder="Поиск по названию или описанию..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pr-12 h-10"
-              />
-              <Button 
-                type="submit" 
-                size="icon" 
-                className="absolute right-1 top-1 h-8 w-8"
-                disabled={!searchQuery.trim()}
-              >
+              <Input type="text" placeholder="Поиск по названию или описанию..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pr-12 h-10" />
+              <Button type="submit" size="icon" className="absolute right-1 top-1 h-8 w-8" disabled={!searchQuery.trim()}>
                 <SearchIcon className="h-4 w-4" />
               </Button>
             </form>
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
