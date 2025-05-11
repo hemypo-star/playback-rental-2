@@ -1,15 +1,30 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
 
+// Get public URL for a product image
 export const getProductImageUrl = (imageUrl: string) => {
   if (!imageUrl) return null;
+  
+  // If the imageUrl is already a full URL, return it as is
+  if (imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
+  
+  // Otherwise, get the public URL from Supabase storage
   return getPublicUrl('products', imageUrl);
 };
 
+// Get public URL for a category image
 export const getCategoryImageUrl = (imageUrl: string) => {
   if (!imageUrl) return null;
+  
+  // If the imageUrl is already a full URL, return it as is
+  if (imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
+  
+  // Otherwise, get the public URL from Supabase storage
   return getPublicUrl('categories', imageUrl);
 };
 
@@ -42,8 +57,8 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
 
     console.log(`Uploading file ${fileName} to products bucket...`);
     
-    // Use supabaseServiceClient for admin operations
-    const { error: uploadError, data } = await supabaseServiceClient.storage
+    // Use authenticated user for uploads
+    const { error: uploadError, data } = await supabase.storage
       .from('products')
       .upload(fileName, file, uploadOptions);
 
@@ -89,8 +104,8 @@ export const uploadCategoryImage = async (file: File, categoryId?: string): Prom
 
     console.log(`Uploading file ${fileName} to categories bucket...`);
     
-    // Use supabaseServiceClient for admin operations
-    const { error: uploadError } = await supabaseServiceClient.storage
+    // Use authenticated user for uploads
+    const { error: uploadError } = await supabase.storage
       .from('categories')
       .upload(fileName, file, uploadOptions);
 

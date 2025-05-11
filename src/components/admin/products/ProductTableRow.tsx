@@ -17,7 +17,7 @@ type Props = {
 export default function ProductTableRow({
   product, onEdit, onDelete, updateMutation, statusOptions,
 }: Props) {
-  const imageUrl = getProductImageUrl(product.imageUrl);
+  const imageUrl = product.imageUrl ? getProductImageUrl(product.imageUrl) : null;
 
   return (
     <TableRow key={product.id}>

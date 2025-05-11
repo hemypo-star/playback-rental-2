@@ -1,10 +1,11 @@
+
 import { Product } from '@/types/product';
-import { supabaseServiceClient } from './supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { getProductImageUrl, uploadProductImage } from '@/utils/imageUtils';
 
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('products').select('*');
+    const { data, error } = await supabase.from('products').select('*');
     if (error) throw error;
     
     // Map imageurl to imageUrl for consistency in the frontend
@@ -20,7 +21,7 @@ export const getProducts = async (): Promise<Product[]> => {
 
 export const getProductById = async (id: string): Promise<Product | null> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('products').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
     if (error) throw error;
     
     // Map imageurl to imageUrl for consistency in the frontend
@@ -50,12 +51,12 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
     };
     
     // Validate that all required fields have values
-    if (!dbProduct.title || !dbProduct.description || !dbProduct.category) {
-      throw new Error("Product title, description, and category are required fields");
+    if (!dbProduct.title || !dbProduct.category) {
+      throw new Error("Product title and category are required fields");
     }
     
     // Insert the product first to get an ID
-    const { data, error } = await supabaseServiceClient.from('products').insert([dbProduct]).select().single();
+    const { data, error } = await supabase.from('products').insert([dbProduct]).select().single();
     
     if (error) {
       console.error("Error inserting product:", error);
@@ -78,7 +79,7 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
         console.log("Image uploaded, filename:", imageFileName);
         
         // Update the product with the image file name
-        const { data: updatedData, error: updateError } = await supabaseServiceClient
+        const { data: updatedData, error: updateError } = await supabase
           .from('products')
           .update({ imageurl: imageFileName })
           .eq('id', data.id)
@@ -157,7 +158,7 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
     
     console.log("Updating product with:", dbUpdates);
     
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('products')
       .update(dbUpdates)
       .eq('id', id)
@@ -184,7 +185,7 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
 
 export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabaseServiceClient.from('products').delete().eq('id', id);
+    const { error } = await supabase.from('products').delete().eq('id', id);
     if (error) throw error;
     return true;
   } catch (error) {
@@ -209,7 +210,7 @@ export const getAvailableProducts = async (startDate: Date, endDate: Date): Prom
       );
       
       // If the product has quantity > number of bookings, it's still available
-      return productBookings.length < product.quantity;
+      return productBookings.length < (product.quantity || 1);
     });
   } catch (error) {
     console.error('Error getting available products:', error);

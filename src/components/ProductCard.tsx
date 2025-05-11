@@ -59,8 +59,7 @@ const ProductCard = ({
       <Card className={`h-full flex flex-col overflow-hidden transition-all hover:shadow-md ${featured ? 'border-primary/20' : ''}`}>
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <ProductImage 
-            imageUrl={product.imageUrl} 
-            title={product.title} 
+            product={product}
             className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105" 
           />
           {featured && (

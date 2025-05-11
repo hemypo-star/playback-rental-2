@@ -26,19 +26,21 @@ const ProductImage = (props: ProductImageProps) => {
 
   // Get the public URL for the image
   useEffect(() => {
-    if (rawImageUrl) {
-      try {
-        const publicUrl = getProductImageUrl(rawImageUrl);
-        console.log(`ProductImage: Converting raw URL "${rawImageUrl}" to public URL "${publicUrl}"`);
-        setImageUrl(publicUrl);
-        setIsLoading(false);
-      } catch (error) {
-        console.error(`Error getting product image URL for "${rawImageUrl}":`, error);
-        setIsLoading(false);
-        setIsError(true);
-      }
-    } else {
+    if (!rawImageUrl) {
       console.log('ProductImage: No raw image URL provided');
+      setIsLoading(false);
+      setIsError(true);
+      return;
+    }
+
+    try {
+      // Get public URL directly from Supabase storage
+      const publicUrl = getProductImageUrl(rawImageUrl);
+      console.log(`ProductImage: Converting raw URL "${rawImageUrl}" to public URL "${publicUrl}"`);
+      setImageUrl(publicUrl);
+      setIsLoading(false);
+    } catch (error) {
+      console.error(`Error getting product image URL for "${rawImageUrl}":`, error);
       setIsLoading(false);
       setIsError(true);
     }

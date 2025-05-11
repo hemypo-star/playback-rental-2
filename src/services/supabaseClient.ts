@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjcwMDMyMCwiZXhwIjoyMDU4Mjc2MzIwfQ.aq-6Z3p3W2jqAt-4Rwx-f_M_fxLpsZGRULKNpOnePm8";
 
 // For admin operations that require service role access, use this client
-export const supabaseServiceClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+export const supabaseServiceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: false
