@@ -20,30 +20,55 @@ export default function Admin() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<{email: string} | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     // Check authentication on component mount
     const verifyAuth = async () => {
-      const isAuthenticated = await checkAuth();
-      if (!isAuthenticated) {
-        navigate('/login');
-        return;
-      }
-      
-      // Get current user
-      const user = getCurrentUser();
-      setCurrentUser(user);
+      setIsLoading(true);
+      try {
+        const isAuthenticated = await checkAuth();
+        if (!isAuthenticated) {
+          toast({
+            title: 'Ошибка аутентификации',
+            description: 'Пожалуйста, войдите снова',
+            variant: 'destructive'
+          });
+          navigate('/login');
+          return;
+        }
+        
+        // Get current user
+        const user = getCurrentUser();
+        setCurrentUser(user);
 
-      // Also ensure Supabase session is valid
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        logout();
+        // Also ensure Supabase session is valid
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) {
+          toast({
+            title: 'Сессия истекла',
+            description: 'Пожалуйста, войдите снова',
+            variant: 'destructive'
+          });
+          logout();
+          navigate('/login');
+          return;
+        }
+      } catch (error) {
+        console.error('Error verifying authentication:', error);
+        toast({
+          title: 'Ошибка аутентификации',
+          description: 'Произошла ошибка при проверке аутентификации',
+          variant: 'destructive'
+        });
         navigate('/login');
+      } finally {
+        setIsLoading(false);
       }
     };
     
     verifyAuth();
-  }, [navigate]);
+  }, [navigate, toast]);
   
   const handleLogout = () => {
     logout();
@@ -53,6 +78,14 @@ export default function Admin() {
     });
     navigate('/login');
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-10">

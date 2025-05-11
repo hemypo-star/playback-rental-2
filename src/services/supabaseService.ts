@@ -1,5 +1,4 @@
-
-import { supabaseServiceClient } from './supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { Product, Category } from '@/types/product';
 import { uploadProductImage, uploadCategoryImage as uploadCategoryImageUtil } from '@/utils/imageUtils';
 
@@ -9,7 +8,7 @@ export const uploadCategoryImage = uploadCategoryImageUtil;
 // Products
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('products').select('*');
+    const { data, error } = await supabase.from('products').select('*');
     
     if (error) throw error;
     
@@ -25,7 +24,7 @@ export const getProducts = async (): Promise<Product[]> => {
 
 export const getProductById = async (id: string): Promise<Product | null> => {
   try {
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('id', id)
@@ -53,7 +52,7 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
       available: product.available !== undefined ? product.available : true
     };
     
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('products')
       .insert([productData])
       .select()
@@ -69,7 +68,7 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
       imageUrl = await uploadProductImage(imageFile, data.id);
       
       // Update the product with the image URL
-      const { data: updatedData, error: updateError } = await supabaseServiceClient
+      const { data: updatedData, error: updateError } = await supabase
         .from('products')
         .update({ imageurl: imageUrl })
         .eq('id', data.id)
@@ -113,7 +112,7 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
     }
     
     // Update the product
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('products')
       .update(dbUpdates)
       .eq('id', id)
@@ -134,7 +133,7 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
 
 export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabaseServiceClient
+    const { error } = await supabase
       .from('products')
       .delete()
       .eq('id', id);
@@ -151,7 +150,7 @@ export const deleteProduct = async (id: string): Promise<boolean> => {
 // Categories
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('categories').select('*');
+    const { data, error } = await supabase.from('categories').select('*');
     
     if (error) throw error;
     
@@ -167,7 +166,7 @@ export const getCategories = async (): Promise<Category[]> => {
 
 export const getCategoryBySlug = async (slug: string): Promise<Category | null> => {
   try {
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('categories')
       .select('*')
       .eq('slug', slug)
@@ -191,7 +190,7 @@ export const addCategory = async (category: { name: string; slug?: string; descr
       imageurl: category.imageUrl || ''
     };
     
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('categories')
       .insert([categoryData])
       .select()
@@ -223,7 +222,7 @@ export const updateCategory = async (id: string, updates: Partial<Category>, ima
     }
     
     // Update the category
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('categories')
       .update(dbUpdates)
       .eq('id', id)
@@ -244,7 +243,7 @@ export const updateCategory = async (id: string, updates: Partial<Category>, ima
 
 export const deleteCategory = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabaseServiceClient
+    const { error } = await supabase
       .from('categories')
       .delete()
       .eq('id', id);
@@ -261,7 +260,7 @@ export const deleteCategory = async (id: string): Promise<boolean> => {
 // Settings
 export const getSetting = async (key: string): Promise<string | null> => {
   try {
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('settings')
       .select('value')
       .eq('key', key)
@@ -281,7 +280,7 @@ export const getSetting = async (key: string): Promise<string | null> => {
 
 export const updateSetting = async (key: string, value: string): Promise<boolean> => {
   try {
-    const { error } = await supabaseServiceClient
+    const { error } = await supabase
       .from('settings')
       .upsert({ key, value }, { onConflict: 'key' });
       
@@ -387,7 +386,7 @@ export const importProductsFromCSV = async (csvContent: string) => {
     
     for (const product of products) {
       const { id, ...productData } = product;
-      await supabaseServiceClient.from('products').insert([productData]);
+      await supabase.from('products').insert([productData]);
     }
     
     return products;

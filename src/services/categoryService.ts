@@ -1,10 +1,10 @@
 
 import { Category } from '@/types/product';
-import { supabaseServiceClient } from './supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('categories').select('*');
+    const { data, error } = await supabase.from('categories').select('*');
     if (error) throw error;
     
     // Map imageurl to imageUrl for consistency in the frontend
@@ -20,7 +20,7 @@ export const getCategories = async (): Promise<Category[]> => {
 
 export const getCategoryById = async (id: string): Promise<Category | null> => {
   try {
-    const { data, error } = await supabaseServiceClient.from('categories').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('categories').select('*').eq('id', id).single();
     if (error) throw error;
     
     // Map imageurl to imageUrl for consistency in the frontend
@@ -49,7 +49,7 @@ export const addCategory = async (categoryData: Partial<Category>): Promise<Cate
       throw new Error('Category name is required');
     }
     
-    const { data, error } = await supabaseServiceClient.from('categories').insert([dbData]).select().single();
+    const { data, error } = await supabase.from('categories').insert([dbData]).select().single();
     if (error) throw error;
     
     // Map imageurl to imageUrl for consistency in the frontend
@@ -74,7 +74,7 @@ export const updateCategory = async (id: string, updates: Partial<Category>): Pr
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.imageUrl !== undefined) dbUpdates.imageurl = updates.imageUrl;
     
-    const { data, error } = await supabaseServiceClient.from('categories').update(dbUpdates).eq('id', id).select().single();
+    const { data, error } = await supabase.from('categories').update(dbUpdates).eq('id', id).select().single();
     if (error) throw error;
     
     // Map imageurl to imageUrl for consistency in the frontend
@@ -90,7 +90,7 @@ export const updateCategory = async (id: string, updates: Partial<Category>): Pr
 
 export const deleteCategory = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabaseServiceClient.from('categories').delete().eq('id', id);
+    const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) throw error;
     return true;
   } catch (error) {
@@ -105,8 +105,8 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = fileName;
     
-    // Use supabaseServiceClient for uploading files to bypass RLS restrictions
-    const { error: uploadError } = await supabaseServiceClient.storage
+    // Use authenticated user for uploading files
+    const { error: uploadError } = await supabase.storage
       .from('categories')
       .upload(filePath, file, { upsert: true });
 
@@ -116,7 +116,7 @@ export const uploadCategoryImage = async (file: File): Promise<string> => {
     }
 
     // Get the public URL
-    const { data: publicUrlData } = supabaseServiceClient.storage
+    const { data: publicUrlData } = supabase.storage
       .from('categories')
       .getPublicUrl(filePath);
 
