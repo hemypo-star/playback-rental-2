@@ -9,30 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      admin_users: {
-        Row: {
-          created_at: string
-          id: string
-          login: string
-          password_hash: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          login: string
-          password_hash: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          login?: string
-          password_hash?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       bookings: {
         Row: {
           created_at: string | null
@@ -166,14 +142,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_login: {
-        Args: { login: string; pass: string }
-        Returns: boolean
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never> | { jwt: Json }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

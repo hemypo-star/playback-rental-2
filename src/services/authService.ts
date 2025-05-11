@@ -8,13 +8,13 @@ interface LoginResponse {
   error?: string;
 }
 
-export const login = async (emailOrUsername: string, password: string): Promise<LoginResponse> => {
+export const login = async (email: string, password: string): Promise<LoginResponse> => {
   try {
-    console.log('Attempting login for:', emailOrUsername);
+    console.log('Attempting login for:', email);
     
     // Use Supabase's built-in authentication
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: emailOrUsername,
+      email: email,
       password: password,
     });
 
