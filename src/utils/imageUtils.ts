@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
@@ -32,10 +31,9 @@ export const getCategoryImageUrl = (imageUrl: string) => {
 export const uploadProductImage = async (file: File, productId?: string): Promise<string> => {
   try {
     console.log(`Uploading product image for product ID: ${productId || 'new product'}`);
-    
+
     // Ensure the products bucket exists and is public
     const bucketReady = await ensurePublicBucket('products');
-    
     if (!bucketReady) {
       console.error("Products bucket not ready, attempting to create it again...");
       // Try one more time with a direct method
@@ -43,7 +41,7 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
         body: { bucketName: 'products' }
       });
     }
-    
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
 
@@ -62,7 +60,7 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
     console.log(`Uploading file ${fileName} to products bucket...`);
     
     // Use authenticated user for uploads
-    const { error: uploadError, data } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('products')
       .upload(fileName, file, uploadOptions);
 
