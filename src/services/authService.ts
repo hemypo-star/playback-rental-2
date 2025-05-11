@@ -29,12 +29,26 @@ export const login = async (email: string, password: string): Promise<AdminLogin
 
     // After successful authentication, verify if the user is an admin
     try {
-      // Use the service client for admin check (has permissions to query admin_users table)
-      const { data: adminData, error: adminError } = await supabaseServiceClient
+      // First try to find an admin user with the login matching the email
+      let { data: adminData, error: adminError } = await supabaseServiceClient
         .from('admin_users')
         .select('login')
         .eq('login', email)
         .single();
+
+      // If not found, try with "admin" as the login (common default)
+      if (!adminData && adminError) {
+        console.log('Trying with default admin login');
+        const { data: defaultAdminData, error: defaultAdminError } = await supabaseServiceClient
+          .from('admin_users')
+          .select('login')
+          .eq('login', 'admin')
+          .single();
+          
+        // Update variables with results from second query
+        adminData = defaultAdminData;
+        adminError = defaultAdminError;
+      }
 
       if (adminError) {
         console.error('Admin verification error:', adminError.message);
@@ -52,7 +66,7 @@ export const login = async (email: string, password: string): Promise<AdminLogin
 
       // Store session info in localStorage
       localStorage.setItem('auth_token', authData.session.access_token);
-      localStorage.setItem('admin_login', email);
+      localStorage.setItem('admin_login', adminData.login); // Store the actual admin login value
 
       return { success: true };
     } catch (adminCheckError: any) {

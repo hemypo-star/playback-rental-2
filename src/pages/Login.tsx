@@ -24,6 +24,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { login } from '@/services/authService';
+import { Label } from '@/components/ui/label';
+import { AlertVariant, AlertTitle, AlertDescription } from '@/components/ui/alert-variant';
 
 const formSchema = z.object({
   username: z.string().email({ message: 'Введите правильный email' }),
@@ -35,6 +37,7 @@ const Login = () => {
   const location = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [adminHelp, setAdminHelp] = useState(false);
 
   // Get the return URL from location state
   const from = location.state?.from?.pathname || '/admin';
@@ -122,8 +125,28 @@ const Login = () => {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-sm text-muted-foreground mt-2">
-            Войдите используя email и пароль, созданные в Supabase Auth
+            Войдите используя email из Supabase Auth
           </p>
+          <Button 
+            variant="ghost" 
+            className="text-sm text-muted-foreground mt-2"
+            onClick={() => setAdminHelp(!adminHelp)}
+          >
+            Нужна помощь?
+          </Button>
+          
+          {adminHelp && (
+            <AlertVariant variant="info" className="mt-3">
+              <AlertTitle>Информация об авторизации</AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">Для входа требуется:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Аккаунт в Supabase Authentication</li>
+                  <li>Запись в таблице admin_users</li>
+                </ul>
+              </AlertDescription>
+            </AlertVariant>
+          )}
         </CardFooter>
       </Card>
     </div>
