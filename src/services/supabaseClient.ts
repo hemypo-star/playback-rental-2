@@ -1,14 +1,17 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = "https://xwylatyyhqyfwsxfwzmn.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4";
-const SUPABASE_SERVICE_KEY = SUPABASE_ANON_KEY; // In production, this should be the service role key
+const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjcwMDMyMCwiZXhwIjoyMDU4Mjc2MzIwfQ.aq-6Z3p3W2jqAt-4Rwx-f_M_fxLpsZGRULKNpOnePm8"; // Using the service role key for admin operations
 
-// Create a Supabase client with the anon key (or service role key in production)
-// For now we're using the anon key as service key for demo purposes
-export const supabaseServiceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+// Create a Supabase client with the service role key for admin operations
+export const supabaseServiceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  auth: {
+    persistSession: false, // Don't persist admin sessions
+    autoRefreshToken: true
+  }
+});
 
 // Create a bucket if it doesn't exist already
 export const createBucketIfNotExists = async (name: string, isPublic: boolean = true) => {

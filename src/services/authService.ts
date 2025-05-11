@@ -5,9 +5,10 @@ interface AdminLoginResponse {
   success: boolean;
   message?: string;
   token?: string;
+  error?: string;
 }
 
-export const login = async (email: string, password: string) => {
+export const login = async (email: string, password: string): Promise<AdminLoginResponse> => {
   try {
     // Use Supabase's built-in authentication
     const { data: authData, error: authError } = await supabaseServiceClient.auth.signInWithPassword({
@@ -16,32 +17,48 @@ export const login = async (email: string, password: string) => {
     });
 
     if (authError) {
-      throw authError;
+      console.error('Authentication error:', authError.message);
+      return { success: false, error: authError.message };
     }
 
     if (!authData || !authData.session) {
-      throw new Error('Authentication failed');
+      console.error('Authentication failed: No session data');
+      return { success: false, error: 'Authentication failed' };
     }
 
     // After successful authentication, verify if the user is an admin
-    const { data: adminData, error: adminError } = await supabaseServiceClient
-      .from('admin_users')
-      .select('login')
-      .eq('login', email)
-      .single();
+    try {
+      const { data: adminData, error: adminError } = await supabaseServiceClient
+        .from('admin_users')
+        .select('login')
+        .eq('login', email)
+        .single();
 
-    if (adminError || !adminData) {
-      // If there's no matching admin user, sign out and return error
+      if (adminError) {
+        console.error('Admin verification error:', adminError.message);
+        // Sign out on error
+        await supabaseServiceClient.auth.signOut();
+        return { success: false, error: 'Unauthorized: Admin verification failed' };
+      }
+
+      if (!adminData) {
+        // If no matching admin user found, sign out
+        console.error('Not an admin user');
+        await supabaseServiceClient.auth.signOut();
+        return { success: false, error: 'Unauthorized: Not an admin user' };
+      }
+
+      // Store session info in localStorage
+      localStorage.setItem('auth_token', authData.session.access_token);
+      localStorage.setItem('admin_login', email);
+
+      return { success: true };
+    } catch (adminCheckError: any) {
+      // If admin check throws an exception
+      console.error('Error during admin verification:', adminCheckError.message);
       await supabaseServiceClient.auth.signOut();
-      console.error('User is not an admin:', adminError);
-      return { success: false, error: 'Unauthorized: Not an admin user' };
+      return { success: false, error: `Admin verification error: ${adminCheckError.message}` };
     }
-
-    // Store the session token in localStorage
-    localStorage.setItem('auth_token', authData.session.access_token);
-    localStorage.setItem('admin_login', email);
-
-    return { success: true };
   } catch (error: any) {
     console.error('Error during login:', error.message);
     return { success: false, error: error.message };
