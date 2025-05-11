@@ -76,7 +76,7 @@ const DateRangePickerRu = ({
       </div>
 
       <div className="flex justify-center mt-6">
-        <Button variant="outline" size="sm" className="text-[#ea384c] border-[#ea384c] hover:bg-[#ea384c] hover:text-white w-full max-w-xs" onClick={handleConfirmTime}>
+        <Button variant="outline" size="sm" onClick={handleConfirmTime} className="text-[#ea384c] border-[#ea384c] hover:bg-[#ea384c] hover:text-white w-full max-w-xs py-[20px]">
           Подтвердить время
         </Button>
       </div>
