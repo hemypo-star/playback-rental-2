@@ -38,6 +38,7 @@ const Login = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [adminHelp, setAdminHelp] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Get the return URL from location state
   const from = location.state?.from?.pathname || '/admin';
@@ -52,6 +53,8 @@ const Login = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
+    setLoginError(null);
+    
     try {
       const result = await login(values.username, values.password);
       
@@ -62,6 +65,7 @@ const Login = () => {
         });
         navigate(from, { replace: true });
       } else {
+        setLoginError(result.error || 'Неверный логин или пароль. Пожалуйста, попробуйте снова.');
         toast({
           variant: 'destructive',
           title: 'Ошибка входа',
@@ -69,6 +73,7 @@ const Login = () => {
         });
       }
     } catch (error: any) {
+      setLoginError(error.message || 'Произошла ошибка при попытке входа.');
       toast({
         variant: 'destructive',
         title: 'Ошибка входа',
@@ -89,6 +94,13 @@ const Login = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {loginError && (
+            <AlertVariant variant="destructive" className="mb-4">
+              <AlertTitle>Ошибка входа</AlertTitle>
+              <AlertDescription>{loginError}</AlertDescription>
+            </AlertVariant>
+          )}
+          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -143,6 +155,7 @@ const Login = () => {
                 <ul className="list-disc pl-5 space-y-1">
                   <li>Аккаунт в Supabase Authentication</li>
                   <li>Запись в таблице admin_users</li>
+                  <li>В таблице admin_users должна быть запись с login="admin" или login=ваш_email</li>
                 </ul>
               </AlertDescription>
             </AlertVariant>

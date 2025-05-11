@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from './supabaseClient';
 
@@ -7,11 +6,14 @@ interface AdminLoginResponse {
   message?: string;
   token?: string;
   error?: string;
+  debug?: any; // Add debug info for troubleshooting
 }
 
 export const login = async (email: string, password: string): Promise<AdminLoginResponse> => {
   try {
-    // Use Supabase's built-in authentication with the anon key (not service key)
+    console.log('Attempting login for:', email);
+    
+    // Step 1: Use Supabase's built-in authentication with the anon key (not service key)
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
@@ -19,65 +21,79 @@ export const login = async (email: string, password: string): Promise<AdminLogin
 
     if (authError) {
       console.error('Authentication error:', authError.message);
-      return { success: false, error: authError.message };
+      return { success: false, error: `Authentication failed: ${authError.message}` };
     }
 
     if (!authData || !authData.session) {
       console.error('Authentication failed: No session data');
-      return { success: false, error: 'Authentication failed' };
+      return { success: false, error: 'Authentication failed: No session data returned' };
     }
 
-    // After successful authentication, verify if the user is an admin
+    console.log('Supabase authentication successful, checking admin status');
+
+    // Step 2: After successful authentication, verify if the user is an admin
     try {
       // First try to find an admin user with the login matching the email
+      console.log('Checking if email matches admin login:', email);
       let { data: adminData, error: adminError } = await supabaseServiceClient
         .from('admin_users')
-        .select('login')
+        .select('login, id')
         .eq('login', email)
-        .single();
+        .maybeSingle();
 
       // If not found, try with "admin" as the login (common default)
-      if (!adminData && adminError) {
-        console.log('Trying with default admin login');
+      if (!adminData) {
+        console.log('Email login not found, trying with default admin login');
         const { data: defaultAdminData, error: defaultAdminError } = await supabaseServiceClient
           .from('admin_users')
-          .select('login')
+          .select('login, id')
           .eq('login', 'admin')
-          .single();
+          .maybeSingle();
           
         // Update variables with results from second query
         adminData = defaultAdminData;
         adminError = defaultAdminError;
-      }
-
-      if (adminError) {
-        console.error('Admin verification error:', adminError.message);
-        // Sign out on error
-        await supabase.auth.signOut();
-        return { success: false, error: 'Unauthorized: Admin verification failed' };
+        
+        console.log('Default admin check result:', adminData ? 'Found' : 'Not found');
       }
 
       if (!adminData) {
         // If no matching admin user found, sign out
-        console.error('Not an admin user');
+        console.error('Not an admin user - no matching record in admin_users table');
         await supabase.auth.signOut();
-        return { success: false, error: 'Unauthorized: Not an admin user' };
+        return { 
+          success: false, 
+          error: 'Unauthorized: Not an admin user. No matching record found in admin_users table.' 
+        };
       }
+
+      console.log('Admin verification successful:', adminData);
 
       // Store session info in localStorage
       localStorage.setItem('auth_token', authData.session.access_token);
       localStorage.setItem('admin_login', adminData.login); // Store the actual admin login value
 
-      return { success: true };
+      return { 
+        success: true,
+        message: `Login successful as admin: ${adminData.login}`
+      };
     } catch (adminCheckError: any) {
       // If admin check throws an exception
-      console.error('Error during admin verification:', adminCheckError.message);
+      console.error('Error during admin verification:', adminCheckError);
       await supabase.auth.signOut();
-      return { success: false, error: `Admin verification error: ${adminCheckError.message}` };
+      return { 
+        success: false, 
+        error: `Admin verification error: ${adminCheckError.message}`,
+        debug: adminCheckError 
+      };
     }
   } catch (error: any) {
-    console.error('Error during login:', error.message);
-    return { success: false, error: error.message };
+    console.error('Error during login:', error);
+    return { 
+      success: false, 
+      error: `Login error: ${error.message}`,
+      debug: error 
+    };
   }
 };
 
@@ -115,12 +131,16 @@ export const logout = () => {
 export const checkAuth = async () => {
   // Check if token exists
   const token = localStorage.getItem('auth_token');
-  if (!token) return false;
+  if (!token) {
+    console.log('No auth token found in localStorage');
+    return false;
+  }
   
   // Verify the session is still valid
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) {
     // Clear invalid tokens
+    console.log('Invalid session, clearing tokens');
     localStorage.removeItem('auth_token');
     localStorage.removeItem('admin_login');
     return false;
