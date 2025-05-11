@@ -1,14 +1,44 @@
-
 project_id = "xwylatyyhqyfwsxfwzmn"
 
 [api]
-enabled = false
+enabled = true
 port = 54321
-schemas = ["public", "storage", "graphql_public"]
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
-[api.headers]
-Authorization = "service_role"
-apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+[auth]
+enabled = true
+site_url = "https://rental-hemypos-projects.vercel.app/"
+additional_redirect_urls = [
+  "https://rental-hemypos-projects.vercel.app/",
+  "https://rental-hemypos-projects.vercel.app/**",
+  "https://rental-*-hemypos-projects.vercel.app",
+  "https://rental-*-hemypos-projects.vercel.app/**"
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.mfa.phone]
+enroll_enabled = false
+verify_enabled = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = false
+max_frequency = "1m0s"
+otp_length = 6
+otp_expiry = 86400
 
 [analytics]
 enabled = false
