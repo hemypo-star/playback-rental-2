@@ -22,7 +22,7 @@ serve(async (req) => {
         JSON.stringify({ error: 'Bucket name is required' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
+          status: 400
         }
       );
     }
@@ -96,22 +96,58 @@ serve(async (req) => {
     
     console.log(`Bucket ${bucketName} is now public.`);
     
-    // Try to create a public policy directly using SQL
+    // Create public access policy using RPC function
     try {
-      // Execute SQL to ensure public access
       const { error: policyError } = await supabaseAdmin.rpc('create_public_bucket_policy', { 
         bucket_name: bucketName 
       });
       
       if (policyError) {
-        console.error(`Warning: Could not create policy via RPC: ${policyError.message}`);
-        // Continue despite this error, bucket should still be public
+        console.log(`Warning: Could not create policy via RPC: ${policyError.message}`);
       } else {
         console.log(`Public access policy created or verified for ${bucketName}`);
       }
-    } catch (policyError) {
-      console.error(`Error with policy creation: ${policyError.message}`);
+    } catch (policyError: any) {
+      console.log(`Error with policy creation: ${policyError.message}`);
       // Continue despite this error, bucket should still be public
+    }
+    
+    // Create direct insert policy for authenticated users
+    try {
+      // Execute SQL to add insert policy for authenticated users
+      const insertPolicySql = `
+        BEGIN;
+        
+        -- Create policy for authenticated users to upload if it doesn't exist
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1
+            FROM pg_policies
+            WHERE tablename = 'objects'
+              AND schemaname = 'storage'
+              AND policyname = '${bucketName}_auth_insert'
+          ) THEN
+            EXECUTE 'CREATE POLICY "${bucketName}_auth_insert" ON storage.objects
+                    FOR INSERT
+                    TO authenticated
+                    WITH CHECK (bucket_id = ''${bucketName}'');';
+          END IF;
+        END
+        $$;
+        
+        COMMIT;
+      `;
+      
+      const { error: insertPolicyError } = await supabaseAdmin.rpc('exec_sql', { sql: insertPolicySql });
+      
+      if (insertPolicyError) {
+        console.log(`Warning: Could not create insert policy: ${insertPolicyError.message}`);
+      } else {
+        console.log(`Insert policy created or verified for ${bucketName}`);
+      }
+    } catch (insertError: any) {
+      console.log(`Error with insert policy creation: ${insertError.message}`);
     }
     
     return new Response(
@@ -124,7 +160,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error:', error);
     return new Response(
       JSON.stringify({ error: `Unexpected error: ${error.message}` }),

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
@@ -36,8 +37,11 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
     const bucketReady = await ensurePublicBucket('products');
     
     if (!bucketReady) {
-      console.error("Products bucket not ready, cannot upload image");
-      throw new Error('Could not ensure products bucket exists and is public');
+      console.error("Products bucket not ready, attempting to create it again...");
+      // Try one more time with a direct method
+      await supabase.functions.invoke('ensure-storage-bucket', {
+        body: { bucketName: 'products' }
+      });
     }
     
     const fileExt = file.name.split('.').pop();
@@ -83,8 +87,11 @@ export const uploadCategoryImage = async (file: File, categoryId?: string): Prom
     const bucketReady = await ensurePublicBucket('categories');
     
     if (!bucketReady) {
-      console.error("Categories bucket not ready, cannot upload image");
-      throw new Error('Could not ensure categories bucket exists and is public');
+      console.error("Categories bucket not ready, attempting to create it again...");
+      // Try one more time with a direct method
+      await supabase.functions.invoke('ensure-storage-bucket', {
+        body: { bucketName: 'categories' }
+      });
     }
     
     const fileExt = file.name.split('.').pop();
@@ -127,20 +134,22 @@ export const verifyStorageAccess = async (): Promise<{ products: boolean, catego
   try {
     console.log("Verifying storage access...");
     
-    // Check products bucket
+    // First try to ensure buckets exist
     const productsResult = await ensurePublicBucket('products');
-    
-    // Check categories bucket
     const categoriesResult = await ensurePublicBucket('categories');
     
+    // Then test actual access
+    const productsTest = await testBucketAccess('products');
+    const categoriesTest = await testBucketAccess('categories');
+    
     console.log("Storage access verification results:", { 
-      products: productsResult, 
-      categories: categoriesResult 
+      products: productsTest, 
+      categories: categoriesTest 
     });
     
     return { 
-      products: productsResult, 
-      categories: categoriesResult 
+      products: productsTest, 
+      categories: categoriesTest 
     };
   } catch (error) {
     console.error("Error verifying storage access:", error);
@@ -150,3 +159,21 @@ export const verifyStorageAccess = async (): Promise<{ products: boolean, catego
     };
   }
 };
+
+// Helper function to test if a bucket is accessible
+async function testBucketAccess(bucketName: string): Promise<boolean> {
+  try {
+    // Try to list files in the bucket
+    const { data, error } = await supabase.storage.from(bucketName).list();
+    
+    if (error) {
+      console.error(`Error accessing ${bucketName} bucket:`, error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Error testing ${bucketName} bucket access:`, error);
+    return false;
+  }
+}

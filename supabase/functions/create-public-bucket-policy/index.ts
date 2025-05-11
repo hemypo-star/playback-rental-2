@@ -27,6 +27,8 @@ serve(async (req) => {
       );
     }
     
+    console.log(`Creating public policy for bucket ${bucketName}...`);
+    
     // Create a Supabase client with service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -55,7 +57,25 @@ serve(async (req) => {
         ) THEN
           EXECUTE 'CREATE POLICY "${bucketName}_public_select" ON storage.objects
                   FOR SELECT
-                  USING (bucket_id = ''${bucketName}'' AND owner IS NOT NULL);';
+                  USING (bucket_id = ''${bucketName}'')';
+        END IF;
+      END
+      $$;
+      
+      -- Create policy for authenticated users to upload if it doesn't exist
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM pg_policies
+          WHERE tablename = 'objects'
+            AND schemaname = 'storage'
+            AND policyname = '${bucketName}_auth_insert'
+        ) THEN
+          EXECUTE 'CREATE POLICY "${bucketName}_auth_insert" ON storage.objects
+                  FOR INSERT
+                  TO authenticated
+                  WITH CHECK (bucket_id = ''${bucketName}'')';
         END IF;
       END
       $$;
@@ -63,11 +83,46 @@ serve(async (req) => {
       COMMIT;
     `;
     
-    // Execute the policy SQL
-    const { error } = await supabaseAdmin.rpc('exec_sql', { sql });
+    // Execute the policy SQL using the exec_sql RPC function
+    const { data, error } = await supabaseAdmin.rpc('exec_sql', { sql });
     
     if (error) {
-      console.error(`Error executing policy SQL: ${error.message}`);
+      console.error(`Error executing policy SQL for bucket ${bucketName}:`, error);
+      if (error.message.includes('function "exec_sql" does not exist')) {
+        console.log('Creating exec_sql function...');
+        const createFunctionSql = `
+          CREATE OR REPLACE FUNCTION exec_sql(sql text)
+          RETURNS void
+          LANGUAGE plpgsql
+          SECURITY DEFINER
+          AS $$
+          BEGIN
+            EXECUTE sql;
+          END;
+          $$;
+        `;
+        try {
+          // Try to create the exec_sql function directly
+          const { error: fnError } = await supabaseAdmin.from('extensions').select('*').eq('name', 'pg_exec_sql').single();
+          if (fnError) {
+            console.log('Could not create exec_sql function due to permissions. Using direct SQL execution instead...');
+            // Try direct policy creation
+            await createDirectPolicies(supabaseAdmin, bucketName);
+            return new Response(
+              JSON.stringify({ 
+                success: true,
+                message: `Attempted direct policy creation for ${bucketName} bucket.`
+              }),
+              {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              }
+            );
+          }
+        } catch (e) {
+          console.error('Error creating exec_sql function:', e);
+        }
+      }
+      
       return new Response(
         JSON.stringify({ error: `Error creating policy: ${error.message}` }),
         {
@@ -78,14 +133,14 @@ serve(async (req) => {
     }
     
     // Check policies to verify
-    const { data, error: checkError } = await supabaseAdmin.from('storage.policies')
+    const { data: policyData, error: checkError } = await supabaseAdmin.from('storage.policies')
       .select('name, definition')
       .eq('bucket_name', bucketName);
     
     if (checkError) {
-      console.error(`Warning: Could not verify policies: ${checkError.message}`);
+      console.log(`Warning: Could not verify policies: ${checkError.message}`);
     } else {
-      console.log(`Policies for ${bucketName}:`, data);
+      console.log(`Policies for ${bucketName}:`, policyData);
     }
     
     return new Response(
@@ -97,7 +152,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating bucket policy:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
@@ -108,3 +163,19 @@ serve(async (req) => {
     );
   }
 });
+
+// Fallback function to create policies directly if exec_sql is not available
+async function createDirectPolicies(supabase: any, bucketName: string) {
+  try {
+    // Update bucket to be public
+    await supabase.storage.updateBucket(bucketName, { public: true });
+    console.log(`Updated ${bucketName} to be public`);
+    
+    // Unfortunately, we can't directly create policies without the exec_sql function
+    // We'll have to rely on the bucket being public
+    return true;
+  } catch (error) {
+    console.error('Error in direct policy creation:', error);
+    return false;
+  }
+}

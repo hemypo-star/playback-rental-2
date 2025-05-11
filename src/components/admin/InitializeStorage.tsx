@@ -29,13 +29,27 @@ export default function InitializeStorage({ onComplete }: InitializeStorageProps
     
     try {
       console.log("Initializing storage buckets and permissions...");
+      
+      // First test if buckets are accessible
+      const productsTest = await testStorageConnection('products');
+      const categoriesTest = await testStorageConnection('categories');
+      
+      if (productsTest.success && categoriesTest.success) {
+        console.log("Storage buckets already configured correctly");
+        setIsSuccess(true);
+        if (onComplete) onComplete(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      // If not successful, try to reset permissions
       const result = await resetStoragePermissions();
       
       if (result) {
         console.log("Storage buckets initialized successfully");
         setIsSuccess(true);
         
-        // Verify the connections
+        // Verify the connections again
         const productsResult = await testStorageConnection('products');
         const categoriesResult = await testStorageConnection('categories');
         
@@ -92,12 +106,13 @@ export default function InitializeStorage({ onComplete }: InitializeStorageProps
     }
   };
 
-  if (!isLoading && !isError && !isSuccess) {
+  // If storage is successful and there are no errors, don't show anything
+  if (!isLoading && !isError && isSuccess) {
     return null;
   }
 
   return (
-    <Alert className={`mb-4 ${isSuccess ? 'bg-green-50' : isError ? 'bg-red-50' : 'bg-blue-50'}`}>
+    <Alert className={`mb-4 ${isSuccess && !isError ? 'bg-green-50' : isError ? 'bg-red-50' : 'bg-blue-50'}`}>
       <AlertTitle className="flex items-center gap-2">
         {isLoading ? (
           <>
