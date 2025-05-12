@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
@@ -87,7 +88,7 @@ export const uploadProductImage = async (file: File | string, productId?: string
   }
 };
 
-// The uploadCategoryImage function correctly expects only File parameter
+// The uploadCategoryImage function explicitly requires File parameter
 export const uploadCategoryImage = async (file: File, categoryId?: string): Promise<string> => {
   try {
     console.log(`Uploading category image for category ID: ${categoryId || 'new category'}`);

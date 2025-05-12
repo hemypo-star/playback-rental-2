@@ -84,10 +84,16 @@ const AdminProducts = () => {
     mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
       let imageUrl: string | undefined = categoryData.imageUrl;
       
-      // Only call uploadCategoryImage if fileForCategory is a File
+      // Only upload image if fileForCategory is a File object
+      // This explicitly checks that we have a valid File before passing to uploadCategoryImage
       if (fileForCategory instanceof File) {
-        imageUrl = await uploadCategoryImage(fileForCategory);
-        categoryData.imageUrl = imageUrl;
+        try {
+          imageUrl = await uploadCategoryImage(fileForCategory);
+          categoryData.imageUrl = imageUrl;
+        } catch (error) {
+          console.error('Error uploading category image:', error);
+          // Continue without image if upload fails
+        }
       }
       
       return supabaseService.addCategory(categoryData);
@@ -101,9 +107,15 @@ const AdminProducts = () => {
     try {
       let imageUrl = payload.imageUrl;
       
-      // Only call uploadCategoryImage if fileForCategory is a File
+      // Only upload image if fileForCategory is a File object
+      // This explicitly checks that we have a valid File before passing to uploadCategoryImage
       if (fileForCategory instanceof File) {
-        imageUrl = await uploadCategoryImage(fileForCategory);
+        try {
+          imageUrl = await uploadCategoryImage(fileForCategory);
+        } catch (error) {
+          console.error('Error uploading category image:', error);
+          // Continue without image if upload fails
+        }
       }
       
       const newCategory = await supabaseService.addCategory({
