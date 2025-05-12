@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +24,7 @@ const AdminProducts = () => {
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
-  const [fileForCategory, setFileForCategory] = useState<File | null>(null); // Important: Changed to only accept File type
+  const [fileForCategory, setFileForCategory] = useState<File | null>(null); // Important: Only accept File type
   const [storageInitialized, setStorageInitialized] = useState<boolean | null>(null);
 
   const form = useForm<ProductFormValues>({
@@ -139,12 +138,15 @@ const AdminProducts = () => {
 
   const addCategoryMutation = useMutation({
     mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
+      let imageUrl: string | undefined = categoryData.imageUrl;
+      
       // Fix: Only call uploadCategoryImage if fileForCategory is a File
       if (fileForCategory) {
         // fileForCategory is always a File now since we changed its type
-        const imageUrl = await uploadCategoryImage(fileForCategory);
+        imageUrl = await uploadCategoryImage(fileForCategory);
         categoryData.imageUrl = imageUrl;
       }
+      
       return supabaseService.addCategory(categoryData);
     },
     onSuccess: () => {
