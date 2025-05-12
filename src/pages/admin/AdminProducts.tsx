@@ -139,7 +139,7 @@ const AdminProducts = () => {
   const addCategoryMutation = useMutation({
     mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
       if (fileForCategory) {
-        const imageUrl = await uploadCategoryImage(fileForCategory, categoryData.name);
+        const imageUrl = await uploadCategoryImage(fileForCategory);
         categoryData.imageUrl = imageUrl;
       }
       return supabaseService.addCategory(categoryData);
@@ -152,6 +152,7 @@ const AdminProducts = () => {
   const handleAddCategory = async (payload: { name: string; slug: string; imageUrl?: string }) => {
     try {
       let imageUrl = payload.imageUrl;
+      
       if (fileForCategory) {
         imageUrl = await uploadCategoryImage(fileForCategory);
       }
