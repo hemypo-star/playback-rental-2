@@ -1,14 +1,31 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
-import { createBucketIfNotExists } from '@/services/supabaseClient';
 
 // Ensure a storage bucket exists and is public
 export const ensurePublicBucket = async (bucketName: string): Promise<boolean> => {
   try {
     console.log(`Ensuring public bucket ${bucketName} exists...`);
     
-    // Use the edge function to ensure bucket exists and is public
+    // Check if bucket exists first
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error(`Error listing buckets:`, listError);
+      // Try the edge function as a fallback
+      return await createBucketViaFunction(bucketName);
+    }
+    
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+    
+    if (!bucketExists) {
+      console.log(`Bucket ${bucketName} doesn't exist, creating it...`);
+      return await createBucketViaFunction(bucketName);
+    }
+    
+    console.log(`Bucket ${bucketName} exists, ensuring it's public...`);
+    
+    // Ensure the bucket is public via the edge function
     const { data, error } = await supabase.functions.invoke('ensure-storage-bucket', {
       body: { bucketName }
     });
@@ -25,6 +42,25 @@ export const ensurePublicBucket = async (bucketName: string): Promise<boolean> =
     return false;
   }
 };
+
+// Create bucket using edge function
+async function createBucketViaFunction(bucketName: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('ensure-storage-bucket', {
+      body: { bucketName, createIfNotExists: true }
+    });
+    
+    if (error) {
+      console.error(`Error creating bucket ${bucketName} via function:`, error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Exception creating bucket ${bucketName}:`, error);
+    return false;
+  }
+}
 
 // Reset storage permissions for all buckets
 export const resetStoragePermissions = async (): Promise<boolean> => {

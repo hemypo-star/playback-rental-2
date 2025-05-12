@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
@@ -60,7 +61,7 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
     console.log(`Uploading file ${fileName} to products bucket...`);
     
     // Use authenticated user for uploads
-    const { error: uploadError } = await supabase.storage
+    const { data, error: uploadError } = await supabase.storage
       .from('products')
       .upload(fileName, file, uploadOptions);
 
@@ -69,7 +70,11 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
       throw uploadError;
     }
 
-    console.log(`Successfully uploaded ${fileName} to products bucket`);
+    if (!data?.path) {
+      throw new Error('Upload succeeded but no file path was returned');
+    }
+
+    console.log(`Successfully uploaded ${fileName} to products bucket`, data);
     return fileName;  // Return just the filename, not the full URL
   } catch (error) {
     console.error('Error in uploadProductImage:', error);
@@ -110,7 +115,7 @@ export const uploadCategoryImage = async (file: File, categoryId?: string): Prom
     console.log(`Uploading file ${fileName} to categories bucket...`);
     
     // Use authenticated user for uploads
-    const { error: uploadError } = await supabase.storage
+    const { data, error: uploadError } = await supabase.storage
       .from('categories')
       .upload(fileName, file, uploadOptions);
 
@@ -119,7 +124,11 @@ export const uploadCategoryImage = async (file: File, categoryId?: string): Prom
       throw uploadError;
     }
 
-    console.log(`Successfully uploaded ${fileName} to categories bucket`);
+    if (!data?.path) {
+      throw new Error('Upload succeeded but no file path was returned');
+    }
+
+    console.log(`Successfully uploaded ${fileName} to categories bucket`, data);
     return fileName; // Return just the filename, not the full URL
   } catch (error) {
     console.error('Error in uploadCategoryImage:', error);

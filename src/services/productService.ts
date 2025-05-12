@@ -1,4 +1,3 @@
-
 import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
@@ -40,13 +39,27 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
   try {
     console.log("Creating product:", product, "with image file:", imageFile?.name);
     
+    let imageFileName = product.imageUrl || '';
+    
+    // If we have an image file, upload it first to get the filename
+    if (imageFile) {
+      try {
+        console.log("Uploading image first before creating product");
+        imageFileName = await uploadProductImage(imageFile);
+        console.log("Image uploaded successfully, filename:", imageFileName);
+      } catch (uploadError) {
+        console.error("Error uploading product image:", uploadError);
+        // Continue with product creation even if image upload fails
+      }
+    }
+    
     // Make sure we're using imageurl for the database column and all required fields are present
     const dbProduct = {
       title: product.title || '',
       description: product.description || '',
       price: product.price || 0,
       category: product.category || '',
-      imageurl: product.imageUrl || '',
+      imageurl: imageFileName, // Use the uploaded image filename or empty string
       quantity: product.quantity || 1,
       available: product.available !== undefined ? product.available : true
     };
@@ -56,7 +69,7 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
       throw new Error("Product title and category are required fields");
     }
     
-    // Insert the product first to get an ID
+    // Insert the product
     const { data, error } = await supabase.from('products').insert([dbProduct]).select().single();
     
     if (error) {
@@ -70,45 +83,6 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
     }
     
     console.log("Product created:", data);
-    
-    // If we have an image file, upload it and update the product
-    if (imageFile) {
-      console.log("Uploading image for product:", data.id);
-      try {
-        // Upload the image and get the filename (not URL)
-        const imageFileName = await uploadProductImage(imageFile, data.id);
-        console.log("Image uploaded, filename:", imageFileName);
-        
-        // Update the product with the image file name
-        const { data: updatedData, error: updateError } = await supabase
-          .from('products')
-          .update({ imageurl: imageFileName })
-          .eq('id', data.id)
-          .select()
-          .single();
-          
-        if (updateError) {
-          console.error("Error updating product with image URL:", updateError);
-          throw updateError;
-        }
-        
-        if (updatedData) {
-          console.log("Product updated with image:", updatedData);
-          // Map imageurl to imageUrl for consistency in the frontend
-          return {
-            ...updatedData,
-            imageUrl: updatedData.imageurl
-          };
-        }
-      } catch (uploadError) {
-        console.error("Error in image upload process:", uploadError);
-        // Return the product even if the image upload fails
-        return {
-          ...data,
-          imageUrl: data.imageurl
-        };
-      }
-    }
     
     // Map imageurl to imageUrl for consistency in the frontend
     return {
@@ -125,7 +99,7 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
   try {
     console.log("Updating product:", id, "with updates:", updates, "and image file:", imageFile?.name);
     
-    // If there's an image file, upload it first and add the filename to updates (not the full URL)
+    // If there's an image file, upload it first and add the filename to updates
     let fileName = null;
     if (imageFile) {
       console.log("Uploading new image for product:", id);

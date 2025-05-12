@@ -33,11 +33,20 @@ const ProductImage = (props: ProductImageProps) => {
       return;
     }
 
+    setIsLoading(true);
+    setIsError(false);
+
     try {
       // Get public URL directly from Supabase storage
       const publicUrl = getProductImageUrl(rawImageUrl);
       console.log(`ProductImage: Converting raw URL "${rawImageUrl}" to public URL "${publicUrl}"`);
       setImageUrl(publicUrl);
+      
+      // If publicUrl is null, set error state
+      if (!publicUrl) {
+        setIsError(true);
+      }
+      
       setIsLoading(false);
     } catch (error) {
       console.error(`Error getting product image URL for "${rawImageUrl}":`, error);
