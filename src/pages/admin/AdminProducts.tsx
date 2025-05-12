@@ -1,226 +1,48 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Product } from '@/types/product';
-import * as supabaseService from '@/services/supabaseService';
-import { uploadCategoryImage } from '@/utils/imageUtils';
-import ProductEditDialog from '@/components/admin/products/ProductEditDialog';
-import ProductList from '@/components/admin/products/ProductList';
-import ImportExport from '@/components/admin/products/ImportExport';
-import { ProductFormValues } from '@/components/admin/products/ProductForm';
-import { productFormSchema } from '@/components/admin/products/ProductForm';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import InitializeStorage from '@/components/admin/InitializeStorage';
+
+import { useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { useProductManagement } from '@/hooks/useProductManagement';
+import { useCategoryManagement } from '@/hooks/useCategoryManagement';
+import { useStorageStatus } from '@/hooks/useStorageStatus';
+import ProductActions from '@/components/admin/products/ProductActions';
+import ProductTabs from '@/components/admin/products/ProductTabs';
+import InitializeStorage from '@/components/admin/InitializeStorage';
+import { ProductFormValues } from '@/components/admin/products/ProductForm';
 
 const AdminProducts = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [showCategoryInput, setShowCategoryInput] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
-  const [fileForCategory, setFileForCategory] = useState<File | null>(null);
-  const [storageInitialized, setStorageInitialized] = useState<boolean | null>(null);
+  const {
+    products,
+    categories,
+    isLoadingProducts,
+    openDialog,
+    setOpenDialog,
+    editProduct,
+    setEditProduct,
+    imageForProduct,
+    setImageForProduct,
+    createProductMutation,
+    updateProductMutation,
+    deleteProductMutation,
+    handleEditProduct,
+    handleDeleteProduct,
+  } = useProductManagement();
 
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productFormSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      price: 0,
-      category: '',
-      imageUrl: '',
-      quantity: 1,
-      available: true,
-    },
-  });
+  const {
+    showCategoryInput,
+    setShowCategoryInput,
+    newCategoryName,
+    setNewCategoryName,
+    fileForCategory,
+    setFileForCategory,
+    addCategoryMutation,
+    handleAddCategory,
+  } = useCategoryManagement();
 
-  const { data: products, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ['products'],
-    queryFn: supabaseService.getProducts,
-  });
-
-  const { data: categories, isLoading: isLoadingCategories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: supabaseService.getCategories,
-  });
-
-  const createProductMutation = useMutation({
-    mutationFn: async (values: ProductFormValues) => {
-      try {
-        return supabaseService.createProduct({
-          ...values,
-        }, imageForProduct);
-      } catch (error) {
-        console.error('Error in createProductMutation:', error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({
-        title: 'Товар добавлен',
-        description: 'Товар успешно добавлен в каталог',
-      });
-      setOpenDialog(false);
-      form.reset();
-      setImageForProduct(null);
-    },
-    onError: (error) => {
-      toast({
-        title: 'Ошибка',
-        description: `Не удалось добавить товар: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  });
-
-  const addCategoryMutation = useMutation({
-    mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
-      let imageUrl: string | undefined = categoryData.imageUrl;
-      
-      // Only upload image if fileForCategory is a File object
-      // This explicitly checks that we have a valid File before passing to uploadCategoryImage
-      if (fileForCategory instanceof File) {
-        try {
-          imageUrl = await uploadCategoryImage(fileForCategory);
-          categoryData.imageUrl = imageUrl;
-        } catch (error) {
-          console.error('Error uploading category image:', error);
-          // Continue without image if upload fails
-        }
-      }
-      
-      return supabaseService.addCategory(categoryData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-    },
-  });
-
-  const handleAddCategory = async (payload: { name: string; slug: string; imageUrl?: string }) => {
-    try {
-      let imageUrl = payload.imageUrl;
-      
-      // Only upload image if fileForCategory is a File object
-      // This explicitly checks that we have a valid File before passing to uploadCategoryImage
-      if (fileForCategory instanceof File) {
-        try {
-          imageUrl = await uploadCategoryImage(fileForCategory);
-        } catch (error) {
-          console.error('Error uploading category image:', error);
-          // Continue without image if upload fails
-        }
-      }
-      
-      const newCategory = await supabaseService.addCategory({
-        name: payload.name,
-        slug: payload.slug,
-        imageUrl: imageUrl || '',
-      });
-      
-      if (newCategory) {
-        queryClient.invalidateQueries({ queryKey: ['categories'] });
-        form.setValue('category', newCategory.name);
-        setShowCategoryInput(false);
-        setNewCategoryName('');
-        setFileForCategory(null);
-        
-        toast({
-          title: 'Категория добавлена',
-          description: 'Новая категория успешно добавлена',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: `Не удалось добавить категорию: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const updateProductMutation = useMutation({
-    mutationFn: async (values: { id: string; product: Partial<Product> }) => {
-      try {
-        return supabaseService.updateProduct(values.id, values.product, imageForProduct);
-      } catch (error) {
-        console.error('Error in updateProductMutation:', error);
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      if (!data) {
-        toast({
-          title: 'Ошибка',
-          description: 'Не удалось обновить товар',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({
-        title: 'Товар обновлен',
-        description: 'Товар успешно обновлен',
-      });
-      setOpenDialog(false);
-      form.reset();
-      setEditProduct(null);
-      setImageForProduct(null);
-    },
-    onError: (error) => {
-      toast({
-        title: 'Ошибка',
-        description: `Не удалось обновить товар: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  });
-
-  const deleteProductMutation = useMutation({
-    mutationFn: (id: string) => supabaseService.deleteProduct(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({
-        title: 'Товар удален',
-        description: 'Товар успешно удален из каталога',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Ошибка',
-        description: `Не удалось удалить товар: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  });
-
-  const handleEditProduct = (product: Product) => {
-    setEditProduct(product);
-    form.reset({
-      title: product.title,
-      description: product.description || '',
-      price: product.price,
-      category: product.category,
-      imageUrl: product.imageUrl || '',
-      quantity: product.quantity,
-      available: product.available,
-    });
-    setOpenDialog(true);
-    setImageForProduct(null); // Reset image when editing
-  };
-
-  const handleDeleteProduct = (id: string) => {
-    if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
-      deleteProductMutation.mutate(id);
-    }
-  };
+  const {
+    storageInitialized,
+    handleStorageInitialized
+  } = useStorageStatus();
 
   const onSubmit = async (formData: ProductFormValues, imageFile: File | string | null) => {
     if (!editProduct) return;
@@ -228,7 +50,7 @@ const AdminProducts = () => {
     setImageForProduct(imageFile);
   
     try {
-      const cleanUpdates: Partial<Product> = {};
+      const cleanUpdates: Partial<any> = {};
   
       if (formData.title && formData.title.trim() !== '') {
         cleanUpdates.title = formData.title;
@@ -258,30 +80,13 @@ const AdminProducts = () => {
         cleanUpdates.quantity = formData.quantity;
       }
       
-      if (Object.keys(cleanUpdates).length === 0 && !imageFile) {
-        toast({ 
-          title: 'Нет изменений',
-          description: 'Вы не внесли никаких изменений в товар'
-        });
-        setOpenDialog(false);
-        return;
-      }
-  
       await updateProductMutation.mutateAsync({
         id: editProduct.id,
         product: cleanUpdates
       });
     } catch (error) {
       console.error('Ошибка при обновлении товара:', error);
-      toast({ 
-        title: 'Ошибка обновления товара', 
-        variant: 'destructive' 
-      });
     }
-  };
-
-  const handleStorageInitialized = (success: boolean) => {
-    setStorageInitialized(success);
   };
 
   return (
@@ -289,11 +94,10 @@ const AdminProducts = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Управление товарами</h2>
         <div className="flex gap-2">
-          <ProductEditDialog
-            open={openDialog}
-            setOpen={setOpenDialog}
+          <ProductActions
+            openDialog={openDialog}
+            setOpenDialog={setOpenDialog}
             editProduct={editProduct}
-            form={form}
             categories={categories || []}
             showCategoryInput={showCategoryInput}
             setShowCategoryInput={setShowCategoryInput}
@@ -324,26 +128,13 @@ const AdminProducts = () => {
         </Alert>
       )}
 
-      <Tabs defaultValue="products">
-        <TabsList>
-          <TabsTrigger value="products">Товары</TabsTrigger>
-          <TabsTrigger value="import-export">Импорт/Экспорт</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="products" className="space-y-4">
-          <ProductList
-            products={products}
-            isLoading={isLoadingProducts}
-            onEditProduct={handleEditProduct}
-            onDeleteProduct={handleDeleteProduct}
-            updateMutation={updateProductMutation}
-          />
-        </TabsContent>
-        
-        <TabsContent value="import-export">
-          <ImportExport />
-        </TabsContent>
-      </Tabs>
+      <ProductTabs
+        products={products}
+        isLoading={isLoadingProducts}
+        onEditProduct={handleEditProduct}
+        onDeleteProduct={handleDeleteProduct}
+        updateMutation={updateProductMutation}
+      />
     </div>
   );
 };
