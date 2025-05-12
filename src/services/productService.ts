@@ -35,21 +35,26 @@ export const getProductById = async (id: string): Promise<Product | null> => {
   }
 };
 
-export const createProduct = async (product: Partial<Product>, imageFile?: File): Promise<Product | null> => {
+export const createProduct = async (product: Partial<Product>, imageFile?: File | string): Promise<Product | null> => {
   try {
-    console.log("Creating product:", product, "with image file:", imageFile?.name);
+    console.log("Creating product:", product, "with image:", typeof imageFile === 'string' ? 'URL' : (imageFile ? 'File' : 'None'));
     
     let imageFileName = product.imageUrl || '';
     
-    // If we have an image file, upload it first to get the filename
+    // If we have an image (file or URL), upload or use it
     if (imageFile) {
       try {
-        console.log("Uploading image first before creating product");
-        imageFileName = await uploadProductImage(imageFile);
-        console.log("Image uploaded successfully, filename:", imageFileName);
+        if (typeof imageFile === 'string') {
+          console.log("Using external URL for product image");
+          imageFileName = imageFile;
+        } else {
+          console.log("Uploading image file before creating product");
+          imageFileName = await uploadProductImage(imageFile);
+        }
+        console.log("Image ready, filename/URL:", imageFileName);
       } catch (uploadError) {
-        console.error("Error uploading product image:", uploadError);
-        // Continue with product creation even if image upload fails
+        console.error("Error with product image:", uploadError);
+        // Continue with product creation even if image handling fails
       }
     }
     
@@ -59,7 +64,7 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
       description: product.description || '',
       price: product.price || 0,
       category: product.category || '',
-      imageurl: imageFileName, // Use the uploaded image filename or empty string
+      imageurl: imageFileName, // Use the uploaded image filename or URL
       quantity: product.quantity || 1,
       available: product.available !== undefined ? product.available : true
     };
@@ -95,20 +100,25 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
   }
 };
 
-export const updateProduct = async (id: string, updates: Partial<Product>, imageFile?: File): Promise<Product | null> => {
+export const updateProduct = async (id: string, updates: Partial<Product>, imageFile?: File | string): Promise<Product | null> => {
   try {
-    console.log("Updating product:", id, "with updates:", updates, "and image file:", imageFile?.name);
+    console.log("Updating product:", id, "with updates:", updates, "and image:", typeof imageFile === 'string' ? 'URL' : (imageFile ? 'File' : 'None'));
     
-    // If there's an image file, upload it first and add the filename to updates
+    // If there's an image (file or URL), handle it appropriately
     let fileName = null;
     if (imageFile) {
-      console.log("Uploading new image for product:", id);
+      console.log("Processing new image for product:", id);
       try {
-        fileName = await uploadProductImage(imageFile, id);
-        console.log("Image uploaded, filename:", fileName);
+        if (typeof imageFile === 'string') {
+          fileName = imageFile; // Use the URL directly
+          console.log("Using external URL for image:", fileName);
+        } else {
+          fileName = await uploadProductImage(imageFile, id);
+          console.log("Image uploaded, filename:", fileName);
+        }
       } catch (uploadError) {
-        console.error("Error uploading image:", uploadError);
-        // Continue with the update even if the image upload fails
+        console.error("Error with image:", uploadError);
+        // Continue with the update even if the image handling fails
       }
     }
     

@@ -29,8 +29,14 @@ export const getCategoryImageUrl = (imageUrl: string) => {
   return getPublicUrl('categories', imageUrl);
 };
 
-export const uploadProductImage = async (file: File, productId?: string): Promise<string> => {
+export const uploadProductImage = async (file: File | string, productId?: string): Promise<string> => {
   try {
+    // If file is a string (URL), return it directly
+    if (typeof file === 'string') {
+      console.log(`Using external URL for product image: ${file}`);
+      return file;
+    }
+    
     console.log(`Uploading product image for product ID: ${productId || 'new product'}`);
 
     // Ensure the products bucket exists and is public
@@ -82,8 +88,14 @@ export const uploadProductImage = async (file: File, productId?: string): Promis
   }
 };
 
-export const uploadCategoryImage = async (file: File, categoryId?: string): Promise<string> => {
+export const uploadCategoryImage = async (file: File | string, categoryId?: string): Promise<string> => {
   try {
+    // If file is a string (URL), return it directly
+    if (typeof file === 'string') {
+      console.log(`Using external URL for category image: ${file}`);
+      return file;
+    }
+    
     console.log(`Uploading category image for category ID: ${categoryId || 'new category'}`);
     
     // Ensure the categories bucket exists and is public
@@ -184,3 +196,4 @@ async function testBucketAccess(bucketName: string): Promise<boolean> {
     return false;
   }
 }
+

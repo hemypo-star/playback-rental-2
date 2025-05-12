@@ -17,12 +17,12 @@ type ProductEditDialogProps = {
   setShowCategoryInput?: (show: boolean) => void;
   newCategoryName?: string;
   setNewCategoryName?: (name: string) => void;
-  fileForProduct: File | null;
-  setFileForProduct: (file: File | null) => void;
+  fileForProduct: File | string | null;
+  setFileForProduct: (file: File | string | null) => void;
   fileForCategory?: File | null;
   setFileForCategory?: (file: File | null) => void;
   addCategoryMutation?: UseMutationResult<any, unknown, any, unknown>;
-  onSubmit: (values: ProductFormValues, imageFile: File | null) => void;
+  onSubmit: (values: ProductFormValues, imageFile: File | string | null) => void;
   handleAddCategory?: (values: any) => void;
   createPending: boolean;
   updatePending: boolean;

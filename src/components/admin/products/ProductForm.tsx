@@ -41,7 +41,7 @@ type ProductFormProps = {
   editProduct: Product | null;
   categories: Category[];
   isSubmitting: boolean;
-  onSubmit: (values: ProductFormValues, imageFile: File | null) => void;
+  onSubmit: (values: ProductFormValues, imageFile: File | string | null) => void;
   onCancel: () => void;
 };
 
@@ -53,7 +53,7 @@ export default function ProductForm({
   onCancel,
 }: ProductFormProps) {
   const { toast } = useToast();
-  const [fileForProduct, setFileForProduct] = useState<File | null>(null);
+  const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [fileForCategory, setFileForCategory] = useState<File | null>(null);
@@ -234,10 +234,13 @@ export default function ProductForm({
 
   const handleFormSubmit = (values: ProductFormValues) => {
     console.log("Form submitted with values:", values);
-    console.log("File for product:", fileForProduct);
+    console.log("Image for product:", imageForProduct);
     
-    // Check if the storage buckets are ready
-    if (fileForProduct && !storageStatus.initialized) {
+    // For external URLs, check if storage is needed
+    const needsStorage = imageForProduct && typeof imageForProduct !== 'string';
+    
+    // Check if the storage buckets are ready (only if we're uploading a file)
+    if (needsStorage && !storageStatus.initialized) {
       toast({
         title: 'Предупреждение',
         description: 'Хранилище для изображений не готово. Изображение может не быть загружено.',
@@ -245,13 +248,13 @@ export default function ProductForm({
       });
     }
     
-    onSubmit(values, fileForProduct);
+    onSubmit(values, imageForProduct);
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-        {storageStatus.error && (
+        {storageStatus.error && !imageForProduct?.toString().startsWith('http') && (
           <AlertVariant variant="warning" className="mb-4">
             <AlertTitle>Проблема с хранилищем изображений</AlertTitle>
             <AlertDescription>
@@ -410,10 +413,14 @@ export default function ProductForm({
                 <div>
                   <ImageUploadField
                     onChange={(file) => {
-                      console.log("New file selected:", file.name);
-                      setFileForProduct(file);
+                      console.log("New image selected:", typeof file === 'string' ? 'URL: ' + file : 'File: ' + file.name);
+                      setImageForProduct(file);
                     }}
-                    previewUrl={fileForProduct ? URL.createObjectURL(fileForProduct) : (field.value || null)}
+                    previewUrl={
+                      typeof imageForProduct === 'string' ? imageForProduct :
+                      imageForProduct ? URL.createObjectURL(imageForProduct) :
+                      (field.value || null)
+                    }
                     disabled={isSubmitting || isCheckingStorage}
                   />
                   <Input 

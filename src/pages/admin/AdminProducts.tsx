@@ -24,7 +24,7 @@ const AdminProducts = () => {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [fileForProduct, setFileForProduct] = useState<File | null>(null);
+  const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
   const [fileForCategory, setFileForCategory] = useState<File | null>(null);
   const [storageInitialized, setStorageInitialized] = useState<boolean | null>(null);
 
@@ -56,7 +56,7 @@ const AdminProducts = () => {
       try {
         return supabaseService.createProduct({
           ...values,
-        }, fileForProduct);
+        }, imageForProduct);
       } catch (error) {
         console.error('Error in createProductMutation:', error);
         throw error;
@@ -70,7 +70,7 @@ const AdminProducts = () => {
       });
       setOpenDialog(false);
       form.reset();
-      setFileForProduct(null);
+      setImageForProduct(null);
     },
     onError: (error) => {
       toast({
@@ -84,7 +84,7 @@ const AdminProducts = () => {
   const updateProductMutation = useMutation({
     mutationFn: async (values: { id: string; product: Partial<Product> }) => {
       try {
-        return supabaseService.updateProduct(values.id, values.product, fileForProduct);
+        return supabaseService.updateProduct(values.id, values.product, imageForProduct);
       } catch (error) {
         console.error('Error in updateProductMutation:', error);
         throw error;
@@ -108,7 +108,7 @@ const AdminProducts = () => {
       setOpenDialog(false);
       form.reset();
       setEditProduct(null);
-      setFileForProduct(null);
+      setImageForProduct(null);
     },
     onError: (error) => {
       toast({
@@ -196,7 +196,7 @@ const AdminProducts = () => {
       available: product.available,
     });
     setOpenDialog(true);
-    setFileForProduct(null); // Reset file when editing
+    setImageForProduct(null); // Reset image when editing
   };
 
   const handleDeleteProduct = (id: string) => {
@@ -205,10 +205,10 @@ const AdminProducts = () => {
     }
   };
 
-  const onSubmit = async (formData: ProductFormValues, imageFile: File | null) => {
+  const onSubmit = async (formData: ProductFormValues, imageFile: File | string | null) => {
     if (!editProduct) return;
     
-    setFileForProduct(imageFile);
+    setImageForProduct(imageFile);
   
     try {
       const cleanUpdates: Partial<Product> = {};
@@ -282,8 +282,8 @@ const AdminProducts = () => {
             setShowCategoryInput={setShowCategoryInput}
             newCategoryName={newCategoryName}
             setNewCategoryName={setNewCategoryName}
-            fileForProduct={fileForProduct}
-            setFileForProduct={setFileForProduct}
+            fileForProduct={imageForProduct}
+            setFileForProduct={setImageForProduct}
             fileForCategory={fileForCategory}
             setFileForCategory={setFileForCategory}
             addCategoryMutation={addCategoryMutation}
