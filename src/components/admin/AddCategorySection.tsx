@@ -14,7 +14,7 @@ type Props = {
   setShow: (show: boolean) => void;
   newCategoryName: string;
   setNewCategoryName: (v: string) => void;
-  fileForCategory: File | null; // Make sure it's explicitly File | null only
+  fileForCategory: File | null; // This is correctly typed as File | null
   setFileForCategory: (f: File | null) => void;
   isPending: boolean;
 };

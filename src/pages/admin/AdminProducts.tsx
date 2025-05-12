@@ -84,9 +84,8 @@ const AdminProducts = () => {
     mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
       let imageUrl: string | undefined = categoryData.imageUrl;
       
-      // Fix: Only call uploadCategoryImage if fileForCategory is a File
-      if (fileForCategory) {
-        // Now we're sure fileForCategory is a File
+      // Only call uploadCategoryImage if fileForCategory is a File
+      if (fileForCategory instanceof File) {
         imageUrl = await uploadCategoryImage(fileForCategory);
         categoryData.imageUrl = imageUrl;
       }
@@ -102,9 +101,8 @@ const AdminProducts = () => {
     try {
       let imageUrl = payload.imageUrl;
       
-      // Fix: Only call uploadCategoryImage if fileForCategory is a File
-      if (fileForCategory) {
-        // Now we're sure fileForCategory is a File
+      // Only call uploadCategoryImage if fileForCategory is a File
+      if (fileForCategory instanceof File) {
         imageUrl = await uploadCategoryImage(fileForCategory);
       }
       
