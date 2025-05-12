@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
@@ -88,14 +87,8 @@ export const uploadProductImage = async (file: File | string, productId?: string
   }
 };
 
-export const uploadCategoryImage = async (file: File | string, categoryId?: string): Promise<string> => {
+export const uploadCategoryImage = async (file: File, categoryId?: string): Promise<string> => {
   try {
-    // If file is a string (URL), return it directly
-    if (typeof file === 'string') {
-      console.log(`Using external URL for category image: ${file}`);
-      return file;
-    }
-    
     console.log(`Uploading category image for category ID: ${categoryId || 'new category'}`);
     
     // Ensure the categories bucket exists and is public
@@ -196,4 +189,3 @@ async function testBucketAccess(bucketName: string): Promise<boolean> {
     return false;
   }
 }
-

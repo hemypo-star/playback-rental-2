@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import ImageUploadField from "@/components/ImageUploadField";
-import { uploadCategoryImage } from "@/services/categoryService";
+import { uploadCategoryImage } from "@/utils/imageUtils";
 import { toast } from "sonner";
 
 type Props = {
@@ -43,6 +43,7 @@ export default function AddCategorySection({
       let imageUrl;
       
       if (fileForCategory) {
+        // We pass File type here, which is what uploadCategoryImage expects
         imageUrl = await uploadCategoryImage(fileForCategory);
       }
       
@@ -79,7 +80,14 @@ export default function AddCategorySection({
       <ImageUploadField
         label=""
         previewUrl={fileForCategory ? URL.createObjectURL(fileForCategory) : null}
-        onChange={f => setFileForCategory(f)}
+        onChange={f => {
+          // Only accept File type for fileForCategory, not string
+          if (f instanceof File) {
+            setFileForCategory(f);
+          } else {
+            toast.error("URLs are not supported for categories. Please upload a file.");
+          }
+        }}
         disabled={isPending || isUploading}
       />
       <Button

@@ -1,5 +1,5 @@
 
-import { Upload, Image, AlertCircle, Link } from "lucide-react";
+import { Upload, Image as ImageIcon, AlertCircle, Link } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,7 +89,7 @@ export default function ImageUploadField({
       }
       
       // Test that the image can be loaded
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         onChange(imageUrl);
         setImageError(false);
@@ -140,7 +140,7 @@ export default function ImageUploadField({
               <div className="w-14 h-14 flex items-center justify-center rounded border border-dashed bg-muted">
                 {imageError ? 
                   <AlertCircle className="h-6 w-6 text-destructive" /> : 
-                  <Image className="h-6 w-6 opacity-60" />
+                  <ImageIcon className="h-6 w-6 opacity-60" />
                 }
               </div>
             )}
