@@ -24,7 +24,7 @@ const AdminProducts = () => {
   const [showCategoryInput, setShowCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
-  const [fileForCategory, setFileForCategory] = useState<File | null>(null); // Important: Only accept File type
+  const [fileForCategory, setFileForCategory] = useState<File | null>(null);
   const [storageInitialized, setStorageInitialized] = useState<boolean | null>(null);
 
   const form = useForm<ProductFormValues>({
@@ -79,6 +79,61 @@ const AdminProducts = () => {
       });
     }
   });
+
+  const addCategoryMutation = useMutation({
+    mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
+      let imageUrl: string | undefined = categoryData.imageUrl;
+      
+      // Fix: Only call uploadCategoryImage if fileForCategory is a File
+      if (fileForCategory) {
+        // Now we're sure fileForCategory is a File
+        imageUrl = await uploadCategoryImage(fileForCategory);
+        categoryData.imageUrl = imageUrl;
+      }
+      
+      return supabaseService.addCategory(categoryData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+
+  const handleAddCategory = async (payload: { name: string; slug: string; imageUrl?: string }) => {
+    try {
+      let imageUrl = payload.imageUrl;
+      
+      // Fix: Only call uploadCategoryImage if fileForCategory is a File
+      if (fileForCategory) {
+        // Now we're sure fileForCategory is a File
+        imageUrl = await uploadCategoryImage(fileForCategory);
+      }
+      
+      const newCategory = await supabaseService.addCategory({
+        name: payload.name,
+        slug: payload.slug,
+        imageUrl: imageUrl || '',
+      });
+      
+      if (newCategory) {
+        queryClient.invalidateQueries({ queryKey: ['categories'] });
+        form.setValue('category', newCategory.name);
+        setShowCategoryInput(false);
+        setNewCategoryName('');
+        setFileForCategory(null);
+        
+        toast({
+          title: 'Категория добавлена',
+          description: 'Новая категория успешно добавлена',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось добавить категорию: ${error}`,
+        variant: 'destructive',
+      });
+    }
+  };
 
   const updateProductMutation = useMutation({
     mutationFn: async (values: { id: string; product: Partial<Product> }) => {
@@ -135,61 +190,6 @@ const AdminProducts = () => {
       });
     }
   });
-
-  const addCategoryMutation = useMutation({
-    mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
-      let imageUrl: string | undefined = categoryData.imageUrl;
-      
-      // Fix: Only call uploadCategoryImage if fileForCategory is a File
-      if (fileForCategory) {
-        // fileForCategory is always a File now since we changed its type
-        imageUrl = await uploadCategoryImage(fileForCategory);
-        categoryData.imageUrl = imageUrl;
-      }
-      
-      return supabaseService.addCategory(categoryData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-    },
-  });
-
-  const handleAddCategory = async (payload: { name: string; slug: string; imageUrl?: string }) => {
-    try {
-      let imageUrl = payload.imageUrl;
-      
-      // Fix: Only call uploadCategoryImage if fileForCategory is a File
-      if (fileForCategory) {
-        // fileForCategory is always a File now since we changed its type
-        imageUrl = await uploadCategoryImage(fileForCategory);
-      }
-      
-      const newCategory = await supabaseService.addCategory({
-        name: payload.name,
-        slug: payload.slug,
-        imageUrl: imageUrl || '',
-      });
-      
-      if (newCategory) {
-        queryClient.invalidateQueries({ queryKey: ['categories'] });
-        form.setValue('category', newCategory.name);
-        setShowCategoryInput(false);
-        setNewCategoryName('');
-        setFileForCategory(null);
-        
-        toast({
-          title: 'Категория добавлена',
-          description: 'Новая категория успешно добавлена',
-        });
-      }
-    } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: `Не удалось добавить категорию: ${error}`,
-        variant: 'destructive',
-      });
-    }
-  };
 
   const handleEditProduct = (product: Product) => {
     setEditProduct(product);

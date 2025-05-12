@@ -87,6 +87,7 @@ export const uploadProductImage = async (file: File | string, productId?: string
   }
 };
 
+// The uploadCategoryImage function correctly expects only File parameter
 export const uploadCategoryImage = async (file: File, categoryId?: string): Promise<string> => {
   try {
     console.log(`Uploading category image for category ID: ${categoryId || 'new category'}`);
