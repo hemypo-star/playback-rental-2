@@ -1,34 +1,18 @@
 
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Product } from "@/types/product";
-import { Form } from "@/components/ui/form";
 import { useState } from "react";
-import StorageStatusAlert from "./StorageStatusAlert";
-import ProductFormFields from "./ProductFormFields";
+import { Form } from "@/components/ui/form";
+import { Product, Category } from "@/types/product";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import CategoryField from "./CategoryField";
 import FormActions from "./FormActions";
-import useStorageStatus from "./useStorageStatus";
-
-export const productFormSchema = z.object({
-  title: z.string().min(2, {
-    message: 'Название должно содержать минимум 2 символа',
-  }),
-  description: z.string().optional(),
-  price: z.coerce.number().min(1, {
-    message: 'Цена должна быть больше 0',
-  }),
-  category: z.string().min(1, {
-    message: 'Выберите категорию',
-  }),
-  imageUrl: z.string().optional(),
-  quantity: z.coerce.number().min(1, {
-    message: 'Количество должно быть больше 0',
-  }),
-  available: z.boolean().default(true),
-});
-
-export type ProductFormValues = z.infer<typeof productFormSchema>;
+import StorageStatusAlert from "./StorageStatusAlert";
+import ProductFormField from "./ProductFormField";
+import ProductImageField from "./ProductImageField";
+import { useProductForm, ProductFormValues } from "@/hooks/useProductForm";
+import { useStorageStatus } from "@/hooks/useStorageStatus";
 
 type ProductFormProps = {
   editProduct: Product | null;
@@ -37,9 +21,6 @@ type ProductFormProps = {
   onSubmit: (values: ProductFormValues, imageFile: File | string | null) => void;
   onCancel: () => void;
 };
-
-import { Category } from "@/types/product";
-import { useToast } from "@/hooks/use-toast";
 
 export default function ProductForm({
   editProduct,
@@ -50,69 +31,22 @@ export default function ProductForm({
 }: ProductFormProps) {
   const { toast } = useToast();
   const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
-  const [showCategoryInput, setShowCategoryInput] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
-  
-  const { storageStatus, isCheckingStorage, checkStorageConnection } = useStorageStatus();
+  const { 
+    storageInitialized, 
+    storageError,
+    isCheckingStorage, 
+    checkStorageConnection 
+  } = useStorageStatus();
 
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productFormSchema),
-    defaultValues: {
-      title: editProduct?.title || '',
-      description: editProduct?.description || '',
-      price: editProduct?.price || 0,
-      category: editProduct?.category || '',
-      imageUrl: editProduct?.imageUrl || '',
-      quantity: editProduct?.quantity || 1,
-      available: editProduct?.available ?? true,
-    },
-  });
-
-  const handleNewCategory = async () => {
-    setIsAddingCategory(true);
-    try {
-      if (!newCategoryName.trim()) {
-        toast({
-          title: 'Ошибка',
-          description: 'Введите название категории',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const slug = newCategoryName.toLowerCase().replace(/\s+/g, '-');
-      
-      // This would typically call a prop function to add the category
-      // For now we'll just update the form state
-      form.setValue('category', newCategoryName);
-      setShowCategoryInput(false);
-      setNewCategoryName('');
-      
-      toast({
-        title: 'Категория добавлена',
-        description: 'Новая категория успешно добавлена',
-      });
-    } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: `Не удалось добавить категорию: ${error}`,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsAddingCategory(false);
-    }
-  };
-
-  const handleFormSubmit = (values: ProductFormValues) => {
+  const handleSubmitWithImage = (values: ProductFormValues) => {
     console.log("Form submitted with values:", values);
     console.log("Image for product:", imageForProduct);
     
     // For external URLs, check if storage is needed
-    const needsStorage = imageForProduct && typeof imageForProduct !== 'string';
+    const needsStorage = imageForProduct && imageForProduct instanceof File;
     
     // Check if the storage buckets are ready (only if we're uploading a file)
-    if (needsStorage && !storageStatus.initialized) {
+    if (needsStorage && !storageInitialized) {
       toast({
         title: 'Предупреждение',
         description: 'Хранилище для изображений не готово. Изображение может не быть загружено.',
@@ -123,31 +57,89 @@ export default function ProductForm({
     onSubmit(values, imageForProduct);
   };
 
+  const { 
+    form,
+    showCategoryInput,
+    setShowCategoryInput,
+    newCategoryName,
+    setNewCategoryName,
+    isAddingCategory,
+    handleNewCategory,
+    handleFormSubmit
+  } = useProductForm(editProduct, handleSubmitWithImage, setImageForProduct);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-        {storageStatus.error && !imageForProduct?.toString().startsWith('http') && (
+        {storageError && !imageForProduct?.toString().startsWith('http') && (
           <StorageStatusAlert 
-            error={storageStatus.error}
+            error={storageError}
             isCheckingStorage={isCheckingStorage}
             onCheckStorage={checkStorageConnection}
           />
         )}
 
-        <ProductFormFields 
+        <ProductFormField 
+          form={form}
+          name="title"
+          label="Название"
+        >
+          <Input />
+        </ProductFormField>
+
+        <ProductFormField 
+          form={form}
+          name="description"
+          label="Описание"
+        >
+          <Textarea />
+        </ProductFormField>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ProductFormField 
+            form={form}
+            name="price"
+            label="Цена (₽)"
+          >
+            <Input type="number" />
+          </ProductFormField>
+
+          <ProductFormField 
+            form={form}
+            name="quantity"
+            label="Количество"
+          >
+            <Input type="number" />
+          </ProductFormField>
+        </div>
+
+        <CategoryField 
           form={form}
           categories={categories}
-          isSubmitting={isSubmitting}
-          isCheckingStorage={isCheckingStorage}
           showCategoryInput={showCategoryInput}
           setShowCategoryInput={setShowCategoryInput}
           newCategoryName={newCategoryName}
           setNewCategoryName={setNewCategoryName}
           handleNewCategory={handleNewCategory}
           isAddingCategory={isAddingCategory}
-          setImageForProduct={setImageForProduct}
-          imageForProduct={imageForProduct}
         />
+
+        <ProductImageField
+          form={form}
+          imageForProduct={imageForProduct}
+          setImageForProduct={setImageForProduct}
+          isCheckingStorage={isCheckingStorage}
+          isSubmitting={isSubmitting}
+        />
+
+        <ProductFormField 
+          form={form}
+          name="available"
+          label="Доступность"
+          description="Товар доступен для бронирования"
+        >
+          <Switch />
+        </ProductFormField>
         
         <FormActions 
           isSubmitting={isSubmitting}
@@ -157,3 +149,7 @@ export default function ProductForm({
     </Form>
   );
 }
+
+// Export the schema and types for use in other components
+export { productFormSchema } from '@/hooks/useProductForm';
+export type { ProductFormValues } from '@/hooks/useProductForm';

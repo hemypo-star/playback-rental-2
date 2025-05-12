@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { AlertVariant, AlertTitle, AlertDescription } from "@/components/ui/alert-variant";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 type StorageStatusAlertProps = {
   error: string | null;
@@ -15,10 +15,11 @@ export default function StorageStatusAlert({
   onCheckStorage
 }: StorageStatusAlertProps) {
   return (
-    <AlertVariant variant="warning" className="mb-4">
+    <Alert variant="destructive" className="mb-4">
+      <AlertTriangle className="h-4 w-4" />
       <AlertTitle>Проблема с хранилищем изображений</AlertTitle>
       <AlertDescription>
-        {error}
+        {error || 'Возникли проблемы с хранилищем изображений. Загрузка новых изображений может быть недоступна.'}
         <div className="mt-2">
           <Button
             type="button"
@@ -38,6 +39,6 @@ export default function StorageStatusAlert({
           </Button>
         </div>
       </AlertDescription>
-    </AlertVariant>
+    </Alert>
   );
 }

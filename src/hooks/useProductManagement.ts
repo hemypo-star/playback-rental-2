@@ -29,6 +29,7 @@ export const useProductManagement = () => {
   const createProductMutation = useMutation({
     mutationFn: async (values: ProductFormValues) => {
       try {
+        // Pass the image as is (could be File or string)
         return supabaseService.createProduct({
           ...values,
         }, imageForProduct);
@@ -59,6 +60,7 @@ export const useProductManagement = () => {
   const updateProductMutation = useMutation({
     mutationFn: async (values: { id: string; product: Partial<Product> }) => {
       try {
+        // Pass the image as is (could be File or string)
         return supabaseService.updateProduct(values.id, values.product, imageForProduct);
       } catch (error) {
         console.error('Error in updateProductMutation:', error);
