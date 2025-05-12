@@ -138,7 +138,7 @@ const AdminProducts = () => {
 
   const addCategoryMutation = useMutation({
     mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
-      if (fileForCategory) {
+      if (fileForCategory && fileForCategory instanceof File) {
         const imageUrl = await uploadCategoryImage(fileForCategory);
         categoryData.imageUrl = imageUrl;
       }
@@ -153,7 +153,7 @@ const AdminProducts = () => {
     try {
       let imageUrl = payload.imageUrl;
       
-      if (fileForCategory) {
+      if (fileForCategory && fileForCategory instanceof File) {
         imageUrl = await uploadCategoryImage(fileForCategory);
       }
       
