@@ -61,33 +61,62 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
     if (error) throw error;
     if (!data) return null;
     
-    let imageUrl = data.imageurl;
+    let imageFileName = product.imageUrl || '';
     
-    // If we have an image file, upload it and update the product
+    // If we have an image (file or URL), upload or use it
     if (imageFile) {
-      imageUrl = await uploadProductImage(imageFile, data.id);
-      
-      // Update the product with the image URL
-      const { data: updatedData, error: updateError } = await supabase
-        .from('products')
-        .update({ imageurl: imageUrl })
-        .eq('id', data.id)
-        .select()
-        .single();
-        
-      if (updateError) throw updateError;
-      
-      if (updatedData) {
-        return {
-          ...updatedData,
-          imageUrl: updatedData.imageurl
-        };
+      try {
+        if (typeof imageFile === 'string') {
+          console.log("Using external URL for product image");
+          imageFileName = imageFile;
+        } else {
+          console.log("Uploading image file before creating product");
+          // Fix the function call to match the definition in imageUtils.ts
+          // uploadProductImage now expects just the file, without a second argument for ID
+          imageFileName = await uploadProductImage(imageFile);
+        }
+        console.log("Image ready, filename/URL:", imageFileName);
+      } catch (uploadError) {
+        console.error("Error with product image:", uploadError);
+        // Continue with product creation even if image handling fails
       }
     }
     
+    // Make sure we're using imageurl for the database column and all required fields are present
+    const dbProduct = {
+      title: product.title || '',
+      description: product.description || '',
+      price: product.price || 0,
+      category: product.category || '',
+      imageurl: imageFileName, // Use the uploaded image filename or URL
+      quantity: product.quantity || 1,
+      available: product.available !== undefined ? product.available : true
+    };
+    
+    // Validate that all required fields have values
+    if (!dbProduct.title || !dbProduct.category) {
+      throw new Error("Product title and category are required fields");
+    }
+    
+    // Insert the product
+    const { data: insertData, error: insertError } = await supabase.from('products').insert([dbProduct]).select().single();
+    
+    if (insertError) {
+      console.error("Error inserting product:", insertError);
+      throw insertError;
+    }
+    
+    if (!insertData) {
+      console.error("No data returned from product insertion");
+      return null;
+    }
+    
+    console.log("Product created:", insertData);
+    
+    // Map imageurl to imageUrl for consistency in the frontend
     return {
-      ...data,
-      imageUrl: imageUrl
+      ...insertData,
+      imageUrl: insertData.imageurl
     };
   } catch (error) {
     console.error('Error creating product:', error);
@@ -95,8 +124,29 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File)
   }
 };
 
-export const updateProduct = async (id: string, updates: Partial<Product>, imageFile?: File): Promise<Product | null> => {
+export const updateProduct = async (id: string, updates: Partial<Product>, imageFile?: File | string): Promise<Product | null> => {
   try {
+    console.log("Updating product:", id, "with updates:", updates, "and image:", typeof imageFile === 'string' ? 'URL' : (imageFile ? 'File' : 'None'));
+    
+    // If there's an image (file or URL), handle it appropriately
+    let fileName = null;
+    if (imageFile) {
+      console.log("Processing new image for product:", id);
+      try {
+        if (typeof imageFile === 'string') {
+          fileName = imageFile; // Use the URL directly
+          console.log("Using external URL for image:", fileName);
+        } else {
+          // Fix the function call to pass both the file and ID
+          fileName = await uploadProductImage(imageFile, id);
+          console.log("Image uploaded, filename:", fileName);
+        }
+      } catch (uploadError) {
+        console.error("Error with image:", uploadError);
+        // Continue with the update even if the image handling fails
+      }
+    }
+    
     const dbUpdates: any = { ...updates };
     
     // Handle imageUrl -> imageurl mapping

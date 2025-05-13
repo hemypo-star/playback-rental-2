@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -97,7 +96,7 @@ export const useProductManagement = () => {
         
         // Handle image upload if it's a File object
         if (data.imageFile && data.imageFile instanceof File) {
-          imageUrl = await uploadProductImage(data.imageFile);
+          imageUrl = await uploadProductImage(data.imageFile, id);
         }
 
         // Update product with the image URL (either newly uploaded or existing)
