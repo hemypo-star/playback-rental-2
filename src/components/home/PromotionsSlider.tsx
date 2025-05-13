@@ -21,14 +21,14 @@ export const PromotionsSlider = () => {
   }
   
   return (
-    <section className="py-3 px-4">
+    <section className="py-2 px-4">
       <div className="container mx-auto">
-        <h2 className="text-3xl font-bold mb-2 text-center">Акции</h2>
+        <h2 className="text-2xl font-bold mb-1 text-center">Акции</h2>
         
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="w-full h-[180px]">
+              <div key={i} className="w-full h-[140px]">
                 <Skeleton className="w-full h-full" />
               </div>
             ))}
@@ -47,7 +47,7 @@ export const PromotionsSlider = () => {
           >
             <CarouselContent>
               {promotions?.map((promotion) => (
-                <CarouselItem key={promotion.id} className="md:basis-1/3 lg:basis-1/3">
+                <CarouselItem key={promotion.id} className="md:basis-1/4 lg:basis-1/5">
                   <Link to={promotion.linkurl} className="block h-full">
                     <Card className="relative overflow-hidden h-full">
                       <AspectRatio ratio={3/4} className="bg-muted">
@@ -61,9 +61,9 @@ export const PromotionsSlider = () => {
                             target.src = '/placeholder.svg';
                           }}
                         />
-                        <div className="absolute bottom-0 left-0 right-0 p-3 pb-5 flex justify-center">
-                          <Button variant="default" size="sm" className="z-10">
-                            Узнать подробнее
+                        <div className="absolute bottom-0 left-0 right-0 p-2 pb-3 flex justify-center">
+                          <Button variant="default" size="sm" className="z-10 text-xs">
+                            Подробнее
                           </Button>
                         </div>
                       </AspectRatio>

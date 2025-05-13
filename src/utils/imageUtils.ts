@@ -4,21 +4,22 @@ import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
 
 /**
- * Uploads a product image to Supabase storage and returns the URL
- * @param imageFile The image file or URL to upload
+ * Uploads a product image to Supabase storage
+ * @param imageFile The image file to upload
+ * @param productId Optional product ID for updates
  * @returns The URL of the uploaded image
  */
-export const uploadProductImage = async (imageFile: File | string): Promise<string> => {
+export const uploadProductImage = async (imageFile: File | string, productId?: string): Promise<string> => {
   // If imageFile is already a URL (string), just return it
   if (typeof imageFile === 'string') {
     return imageFile;
   }
-
+  
   // Ensure the products bucket exists
   await ensurePublicBucket('products');
   
   const timestamp = new Date().getTime();
-  const fileName = `${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
+  const fileName = `${productId ? `${productId}_` : ''}${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
   const filePath = `${fileName}`;
   
   try {
@@ -30,11 +31,11 @@ export const uploadProductImage = async (imageFile: File | string): Promise<stri
       });
       
     if (uploadError) {
-      console.error('Error uploading image:', uploadError);
-      throw new Error(`Error uploading image: ${uploadError.message}`);
+      console.error('Error uploading product image:', uploadError);
+      throw new Error(`Error uploading product image: ${uploadError.message}`);
     }
     
-    // Return the public URL of the image
+    // Return the path of the uploaded image
     return filePath;
   } catch (error) {
     console.error('Error in uploadProductImage:', error);
