@@ -1,148 +1,166 @@
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { Product } from '@/types/product';
-import * as supabaseService from '@/services/supabaseService';
-import { ProductFormValues } from '@/components/admin/products/ProductForm';
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  getProducts, 
+  createProduct, 
+  updateProduct, 
+  deleteProduct,
+  exportProductsToCSV,
+  importProductsFromCSV 
+} from "@/services/productService";
+import { uploadProductImage } from "@/utils/imageUtils";
+import { ProductFormValues } from "@/types/product";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 
 export const useProductManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch products data
-  const { data: products, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ['products'],
-    queryFn: supabaseService.getProducts,
-  });
-
-  // Fetch categories data
-  const { data: categories, isLoading: isLoadingCategories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: supabaseService.getCategories,
-  });
-
-  // Create product mutation
-  const createProductMutation = useMutation({
-    mutationFn: async (values: ProductFormValues) => {
+  // Add product mutation
+  const addProductMutation = useMutation({
+    mutationFn: async (productData: ProductFormValues) => {
+      setIsLoading(true);
       try {
-        // Pass the image as is (could be File or string)
-        return supabaseService.createProduct({
-          ...values,
-        }, imageForProduct);
-      } catch (error) {
-        console.error('Error in createProductMutation:', error);
-        throw error;
+        let imageUrl = productData.imageUrl;
+        
+        // Handle image upload if it's a File object
+        if (productData.imageFile && productData.imageFile instanceof File) {
+          imageUrl = await uploadProductImage(productData.imageFile);
+        }
+
+        // Create product with the image URL (either uploaded or external URL)
+        const newProduct = await createProduct({
+          ...productData,
+          imageUrl: imageUrl || '',
+        });
+
+        return newProduct;
+      } finally {
+        setIsLoading(false);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
-        title: 'Товар добавлен',
-        description: 'Товар успешно добавлен в каталог',
+        title: "Продукт добавлен",
+        description: "Новый продукт успешно добавлен",
       });
-      setOpenDialog(false);
-      setImageForProduct(null);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: 'Ошибка',
-        description: `Не удалось добавить товар: ${error}`,
-        variant: 'destructive',
+        title: "Ошибка",
+        description: `Не удалось добавить продукт: ${error.message}`,
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Update product mutation
   const updateProductMutation = useMutation({
-    mutationFn: async (values: { id: string; product: Partial<Product> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: ProductFormValues }) => {
+      setIsLoading(true);
       try {
-        // Pass the image as is (could be File or string)
-        return supabaseService.updateProduct(values.id, values.product, imageForProduct);
-      } catch (error) {
-        console.error('Error in updateProductMutation:', error);
-        throw error;
+        let imageUrl = data.imageUrl;
+        
+        // Handle image upload if it's a File object
+        if (data.imageFile && data.imageFile instanceof File) {
+          imageUrl = await uploadProductImage(data.imageFile, id);
+        }
+
+        // Update product with the image URL (either newly uploaded or existing)
+        const updatedProduct = await updateProduct(id, {
+          ...data,
+          imageUrl: imageUrl || '',
+        });
+
+        return updatedProduct;
+      } finally {
+        setIsLoading(false);
       }
     },
-    onSuccess: (data) => {
-      if (!data) {
-        toast({
-          title: 'Ошибка',
-          description: 'Не удалось обновить товар',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
-        title: 'Товар обновлен',
-        description: 'Товар успешно обновлен',
+        title: "Продукт обновлен",
+        description: "Продукт успешно обновлен",
       });
-      setOpenDialog(false);
-      setEditProduct(null);
-      setImageForProduct(null);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: 'Ошибка',
-        description: `Не удалось обновить товар: ${error}`,
-        variant: 'destructive',
+        title: "Ошибка",
+        description: `Не удалось обновить продукт: ${error.message}`,
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
-    mutationFn: (id: string) => supabaseService.deleteProduct(id),
+    mutationFn: deleteProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
-        title: 'Товар удален',
-        description: 'Товар успешно удален из каталога',
+        title: "Продукт удален",
+        description: "Продукт успешно удален",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: 'Ошибка',
-        description: `Не удалось удалить товар: ${error}`,
-        variant: 'destructive',
+        title: "Ошибка",
+        description: `Не удалось удалить продукт: ${error.message}`,
+        variant: "destructive",
       });
-    }
+    },
   });
 
-  // Handle editing a product
-  const handleEditProduct = (product: Product) => {
-    setEditProduct(product);
-    setOpenDialog(true);
-    setImageForProduct(null); // Reset image when editing
+  // Handlers for export and import
+  const handleExport = async () => {
+    try {
+      setIsLoading(true);
+      await exportProductsToCSV();
+      toast({
+        title: "Экспорт завершен",
+        description: "Продукты успешно экспортированы в CSV",
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка экспорта",
+        description: error instanceof Error ? error.message : "Неизвестная ошибка",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Handle deleting a product
-  const handleDeleteProduct = (id: string) => {
-    if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
-      deleteProductMutation.mutate(id);
+  const handleImport = async (file: File) => {
+    try {
+      setIsLoading(true);
+      await importProductsFromCSV(file);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({
+        title: "Импорт завершен",
+        description: "Продукты успешно импортированы из CSV",
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка импорта",
+        description: error instanceof Error ? error.message : "Неизвестная ошибка",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return {
-    products,
-    categories,
-    isLoadingProducts,
-    isLoadingCategories,
-    openDialog,
-    setOpenDialog,
-    editProduct,
-    setEditProduct,
-    imageForProduct,
-    setImageForProduct,
-    createProductMutation,
-    updateProductMutation,
-    deleteProductMutation,
-    handleEditProduct,
-    handleDeleteProduct,
+    isLoading,
+    addProduct: addProductMutation.mutate,
+    updateProduct: updateProductMutation.mutate,
+    deleteProduct: deleteProductMutation.mutate,
+    handleExport,
+    handleImport
   };
 };

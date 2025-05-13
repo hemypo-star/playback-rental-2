@@ -7,6 +7,7 @@ export * from './authService';
 export * from './settingsService';
 export * from './supabaseClient';
 export * from './storageService';
+export * from './promotionService';
 
 // Deprecated: Use individual service imports instead
 // This re-export is maintained for backward compatibility
@@ -56,3 +57,12 @@ export {
   uploadProductImage,
   getProductImageUrl
 } from '@/utils/imageUtils';
+
+export {
+  getPromotions,
+  getActivePromotions,
+  createPromotion,
+  updatePromotion,
+  deletePromotion,
+  reorderPromotions
+} from './promotionService';

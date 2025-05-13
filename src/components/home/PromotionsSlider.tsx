@@ -1,0 +1,82 @@
+
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getActivePromotions } from '@/services/promotionService';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export const PromotionsSlider = () => {
+  const { data: promotions, isLoading, error } = useQuery({
+    queryKey: ['activePromotions'],
+    queryFn: getActivePromotions
+  });
+  
+  // If there are no promotions or there's an error, don't render the section
+  if ((!promotions || promotions.length === 0) && !isLoading) {
+    return null;
+  }
+  
+  return (
+    <section className="py-12 px-4">
+      <div className="container mx-auto">
+        <h2 className="text-3xl font-bold mb-8 text-center">Акции</h2>
+        
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="w-full h-[500px]">
+                <Skeleton className="w-full h-full" />
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center text-destructive">
+            Ошибка загрузки акций
+          </div>
+        ) : (
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true
+            }}
+            className="w-full"
+          >
+            <CarouselContent>
+              {promotions?.map((promotion) => (
+                <CarouselItem key={promotion.id} className="md:basis-1/3 lg:basis-1/3">
+                  <Link to={promotion.linkUrl} className="block h-full">
+                    <Card className="relative overflow-hidden h-full">
+                      <AspectRatio ratio={9/16} className="bg-muted">
+                        <img 
+                          src={promotion.imageUrl.startsWith('http') ? promotion.imageUrl : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageUrl}`}
+                          alt={promotion.title}
+                          className="object-cover w-full h-full"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = '/placeholder.svg';
+                          }}
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 flex justify-center">
+                          <Button variant="default" size="sm" className="z-10">
+                            Узнать подробнее
+                          </Button>
+                        </div>
+                      </AspectRatio>
+                    </Card>
+                  </Link>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="left-1 lg:-left-12" />
+            <CarouselNext className="right-1 lg:-right-12" />
+          </Carousel>
+        )}
+      </div>
+    </section>
+  );
+};
