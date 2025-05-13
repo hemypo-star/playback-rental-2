@@ -3,6 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Promotion, PromotionFormValues } from '@/types/promotion';
 import { uploadProductImage } from '@/utils/imageUtils';
 
+// Function to convert DB row to our Promotion interface
+const mapDbRowToPromotion = (row: any): Promotion => ({
+  id: row.id,
+  title: row.title,
+  imageurl: row.imageurl,
+  linkurl: row.linkurl,
+  order: row.order,
+  active: row.active,
+  created_at: row.created_at,
+});
+
 // Get all promotions, ordered by the 'order' field
 export const getPromotions = async (): Promise<Promotion[]> => {
   try {
@@ -18,7 +29,7 @@ export const getPromotions = async (): Promise<Promotion[]> => {
     }
     
     console.log(`Retrieved ${data?.length || 0} promotions`);
-    return data || [];
+    return data?.map(mapDbRowToPromotion) || [];
   } catch (error) {
     console.error('Error in getPromotions:', error);
     throw error;
@@ -41,7 +52,7 @@ export const getActivePromotions = async (): Promise<Promotion[]> => {
     }
     
     console.log(`Retrieved ${data?.length || 0} active promotions`);
-    return data || [];
+    return data?.map(mapDbRowToPromotion) || [];
   } catch (error) {
     console.error('Error in getActivePromotions:', error);
     throw error;
@@ -70,12 +81,13 @@ export const createPromotion = async (promotionData: PromotionFormValues): Promi
     
     const newOrder = maxOrderData && maxOrderData.length > 0 ? (maxOrderData[0].order + 1) : 0;
     
+    // Insert new promotion with database column names
     const { data, error } = await supabase
       .from('promotions')
       .insert([{
         title: promotionData.title,
-        imageUrl: imageUrl,
-        linkUrl: promotionData.linkUrl,
+        imageurl: imageUrl,
+        linkurl: promotionData.linkUrl,
         active: promotionData.active,
         order: newOrder
       }])
@@ -88,7 +100,7 @@ export const createPromotion = async (promotionData: PromotionFormValues): Promi
     }
     
     console.log('Promotion created successfully:', data);
-    return data;
+    return mapDbRowToPromotion(data);
   } catch (error) {
     console.error('Error in createPromotion:', error);
     throw error;
@@ -112,8 +124,8 @@ export const updatePromotion = async (id: string, promotionData: PromotionFormVa
       .from('promotions')
       .update({
         title: promotionData.title,
-        imageUrl: imageUrl,
-        linkUrl: promotionData.linkUrl,
+        imageurl: imageUrl,
+        linkurl: promotionData.linkUrl,
         active: promotionData.active
       })
       .eq('id', id)
@@ -126,7 +138,7 @@ export const updatePromotion = async (id: string, promotionData: PromotionFormVa
     }
     
     console.log(`Promotion ${id} updated successfully:`, data);
-    return data;
+    return mapDbRowToPromotion(data);
   } catch (error) {
     console.error(`Error in updatePromotion for ID ${id}:`, error);
     throw error;

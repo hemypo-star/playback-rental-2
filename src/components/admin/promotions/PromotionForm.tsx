@@ -27,9 +27,9 @@ type PromotionFormProps = {
 const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: PromotionFormProps) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(
-    promotion?.imageUrl ? promotion.imageUrl.startsWith('http') 
-      ? promotion.imageUrl 
-      : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageUrl}` 
+    promotion?.imageurl ? promotion.imageurl.startsWith('http') 
+      ? promotion.imageurl 
+      : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageurl}` 
       : null
   );
   
@@ -37,7 +37,7 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
     resolver: zodResolver(promotionSchema),
     defaultValues: {
       title: promotion?.title || '',
-      linkUrl: promotion?.linkUrl || '',
+      linkUrl: promotion?.linkurl || '',
       active: promotion?.active !== undefined ? promotion.active : true,
     },
   });
@@ -54,9 +54,11 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
 
   const handleSubmit = (values: z.infer<typeof promotionSchema>) => {
     onSubmit({
-      ...values,
+      title: values.title,
       imageFile,
       imageUrl: typeof imagePreviewUrl === 'string' ? imagePreviewUrl : undefined,
+      linkUrl: values.linkUrl,
+      active: values.active,
     });
   };
 

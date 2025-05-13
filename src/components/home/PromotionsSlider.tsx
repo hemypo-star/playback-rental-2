@@ -48,11 +48,11 @@ export const PromotionsSlider = () => {
             <CarouselContent>
               {promotions?.map((promotion) => (
                 <CarouselItem key={promotion.id} className="md:basis-1/3 lg:basis-1/3">
-                  <Link to={promotion.linkUrl} className="block h-full">
+                  <Link to={promotion.linkurl} className="block h-full">
                     <Card className="relative overflow-hidden h-full">
                       <AspectRatio ratio={9/16} className="bg-muted">
                         <img 
-                          src={promotion.imageUrl.startsWith('http') ? promotion.imageUrl : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageUrl}`}
+                          src={promotion.imageurl.startsWith('http') ? promotion.imageurl : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageurl}`}
                           alt={promotion.title}
                           className="object-cover w-full h-full"
                           onError={(e) => {

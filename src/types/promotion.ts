@@ -2,8 +2,8 @@
 export interface Promotion {
   id: string;
   title: string;
-  imageUrl: string;
-  linkUrl: string;
+  imageurl: string;
+  linkurl: string;
   order: number;
   active: boolean;
   created_at?: string;

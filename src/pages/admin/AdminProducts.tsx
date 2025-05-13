@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { useStorageStatus } from '@/hooks/useStorageStatus';
 import ProductActions from '@/components/admin/products/ProductActions';
 import ProductTabs from '@/components/admin/products/ProductTabs';
 import InitializeStorage from '@/components/admin/InitializeStorage';
-import { ProductFormValues } from '@/components/admin/products/ProductForm';
+import { ProductFormValues } from '@/hooks/useProductManagement';
 
 const AdminProducts = () => {
   const {
@@ -50,39 +49,12 @@ const AdminProducts = () => {
     setImageForProduct(imageFile);
   
     try {
-      const cleanUpdates: Partial<any> = {};
-  
-      if (formData.title && formData.title.trim() !== '') {
-        cleanUpdates.title = formData.title;
-      }
-      
-      if (formData.description !== undefined) {
-        cleanUpdates.description = formData.description;
-      }
-      
-      if (formData.price !== undefined) {
-        cleanUpdates.price = formData.price;
-      }
-      
-      if (formData.category && formData.category.trim() !== '') {
-        cleanUpdates.category = formData.category;
-      }
-      
-      if (formData.imageUrl && formData.imageUrl.trim() !== '') {
-        cleanUpdates.imageUrl = formData.imageUrl;
-      }
-      
-      if (formData.available !== undefined) {
-        cleanUpdates.available = formData.available;
-      }
-      
-      if (formData.quantity !== undefined) {
-        cleanUpdates.quantity = formData.quantity;
-      }
-      
       await updateProductMutation.mutateAsync({
         id: editProduct.id,
-        product: cleanUpdates
+        data: {
+          ...formData,
+          imageFile: imageFile instanceof File ? imageFile : undefined
+        }
       });
     } catch (error) {
       console.error('Ошибка при обновлении товара:', error);
