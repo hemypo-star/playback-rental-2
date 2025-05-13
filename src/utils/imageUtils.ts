@@ -61,9 +61,10 @@ export const getProductImageUrl = (imageUrl: string): string => {
 /**
  * Uploads a category image to Supabase storage
  * @param imageFile The image file to upload
+ * @param categoryId Optional category ID for updates
  * @returns The URL of the uploaded image
  */
-export const uploadCategoryImage = async (imageFile: File | string): Promise<string> => {
+export const uploadCategoryImage = async (imageFile: File | string, categoryId?: string): Promise<string> => {
   // If imageFile is already a URL (string), just return it
   if (typeof imageFile === 'string') {
     return imageFile;
@@ -73,7 +74,7 @@ export const uploadCategoryImage = async (imageFile: File | string): Promise<str
   await ensurePublicBucket('categories');
   
   const timestamp = new Date().getTime();
-  const fileName = `${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
+  const fileName = `${categoryId ? `${categoryId}_` : ''}${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
   const filePath = `${fileName}`;
   
   try {

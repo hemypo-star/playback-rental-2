@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Category } from '@/types/product';
 import { uploadProductImage, uploadCategoryImage as uploadCategoryImageUtil } from '@/utils/imageUtils';
@@ -266,6 +267,7 @@ export const updateCategory = async (id: string, updates: Partial<Category>, ima
     }
     
     // If we have an image file, upload it first
+    // Fixed: Pass categoryId as the second parameter to match function signature
     if (imageFile) {
       const imageUrl = await uploadCategoryImage(imageFile, id);
       dbUpdates.imageurl = imageUrl;
