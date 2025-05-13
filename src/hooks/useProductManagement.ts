@@ -97,7 +97,7 @@ export const useProductManagement = () => {
         
         // Handle image upload if it's a File object
         if (data.imageFile && data.imageFile instanceof File) {
-          // Fixed: Pass the File object as the first parameter, id as second parameter
+          // Fixed: Pass both parameters with the correct types
           imageUrl = await uploadProductImage(data.imageFile, id);
         }
 
