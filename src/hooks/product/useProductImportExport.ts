@@ -15,7 +15,19 @@ export const useProductImportExport = () => {
   const handleExport = async () => {
     try {
       setIsLoading(true);
-      await exportProductsToCSV();
+      const csvContent = await exportProductsToCSV();
+      
+      // Create a blob and download it
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `products_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
       toast({
         title: "Экспорт завершен",
         description: "Продукты успешно экспортированы в CSV",
@@ -34,7 +46,18 @@ export const useProductImportExport = () => {
   const handleImport = async (file: File) => {
     try {
       setIsLoading(true);
-      await importProductsFromCSV(file);
+      
+      // Read the file content as text
+      const fileContent = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+      
+      // Now pass the string content to importProductsFromCSV
+      await importProductsFromCSV(fileContent);
+      
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: "Импорт завершен",
