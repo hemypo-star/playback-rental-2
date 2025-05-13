@@ -21,14 +21,14 @@ export const PromotionsSlider = () => {
   }
   
   return (
-    <section className="py-6 px-4">
+    <section className="py-3 px-4">
       <div className="container mx-auto">
-        <h2 className="text-3xl font-bold mb-4 text-center">Акции</h2>
+        <h2 className="text-3xl font-bold mb-2 text-center">Акции</h2>
         
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="w-full h-[250px]">
+              <div key={i} className="w-full h-[180px]">
                 <Skeleton className="w-full h-full" />
               </div>
             ))}
@@ -50,7 +50,7 @@ export const PromotionsSlider = () => {
                 <CarouselItem key={promotion.id} className="md:basis-1/3 lg:basis-1/3">
                   <Link to={promotion.linkurl} className="block h-full">
                     <Card className="relative overflow-hidden h-full">
-                      <AspectRatio ratio={16/9} className="bg-muted">
+                      <AspectRatio ratio={3/4} className="bg-muted">
                         <img 
                           src={promotion.imageurl.startsWith('http') ? promotion.imageurl : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageurl}`}
                           alt={promotion.title}
@@ -61,7 +61,7 @@ export const PromotionsSlider = () => {
                             target.src = '/placeholder.svg';
                           }}
                         />
-                        <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 flex justify-center">
+                        <div className="absolute bottom-0 left-0 right-0 p-3 pb-5 flex justify-center">
                           <Button variant="default" size="sm" className="z-10">
                             Узнать подробнее
                           </Button>
