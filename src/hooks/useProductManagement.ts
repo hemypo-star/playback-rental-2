@@ -10,16 +10,47 @@ import {
   importProductsFromCSV 
 } from "@/services/productService";
 import { uploadProductImage } from "@/utils/imageUtils";
-import { ProductFormValues } from "@/types/product";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { Product } from "@/types/product";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
+
+export interface ProductFormValues {
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  imageUrl?: string;
+  imageFile?: File | null;
+  available: boolean;
+  quantity: number;
+}
 
 export const useProductManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
+
+  // Query to fetch products
+  const productsQuery = useQuery({
+    queryKey: ['products'],
+    queryFn: getProducts,
+  });
+
+  // Query to fetch categories from products
+  const categoriesQuery = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const products = await getProducts();
+      const uniqueCategories = [...new Set(products.map(prod => prod.category))];
+      return uniqueCategories.map(cat => ({ name: cat }));
+    },
+    enabled: !!productsQuery.data,
+  });
 
   // Add product mutation
-  const addProductMutation = useMutation({
+  const createProductMutation = useMutation({
     mutationFn: async (productData: ProductFormValues) => {
       setIsLoading(true);
       try {
@@ -66,7 +97,7 @@ export const useProductManagement = () => {
         
         // Handle image upload if it's a File object
         if (data.imageFile && data.imageFile instanceof File) {
-          imageUrl = await uploadProductImage(data.imageFile, id);
+          imageUrl = await uploadProductImage(data.imageFile);
         }
 
         // Update product with the image URL (either newly uploaded or existing)
@@ -155,9 +186,32 @@ export const useProductManagement = () => {
     }
   };
 
+  const handleEditProduct = (product: Product) => {
+    setEditProduct(product);
+    setOpenDialog(true);
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    deleteProductMutation.mutate(id);
+  };
+
   return {
+    products: productsQuery.data || [],
+    categories: categoriesQuery.data || [],
+    isLoadingProducts: productsQuery.isLoading,
     isLoading,
-    addProduct: addProductMutation.mutate,
+    openDialog,
+    setOpenDialog,
+    editProduct,
+    setEditProduct,
+    imageForProduct,
+    setImageForProduct,
+    createProductMutation,
+    updateProductMutation, 
+    deleteProductMutation,
+    handleEditProduct,
+    handleDeleteProduct,
+    addProduct: createProductMutation.mutate,
     updateProduct: updateProductMutation.mutate,
     deleteProduct: deleteProductMutation.mutate,
     handleExport,
