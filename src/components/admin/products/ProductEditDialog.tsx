@@ -6,6 +6,7 @@ import { Product, Category } from "@/types/product";
 import ProductForm, { ProductFormValues } from "./ProductForm";
 import { UseFormReturn } from "react-hook-form";
 import { UseMutationResult } from "@tanstack/react-query";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type ProductEditDialogProps = {
   open: boolean;
@@ -57,19 +58,23 @@ export default function ProductEditDialog({
       </Button>
       
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[550px] max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{editProduct ? 'Редактировать товар' : 'Добавить товар'}</DialogTitle>
           </DialogHeader>
           
           {open && (
-            <ProductForm
-              editProduct={editProduct}
-              categories={categories || []}
-              isSubmitting={isSubmitting}
-              onSubmit={handleSubmit}
-              onCancel={handleCancel}
-            />
+            <ScrollArea className="max-h-[70vh]">
+              <div className="pr-4">
+                <ProductForm
+                  editProduct={editProduct}
+                  categories={categories || []}
+                  isSubmitting={isSubmitting}
+                  onSubmit={handleSubmit}
+                  onCancel={handleCancel}
+                />
+              </div>
+            </ScrollArea>
           )}
         </DialogContent>
       </Dialog>
