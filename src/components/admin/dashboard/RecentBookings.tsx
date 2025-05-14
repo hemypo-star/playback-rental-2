@@ -2,6 +2,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BookingPeriod } from '@/types/product';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 interface RecentBookingsProps {
   bookings: BookingPeriod[] | undefined;
@@ -19,6 +21,22 @@ export const RecentBookings = ({ bookings, isLoading }: RecentBookingsProps) => 
     }
   };
 
+  const getStatusLabel = (status: string): string => {
+    switch (status) {
+      case 'confirmed': return 'Подтверждено';
+      case 'pending': return 'В ожидании';
+      case 'cancelled': return 'Отменено';
+      case 'completed': return 'Завершено';
+      default: return status;
+    }
+  };
+
+  const formatDate = (date: Date): string => {
+    return format(date, 'dd MMM yyyy', { locale: ru });
+  };
+
+  const recentBookings = bookings?.slice(0, 5) || [];
+
   return (
     <Card>
       <CardHeader>
@@ -28,35 +46,32 @@ export const RecentBookings = ({ bookings, isLoading }: RecentBookingsProps) => 
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {!bookings ? (
+        {isLoading ? (
           <div className="flex items-center justify-center h-32">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ) : bookings.length > 0 ? (
-          <div className="space-y-2">
-            {bookings.slice(0, 5).map((booking) => (
-              <div key={booking.id} className="flex items-center justify-between border-b pb-2">
+        ) : recentBookings.length > 0 ? (
+          <div className="space-y-3">
+            {recentBookings.map((booking) => (
+              <div key={booking.id} className="flex items-center justify-between border-b pb-3">
                 <div>
                   <p className="font-medium">{booking.customerName}</p>
-                  <p className="text-sm text-muted-foreground">{booking.customerPhone}</p>
+                  <div className="text-sm text-muted-foreground flex flex-col">
+                    <span>{booking.customerPhone}</span>
+                    <span className="text-xs">{formatDate(booking.startDate)}</span>
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="font-medium">{booking.totalPrice?.toLocaleString() || '0'} ₽</p>
                   <Badge className={formatStatus(booking.status)}>
-                    {booking.status === 'confirmed' 
-                      ? 'Подтверждено' 
-                      : booking.status === 'pending' 
-                      ? 'В ожидании'
-                      : booking.status === 'cancelled'
-                      ? 'Отменено'
-                      : 'Завершено'}
+                    {getStatusLabel(booking.status)}
                   </Badge>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground">Нет заявок на бронирование</p>
+          <p className="text-muted-foreground py-8 text-center">Нет заявок на бронирование</p>
         )}
       </CardContent>
     </Card>

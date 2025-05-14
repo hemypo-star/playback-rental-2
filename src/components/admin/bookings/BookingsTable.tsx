@@ -61,7 +61,7 @@ export const BookingsTable = ({ bookings, isLoading, isError, onViewDetails, onS
           </TableRow>
         ) : (
           bookings.map(booking => (
-            <TableRow key={booking.id} className="cursor-pointer" onClick={() => onViewDetails(booking)}>
+            <TableRow key={booking.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onViewDetails(booking)}>
               <TableCell>{booking.customerName}</TableCell>
               <TableCell>{booking.product?.title || 'Неизвестный продукт'}</TableCell>
               <TableCell>{booking.customerEmail}</TableCell>

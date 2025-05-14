@@ -33,7 +33,7 @@ export default function ProductTableRow({
           </div>
         )}
       </TableCell>
-      <TableCell className="font-mono text-xs">{product.id}</TableCell>
+      <TableCell className="font-mono text-sm">{product.id.substring(0, 8)}...</TableCell>
       <TableCell className="font-medium">
         <div className="flex justify-between items-center gap-2">
           {product.title}
@@ -68,6 +68,7 @@ export default function ProductTableRow({
             updateMutation.mutate({ id: product.id, product: { available: newStatus === "confirmed" } });
           }}
           options={statusOptions}
+          disabled={updateMutation.isPending}
         />
       </TableCell>
     </TableRow>

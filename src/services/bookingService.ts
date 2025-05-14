@@ -2,12 +2,15 @@
 import { BookingPeriod, BookingFormData } from '@/types/product';
 import { supabaseServiceClient } from './supabaseClient';
 import { getProducts } from './productService';
+import { supabase } from '@/integrations/supabase/client';
+import { formatDateRu, isDateRangeAvailable } from '@/utils/dateUtils';
 
 export const getBookings = async (): Promise<BookingPeriod[]> => {
   try {
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('bookings')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
     
@@ -32,10 +35,11 @@ export const getBookings = async (): Promise<BookingPeriod[]> => {
 
 export const getProductBookings = async (productId: string): Promise<BookingPeriod[]> => {
   try {
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('bookings')
       .select('*')
-      .eq('product_id', productId);
+      .eq('product_id', productId)
+      .order('start_date', { ascending: true });
     
     if (error) throw error;
     
@@ -70,7 +74,7 @@ export const createBooking = async (booking: {
   notes?: string;
 }): Promise<BookingPeriod> => {
   try {
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('bookings')
       .insert({
         product_id: booking.productId,
@@ -109,7 +113,7 @@ export const createBooking = async (booking: {
 
 export const updateBookingStatus = async (bookingId: string, status: BookingPeriod['status']) => {
   try {
-    const { data, error } = await supabaseServiceClient
+    const { data, error } = await supabase
       .from('bookings')
       .update({ status })
       .eq('id', bookingId)
@@ -126,34 +130,55 @@ export const updateBookingStatus = async (bookingId: string, status: BookingPeri
 
 export const getAvailableProducts = async (startDate: Date, endDate: Date) => {
   try {
-    const products = await getProducts();
-    const bookings = await getBookings();
+    console.log("Getting available products between", formatDateRu(startDate, 'yyyy-MM-dd HH:mm'), "and", formatDateRu(endDate, 'yyyy-MM-dd HH:mm'));
     
-    console.log("Filtering products for availability between", startDate, "and", endDate);
+    // Get all active products
+    const products = await getProducts();
+    const availableProducts = products.filter(product => product.available);
+    
+    // If no date range is provided, return all available products
+    if (!startDate || !endDate) {
+      console.log("No date range provided, returning all available products:", availableProducts.length);
+      return availableProducts;
+    }
+    
+    // Get all bookings
+    const bookings = await getBookings();
     console.log("Total bookings in system:", bookings.length);
     
-    const availableProducts = products.filter(product => {
-      if (!product.available) return false;
-      
-      const productBookings = bookings.filter(booking => booking.productId === product.id);
+    // Filter out products that are booked in the requested period
+    const result = availableProducts.filter(product => {
+      // Get bookings for this product that are confirmed or pending
+      const productBookings = bookings.filter(
+        booking => booking.productId === product.id && 
+                  ['confirmed', 'pending'].includes(booking.status)
+      );
       
       if (productBookings.length === 0) {
-        return true;
+        return true; // No bookings for this product, it's available
       }
       
-      const productBookedRanges = productBookings.map(booking => ({
-        start: new Date(booking.startDate),
-        end: new Date(booking.endDate)
+      // Convert bookings to date ranges
+      const bookedRanges = productBookings.map(booking => ({
+        start: booking.startDate,
+        end: booking.endDate
       }));
       
-      // Import this function dynamically to avoid circular dependencies
-      const { isDateRangeAvailable } = require('@/utils/dateUtils');
-      return isDateRangeAvailable(startDate, endDate, productBookedRanges);
+      // Check if the current product quantity can handle another booking
+      const overlappingBookingsCount = bookedRanges.filter(range => 
+        !(endDate <= range.start || startDate >= range.end)
+      ).length;
+      
+      // Product is available if it has more quantity than overlapping bookings
+      const isAvailable = overlappingBookingsCount < (product.quantity || 1);
+      
+      console.log(`Product ${product.id} (${product.title}): ${isAvailable ? 'available' : 'not available'} - ${overlappingBookingsCount} overlapping bookings out of ${product.quantity} quantity`);
+      
+      return isAvailable;
     });
     
-    console.log("Available products count:", availableProducts.length);
-    
-    return availableProducts;
+    console.log("Available products for selected period:", result.length);
+    return result;
   } catch (error) {
     console.error('Error getting available products:', error);
     return [];
