@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { checkAuth, logout, getCurrentUser } from '@/services/authService';
@@ -15,14 +14,16 @@ import { LogOut, Settings, User, FolderOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import FileExplorer from '@/components/admin/FileExplorer';
 import { supabase } from '@/integrations/supabase/client';
-
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState<{email: string} | null>(null);
+  const {
+    toast
+  } = useToast();
+  const [currentUser, setCurrentUser] = useState<{
+    email: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
   useEffect(() => {
     // Check authentication on component mount
     const verifyAuth = async () => {
@@ -38,13 +39,16 @@ export default function Admin() {
           navigate('/login');
           return;
         }
-        
+
         // Get current user
         const user = getCurrentUser();
         setCurrentUser(user);
 
         // Also ensure Supabase session is valid
-        const { data, error } = await supabase.auth.getSession();
+        const {
+          data,
+          error
+        } = await supabase.auth.getSession();
         if (error || !data.session) {
           toast({
             title: 'Сессия истекла',
@@ -67,10 +71,8 @@ export default function Admin() {
         setIsLoading(false);
       }
     };
-    
     verifyAuth();
   }, [navigate, toast]);
-  
   const handleLogout = () => {
     logout();
     toast({
@@ -79,17 +81,12 @@ export default function Admin() {
     });
     navigate('/login');
   };
-
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
+    return <div className="flex justify-center items-center h-screen">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="container mx-auto px-4 py-10">
+  return <div className="container mx-auto px-4 py-10">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Панель администратора</h1>
         <div className="flex items-center gap-4">
@@ -112,7 +109,7 @@ export default function Admin() {
           <TabsTrigger value="promotions">Акции</TabsTrigger>
           <TabsTrigger value="bookings">Бронирования</TabsTrigger>
           <TabsTrigger value="calendar">Календарь</TabsTrigger>
-          <TabsTrigger value="storage">Файлы</TabsTrigger>
+          
           <TabsTrigger value="settings">Настройки</TabsTrigger>
         </TabsList>
         
@@ -148,6 +145,6 @@ export default function Admin() {
           <AdminSettings />
         </TabsContent>
       </Tabs>
-    </div>
-  );
-};
+    </div>;
+}
+;
