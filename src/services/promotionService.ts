@@ -69,7 +69,15 @@ export const createPromotion = async (promotionData: PromotionFormValues): Promi
     // Handle image upload if provided
     if (promotionData.imageFile) {
       console.log('Uploading promotion image...');
-      imageUrl = await uploadProductImage(promotionData.imageFile);
+      try {
+        imageUrl = await uploadProductImage(promotionData.imageFile);
+        console.log('Image uploaded successfully:', imageUrl);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        throw new Error(`Failed to upload image: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } else if (!imageUrl) {
+      throw new Error('No image provided for promotion');
     }
     
     // Get the highest current order value to place the new promotion at the end
@@ -80,6 +88,8 @@ export const createPromotion = async (promotionData: PromotionFormValues): Promi
       .limit(1);
     
     const newOrder = maxOrderData && maxOrderData.length > 0 ? (maxOrderData[0].order + 1) : 0;
+    
+    console.log('Inserting promotion with image URL:', imageUrl);
     
     // Insert new promotion with database column names
     const { data, error } = await supabase
@@ -112,13 +122,34 @@ export const updatePromotion = async (id: string, promotionData: PromotionFormVa
   try {
     console.log(`Updating promotion ${id}:`, promotionData);
     
-    let imageUrl = promotionData.imageUrl;
+    let imageUrl = promotionData.imageUrl || '';
     
     // Handle image upload if provided
     if (promotionData.imageFile) {
       console.log('Uploading new promotion image...');
-      imageUrl = await uploadProductImage(promotionData.imageFile);
+      try {
+        imageUrl = await uploadProductImage(promotionData.imageFile);
+        console.log('New image uploaded successfully:', imageUrl);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        throw new Error(`Failed to upload image: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } else if (!imageUrl) {
+      // If we're updating and no new image is provided, we need to get the existing one
+      const { data: existingPromotion } = await supabase
+        .from('promotions')
+        .select('imageurl')
+        .eq('id', id)
+        .single();
+        
+      if (existingPromotion) {
+        imageUrl = existingPromotion.imageurl;
+      } else {
+        throw new Error('No image provided for promotion update');
+      }
     }
+    
+    console.log('Updating promotion with image URL:', imageUrl);
     
     const { data, error } = await supabase
       .from('promotions')

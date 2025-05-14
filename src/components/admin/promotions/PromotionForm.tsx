@@ -80,7 +80,7 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
         />
 
         <div className="space-y-2">
-          <FormLabel>Изображение (соотношение 9:16)</FormLabel>
+          <FormLabel>Изображение (соотношение 3:4)</FormLabel>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <ImageUploadField
@@ -89,12 +89,12 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
                 previewUrl={imagePreviewUrl}
               />
               <FormDescription className="mt-2">
-                Рекомендуемый размер: 900×1600px, соотношение сторон 9:16
+                Рекомендуемый размер: 900×1200px, соотношение сторон 3:4
               </FormDescription>
             </div>
             {imagePreviewUrl && (
               <div className="w-full max-w-xs mx-auto">
-                <AspectRatio ratio={9/16} className="bg-muted overflow-hidden rounded-md border">
+                <AspectRatio ratio={3/4} className="bg-muted overflow-hidden rounded-md border">
                   <img
                     src={imagePreviewUrl}
                     alt="Preview"
