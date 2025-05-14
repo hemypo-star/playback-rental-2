@@ -8,10 +8,12 @@ export default function StatusDropdown({
   value,
   onChange,
   options,
+  disabled,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: StatusOption[];
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
@@ -22,6 +24,7 @@ export default function StatusDropdown({
         size="sm"
         className="px-2"
         onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
       >
         {current?.label || value}
       </Button>
@@ -37,6 +40,7 @@ export default function StatusDropdown({
                 setOpen(false);
                 onChange(opt.value);
               }}
+              disabled={disabled}
             >
               {opt.label}
             </button>
