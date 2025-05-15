@@ -10,14 +10,16 @@ const Contact = () => {
       {/* Hero Section */}
       <ContactHero />
 
-      {/* Company Description Section */}
-      <CompanyDescription />
+      <div className="container mx-auto px-4">
+        {/* Company Description Section */}
+        <CompanyDescription />
 
-      {/* Contact Information & Form Section */}
-      <ContactSection />
-      
-      {/* Map Section */}
-      <MapSection />
+        {/* Contact Information & Form Section */}
+        <ContactSection />
+        
+        {/* Map Section */}
+        <MapSection />
+      </div>
     </div>
   );
 };
