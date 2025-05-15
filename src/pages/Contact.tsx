@@ -195,7 +195,7 @@ const Contact = () => {
                 <div className="space-y-2 text-muted-foreground">
                   <div className="flex justify-between">
                     <span>Будние:</span>
-                    <span>9:00 - 18:00</span>
+                    <span>10:00 - 20:00</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Выходные:</span>
