@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRightIcon, SearchIcon } from 'lucide-react';
@@ -9,14 +8,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import type { BookingPeriod } from '@/types/product';
-
 export const HeroSection = () => {
   const navigate = useNavigate();
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [searchQuery, setSearchQuery] = useState('');
   const [bannerImage, setBannerImage] = useState('public/BG.svg');
-  
   useEffect(() => {
     const fetchBannerImage = async () => {
       try {
@@ -33,12 +30,10 @@ export const HeroSection = () => {
     };
     fetchBannerImage();
   }, []);
-  
   const handleBookingChange = (bookingData: BookingPeriod) => {
     setStartDate(bookingData.startDate);
     setEndDate(bookingData.endDate);
   };
-  
   const handleSearchClick = () => {
     if (startDate && endDate) {
       navigate('/catalog', {
@@ -49,7 +44,6 @@ export const HeroSection = () => {
       });
     }
   };
-  
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     navigate('/catalog', {
@@ -59,7 +53,6 @@ export const HeroSection = () => {
       }
     });
   };
-  
   return <section className="relative h-screen max-h-[800px] flex items-center overflow-hidden">
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-black/70 to-black/40" />
       <div className="absolute inset-0 z-0 bg-cover bg-center" style={{
@@ -69,9 +62,9 @@ export const HeroSection = () => {
       <div className="container relative z-10 px-4 py-16 mx-auto">
         <div className="max-w-xl">
           <h1 className="heading-1 text-white mb-6">Playback Rental</h1>
-          <p className="text-xl text-white/90 mb-8">
-            Современная и профессиональная фото- и видеотехника, включая новейшие модели и классические решения, доступные для аренды на гибких и выгодных условиях.
-          </p>
+          <p className="text-xl text-white/90 mb-8">Аренда фото и видеотехники.
+
+Свежие новинки и вечная классика в аренду на выгодных условиях</p>
           
           <div className="w-full glass-panel p-4 rounded-xl">
             <h2 className="text-lg font-medium mb-3">Найдите доступное оборудование</h2>
