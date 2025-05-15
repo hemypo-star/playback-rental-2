@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { MailIcon, MapPinIcon, Phone, Send, Facebook } from "lucide-react";
+import { MailIcon, MapPinIcon, Phone, Send, Facebook, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { usePhoneInputMask } from "@/hooks/usePhoneInputMask";
+import { Card, CardContent } from "@/components/ui/card";
+
 const phoneRegex = /^\+7\d{10}$/;
 const nameRegex = /^[A-Za-zА-Яа-яЁё\s\-]+$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const Contact = () => {
   const {
     toast
@@ -26,6 +29,7 @@ const Contact = () => {
     message?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const {
     handlePhoneChange,
     handlePhonePaste
@@ -39,6 +43,7 @@ const Contact = () => {
       phone: undefined
     }));
   });
+  
   const validateForm = () => {
     const nextErrors: {
       name?: string;
@@ -67,6 +72,7 @@ const Contact = () => {
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.target.name === "phone") return;
     setFormState({
@@ -78,6 +84,7 @@ const Contact = () => {
       [e.target.name]: undefined
     }));
   };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -102,6 +109,7 @@ const Contact = () => {
       setErrors({});
     }, 1500);
   };
+  
   return <div className="min-h-screen">
       {/* Hero Section */}
       <section className="bg-primary text-white py-20">
@@ -113,7 +121,37 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* Contact Information & Form */}
+      {/* Company Description Section */}
+      <section className="py-16 bg-secondary/10">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <Building className="h-7 w-7 text-primary" />
+              <h2 className="heading-2">О компании Playback</h2>
+            </div>
+            
+            <Card className="subtle-ring">
+              <CardContent className="p-6 sm:p-8">
+                <div className="prose prose-slate max-w-none space-y-4">
+                  <p className="body-text">
+                    Компания Playback работает на рынке фото/видео производства с 2017года, мы гордимся нашим опытом и отличной репутацией в индустрии, предлагая в аренду оборудование от известных брендов.
+                  </p>
+                  
+                  <p className="body-text">
+                    Мы обладаем высокими компетенциями в области подбора и обслуживания техники, что позволяет нам предоставить идеальные решения для съемок различного масштаба – от небольших и крупных проектов. Наши специалисты всегда готовы помочь с выбором оборудования и предложить индивидуальные условия аренды.
+                  </p>
+                  
+                  <p className="body-text">
+                    Работаем с частными клиентами, видеографами, фотографами и производственными командами. Мы предлагаем гибкие условия аренды и предоставляем только проверенную технику, что позволяет нашим клиентам сосредоточиться на своей работе, не беспокоясь о технических вопросах.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Information & Form Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
@@ -286,4 +324,5 @@ const Contact = () => {
       </section>
     </div>;
 };
+
 export default Contact;
