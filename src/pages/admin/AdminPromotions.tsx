@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import PromotionForm from '@/components/admin/promotions/PromotionForm';
 import PromotionsList from '@/components/admin/promotions/PromotionsList';
 import { Promotion, PromotionFormValues } from '@/types/promotion';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 export default function AdminPromotions() {
   const {
     promotions,
@@ -17,6 +19,7 @@ export default function AdminPromotions() {
   } = usePromotionManagement();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | undefined>(undefined);
+  
   const handleAddClick = () => {
     setEditingPromotion(undefined);
     setDialogOpen(true);
@@ -45,6 +48,7 @@ export default function AdminPromotions() {
   const handleReorderPromotions = (ids: string[]) => {
     reorderPromotions(ids);
   };
+
   return <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Управление акциями</h1>
@@ -67,13 +71,22 @@ export default function AdminPromotions() {
       {isLoading ? <p className="text-center py-4">Загрузка...</p> : <PromotionsList promotions={promotions} onEdit={handleEditClick} onDelete={handleDeletePromotion} onReorder={handleReorderPromotions} />}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {editingPromotion ? 'Редактировать акцию' : 'Добавить акцию'}
             </DialogTitle>
           </DialogHeader>
-          <PromotionForm promotion={editingPromotion} onSubmit={handleFormSubmit} onCancel={handleFormCancel} isSubmitting={isLoading} />
+          <ScrollArea className="max-h-[70vh]">
+            <div className="pr-4">
+              <PromotionForm 
+                promotion={editingPromotion} 
+                onSubmit={handleFormSubmit} 
+                onCancel={handleFormCancel} 
+                isSubmitting={isLoading} 
+              />
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>;
