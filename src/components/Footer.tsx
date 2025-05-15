@@ -32,7 +32,7 @@ export const Footer = () => {
             <h3 className="font-semibold mb-4">Адрес</h3>
             <div className="flex items-start gap-2 text-muted-foreground">
               <MapPin className="h-4 w-4 mt-1 flex-shrink-0" />
-              <p>Г.Кемерово, ул. Демьяна Бедного, 6</p>
+              <p>г. Кемерово, ул. Демьяна Бедного, 6</p>
             </div>
           </div>
           
