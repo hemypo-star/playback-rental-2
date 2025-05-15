@@ -1,52 +1,51 @@
 import { useState } from "react";
-import { 
-  MailIcon, 
-  MapPinIcon, 
-  Phone, 
-  Send, 
-  Facebook 
-} from "lucide-react";
+import { MailIcon, MapPinIcon, Phone, Send, Facebook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { usePhoneInputMask } from "@/hooks/usePhoneInputMask";
-
 const phoneRegex = /^\+7\d{10}$/;
 const nameRegex = /^[A-Za-zА-Яа-яЁё\s\-]+$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 const Contact = () => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [formState, setFormState] = useState({
     name: "",
     email: "",
     phone: "",
     subject: "",
-    message: "",
+    message: ""
   });
   const [errors, setErrors] = useState<{
-    name?: string,
-    email?: string,
-    phone?: string,
-    message?: string
+    name?: string;
+    email?: string;
+    phone?: string;
+    message?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { handlePhoneChange, handlePhonePaste } = usePhoneInputMask((maskedValue) => {
-    setFormState((prev) => ({
+  const {
+    handlePhoneChange,
+    handlePhonePaste
+  } = usePhoneInputMask(maskedValue => {
+    setFormState(prev => ({
       ...prev,
-      phone: maskedValue,
+      phone: maskedValue
     }));
-    setErrors((prev) => ({
+    setErrors(prev => ({
       ...prev,
-      phone: undefined,
+      phone: undefined
     }));
   });
-
   const validateForm = () => {
-    const nextErrors: { name?: string; email?: string; phone?: string; message?: string } = {};
-
+    const nextErrors: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      message?: string;
+    } = {};
     if (!formState.name.trim()) {
       nextErrors.name = "Введите имя";
     } else if (!nameRegex.test(formState.name.trim())) {
@@ -65,26 +64,20 @@ const Contact = () => {
     if (!formState.message.trim()) {
       nextErrors.message = "Введите сообщение";
     }
-
     setErrors(nextErrors);
-
     return Object.keys(nextErrors).length === 0;
   };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.target.name === "phone") return;
     setFormState({
       ...formState,
-      [e.target.name]: e.target.value,
+      [e.target.name]: e.target.value
     });
-    setErrors((prev) => ({
+    setErrors(prev => ({
       ...prev,
-      [e.target.name]: undefined,
+      [e.target.name]: undefined
     }));
   };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -96,7 +89,7 @@ const Contact = () => {
     setTimeout(() => {
       toast({
         title: "Message sent!",
-        description: "We'll get back to you as soon as possible.",
+        description: "We'll get back to you as soon as possible."
       });
       setIsSubmitting(false);
       setFormState({
@@ -104,14 +97,12 @@ const Contact = () => {
         email: "",
         phone: "",
         subject: "",
-        message: "",
+        message: ""
       });
       setErrors({});
     }, 1500);
   };
-
-  return (
-    <div className="min-h-screen">
+  return <div className="min-h-screen">
       {/* Hero Section */}
       <section className="bg-primary text-white py-20">
         <div className="container mx-auto px-4 text-center">
@@ -224,21 +215,10 @@ const Contact = () => {
                     <label htmlFor="name" className="text-sm font-medium">
                       Имя
                     </label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formState.name}
-                      onChange={handleChange}
-                      required
-                      autoComplete="off"
-                      className={errors.name ? "border-destructive" : ""}
-                      pattern="[A-Za-zА-Яа-яЁё\s\-]+"
-                      onPaste={e => {
-                        const paste = e.clipboardData.getData('text');
-                        if (!/^[A-Za-zА-Яа-яЁё\s\-]+$/.test(paste)) e.preventDefault();
-                      }}
-                      inputMode="text"
-                    />
+                    <Input id="name" name="name" value={formState.name} onChange={handleChange} required autoComplete="off" className={errors.name ? "border-destructive" : ""} pattern="[A-Za-zА-Яа-яЁё\s\-]+" onPaste={e => {
+                    const paste = e.clipboardData.getData('text');
+                    if (!/^[A-Za-zА-Яа-яЁё\s\-]+$/.test(paste)) e.preventDefault();
+                  }} inputMode="text" />
                     {errors.name && <p className="text-destructive text-sm">{errors.name}</p>}
                   </div>
                   
@@ -246,20 +226,7 @@ const Contact = () => {
                     <label htmlFor="phone" className="text-sm font-medium">
                       Телефон
                     </label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      value={formState.phone}
-                      onChange={handlePhoneChange}
-                      onPaste={handlePhonePaste}
-                      required
-                      autoComplete="off"
-                      className={errors.phone ? "border-destructive" : ""}
-                      placeholder="+7 (___) ___-__-__"
-                      maxLength={18}
-                      inputMode="tel"
-                    />
+                    <Input id="phone" name="phone" type="tel" value={formState.phone} onChange={handlePhoneChange} onPaste={handlePhonePaste} required autoComplete="off" className={errors.phone ? "border-destructive" : ""} placeholder="+7 (___) ___-__-__" maxLength={18} inputMode="tel" />
                     {errors.phone && <p className="text-destructive text-sm">{errors.phone}</p>}
                   </div>
                 </div>
@@ -268,17 +235,7 @@ const Contact = () => {
                   <label htmlFor="email" className="text-sm font-medium">
                     Email
                   </label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formState.email}
-                    onChange={handleChange}
-                    required
-                    autoComplete="off"
-                    className={errors.email ? "border-destructive" : ""}
-                    placeholder="example@email.com"
-                  />
+                  <Input id="email" name="email" type="email" value={formState.email} onChange={handleChange} required autoComplete="off" className={errors.email ? "border-destructive" : ""} placeholder="example@email.com" />
                   {errors.email && <p className="text-destructive text-sm">{errors.email}</p>}
                 </div>
                 
@@ -286,30 +243,18 @@ const Contact = () => {
                   <label htmlFor="message" className="text-sm font-medium">
                     Сообщение
                   </label>
-                  <Textarea
-                    id="message"
-                    name="message"
-                    rows={5}
-                    value={formState.message}
-                    onChange={handleChange}
-                    required
-                    className={errors.message ? "border-destructive" : ""}
-                  />
+                  <Textarea id="message" name="message" rows={5} value={formState.message} onChange={handleChange} required className={errors.message ? "border-destructive" : ""} />
                   {errors.message && <p className="text-destructive text-sm">{errors.message}</p>}
                 </div>
                 
                 <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
+                  {isSubmitting ? <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                      Отправка...
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       <Send className="h-4 w-4 mr-2" />
                       Отправить
-                    </>
-                  )}
+                    </>}
                 </Button>
               </form>
             </div>
@@ -332,18 +277,13 @@ const Contact = () => {
                 <div className="text-center p-8">
                   <MapPinIcon className="h-12 w-12 text-primary mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">Карта в процессе</h3>
-                  <p className="text-muted-foreground max-w-md">
-                  Мы работаем над созданием интерактивной карты. А пока
-                  вы можете найти нас по адресу Г.Кемерово ул. Демьяна Бедного, 6 
-                  </p>
+                  <p className="text-muted-foreground max-w-md">Мы работаем над созданием интерактивной карты. А пока вы можете найти нас по адресу г. Кемерово ул. Демьяна Бедного, 6</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </section>
-    </div>
-  );
+    </div>;
 };
-
 export default Contact;
