@@ -199,7 +199,7 @@ const Contact = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Выходные:</span>
-                    <span>10:00 - 19:00</span>
+                    <span>По предварительной записи</span>
                   </div>
                 </div>
               </div>
