@@ -96,8 +96,8 @@ const Catalog = () => {
       />
       
       <div className="container mx-auto px-4 py-8">
-        <SidebarProvider defaultOpen={!isMobile}>
-          <div className="flex flex-col lg:flex-row gap-8 min-h-[500px]">
+        <div className={`flex flex-col ${!isMobile ? 'lg:flex-row' : ''} gap-8 min-h-[500px]`}>
+          <SidebarProvider defaultOpen={!isMobile}>
             <CategorySidebar
               categories={categories}
               activeTab={activeTab}
@@ -109,8 +109,8 @@ const Catalog = () => {
               bookingDates={bookingDates}
               onClearFilters={handleClearFilters}
             />
-          </div>
-        </SidebarProvider>
+          </SidebarProvider>
+        </div>
       </div>
     </div>
   );
