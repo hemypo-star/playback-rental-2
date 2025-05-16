@@ -28,7 +28,7 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
   return (
     <Sidebar 
       variant="inset" 
-      collapsible={isMobile ? "always" : "none"} 
+      collapsible={isMobile ? "offcanvas" : "none"} 
       className={isMobile ? "w-full" : "w-1/4 min-w-[240px] pr-6"}
       defaultCollapsed={isMobile}
     >
