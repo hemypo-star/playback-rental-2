@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -119,7 +118,10 @@ const ProductDetail = () => {
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <ScrollToTopLink to={`/catalog?category=${product.category}`}>
+                <ScrollToTopLink 
+                  to="/catalog" 
+                  state={{ activeCategory: product.category, scrollTop: true }}
+                >
                   {product.category}
                 </ScrollToTopLink>
               </BreadcrumbLink>
