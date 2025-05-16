@@ -30,7 +30,6 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
       variant="inset" 
       collapsible={isMobile ? "offcanvas" : "none"} 
       className={isMobile ? "w-full" : "w-1/4 min-w-[240px] pr-6"}
-      defaultCollapsed={isMobile}
     >
       <SidebarContent>
         <h3 className="font-medium text-sm uppercase text-muted-foreground mb-3 px-3">Категории</h3>

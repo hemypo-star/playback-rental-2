@@ -30,7 +30,6 @@ const Catalog = () => {
     startDate: locationState?.startDate,
     endDate: locationState?.endDate
   });
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   
   // Fetch categories directly without excessive dependencies
   const { data: categories = [] } = useQuery({
@@ -63,14 +62,7 @@ const Catalog = () => {
     if (locationState?.scrollTop) {
       window.scrollTo(0, 0);
     }
-    
-    // Close sidebar on mobile by default
-    if (isMobile) {
-      setSidebarOpen(false);
-    } else {
-      setSidebarOpen(true);
-    }
-  }, [categoryFromUrl, locationState, isMobile]);
+  }, [categoryFromUrl, locationState]);
 
   const handleBookingChange = (startDate: Date | undefined, endDate: Date | undefined) => {
     setBookingDates({ startDate, endDate });
