@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { SearchIcon, MenuIcon, ShoppingCartIcon, XIcon, Phone, Send, Facebook } from 'lucide-react';
+import { 
+  SearchIcon, 
+  MenuIcon, 
+  ShoppingCartIcon, 
+  XIcon, 
+  Phone, 
+  Send,
+  Facebook 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -8,6 +16,7 @@ import AnimatedTransition from './AnimatedTransition';
 import { cn } from '@/lib/utils';
 import { checkAuth } from '@/services/apiService';
 import { useCartContext } from '@/hooks/useCart';
+
 const Navbar = () => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -16,6 +25,7 @@ const Navbar = () => {
   const {
     cartCount
   } = useCartContext();
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -28,22 +38,25 @@ const Navbar = () => {
 
   // Add an effect to scroll to top on route changes
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location.pathname]);
+
   const isActive = (path: string) => {
     return location.pathname === path;
   };
-  return <header className={cn('fixed top-0 left-0 right-0 z-50 py-4 transition-all duration-300 backdrop-blur-md', isScrolled ? 'bg-white/70 dark:bg-black/70 shadow-soft' : 'bg-white bg-opacity-90')}>
+
+  return (
+    <header className={cn(
+      'fixed top-0 left-0 right-0 z-50 py-4 transition-all duration-300 backdrop-blur-md', 
+      isScrolled ? 'bg-white/70 dark:bg-black/70 shadow-soft' : 'bg-white bg-opacity-90'
+    )}>
       <div className="container mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link to="/" className="text-xl font-semibold tracking-tight hover:opacity-80 transition-opacity flex items-center">
               <img src="/logo.svg" alt="PlayBack Rental" className="h-8 mr-2" onError={e => {
-              e.currentTarget.style.display = 'none';
-            }} />
+                e.currentTarget.style.display = 'none';
+              }} />
               <span>Playback Rental</span>
             </Link>
             
@@ -95,8 +108,8 @@ const Navbar = () => {
                 <div className="flex flex-col gap-8 mt-8">
                   <Link to="/" className="text-xl font-semibold tracking-tight flex items-center">
                     <img src="/logo.svg" alt="PlayBack Rental" className="h-8 mr-2" onError={e => {
-                    e.currentTarget.style.display = 'none';
-                  }} />
+                      e.currentTarget.style.display = 'none';
+                    }} />
                     <span>Playback Rental</span>
                   </Link>
                   <nav className="flex flex-col space-y-6">
@@ -104,7 +117,9 @@ const Navbar = () => {
                     <Link to="/catalog" className="text-foreground hover:text-primary transition-colors">Каталог</Link>
                     <Link to="/how-it-works" className="text-foreground hover:text-primary transition-colors">Как это работает</Link>
                     <Link to="/contact" className="text-foreground hover:text-primary transition-colors">Контакты</Link>
-                    {isAuthenticated}
+                    {isAuthenticated && <Link to="/admin" className="text-foreground hover:text-primary transition-colors">
+                        Админ-панель
+                      </Link>}
                   </nav>
                 </div>
                 <div className="flex flex-col space-y-4 mt-4">
@@ -132,21 +147,27 @@ const Navbar = () => {
           </div>
         </div>
       </div>
-    </header>;
+    </header>
+  );
 };
+
 interface NavLinkProps {
   to: string;
   active: boolean;
   children: React.ReactNode;
 }
+
 const NavLink: React.FC<NavLinkProps> = ({
   to,
   active,
   children
 }) => {
-  return <Link to={to} className={cn("relative py-1 font-medium transition-colors", active ? "text-foreground" : "text-foreground/70 hover:text-foreground")}>
+  return (
+    <Link to={to} className={cn("relative py-1 font-medium transition-colors", active ? "text-foreground" : "text-foreground/70 hover:text-foreground")}>
       {children}
       {active && <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full animate-in-up" />}
-    </Link>;
+    </Link>
+  );
 };
+
 export default Navbar;
