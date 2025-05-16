@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
@@ -96,7 +95,7 @@ const Catalog = () => {
       
       {/* Mobile category selector immediately after header */}
       {isMobile && (
-        <div className="w-full px-4 mt-4">
+        <div className="w-full px-4 mt-4 max-w-full overflow-hidden">
           <CategorySidebar
             categories={categories}
             activeTab={activeTab}

@@ -41,7 +41,7 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Выберите категорию" />
           </SelectTrigger>
-          <SelectContent className="w-full">
+          <SelectContent className="w-full" position="popper" sideOffset={4} align="start" alignOffset={0}>
             <SelectItem value="all">
               <div className="flex items-center">
                 <Grid2X2Icon className="mr-2 h-4 w-4" />

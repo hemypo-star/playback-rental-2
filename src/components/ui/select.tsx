@@ -80,6 +80,11 @@ const SelectContent = React.forwardRef<
         className
       )}
       position={position}
+      style={{
+        // Ensure content doesn't overflow viewport
+        width: position === "popper" ? "var(--radix-select-trigger-width)" : undefined,
+        maxWidth: "calc(100vw - 16px)", // Subtract padding to avoid horizontal scrolling
+      }}
       {...props}
     >
       <SelectScrollUpButton />
