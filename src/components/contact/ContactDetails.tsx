@@ -18,8 +18,7 @@ const ContactDetails = () => {
           <div>
             <h3 className="font-medium mb-1">Наше местоположение</h3>
             <p className="text-muted-foreground mb-2">
-              Г.Кемерово <br />
-              ул. Демьяна Бедного, 6 
+              г.Кемерово ул. Демьяна Бедного, 6 
             </p>
             <div className="flex gap-2">
               <Button size="xs" variant="outline" asChild>
