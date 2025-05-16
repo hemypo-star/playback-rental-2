@@ -96,34 +96,37 @@ const Catalog = () => {
       />
       
       <div className="container mx-auto px-4 py-8">
-        {/* Mobile category selector above product grid */}
-        {isMobile && (
-          <CategorySidebar
-            categories={categories}
-            activeTab={activeTab}
-            onCategoryChange={setActiveTab}
-          />
-        )}
-        
-        <div className="flex flex-col lg:flex-row gap-8 min-h-[500px]">
-          {/* Desktop sidebar, hidden on mobile */}
-          {!isMobile && (
-            <SidebarProvider defaultOpen={true}>
+        {/* Always wrap in SidebarProvider, regardless of mobile or desktop */}
+        <SidebarProvider defaultOpen={!isMobile}>
+          {/* Mobile category selector above product grid */}
+          {isMobile && (
+            <div className="mb-6">
               <CategorySidebar
                 categories={categories}
                 activeTab={activeTab}
                 onCategoryChange={setActiveTab}
               />
-            </SidebarProvider>
+            </div>
           )}
           
-          <ProductGrid
-            products={filteredProducts}
-            isLoading={isLoading}
-            bookingDates={bookingDates}
-            onClearFilters={handleClearFilters}
-          />
-        </div>
+          <div className="flex flex-col lg:flex-row gap-8 min-h-[500px]">
+            {/* Desktop sidebar, hidden on mobile */}
+            {!isMobile && (
+              <CategorySidebar
+                categories={categories}
+                activeTab={activeTab}
+                onCategoryChange={setActiveTab}
+              />
+            )}
+            
+            <ProductGrid
+              products={filteredProducts}
+              isLoading={isLoading}
+              bookingDates={bookingDates}
+              onClearFilters={handleClearFilters}
+            />
+          </div>
+        </SidebarProvider>
       </div>
     </div>
   );

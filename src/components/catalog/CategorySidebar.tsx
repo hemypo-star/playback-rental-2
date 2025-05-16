@@ -6,6 +6,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarProvider
 } from '@/components/ui/sidebar';
 import { Category } from '@/types/product';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -60,6 +61,7 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
   }
 
   // For desktop view, show the sidebar with enhanced active styling
+  // The SidebarProvider is now directly handled in the Catalog component
   return (
     <Sidebar 
       variant="inset" 
