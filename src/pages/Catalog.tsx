@@ -8,11 +8,14 @@ import * as categoryService from '@/services/categoryService';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import CategorySidebar from '@/components/catalog/CategorySidebar';
 import ProductGrid from '@/components/catalog/ProductGrid';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Catalog = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const categoryFromUrl = searchParams.get('category');
+  const isMobile = useIsMobile();
+  
   const locationState = location.state as { 
     activeCategory?: string; 
     startDate?: Date; 
@@ -27,6 +30,7 @@ const Catalog = () => {
     startDate: locationState?.startDate,
     endDate: locationState?.endDate
   });
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   
   // Fetch categories directly without excessive dependencies
   const { data: categories = [] } = useQuery({
@@ -59,7 +63,14 @@ const Catalog = () => {
     if (locationState?.scrollTop) {
       window.scrollTo(0, 0);
     }
-  }, [categoryFromUrl, locationState]);
+    
+    // Close sidebar on mobile by default
+    if (isMobile) {
+      setSidebarOpen(false);
+    } else {
+      setSidebarOpen(true);
+    }
+  }, [categoryFromUrl, locationState, isMobile]);
 
   const handleBookingChange = (startDate: Date | undefined, endDate: Date | undefined) => {
     setBookingDates({ startDate, endDate });
@@ -93,8 +104,8 @@ const Catalog = () => {
       />
       
       <div className="container mx-auto px-4 py-8">
-        <SidebarProvider defaultOpen>
-          <div className="flex gap-8 min-h-[500px]">
+        <SidebarProvider defaultOpen={!isMobile}>
+          <div className="flex flex-col lg:flex-row gap-8 min-h-[500px]">
             <CategorySidebar
               categories={categories}
               activeTab={activeTab}

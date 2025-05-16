@@ -1,8 +1,9 @@
+
 import { useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeftIcon, CalendarIcon } from 'lucide-react';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,11 +16,15 @@ import { useCartContext } from '@/hooks/useCart';
 import ProductImage from '@/components/product/ProductImage';
 import ProductHeader from '@/components/product/ProductHeader';
 import ProductTabs from '@/components/product/ProductTabs';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ScrollToTopLink } from '@/components/ui/navigation-menu';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
+  
   const locationState = location.state as { startDate?: Date; endDate?: Date } | null;
   
   const [bookingDates, setBookingDates] = useState<{
@@ -101,15 +106,27 @@ const ProductDetail = () => {
         <Breadcrumb className="mb-8">
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/">Главная</BreadcrumbLink>
+              <BreadcrumbLink asChild>
+                <ScrollToTopLink to="/">Главная</ScrollToTopLink>
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href="/catalog">Каталог</BreadcrumbLink>
+              <BreadcrumbLink asChild>
+                <ScrollToTopLink to="/catalog">Каталог</ScrollToTopLink>
+              </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink>{product.title}</BreadcrumbLink>
+              <BreadcrumbLink asChild>
+                <ScrollToTopLink to={`/catalog?category=${product.category}`}>
+                  {product.category}
+                </ScrollToTopLink>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{product.title}</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -130,6 +147,7 @@ const ProductDetail = () => {
                 bookedPeriods={bookings || []} 
                 initialStartDate={bookingDates.startDate} 
                 initialEndDate={bookingDates.endDate} 
+                isCompact={isMobile}
               />
 
               {bookingDates.startDate && bookingDates.endDate && 
@@ -169,7 +187,7 @@ const ProductDetail = () => {
 
         <div className="mt-16">
           <Tabs defaultValue="details">
-            <TabsList className="mb-8">
+            <TabsList className="mb-8 overflow-x-auto flex w-full justify-start pb-1">
               <TabsTrigger value="details">Подробности</TabsTrigger>
             </TabsList>
             

@@ -8,6 +8,7 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { Category } from '@/types/product';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CategorySidebarProps {
   categories?: Category[];
@@ -16,6 +17,8 @@ interface CategorySidebarProps {
 }
 
 const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: CategorySidebarProps) => {
+  const isMobile = useIsMobile();
+  
   // Method to handle category selection that also scrolls to top
   const handleCategoryChange = (category: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -23,7 +26,12 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
   };
 
   return (
-    <Sidebar variant="inset" collapsible="none" className="w-1/4 min-w-[240px] pr-6">
+    <Sidebar 
+      variant="inset" 
+      collapsible={isMobile ? "always" : "none"} 
+      className={isMobile ? "w-full" : "w-1/4 min-w-[240px] pr-6"}
+      defaultCollapsed={isMobile}
+    >
       <SidebarContent>
         <h3 className="font-medium text-sm uppercase text-muted-foreground mb-3 px-3">Категории</h3>
         <SidebarMenu>

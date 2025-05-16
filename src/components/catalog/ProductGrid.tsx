@@ -4,6 +4,8 @@ import ProductCard from '@/components/ProductCard';
 import { Product } from '@/types/product';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type ProductGridProps = {
   products: Product[];
@@ -19,9 +21,12 @@ const ProductGrid = ({
   onClearFilters 
 }: ProductGridProps) => {
   const [visibleProducts, setVisibleProducts] = useState(8);
+  const isMobile = useIsMobile();
+  
+  const productsPerPage = isMobile ? 6 : 8;
 
   const handleLoadMore = () => {
-    setVisibleProducts(prev => prev + 16);
+    setVisibleProducts(prev => prev + (isMobile ? 6 : 16));
   };
 
   if (isLoading) {
@@ -35,7 +40,7 @@ const ProductGrid = ({
 
   if (!products.length) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] w-full text-center">
+      <div className="flex flex-col items-center justify-center min-h-[400px] w-full text-center px-4">
         <div className="bg-gray-100 rounded-full p-6 mb-4">
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
@@ -63,12 +68,12 @@ const ProductGrid = ({
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-xl font-medium">
+      <div className="mb-6 flex justify-between items-center flex-wrap gap-2">
+        <h2 className="text-base sm:text-xl font-medium">
           Найдено товаров: <span className="text-primary">{products.length}</span>
         </h2>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {products.slice(0, visibleProducts).map(product => (
           <ProductCard 
             key={product.id}
