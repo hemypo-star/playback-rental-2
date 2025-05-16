@@ -96,20 +96,33 @@ const Catalog = () => {
       />
       
       <div className="container mx-auto px-4 py-8">
-        <div className={`flex flex-col ${!isMobile ? 'lg:flex-row' : ''} gap-8 min-h-[500px]`}>
-          <SidebarProvider defaultOpen={!isMobile}>
-            <CategorySidebar
-              categories={categories}
-              activeTab={activeTab}
-              onCategoryChange={setActiveTab}
-            />
-            <ProductGrid
-              products={filteredProducts}
-              isLoading={isLoading}
-              bookingDates={bookingDates}
-              onClearFilters={handleClearFilters}
-            />
-          </SidebarProvider>
+        {/* Mobile category selector above product grid */}
+        {isMobile && (
+          <CategorySidebar
+            categories={categories}
+            activeTab={activeTab}
+            onCategoryChange={setActiveTab}
+          />
+        )}
+        
+        <div className="flex flex-col lg:flex-row gap-8 min-h-[500px]">
+          {/* Desktop sidebar, hidden on mobile */}
+          {!isMobile && (
+            <SidebarProvider defaultOpen={true}>
+              <CategorySidebar
+                categories={categories}
+                activeTab={activeTab}
+                onCategoryChange={setActiveTab}
+              />
+            </SidebarProvider>
+          )}
+          
+          <ProductGrid
+            products={filteredProducts}
+            isLoading={isLoading}
+            bookingDates={bookingDates}
+            onClearFilters={handleClearFilters}
+          />
         </div>
       </div>
     </div>
