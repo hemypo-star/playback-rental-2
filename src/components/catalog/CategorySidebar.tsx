@@ -60,8 +60,8 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
     );
   }
 
-  // For desktop view, show the sidebar with enhanced active styling
-  // The SidebarProvider is now directly handled in the Catalog component
+  // For desktop view, we're now creating a sidebar without SidebarProvider
+  // as the Provider should be in the parent component
   return (
     <Sidebar 
       variant="inset" 
