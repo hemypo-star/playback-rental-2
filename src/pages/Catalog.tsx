@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
@@ -95,21 +94,21 @@ const Catalog = () => {
         searchValue={search}
       />
       
-      <div className="container mx-auto px-4 py-8">
+      {/* Mobile category selector immediately after header */}
+      {isMobile && (
+        <div className="w-full px-4 mt-4">
+          <CategorySidebar
+            categories={categories}
+            activeTab={activeTab}
+            onCategoryChange={setActiveTab}
+          />
+        </div>
+      )}
+      
+      <div className="container mx-auto px-4 py-6">
         {/* Always wrap in SidebarProvider, regardless of mobile or desktop */}
         <SidebarProvider defaultOpen={!isMobile}>
-          {/* Mobile category selector above product grid */}
-          {isMobile && (
-            <div className="mb-6">
-              <CategorySidebar
-                categories={categories}
-                activeTab={activeTab}
-                onCategoryChange={setActiveTab}
-              />
-            </div>
-          )}
-          
-          <div className="flex flex-col lg:flex-row gap-8 min-h-[500px]">
+          <div className="flex flex-col lg:flex-row gap-8 min-h-[500px] w-full">
             {/* Desktop sidebar, hidden on mobile */}
             {!isMobile && (
               <CategorySidebar

@@ -37,12 +37,12 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
   // For mobile view, show a Select dropdown instead of sidebar
   if (isMobile) {
     return (
-      <div className="w-full mb-6">
+      <div className="w-full">
         <Select value={activeTab} onValueChange={handleCategoryChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Выберите категорию" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="w-full">
             <SelectItem value="all">
               <div className="flex items-center">
                 <Grid2X2Icon className="mr-2 h-4 w-4" />

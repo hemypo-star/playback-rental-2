@@ -67,13 +67,13 @@ const ProductGrid = ({
   const hasMoreToLoad = currentlyVisible < products.length;
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col w-full">
       <div className="mb-6 flex justify-between items-center flex-wrap gap-2">
         <h2 className="text-base sm:text-xl font-medium">
           Найдено товаров: <span className="text-primary">{products.length}</span>
         </h2>
       </div>
-      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 w-full">
         {products.slice(0, visibleProducts).map(product => (
           <ProductCard 
             key={product.id}
