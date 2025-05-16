@@ -75,7 +75,7 @@ const Navbar = () => {
                 <Phone className="h-4 w-4" />
                 +7 (900) 123-45-67
               </a>
-              <a href="https://t.me/yourcompany" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+              <a href="https://t.me/PlaybackRental" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                 <Send className="h-4 w-4" />
               </a>
               <a href="https://vk.com/playbackkem" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700">
