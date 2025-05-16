@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -117,9 +118,6 @@ const Navbar = () => {
                     <Link to="/catalog" className="text-foreground hover:text-primary transition-colors">Каталог</Link>
                     <Link to="/how-it-works" className="text-foreground hover:text-primary transition-colors">Как это работает</Link>
                     <Link to="/contact" className="text-foreground hover:text-primary transition-colors">Контакты</Link>
-                    {isAuthenticated && <Link to="/admin" className="text-foreground hover:text-primary transition-colors">
-                        Админ-панель
-                      </Link>}
                   </nav>
                 </div>
                 <div className="flex flex-col space-y-4 mt-4">
