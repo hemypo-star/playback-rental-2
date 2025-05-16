@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { SidebarProvider } from '@/components/ui/sidebar';
 import * as productService from '@/services/productService';
 import * as categoryService from '@/services/categoryService';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
@@ -107,26 +106,23 @@ const Catalog = () => {
       )}
       
       <div className="container mx-auto px-4 py-6">
-        {/* Always wrap in SidebarProvider, regardless of mobile or desktop */}
-        <SidebarProvider defaultOpen={!isMobile}>
-          <div className="flex flex-col lg:flex-row gap-8 min-h-[500px] w-full">
-            {/* Desktop sidebar, hidden on mobile */}
-            {!isMobile && (
-              <CategorySidebar
-                categories={categories}
-                activeTab={activeTab}
-                onCategoryChange={setActiveTab}
-              />
-            )}
-            
-            <ProductGrid
-              products={filteredProducts}
-              isLoading={isLoading}
-              bookingDates={bookingDates}
-              onClearFilters={handleClearFilters}
+        <div className="flex flex-col lg:flex-row gap-8 min-h-[500px] w-full">
+          {/* Desktop sidebar, hidden on mobile */}
+          {!isMobile && (
+            <CategorySidebar
+              categories={categories}
+              activeTab={activeTab}
+              onCategoryChange={setActiveTab}
             />
-          </div>
-        </SidebarProvider>
+          )}
+          
+          <ProductGrid
+            products={filteredProducts}
+            isLoading={isLoading}
+            bookingDates={bookingDates}
+            onClearFilters={handleClearFilters}
+          />
+        </div>
       </div>
     </div>
   );

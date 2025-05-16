@@ -6,7 +6,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarProvider
 } from '@/components/ui/sidebar';
 import { Category } from '@/types/product';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -60,24 +59,18 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
     );
   }
 
-  // For desktop view, we're now creating a sidebar without SidebarProvider
-  // as the Provider should be in the parent component
+  // For desktop view, create a simple sidebar component that doesn't use useSidebar hook directly
   return (
-    <Sidebar 
-      variant="inset" 
-      collapsible={isMobile ? "offcanvas" : "none"} 
-      className="w-1/4 min-w-[240px] pr-6"
-    >
-      <SidebarContent>
+    <div className="w-1/4 min-w-[240px] pr-6">
+      <div className="sticky top-4">
         <h3 className="font-medium text-sm uppercase text-muted-foreground mb-3 px-3">Категории</h3>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
+        <ul className="flex flex-col gap-1">
+          <li>
+            <button
               onClick={() => handleCategoryChange('all')}
-              isActive={activeTab === 'all'}
               className={cn(
-                "w-full text-left justify-start font-medium",
-                activeTab === 'all' && "text-[#ea384c] font-semibold"
+                "w-full text-left flex items-center px-3 py-2 rounded-md font-medium",
+                activeTab === 'all' ? "text-[#ea384c] font-semibold bg-muted/50" : "hover:bg-muted"
               )}
             >
               <Grid2X2Icon className={cn(
@@ -85,26 +78,25 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
                 activeTab === 'all' && "text-[#ea384c]"
               )} />
               <span>Все категории</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+            </button>
+          </li>
           
           {categories?.map((category) => (
-            <SidebarMenuItem key={category.id}>
-              <SidebarMenuButton
+            <li key={category.id}>
+              <button
                 onClick={() => handleCategoryChange(category.name)}
-                isActive={activeTab === category.name}
                 className={cn(
-                  "w-full text-left justify-start",
-                  activeTab === category.name && "text-[#ea384c] font-semibold"
+                  "w-full text-left flex items-center px-3 py-2 rounded-md",
+                  activeTab === category.name ? "text-[#ea384c] font-semibold bg-muted/50" : "hover:bg-muted"
                 )}
               >
                 <span>{category.name}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+              </button>
+            </li>
           ))}
-        </SidebarMenu>
-      </SidebarContent>
-    </Sidebar>
+        </ul>
+      </div>
+    </div>
   );
 };
 
