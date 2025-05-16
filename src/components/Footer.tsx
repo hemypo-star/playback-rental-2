@@ -1,6 +1,14 @@
+
 import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, MessageSquare, Send, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+
 export const Footer = () => {
+  const address = "г. Кемерово, ул. Демьяна Бедного, 6";
+  const encodedAddress = encodeURIComponent(address);
+  const yandexMapsUrl = `https://yandex.ru/maps/?text=${encodedAddress}`;
+  const twoGisUrl = `https://2gis.ru/kemerovo/search/${encodedAddress}`;
+
   return <footer className="bg-secondary mt-auto">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -30,9 +38,21 @@ export const Footer = () => {
           
           <div>
             <h3 className="font-semibold mb-4">Адрес</h3>
-            <div className="flex items-start gap-2 text-muted-foreground">
+            <div className="flex items-start gap-2 text-muted-foreground mb-3">
               <MapPin className="h-4 w-4 mt-1 flex-shrink-0" />
               <p>г. Кемерово, ул. Демьяна Бедного, 6</p>
+            </div>
+            <div className="flex gap-2">
+              <Button size="xs" variant="outline" asChild>
+                <a href={yandexMapsUrl} target="_blank" rel="noopener noreferrer">
+                  Я.Карты
+                </a>
+              </Button>
+              <Button size="xs" variant="outline" asChild>
+                <a href={twoGisUrl} target="_blank" rel="noopener noreferrer">
+                  2ГИС
+                </a>
+              </Button>
             </div>
           </div>
           
