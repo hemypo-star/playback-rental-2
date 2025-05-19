@@ -1,12 +1,9 @@
-
 import { MapPinIcon, Phone, Send, Facebook, MailIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const ContactDetails = () => {
-  const address = "г. Кемерово ул. Демьяна Бедного, 6";
-  const encodedAddress = encodeURIComponent(address);
-  const yandexMapsUrl = `https://yandex.ru/maps/?text=${encodedAddress}`;
-  const twoGisUrl = `https://2gis.ru/kemerovo/search/${encodedAddress}`;
+  const yandexMapsUrl = `https://yandex.ru/maps/-/CHvDmII7`;
+  const twoGisUrl = `https://go.2gis.com/2y9MJ`;
 
   return (
     <div className="space-y-8">

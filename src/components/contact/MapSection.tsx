@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 
 const MapSection = () => {
   const address = "г. Кемерово ул. Демьяна Бедного, 6";
-  const encodedAddress = encodeURIComponent(address);
-  const yandexMapsUrl = `https://yandex.ru/maps/?text=${encodedAddress}`;
-  const twoGisUrl = `https://2gis.ru/kemerovo/search/${encodedAddress}`;
+  const yandexMapsUrl = `https://yandex.ru/maps/-/CHvDmII7`;
+  const twoGisUrl = `https://go.2gis.com/2y9MJ`;
 
   return (
     <section className="py-20 bg-secondary/50">
