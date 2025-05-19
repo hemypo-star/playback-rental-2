@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -7,10 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { Pencil, Plus, Trash2, Upload, GripVertical, Save } from 'lucide-react';
 import { Category } from '@/types/product';
 import * as categoryService from '@/services/categoryService';
 import AddCategorySection from '@/components/admin/AddCategorySection';
+import { useCategoryManagement } from '@/hooks/useCategoryManagement';
 
 const AdminCategories = () => {
   const { toast } = useToast();
@@ -34,10 +36,25 @@ const AdminCategories = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [uploadType, setUploadType] = useState<'file' | 'url'>('file');
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [categoriesOrder, setCategoriesOrder] = useState<Category[]>([]);
+  const [hasOrderChanged, setHasOrderChanged] = useState(false);
+
+  const {
+    handleAddCategory,
+    handleUpdateCategoriesOrder,
+    updateCategoryOrderMutation,
+  } = useCategoryManagement();
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: categoryService.getCategories,
+    onSuccess: (data) => {
+      if (!hasOrderChanged) {
+        setCategoriesOrder(data);
+      }
+    }
   });
 
   const addCategoryMutation = useMutation({
@@ -252,28 +269,79 @@ const AdminCategories = () => {
     }
   };
 
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+    setIsDragging(true);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newOrder = [...categoriesOrder];
+    const draggedItem = newOrder[draggedIndex];
+    
+    // Remove the item from its original position
+    newOrder.splice(draggedIndex, 1);
+    // Insert it at the new position
+    newOrder.splice(index, 0, draggedItem);
+    
+    setCategoriesOrder(newOrder);
+    setDraggedIndex(index);
+    setHasOrderChanged(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDraggedIndex(null);
+  };
+
+  const handleSaveOrder = () => {
+    handleUpdateCategoriesOrder(categoriesOrder);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Управление категориями</h2>
-        {showAddSection ? (
-          <AddCategorySection 
-            form={{}}
-            onAddCategory={handleAddNewCategory}
-            show={showAddSection}
-            setShow={setShowAddSection}
-            newCategoryName={newCategoryName}
-            setNewCategoryName={setNewCategoryName}
-            fileForCategory={fileForCategory}
-            setFileForCategory={setFileForCategory}
-            isPending={addCategoryMutation.isPending}
-          />
-        ) : (
-          <Button onClick={() => setShowAddSection(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Добавить категорию
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {hasOrderChanged && (
+            <Button onClick={handleSaveOrder} variant="outline" disabled={updateCategoryOrderMutation.isPending}>
+              {updateCategoryOrderMutation.isPending ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Сохранение...
+                </span>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Сохранить порядок
+                </>
+              )}
+            </Button>
+          )}
+          {showAddSection ? (
+            <AddCategorySection 
+              form={{}}
+              onAddCategory={handleAddNewCategory}
+              show={showAddSection}
+              setShow={setShowAddSection}
+              newCategoryName={newCategoryName}
+              setNewCategoryName={setNewCategoryName}
+              fileForCategory={fileForCategory}
+              setFileForCategory={setFileForCategory}
+              isPending={addCategoryMutation.isPending}
+            />
+          ) : (
+            <Button onClick={() => setShowAddSection(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Добавить категорию
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -289,52 +357,63 @@ const AdminCategories = () => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories?.map((category) => (
-            <Card key={category.id} className="overflow-hidden">
-              <div className="h-32 relative bg-muted">
-                {category.imageUrl ? (
-                  <img
-                    src={category.imageUrl}
-                    alt={category.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null; // Prevent infinite loop
-                      target.src = 'https://via.placeholder.com/300x150?text=No+Image';
-                    }}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full bg-primary/10">
-                    <span className="text-primary">Нет изображения</span>
-                  </div>
-                )}
-                <div className="absolute top-2 right-2 flex space-x-1">
+        <div className="space-y-4">
+          {categoriesOrder.map((category, index) => (
+            <div 
+              key={category.id}
+              draggable={true}
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`border rounded-md overflow-hidden ${isDragging && draggedIndex === index ? 'opacity-50' : ''} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            >
+              <div className="flex items-center p-4">
+                <div className="mr-4 text-muted-foreground cursor-grab">
+                  <GripVertical className="h-6 w-6" />
+                </div>
+                <div className="h-12 w-12 rounded overflow-hidden bg-muted flex-shrink-0">
+                  {category.imageUrl ? (
+                    <img
+                      src={category.imageUrl}
+                      alt={category.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null; // Prevent infinite loop
+                        target.src = 'https://via.placeholder.com/48?text=No+Image';
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full bg-primary/10">
+                      <span className="text-xs text-primary">Нет фото</span>
+                    </div>
+                  )}
+                </div>
+                <div className="ml-4 flex-1">
+                  <h3 className="font-medium">{category.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-1">
+                    {category.description || 'Нет описания'}
+                  </p>
+                </div>
+                <div className="flex gap-1">
                   <Button
-                    size="icon"
-                    variant="secondary"
-                    className="w-8 h-8"
+                    size="sm"
+                    variant="ghost"
                     onClick={() => handleEdit(category)}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
-                    size="icon"
-                    variant="destructive"
-                    className="w-8 h-8"
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
                     onClick={() => handleDelete(category.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-              <CardContent className="p-4">
-                <CardTitle className="text-xl mb-2">{category.name}</CardTitle>
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {category.description || 'Нет описания'}
-                </p>
-              </CardContent>
-            </Card>
+            </div>
           ))}
         </div>
       )}

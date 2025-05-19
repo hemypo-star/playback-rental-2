@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import * as supabaseService from '@/services/supabaseService';
+import * as categoryService from '@/services/categoryService';
 import { uploadCategoryImage } from '@/utils/imageUtils';
+import { Category } from '@/types/product';
 
 export const useCategoryManagement = () => {
   const { toast } = useToast();
@@ -13,7 +14,7 @@ export const useCategoryManagement = () => {
   const [fileForCategory, setFileForCategory] = useState<File | null>(null);
 
   const addCategoryMutation = useMutation({
-    mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string }) => {
+    mutationFn: async (categoryData: { name: string; slug: string; imageUrl?: string; order?: number }) => {
       let imageUrl: string | undefined = categoryData.imageUrl;
       
       // Only upload image if fileForCategory is a File object
@@ -27,12 +28,41 @@ export const useCategoryManagement = () => {
         }
       }
       
-      return supabaseService.addCategory(categoryData);
+      return categoryService.addCategory(categoryData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
   });
+
+  const updateCategoryOrderMutation = useMutation({
+    mutationFn: (categories: { id: string; order: number }[]) => {
+      return categoryService.updateCategoriesOrder(categories);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast({
+        title: 'Порядок категорий обновлен',
+        description: 'Порядок категорий успешно сохранен',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Ошибка',
+        description: `Не удалось обновить порядок категорий: ${error}`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleUpdateCategoriesOrder = (categories: Category[]) => {
+    const orderUpdates = categories.map((cat, index) => ({
+      id: cat.id,
+      order: index,
+    }));
+    
+    updateCategoryOrderMutation.mutate(orderUpdates);
+  };
 
   const handleAddCategory = async (payload: { name: string; slug: string; imageUrl?: string }) => {
     try {
@@ -48,10 +78,15 @@ export const useCategoryManagement = () => {
         }
       }
       
-      const newCategory = await supabaseService.addCategory({
+      // Get all categories to determine the next order value
+      const allCategories = await categoryService.getCategories();
+      const maxOrder = allCategories.reduce((max, cat) => Math.max(max, cat.order || 0), -1);
+      
+      const newCategory = await categoryService.addCategory({
         name: payload.name,
         slug: payload.slug,
         imageUrl: imageUrl || '',
+        order: maxOrder + 1, // Add new categories at the end
       });
       
       if (newCategory) {
@@ -85,6 +120,8 @@ export const useCategoryManagement = () => {
     fileForCategory,
     setFileForCategory,
     addCategoryMutation,
+    updateCategoryOrderMutation,
     handleAddCategory,
+    handleUpdateCategoriesOrder,
   };
 };

@@ -4,13 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    const { data, error } = await supabase.from('categories').select('*');
+    const { data, error } = await supabase.from('categories').select('*').order('order', { ascending: true });
     if (error) throw error;
     
     // Map imageurl to imageUrl for consistency in the frontend
     return data?.map(category => ({
       ...category,
-      imageUrl: category.imageurl
+      imageUrl: category.imageurl,
+      order: category.order || 0
     })) || [];
   } catch (error) {
     console.error('Error getting categories:', error);
@@ -26,7 +27,8 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
     // Map imageurl to imageUrl for consistency in the frontend
     return data ? {
       ...data,
-      imageUrl: data.imageurl
+      imageUrl: data.imageurl,
+      order: data.order || 0
     } : null;
   } catch (error) {
     console.error('Error getting category by ID:', error);
@@ -41,7 +43,8 @@ export const addCategory = async (categoryData: Partial<Category>): Promise<Cate
       name: categoryData.name || '', // Ensure name is never undefined
       imageurl: categoryData.imageUrl || '',
       slug: categoryData.slug,
-      description: categoryData.description
+      description: categoryData.description,
+      order: categoryData.order || 0
     };
     
     // Validate that required fields exist
@@ -55,7 +58,8 @@ export const addCategory = async (categoryData: Partial<Category>): Promise<Cate
     // Map imageurl to imageUrl for consistency in the frontend
     return data ? {
       ...data,
-      imageUrl: data.imageurl
+      imageUrl: data.imageurl,
+      order: data.order || 0
     } : null;
   } catch (error) {
     console.error('Error adding category:', error);
@@ -73,6 +77,7 @@ export const updateCategory = async (id: string, updates: Partial<Category>): Pr
     if (updates.slug !== undefined) dbUpdates.slug = updates.slug;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.imageUrl !== undefined) dbUpdates.imageurl = updates.imageUrl;
+    if (updates.order !== undefined) dbUpdates.order = updates.order;
     
     const { data, error } = await supabase.from('categories').update(dbUpdates).eq('id', id).select().single();
     if (error) throw error;
@@ -80,11 +85,27 @@ export const updateCategory = async (id: string, updates: Partial<Category>): Pr
     // Map imageurl to imageUrl for consistency in the frontend
     return data ? {
       ...data,
-      imageUrl: data.imageurl
+      imageUrl: data.imageurl,
+      order: data.order || 0
     } : null;
   } catch (error) {
     console.error('Error updating category:', error);
     return null;
+  }
+};
+
+export const updateCategoriesOrder = async (categories: { id: string, order: number }[]): Promise<boolean> => {
+  try {
+    // Use Promise.all to execute all updates in parallel
+    const updates = categories.map(cat => 
+      supabase.from('categories').update({ order: cat.order }).eq('id', cat.id)
+    );
+    
+    await Promise.all(updates);
+    return true;
+  } catch (error) {
+    console.error('Error updating categories order:', error);
+    return false;
   }
 };
 
