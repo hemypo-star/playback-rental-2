@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   title: string;
@@ -27,9 +26,10 @@ export interface BookingPeriod {
 export interface Category {
   id: string;
   name: string;
-  slug: string;
+  slug?: string;
   description?: string;
   imageUrl?: string;
+  order?: number;
 }
 
 export interface BookingFormData {

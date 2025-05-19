@@ -1,5 +1,4 @@
-
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -50,12 +49,14 @@ const AdminCategories = () => {
   const { data: categories, isLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: categoryService.getCategories,
-    onSuccess: (data) => {
-      if (!hasOrderChanged) {
-        setCategoriesOrder(data);
-      }
-    }
   });
+
+  // Update categoriesOrder when categories data changes, but only if order hasn't been modified
+  useEffect(() => {
+    if (categories && !hasOrderChanged) {
+      setCategoriesOrder(categories);
+    }
+  }, [categories, hasOrderChanged]);
 
   const addCategoryMutation = useMutation({
     mutationFn: async (categoryData: Partial<Category>) => {
