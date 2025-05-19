@@ -39,7 +39,7 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
 export const addCategory = async (categoryData: Partial<Category>): Promise<Category | null> => {
   try {
     // Make sure we're using imageurl for the database column and required fields are present
-    const dbData = {
+    const dbData: any = {
       name: categoryData.name || '', // Ensure name is never undefined
       imageurl: categoryData.imageUrl || '',
       slug: categoryData.slug,
