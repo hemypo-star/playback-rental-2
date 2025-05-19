@@ -70,7 +70,7 @@ const ContactDetails = () => {
                   </svg>
           </div>
           <div>
-            <h3 className="font-medium mb-1">VKontakte</h3>
+            <h3 className="font-medium mb-1">VK</h3>
             <p className="text-muted-foreground">
               <a href="https://vk.com/playbackrental" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
                 /playbackrental
