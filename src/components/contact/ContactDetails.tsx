@@ -56,8 +56,8 @@ const ContactDetails = () => {
           <div>
             <h3 className="font-medium mb-1">Telegram</h3>
             <p className="text-muted-foreground">
-              <a href="https://t.me/yourcompany" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                @yourcompany
+              <a href="https://t.me/PlaybackRental" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                @PlaybackRental
               </a>
             </p>
           </div>
@@ -72,8 +72,8 @@ const ContactDetails = () => {
           <div>
             <h3 className="font-medium mb-1">VKontakte</h3>
             <p className="text-muted-foreground">
-              <a href="https://vk.com/yourcompany" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                /yourcompany
+              <a href="https://vk.com/playbackrental" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                /playbackrental
               </a>
             </p>
           </div>
