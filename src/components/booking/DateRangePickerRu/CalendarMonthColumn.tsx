@@ -5,6 +5,7 @@ import { ru } from "date-fns/locale";
 import { Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DaysGrid from "./DaysGrid";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type TimeOption = {
   value: string;
@@ -49,6 +50,7 @@ const CalendarMonthColumn = ({
 }: CalendarMonthColumnProps) => {
   const month = monthDate.getMonth();
   const year = monthDate.getFullYear();
+  const isMobile = useIsMobile();
 
   return (
     <div className="flex flex-col items-center h-full">
@@ -72,24 +74,27 @@ const CalendarMonthColumn = ({
           currentMonth={month}
         />
       </div>
-      <div className="mt-auto pt-2 flex items-center gap-2 self-start">
-        <Clock className="h-4 w-4 text-[#ea384c]" />
-        <span className="text-sm text-[#222] text-sec">
-          {label === "Взять" ? "Взять в:" : "Вернуть до:"}
-        </span>
-        <Select value={timeValue} onValueChange={setTime}>
-          <SelectTrigger className="w-[100px] bg-white border rounded px-2 py-1 h-8">
-            <SelectValue placeholder="Выберите время" />
-          </SelectTrigger>
-          <SelectContent>
-            {hours.map(hour => (
-              <SelectItem key={hour.value} value={hour.value}>
-                {hour.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Hide time selector for "Вернуть" in mobile mode since we've added it separately */}
+      {!(isMobile && label === "Вернуть") && (
+        <div className="mt-auto pt-2 flex items-center gap-2 self-start">
+          <Clock className="h-4 w-4 text-[#ea384c]" />
+          <span className="text-sm text-[#222] text-sec">
+            {label === "Взять" ? "Взять в:" : "Вернуть до:"}
+          </span>
+          <Select value={timeValue} onValueChange={setTime}>
+            <SelectTrigger className="w-[100px] bg-white border rounded px-2 py-1 h-8">
+              <SelectValue placeholder="Выберите время" />
+            </SelectTrigger>
+            <SelectContent>
+              {hours.map(hour => (
+                <SelectItem key={hour.value} value={hour.value}>
+                  {hour.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 };
