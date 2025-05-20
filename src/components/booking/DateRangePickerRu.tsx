@@ -1,4 +1,3 @@
-
 import React from "react";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -8,14 +7,12 @@ import CalendarHeader from "./DateRangePickerRu/CalendarHeader";
 import SelectedInfo from "./DateRangePickerRu/SelectedInfo";
 import { useDateRangeCalendar } from "@/hooks/useDateRangeCalendar";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 const HOURS = Array.from({
   length: 10
 }, (_, i) => i + 10).map(hour => ({
   value: hour.toString(),
   label: (hour < 10 ? `0${hour}` : hour) + ":00"
 }));
-
 interface DateRangePickerRuProps {
   onChange: (range: {
     start: Date | null;
@@ -26,7 +23,6 @@ interface DateRangePickerRuProps {
   className?: string;
   onClose?: () => void;
 }
-
 const DateRangePickerRu = ({
   onChange,
   initialStartDate,
@@ -35,7 +31,6 @@ const DateRangePickerRu = ({
   onClose
 }: DateRangePickerRuProps) => {
   const isMobile = useIsMobile();
-  
   const {
     leftMonth,
     rightMonth,
@@ -53,9 +48,7 @@ const DateRangePickerRu = ({
     setEndTime,
     getFormattedDateRange
   } = useDateRangeCalendar(initialStartDate, initialEndDate);
-  
   const daysOfWeek = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"].map(d => d.toUpperCase());
-  
   const handleConfirmTime = () => {
     if (!selection.from) return;
     const dateRange = getFormattedDateRange();
@@ -72,66 +65,30 @@ const DateRangePickerRu = ({
       }
     }
   };
-  
   return <div className={cn("w-full", className)}>
       <CalendarHeader onPrev={handlePrevMonth} onNext={handleNextMonth} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
         <div className="flex flex-col h-full">
-          {isMobile && (
-            <h3 className="text-base font-medium text-[#222] mb-3">Взять в:</h3>
-          )}
-          <CalendarMonthColumn 
-            label="Взять" 
-            monthDate={leftMonth} 
-            daysOfWeek={daysOfWeek} 
-            daysGrid={buildDaysGrid(leftMonth)} 
-            getDayKey={getDayKey} 
-            getDayClasses={getDayClasses} 
-            handleDateClick={handleDateClick} 
-            handleDateHover={handleDateHover} 
-            timeValue={startTime} 
-            setTime={setStartTime} 
-            hours={HOURS} 
-          />
+          {isMobile && <h3 className="text-base font-medium text-[#222] mb-3">Взять в:</h3>}
+          <CalendarMonthColumn label="Взять" monthDate={leftMonth} daysOfWeek={daysOfWeek} daysGrid={buildDaysGrid(leftMonth)} getDayKey={getDayKey} getDayClasses={getDayClasses} handleDateClick={handleDateClick} handleDateHover={handleDateHover} timeValue={startTime} setTime={setStartTime} hours={HOURS} />
         </div>
         
-        {!isMobile ? (
-          <div className="flex flex-col h-full">
-            <CalendarMonthColumn 
-              label="Вернуть" 
-              monthDate={rightMonth} 
-              daysOfWeek={daysOfWeek} 
-              daysGrid={buildDaysGrid(rightMonth)} 
-              getDayKey={getDayKey} 
-              getDayClasses={getDayClasses} 
-              handleDateClick={handleDateClick} 
-              handleDateHover={handleDateHover} 
-              timeValue={endTime} 
-              setTime={setEndTime} 
-              hours={HOURS} 
-            />
-          </div>
-        ) : (
-          // Mobile: Show "Вернуть до" header and the end time selection with the same calendar
-          <div className="flex flex-col h-full mt-6">
-            <h3 className="text-base font-medium text-[#222] mb-3">Вернуть до:</h3>
+        {!isMobile ? <div className="flex flex-col h-full">
+            <CalendarMonthColumn label="Вернуть" monthDate={rightMonth} daysOfWeek={daysOfWeek} daysGrid={buildDaysGrid(rightMonth)} getDayKey={getDayKey} getDayClasses={getDayClasses} handleDateClick={handleDateClick} handleDateHover={handleDateHover} timeValue={endTime} setTime={setEndTime} hours={HOURS} />
+          </div> :
+      // Mobile: Show "Вернуть до" header and the end time selection with the same calendar
+      <div className="flex flex-col h-full mt-6">
+            
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[#222]">Время:</span>
-              <select 
-                value={endTime} 
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-[100px] bg-white border rounded px-2 py-1 h-8"
-              >
-                {HOURS.map(hour => (
-                  <option key={hour.value} value={hour.value}>
+              <span className="text-sm text-[#222]">Вернуть до:</span>
+              <select value={endTime} onChange={e => setEndTime(e.target.value)} className="w-[100px] bg-white border rounded px-2 py-1 h-8">
+                {HOURS.map(hour => <option key={hour.value} value={hour.value}>
                     {hour.label}
-                  </option>
-                ))}
+                  </option>)}
               </select>
             </div>
-          </div>
-        )}
+          </div>}
       </div>
 
       <div className="flex justify-center mt-6">
@@ -143,5 +100,4 @@ const DateRangePickerRu = ({
       <SelectedInfo from={selection.from} to={selection.to} startTime={startTime} endTime={endTime} />
     </div>;
 };
-
 export default DateRangePickerRu;
