@@ -72,42 +72,13 @@ const DateRangePickerRu = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
         <div className="flex flex-col h-full">
-          <CalendarMonthColumn 
-            label="Взять" 
-            monthDate={leftMonth} 
-            daysOfWeek={daysOfWeek} 
-            daysGrid={buildDaysGrid(leftMonth)} 
-            getDayKey={getDayKey} 
-            getDayClasses={getDayClasses} 
-            handleDateClick={handleDateClick} 
-            handleDateHover={handleDateHover} 
-            timeValue={startTime} 
-            setTime={setStartTime} 
-            hours={HOURS}
-            isMobile={isMobile}
-          />
+          <CalendarMonthColumn label="Взять" monthDate={leftMonth} daysOfWeek={daysOfWeek} daysGrid={buildDaysGrid(leftMonth)} getDayKey={getDayKey} getDayClasses={getDayClasses} handleDateClick={handleDateClick} handleDateHover={handleDateHover} timeValue={startTime} setTime={setStartTime} hours={HOURS} isMobile={isMobile} />
         </div>
         
-        {!isMobile ? (
-          <div className="flex flex-col h-full">
-            <CalendarMonthColumn 
-              label="Вернуть" 
-              monthDate={rightMonth} 
-              daysOfWeek={daysOfWeek} 
-              daysGrid={buildDaysGrid(rightMonth)} 
-              getDayKey={getDayKey} 
-              getDayClasses={getDayClasses} 
-              handleDateClick={handleDateClick} 
-              handleDateHover={handleDateHover} 
-              timeValue={endTime} 
-              setTime={setEndTime} 
-              hours={HOURS}
-              isMobile={isMobile}
-            />
-          </div>
-        ) : (
-          <div className="flex flex-col h-full mt-0">
-            <div className="pt-2 flex items-center gap-2 self-start py-[4px]">
+        {!isMobile ? <div className="flex flex-col h-full">
+            <CalendarMonthColumn label="Вернуть" monthDate={rightMonth} daysOfWeek={daysOfWeek} daysGrid={buildDaysGrid(rightMonth)} getDayKey={getDayKey} getDayClasses={getDayClasses} handleDateClick={handleDateClick} handleDateHover={handleDateHover} timeValue={endTime} setTime={setEndTime} hours={HOURS} isMobile={isMobile} />
+          </div> : <div className="flex flex-col h-full mt-0">
+            <div className="pt-2 flex items-center gap-2 self-start py-[4px] my-[-15px]">
               <Clock className="h-4 w-4 text-[#ea384c]" />
               <span className="text-sm text-[#222]">
                 Вернуть до:
@@ -123,8 +94,7 @@ const DateRangePickerRu = ({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-        )}
+          </div>}
       </div>
 
       <div className="flex justify-center mt-6">
