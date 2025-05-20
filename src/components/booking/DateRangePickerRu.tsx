@@ -1,4 +1,3 @@
-
 import React from "react";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -8,14 +7,12 @@ import CalendarHeader from "./DateRangePickerRu/CalendarHeader";
 import SelectedInfo from "./DateRangePickerRu/SelectedInfo";
 import { useDateRangeCalendar } from "@/hooks/useDateRangeCalendar";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 const HOURS = Array.from({
   length: 10
 }, (_, i) => i + 10).map(hour => ({
   value: hour.toString(),
   label: (hour < 10 ? `0${hour}` : hour) + ":00"
 }));
-
 interface DateRangePickerRuProps {
   onChange: (range: {
     start: Date | null;
@@ -26,7 +23,6 @@ interface DateRangePickerRuProps {
   className?: string;
   onClose?: () => void;
 }
-
 const DateRangePickerRu = ({
   onChange,
   initialStartDate,
@@ -52,9 +48,7 @@ const DateRangePickerRu = ({
     setEndTime,
     getFormattedDateRange
   } = useDateRangeCalendar(initialStartDate, initialEndDate);
-
   const daysOfWeek = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"].map(d => d.toUpperCase());
-
   const handleConfirmTime = () => {
     if (!selection.from) return;
     const dateRange = getFormattedDateRange();
@@ -71,7 +65,6 @@ const DateRangePickerRu = ({
       }
     }
   };
-
   return <div className={cn("w-full", className)}>
       <CalendarHeader onPrev={handlePrevMonth} onNext={handleNextMonth} />
 
@@ -86,7 +79,7 @@ const DateRangePickerRu = ({
           </div> :
       // Mobile: Show "Вернуть до" header and the end time selection with the same calendar
       <div className="flex flex-col h-full mt-0">
-            <div className="flex items-center gap-2 my-0">
+            <div className="flex items-center gap-2 my-[-15px]">
               <span className="text-sm text-[#222]">Вернуть до:</span>
               <select value={endTime} onChange={e => setEndTime(e.target.value)} className="w-[100px] bg-white border rounded px-2 py-1 h-8">
                 {HOURS.map(hour => <option key={hour.value} value={hour.value}>
@@ -106,5 +99,4 @@ const DateRangePickerRu = ({
       <SelectedInfo from={selection.from} to={selection.to} startTime={startTime} endTime={endTime} />
     </div>;
 };
-
 export default DateRangePickerRu;
