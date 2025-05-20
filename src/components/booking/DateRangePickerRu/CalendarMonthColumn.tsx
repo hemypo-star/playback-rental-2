@@ -1,3 +1,4 @@
+
 import React from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -62,7 +63,7 @@ const CalendarMonthColumn = ({
         <DaysGrid daysGrid={daysGrid} getDayKey={getDayKey} getDayClasses={getDayClasses} handleDateClick={handleDateClick} handleDateHover={handleDateHover} currentMonth={month} />
       </div>
       {/* Hide time selector for "Вернуть" in mobile mode since we've added it separately */}
-      {!(isMobile && label === "Вернуть") && <div className="mt-auto pt-2 flex items-center gap-2 self-start py-[4px]">
+      {!(isMobile && label === "Вернуть") && <div className="pt-2 flex items-center gap-2 self-start py-[4px]">
           <Clock className="h-4 w-4 text-[#ea384c]" />
           <span className="text-sm text-[#222] text-sec">
             {label === "Взять" ? "Взять в:" : "Вернуть до:"}
