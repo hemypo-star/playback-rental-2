@@ -1,8 +1,11 @@
+
 import { useState, useCallback } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BookingPeriod } from '@/types/product';
 import DateRangePickerRu from './booking/DateRangePickerRu';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 interface BookingCalendarProps {
   onBookingChange: (booking: BookingPeriod) => void;
   initialStartDate?: Date;
@@ -12,6 +15,7 @@ interface BookingCalendarProps {
   className?: string;
   onClose?: () => void;
 }
+
 const BookingCalendar = ({
   onBookingChange,
   initialStartDate,
@@ -21,6 +25,7 @@ const BookingCalendar = ({
   className,
   onClose
 }: BookingCalendarProps) => {
+  const isMobile = useIsMobile();
   const [dateRange, setDateRange] = useState<{
     start: Date | null;
     end: Date | null;
@@ -64,6 +69,7 @@ const BookingCalendar = ({
       }
     }
   }, [onBookingChange, onClose]);
+
   const handleClose = useCallback(() => {
     if (onClose) {
       window.scrollTo({
@@ -73,6 +79,7 @@ const BookingCalendar = ({
       onClose();
     }
   }, [onClose]);
+
   return <div className={cn("border rounded-lg shadow-sm bg-card flex flex-col h-full w-full", className)}>
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -80,9 +87,16 @@ const BookingCalendar = ({
           <h3 className="font-medium">Выберите даты аренды</h3>
         </div>
       </div>
-      <div className="p-4 flex-1 overflow-auto w-full py-[6px]">
-        <DateRangePickerRu onChange={handleDateRangeChange} initialStartDate={initialStartDate} initialEndDate={initialEndDate} className={cn(isCompact && "scale-[0.95] origin-top")} onClose={handleClose} />
+      <div className={cn("p-4 flex-1 overflow-auto w-full py-[6px]", isMobile ? "max-h-[550px]" : "")}>
+        <DateRangePickerRu 
+          onChange={handleDateRangeChange} 
+          initialStartDate={initialStartDate} 
+          initialEndDate={initialEndDate} 
+          className={cn(isCompact && "scale-[0.95] origin-top")} 
+          onClose={handleClose} 
+        />
       </div>
     </div>;
 };
+
 export default BookingCalendar;
