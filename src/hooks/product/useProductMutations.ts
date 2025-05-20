@@ -96,7 +96,18 @@ export const useProductMutations = () => {
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
-    mutationFn: deleteProduct,
+    mutationFn: async (id: string) => {
+      setIsLoading(true);
+      try {
+        const result = await deleteProduct(id);
+        if (!result) {
+          throw new Error(`Failed to delete product with ID ${id}`);
+        }
+        return result;
+      } finally {
+        setIsLoading(false);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
@@ -113,6 +124,16 @@ export const useProductMutations = () => {
     },
   });
 
+  const handleDeleteProduct = async (id: string): Promise<boolean> => {
+    try {
+      await deleteProductMutation.mutateAsync(id);
+      return true;
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      return false;
+    }
+  };
+
   return {
     isLoading,
     createProductMutation,
@@ -120,6 +141,6 @@ export const useProductMutations = () => {
     deleteProductMutation,
     addProduct: createProductMutation.mutate,
     updateProduct: updateProductMutation.mutate,
-    deleteProduct: deleteProductMutation.mutate
+    deleteProduct: handleDeleteProduct
   };
 };

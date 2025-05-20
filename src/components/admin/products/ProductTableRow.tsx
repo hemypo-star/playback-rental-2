@@ -1,5 +1,6 @@
 
 import { TableRow, TableCell } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import StatusDropdown from "@/components/admin/StatusDropdown";
 import { Badge } from "@/components/ui/badge";
 import { Image } from "lucide-react";
@@ -12,15 +13,30 @@ type Props = {
   onDelete: (id: string) => void;
   updateMutation: any;
   statusOptions: { value: string; label: string }[];
+  isSelected?: boolean;
+  onSelectChange?: () => void;
 };
 
 export default function ProductTableRow({
-  product, onEdit, onDelete, updateMutation, statusOptions,
+  product, 
+  onEdit, 
+  onDelete, 
+  updateMutation, 
+  statusOptions,
+  isSelected = false,
+  onSelectChange = () => {}
 }: Props) {
   const imageUrl = product.imageUrl ? getProductImageUrl(product.imageUrl) : null;
 
   return (
     <TableRow key={product.id}>
+      <TableCell>
+        <Checkbox 
+          checked={isSelected} 
+          onCheckedChange={onSelectChange}
+          aria-label={`Select ${product.title}`} 
+        />
+      </TableCell>
       <TableCell>
         {imageUrl ? (
           <div 
@@ -65,7 +81,7 @@ export default function ProductTableRow({
         <StatusDropdown
           value={product.available ? "confirmed" : "cancelled"}
           onChange={(newStatus) => {
-            updateMutation.mutate({ id: product.id, product: { available: newStatus === "confirmed" } });
+            updateMutation.mutate({ id: product.id, data: { available: newStatus === "confirmed" } });
           }}
           options={statusOptions}
           disabled={updateMutation.isPending}
