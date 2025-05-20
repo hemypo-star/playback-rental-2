@@ -1,8 +1,9 @@
-
 import React from "react";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CalendarMonthColumn from "./DateRangePickerRu/CalendarMonthColumn";
 import CalendarHeader from "./DateRangePickerRu/CalendarHeader";
 import SelectedInfo from "./DateRangePickerRu/SelectedInfo";
@@ -107,18 +108,20 @@ const DateRangePickerRu = ({
         ) : (
           <div className="flex flex-col h-full mt-0">
             <div className="pt-2 flex items-center gap-2 self-start py-[4px]">
-              <span className="text-sm text-[#222]">Вернуть до:</span>
-              <select 
-                value={endTime} 
-                onChange={e => setEndTime(e.target.value)} 
-                className="w-[100px] bg-white border rounded px-2 py-1 h-8"
-              >
-                {HOURS.map(hour => (
-                  <option key={hour.value} value={hour.value}>
-                    {hour.label}
-                  </option>
-                ))}
-              </select>
+              <Clock className="h-4 w-4 text-[#ea384c]" />
+              <span className="text-sm text-[#222]">
+                Вернуть до:
+              </span>
+              <Select value={endTime} onValueChange={setEndTime}>
+                <SelectTrigger className="w-[100px] bg-white border rounded px-2 py-1 h-8">
+                  <SelectValue placeholder="Выберите время" />
+                </SelectTrigger>
+                <SelectContent>
+                  {HOURS.map(hour => <SelectItem key={hour.value} value={hour.value}>
+                      {hour.label}
+                    </SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         )}
