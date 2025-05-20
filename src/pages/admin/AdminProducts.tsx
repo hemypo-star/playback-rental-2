@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { useStorageStatus } from '@/hooks/useStorageStatus';
 import ProductActions from '@/components/admin/products/ProductActions';
 import ProductTabs from '@/components/admin/products/ProductTabs';
 import InitializeStorage from '@/components/admin/InitializeStorage';
+import ImportExport from '@/components/admin/products/ImportExport';
 import { ProductFormValues } from '@/hooks/useProductManagement';
 
 const AdminProducts = () => {
@@ -61,30 +63,47 @@ const AdminProducts = () => {
     }
   };
 
+  // State to control which section is visible
+  const [activeSection, setActiveSection] = useState<'products' | 'import-export'>('products');
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Управление товарами</h2>
         <div className="flex gap-2">
-          <ProductActions
-            openDialog={openDialog}
-            setOpenDialog={setOpenDialog}
-            editProduct={editProduct}
-            categories={categories || []}
-            showCategoryInput={showCategoryInput}
-            setShowCategoryInput={setShowCategoryInput}
-            newCategoryName={newCategoryName}
-            setNewCategoryName={setNewCategoryName}
-            fileForProduct={imageForProduct}
-            setFileForProduct={setImageForProduct}
-            fileForCategory={fileForCategory}
-            setFileForCategory={setFileForCategory}
-            addCategoryMutation={addCategoryMutation}
-            onSubmit={onSubmit}
-            handleAddCategory={handleAddCategory}
-            createPending={createProductMutation?.isPending}
-            updatePending={updateProductMutation?.isPending}
-          />
+          <Button 
+            variant={activeSection === 'products' ? "default" : "outline"} 
+            onClick={() => setActiveSection('products')}
+          >
+            Товары
+          </Button>
+          <Button 
+            variant={activeSection === 'import-export' ? "default" : "outline"} 
+            onClick={() => setActiveSection('import-export')}
+          >
+            Импорт/Экспорт
+          </Button>
+          {activeSection === 'products' && (
+            <ProductActions
+              openDialog={openDialog}
+              setOpenDialog={setOpenDialog}
+              editProduct={editProduct}
+              categories={categories || []}
+              showCategoryInput={showCategoryInput}
+              setShowCategoryInput={setShowCategoryInput}
+              newCategoryName={newCategoryName}
+              setNewCategoryName={setNewCategoryName}
+              fileForProduct={imageForProduct}
+              setFileForProduct={setImageForProduct}
+              fileForCategory={fileForCategory}
+              setFileForCategory={setFileForCategory}
+              addCategoryMutation={addCategoryMutation}
+              onSubmit={onSubmit}
+              handleAddCategory={handleAddCategory}
+              createPending={createProductMutation?.isPending}
+              updatePending={updateProductMutation?.isPending}
+            />
+          )}
         </div>
       </div>
 
@@ -100,13 +119,17 @@ const AdminProducts = () => {
         </Alert>
       )}
 
-      <ProductTabs
-        products={products}
-        isLoading={isLoadingProducts}
-        onEditProduct={handleEditProduct}
-        onDeleteProduct={handleDeleteProduct}
-        updateMutation={updateProductMutation}
-      />
+      {activeSection === 'products' ? (
+        <ProductTabs
+          products={products}
+          isLoading={isLoadingProducts}
+          onEditProduct={handleEditProduct}
+          onDeleteProduct={handleDeleteProduct}
+          updateMutation={updateProductMutation}
+        />
+      ) : (
+        <ImportExport />
+      )}
     </div>
   );
 };

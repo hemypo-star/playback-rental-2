@@ -36,8 +36,39 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
   }
 };
 
+export const getCategoryByName = async (name: string): Promise<Category | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .ilike('name', name)
+      .maybeSingle();
+      
+    if (error) throw error;
+    
+    // Map imageurl to imageUrl for consistency in the frontend
+    return data ? {
+      ...data,
+      imageUrl: data.imageurl,
+      order: data.order || 0
+    } : null;
+  } catch (error) {
+    console.error('Error getting category by name:', error);
+    return null;
+  }
+};
+
 export const addCategory = async (categoryData: Partial<Category>): Promise<Category | null> => {
   try {
+    // Check if category already exists with similar name (case insensitive)
+    if (categoryData.name) {
+      const existingCategory = await getCategoryByName(categoryData.name);
+      if (existingCategory) {
+        console.log(`Category ${categoryData.name} already exists, returning existing category`);
+        return existingCategory;
+      }
+    }
+    
     // Make sure we're using imageurl for the database column and required fields are present
     const dbData: any = {
       name: categoryData.name || '', // Ensure name is never undefined

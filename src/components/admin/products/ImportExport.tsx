@@ -5,91 +5,48 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Download, Upload, Loader2 } from 'lucide-react';
-import * as supabaseService from '@/services/supabaseService';
+import { Download, Upload, Loader2, AlertCircle } from 'lucide-react';
+import { useProductImportExport } from '@/hooks/product/useProductImportExport';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function ImportExport() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
+  const { isLoading, handleExport, handleImport } = useProductImportExport();
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
-  const handleExportCSV = async () => {
-    setIsExporting(true);
-    try {
-      const csvContent = await supabaseService.exportProductsToCSV();
-      
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `products_export_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast({
-        title: 'Экспорт завершен',
-        description: 'Файл CSV успешно скачан',
-      });
-    } catch (error) {
-      toast({
-        title: 'Ошибка экспорта',
-        description: 'Не удалось экспортировать товары',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleImportCSV = async () => {
-    if (!csvFile) {
-      toast({
-        title: 'Ошибка',
-        description: 'Выберите файл CSV для импорта',
-        variant: 'destructive',
-      });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError(null);
+    const file = e.target.files?.[0];
+    
+    if (!file) {
       return;
     }
     
-    setIsImporting(true);
+    // Validate file type
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+      setFileError('Пожалуйста, выберите файл CSV');
+      return;
+    }
+    
+    setCsvFile(file);
+  };
+
+  const handleImportClick = async () => {
+    if (!csvFile) {
+      setFileError('Выберите файл CSV для импорта');
+      return;
+    }
+    
     try {
-      const reader = new FileReader();
-      
-      reader.onload = async (e) => {
-        const text = e.target?.result as string;
-        await supabaseService.importProductsFromCSV(text);
-        
-        queryClient.invalidateQueries({ queryKey: ['products'] });
-        toast({
-          title: 'Импорт завершен',
-          description: 'Товары успешно импортированы',
-        });
-        
-        setCsvFile(null);
-        setIsImporting(false);
-      };
-      
-      reader.onerror = () => {
-        toast({
-          title: 'Ошибка чтения файла',
-          description: 'Не удалось прочитать файл CSV',
-          variant: 'destructive',
-        });
-        setIsImporting(false);
-      };
-      
-      reader.readAsText(csvFile);
+      await handleImport(csvFile);
+      setCsvFile(null);
+      // Reset file input
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
     } catch (error) {
-      toast({
-        title: 'Ошибка импорта',
-        description: 'Не удалось импортировать товары',
-        variant: 'destructive',
-      });
-      setIsImporting(false);
+      console.error('Error during import:', error);
     }
   };
 
@@ -104,11 +61,11 @@ export default function ImportExport() {
         </CardHeader>
         <CardContent>
           <Button 
-            onClick={handleExportCSV} 
-            disabled={isExporting}
+            onClick={handleExport} 
+            disabled={isLoading}
             className="w-full"
           >
-            {isExporting ? (
+            {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Экспорт...
@@ -128,23 +85,32 @@ export default function ImportExport() {
           <CardTitle>Импорт товаров</CardTitle>
           <CardDescription>
             Импортируйте товары из CSV файла. Формат должен соответствовать экспортированному файлу.
+            Новые категории будут созданы автоматически.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {fileError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{fileError}</AlertDescription>
+            </Alert>
+          )}
+          
           <div className="flex items-center gap-4">
             <Input
               type="file"
               accept=".csv"
-              onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-              disabled={isImporting}
+              onChange={handleFileChange}
+              disabled={isLoading}
             />
           </div>
+          
           <Button 
-            onClick={handleImportCSV} 
-            disabled={!csvFile || isImporting}
+            onClick={handleImportClick} 
+            disabled={!csvFile || isLoading}
             className="w-full"
           >
-            {isImporting ? (
+            {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Импорт...

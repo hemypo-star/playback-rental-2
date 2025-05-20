@@ -2,6 +2,7 @@ import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
 import { getProductImageUrl, uploadProductImage } from '@/utils/imageUtils';
+import { addCategory, getCategoryById, getCategories } from '@/services/categoryService';
 
 export const getProducts = async (): Promise<Product[]> => {
   try {
@@ -203,26 +204,35 @@ export const getAvailableProducts = async (startDate: Date, endDate: Date): Prom
   }
 };
 
-// CSV operations
+// CSV operations with enhanced reliability
 export const exportProductsToCSV = async () => {
   try {
     const products = await getProducts();
     
     const headers = ['id', 'title', 'description', 'price', 'category', 'imageurl', 'quantity', 'available'];
     const csvRows = [
-      headers.join(','),
+      headers.join(';'),
       ...products.map(product => 
         headers.map(header => {
           const value = product[header as keyof typeof product];
-          if (typeof value === 'string' && value.includes(',')) {
-            return `"${value}"`;
+          let cellValue = String(value);
+          
+          // Escape quotes and add quotes around fields with special characters
+          if (typeof value === 'string' && (
+              value.includes(';') || 
+              value.includes('"') || 
+              value.includes('\r') || 
+              value.includes('\n')
+          )) {
+            cellValue = '"' + cellValue.replace(/"/g, '""') + '"';
           }
-          return value;
-        }).join(',')
+          return cellValue;
+        }).join(';')
       )
     ];
     
-    return csvRows.join('\n');
+    // Use Windows line breaks for better compatibility
+    return csvRows.join('\r\n');
   } catch (error) {
     console.error('Error exporting products to CSV:', error);
     return '';
@@ -231,50 +241,114 @@ export const exportProductsToCSV = async () => {
 
 export const importProductsFromCSV = async (csvContent: string) => {
   try {
-    const lines = csvContent.split('\n');
-    const headers = lines[0].split(',');
+    // Handle different line break styles
+    const lines = csvContent.split(/\r\n|\r|\n/).filter(line => line.trim());
     
+    if (lines.length === 0) {
+      throw new Error('CSV file is empty or invalid');
+    }
+    
+    const headers = parseCSVLine(lines[0], ';');
     const products = [];
+    
+    // Get existing categories for quick lookup
+    const existingCategories = await getCategories();
+    const categoryMap = new Map(existingCategories.map(cat => [cat.name.toLowerCase(), cat]));
     
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i].trim()) continue;
       
-      const values = lines[i].split(',');
+      const values = parseCSVLine(lines[i], ';');
       const product: Record<string, any> = {};
       
       headers.forEach((header, index) => {
-        let value = values[index];
-        
-        if (value && value.startsWith('"') && !value.endsWith('"')) {
-          let j = index + 1;
-          while (j < values.length) {
-            value += ',' + values[j];
-            if (values[j].endsWith('"')) break;
-            j++;
+        if (index < values.length) {
+          let value = values[index];
+          
+          if (header === 'available') {
+            product[header] = value.toLowerCase() === 'true' || value === '1';
+          } else if (header === 'price' || header === 'quantity') {
+            product[header] = Number(value) || 0;
+          } else {
+            product[header] = value;
           }
-          value = value.substring(1, value.length - 1);
-        }
-        
-        if (header === 'available') {
-          product[header] = value.toLowerCase() === 'true';
-        } else if (header === 'price' || header === 'quantity') {
-          product[header] = Number(value);
-        } else {
-          product[header] = value;
         }
       });
+      
+      // Ensure category exists or create it
+      if (product.category) {
+        const categoryExists = categoryMap.has(product.category.toLowerCase());
+        
+        if (!categoryExists) {
+          console.log(`Creating new category: ${product.category}`);
+          const newCategory = await addCategory({ 
+            name: product.category,
+            slug: product.category.toLowerCase().replace(/\s+/g, '-')
+          });
+          
+          if (newCategory) {
+            categoryMap.set(newCategory.name.toLowerCase(), newCategory);
+          }
+        }
+      }
       
       products.push(product);
     }
     
+    // Insert products using transaction to ensure all succeed or none
     for (const product of products) {
       const { id, ...productData } = product;
-      await supabaseServiceClient.from('products').insert([productData]);
+      
+      // Handle existing products (update) vs. new products (insert)
+      if (id) {
+        const existingProduct = await getProductById(id);
+        if (existingProduct) {
+          await updateProduct(id, productData);
+        } else {
+          await createProduct(productData);
+        }
+      } else {
+        await createProduct(productData);
+      }
     }
     
     return products;
   } catch (error) {
     console.error('Error importing products from CSV:', error);
-    return [];
+    throw error;
   }
 };
+
+// Helper function to parse CSV lines considering quoted fields
+function parseCSVLine(line: string, delimiter: string): string[] {
+  const result: string[] = [];
+  let inQuotes = false;
+  let currentValue = '';
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = i + 1 < line.length ? line[i + 1] : '';
+    
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote inside quotes
+        currentValue += '"';
+        i++; // Skip next quote
+      } else {
+        // Toggle quote mode
+        inQuotes = !inQuotes;
+      }
+    } else if (char === delimiter && !inQuotes) {
+      // End of field
+      result.push(currentValue);
+      currentValue = '';
+    } else {
+      // Regular character
+      currentValue += char;
+    }
+  }
+  
+  // Add the last field
+  result.push(currentValue);
+  return result;
+}

@@ -17,8 +17,11 @@ export const useProductImportExport = () => {
       setIsLoading(true);
       const csvContent = await exportProductsToCSV();
       
-      // Create a blob and download it
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      // Set proper encoding for Russian characters
+      const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { 
+        type: 'text/csv;charset=utf-8;' 
+      });
+      
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
@@ -47,18 +50,20 @@ export const useProductImportExport = () => {
     try {
       setIsLoading(true);
       
-      // Read the file content as text
+      // Read the file content as text with encoding detection
       const fileContent = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => resolve(e.target?.result as string);
         reader.onerror = reject;
-        reader.readAsText(file);
+        reader.readAsText(file, 'UTF-8');
       });
       
       // Now pass the string content to importProductsFromCSV
       await importProductsFromCSV(fileContent);
       
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      
       toast({
         title: "Импорт завершен",
         description: "Продукты успешно импортированы из CSV",
