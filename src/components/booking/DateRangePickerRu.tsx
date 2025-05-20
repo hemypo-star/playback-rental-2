@@ -70,7 +70,7 @@ const DateRangePickerRu = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
         <div className="flex flex-col h-full">
-          {isMobile && <h3 className="text-base font-medium text-[#222] mb-3">Взять в:</h3>}
+          {isMobile}
           <CalendarMonthColumn label="Взять" monthDate={leftMonth} daysOfWeek={daysOfWeek} daysGrid={buildDaysGrid(leftMonth)} getDayKey={getDayKey} getDayClasses={getDayClasses} handleDateClick={handleDateClick} handleDateHover={handleDateHover} timeValue={startTime} setTime={setStartTime} hours={HOURS} />
         </div>
         
@@ -80,7 +80,7 @@ const DateRangePickerRu = ({
       // Mobile: Show "Вернуть до" header and the end time selection with the same calendar
       <div className="flex flex-col h-full mt-6">
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 my-0">
               <span className="text-sm text-[#222]">Вернуть до:</span>
               <select value={endTime} onChange={e => setEndTime(e.target.value)} className="w-[100px] bg-white border rounded px-2 py-1 h-8">
                 {HOURS.map(hour => <option key={hour.value} value={hour.value}>

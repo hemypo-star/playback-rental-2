@@ -1,4 +1,3 @@
-
 import React from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -6,12 +5,10 @@ import { Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DaysGrid from "./DaysGrid";
 import { useIsMobile } from "@/hooks/use-mobile";
-
 type TimeOption = {
   value: string;
   label: string;
 };
-
 interface CalendarMonthColumnProps {
   label: string;
   monthDate: Date;
@@ -34,7 +31,6 @@ interface CalendarMonthColumnProps {
   setTime: (v: string) => void;
   hours: TimeOption[];
 }
-
 const CalendarMonthColumn = ({
   label,
   monthDate,
@@ -51,32 +47,22 @@ const CalendarMonthColumn = ({
   const month = monthDate.getMonth();
   const year = monthDate.getFullYear();
   const isMobile = useIsMobile();
-
-  return (
-    <div className="flex flex-col items-center h-full">
+  return <div className="flex flex-col items-center h-full">
       <h3 className="font-medium text-lg text-[#222] text-center mb-3">
-        {format(monthDate, "LLLL yyyy", { locale: ru })}
+        {format(monthDate, "LLLL yyyy", {
+        locale: ru
+      })}
       </h3>
       <div className="grid grid-cols-7 gap-y-2 gap-x-0 mb-2 w-full">
-        {daysOfWeek.map((d, i) => (
-          <span key={d + i} className="text-xs font-medium text-[#B1B1C7] text-center">
+        {daysOfWeek.map((d, i) => <span key={d + i} className="text-xs font-medium text-[#B1B1C7] text-center">
             {d}
-          </span>
-        ))}
+          </span>)}
       </div>
       <div className="flex-grow w-full">
-        <DaysGrid
-          daysGrid={daysGrid}
-          getDayKey={getDayKey}
-          getDayClasses={getDayClasses}
-          handleDateClick={handleDateClick}
-          handleDateHover={handleDateHover}
-          currentMonth={month}
-        />
+        <DaysGrid daysGrid={daysGrid} getDayKey={getDayKey} getDayClasses={getDayClasses} handleDateClick={handleDateClick} handleDateHover={handleDateHover} currentMonth={month} />
       </div>
       {/* Hide time selector for "Вернуть" in mobile mode since we've added it separately */}
-      {!(isMobile && label === "Вернуть") && (
-        <div className="mt-auto pt-2 flex items-center gap-2 self-start">
+      {!(isMobile && label === "Вернуть") && <div className="mt-auto pt-2 flex items-center gap-2 self-start py-[4px]">
           <Clock className="h-4 w-4 text-[#ea384c]" />
           <span className="text-sm text-[#222] text-sec">
             {label === "Взять" ? "Взять в:" : "Вернуть до:"}
@@ -86,17 +72,12 @@ const CalendarMonthColumn = ({
               <SelectValue placeholder="Выберите время" />
             </SelectTrigger>
             <SelectContent>
-              {hours.map(hour => (
-                <SelectItem key={hour.value} value={hour.value}>
+              {hours.map(hour => <SelectItem key={hour.value} value={hour.value}>
                   {hour.label}
-                </SelectItem>
-              ))}
+                </SelectItem>)}
             </SelectContent>
           </Select>
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 };
-
 export default CalendarMonthColumn;
