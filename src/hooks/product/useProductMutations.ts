@@ -40,7 +40,7 @@ export const useProductMutations = () => {
         const newProduct = await createProduct({
           ...productData,
           imageUrl: imageUrl || '',
-        }, imageFile);
+        }, productData.imageFile); // Fixed: Using productData.imageFile instead of undefined imageFile
 
         return newProduct;
       } finally {
