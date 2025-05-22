@@ -47,7 +47,7 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File 
     if (imageFile) {
       try {
         if (typeof imageFile === 'string') {
-          console.log("Using external URL for product image");
+          console.log("Using external URL for product image:", imageFile);
           imageFileName = imageFile;
         } else {
           console.log("Uploading image file before creating product");
@@ -75,6 +75,8 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File 
     if (!dbProduct.title || !dbProduct.category) {
       throw new Error("Product title and category are required fields");
     }
+    
+    console.log("Inserting product with imageurl:", dbProduct.imageurl);
     
     // Insert the product
     const { data, error } = await supabase.from('products').insert([dbProduct]).select().single();
@@ -350,6 +352,8 @@ export const importProductsFromCSV = async (csvContent: string) => {
       const imageUrl = getColumnValue('imageurl', '');
       product.imageurl = imageUrl;
       
+      console.log(`Row ${i}: Extracted image URL: "${imageUrl}"`);
+      
       // Skip empty rows or rows with missing required fields
       if (!product.title || !product.category) {
         console.warn(`Skipping row ${i+1}: Missing required fields`);
@@ -383,16 +387,20 @@ export const importProductsFromCSV = async (csvContent: string) => {
       try {
         const { id, ...productData } = product;
         
+        // Log the image URL before creating/updating product
+        console.log(`Processing product "${productData.title}" with image URL: "${productData.imageurl}"`);
+        
         // Handle existing products (update) vs. new products (insert)
         if (id) {
           const existingProduct = await getProductById(id);
           if (existingProduct) {
             await updateProduct(id, productData);
           } else {
-            await createProduct(productData);
+            await createProduct(productData, productData.imageurl);
           }
         } else {
-          await createProduct(productData);
+          // Pass the image URL directly to createProduct
+          await createProduct(productData, productData.imageurl);
         }
       } catch (error) {
         console.error(`Error processing product: ${product.title}`, error);

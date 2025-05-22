@@ -75,7 +75,10 @@ export const useProductImportExport = () => {
       const importedProducts = await importProductsFromCSV(fileContent);
       
       console.log(`Import completed successfully. Imported ${importedProducts.length} products`);
-      console.log("Sample imported product:", importedProducts[0]);
+      if (importedProducts.length > 0) {
+        console.log("Sample imported product:", importedProducts[0]);
+        console.log("Image URL in sample:", importedProducts[0].imageurl || "No image URL");
+      }
       
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
