@@ -74,6 +74,9 @@ export const useProductImportExport = () => {
       // Now pass the string content to importProductsFromCSV
       const importedProducts = await importProductsFromCSV(fileContent);
       
+      console.log(`Import completed successfully. Imported ${importedProducts.length} products`);
+      console.log("Sample imported product:", importedProducts[0]);
+      
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       

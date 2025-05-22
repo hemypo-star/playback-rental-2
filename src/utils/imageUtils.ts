@@ -56,11 +56,16 @@ export const uploadProductImage = async (imageFile: File | string, productId?: s
 export const getProductImageUrl = (imageUrl: string): string => {
   if (!imageUrl) return '/placeholder.svg';
   
+  console.log("getProductImageUrl processing:", imageUrl);
+  
   if (imageUrl.startsWith('http')) {
+    console.log("Using direct URL (external):", imageUrl);
     return imageUrl;
   }
   
-  return `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${imageUrl}`;
+  const fullUrl = `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${imageUrl}`;
+  console.log("Generated Supabase URL:", fullUrl);
+  return fullUrl;
 };
 
 /**

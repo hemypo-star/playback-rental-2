@@ -29,6 +29,7 @@ export default function ImportExport() {
       return;
     }
     
+    console.log(`Selected CSV file: ${file.name} (${file.size} bytes, type: ${file.type})`);
     setCsvFile(file);
   };
 
@@ -39,7 +40,9 @@ export default function ImportExport() {
     }
     
     try {
+      console.log(`Importing CSV file: ${csvFile.name}`);
       await handleImport(csvFile);
+      console.log('CSV import completed successfully');
       setCsvFile(null);
       // Reset file input
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
