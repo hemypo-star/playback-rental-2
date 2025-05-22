@@ -37,7 +37,7 @@ const ProductImage = (props: ProductImageProps) => {
     setIsError(false);
 
     try {
-      // Get public URL directly from Supabase storage
+      // Get public URL directly from Supabase storage or use the URL as is if it's external
       const publicUrl = getProductImageUrl(rawImageUrl);
       console.log(`ProductImage: Converting raw URL "${rawImageUrl}" to public URL "${publicUrl}"`);
       setImageUrl(publicUrl);

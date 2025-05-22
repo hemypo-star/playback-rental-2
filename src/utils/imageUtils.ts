@@ -12,6 +12,11 @@ import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
 export const uploadProductImage = async (imageFile: File | string, productId?: string): Promise<string> => {
   // If imageFile is already a URL (string), just return it
   if (typeof imageFile === 'string') {
+    // Check if it's a full URL or just a path
+    if (imageFile.startsWith('http')) {
+      console.log('Already an absolute URL, skipping upload:', imageFile);
+      return imageFile;
+    }
     return imageFile;
   }
   
