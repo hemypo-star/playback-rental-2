@@ -2,10 +2,14 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  createProduct, 
-  updateProduct, 
+  createProduct,
+} from "@/services/product/productCreateService";
+import { 
+  updateProduct,
+} from "@/services/product/productUpdateService";
+import { 
   deleteProduct 
-} from "@/services/productService";
+} from "@/services/product/productDeleteService";
 import { uploadProductImage } from "@/utils/imageUtils";
 import { Product } from "@/types/product";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
@@ -36,7 +40,7 @@ export const useProductMutations = () => {
         const newProduct = await createProduct({
           ...productData,
           imageUrl: imageUrl || '',
-        });
+        }, imageFile);
 
         return newProduct;
       } finally {
@@ -65,6 +69,7 @@ export const useProductMutations = () => {
       setIsLoading(true);
       try {
         let imageUrl = data.imageUrl;
+        let imageFile = data.imageFile;
         
         // Handle image upload if it's a File object
         if (data.imageFile && data.imageFile instanceof File) {
@@ -79,7 +84,7 @@ export const useProductMutations = () => {
         const updatedProduct = await updateProduct(id, {
           ...data,
           imageUrl: imageUrl || '',
-        });
+        }, imageFile);
 
         return updatedProduct;
       } finally {
