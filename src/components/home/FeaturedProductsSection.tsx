@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRightIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
-import { getProducts } from '@/services/supabaseService'; // Updated import path
+import { getProducts } from '@/services/productCrudService'; // Update import path to use direct import
 
 export const FeaturedProductsSection = () => {
   const { data: featuredProducts, isLoading: productsLoading } = useQuery({
