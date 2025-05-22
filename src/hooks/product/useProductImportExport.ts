@@ -53,20 +53,26 @@ export const useProductImportExport = () => {
       // Read the file content as text with encoding detection
       const fileContent = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onload = (e) => {
+          // Get the result and pass it to the processing function
+          const content = e.target?.result as string;
+          resolve(content);
+        };
         reader.onerror = reject;
-        reader.readAsText(file, 'UTF-8');
+        reader.readAsText(file);
       });
       
+      console.log(`File read successfully, size: ${fileContent.length} bytes`);
+
       // Now pass the string content to importProductsFromCSV
-      await importProductsFromCSV(fileContent);
+      const importedProducts = await importProductsFromCSV(fileContent);
       
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       
       toast({
         title: "Импорт завершен",
-        description: "Продукты успешно импортированы из CSV",
+        description: `Успешно импортировано ${importedProducts.length} товаров`,
       });
     } catch (error) {
       toast({

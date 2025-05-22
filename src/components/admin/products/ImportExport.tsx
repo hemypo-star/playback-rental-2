@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Download, Upload, Loader2, AlertCircle } from 'lucide-react';
+import { Download, Upload, Loader2, AlertCircle, FileUp } from 'lucide-react';
 import { useProductImportExport } from '@/hooks/product/useProductImportExport';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -22,8 +22,9 @@ export default function ImportExport() {
       return;
     }
     
-    // Validate file type
-    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+    // Validate file type - accept both CSV and text files
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv') && 
+        file.type !== 'text/plain' && file.type !== 'application/vnd.ms-excel') {
       setFileError('Пожалуйста, выберите файл CSV');
       return;
     }
@@ -84,8 +85,8 @@ export default function ImportExport() {
         <CardHeader>
           <CardTitle>Импорт товаров</CardTitle>
           <CardDescription>
-            Импортируйте товары из CSV файла. Формат должен соответствовать экспортированному файлу.
-            Новые категории будут созданы автоматически.
+            Импортируйте товары из CSV файла. Формат должен соответствовать экспорту: столбцы разделены точкой с запятой (;).
+            Новые категории будут созданы автоматически. Ссылки на изображения сохраняются как есть.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -96,32 +97,48 @@ export default function ImportExport() {
             </Alert>
           )}
           
-          <div className="flex items-center gap-4">
-            <Input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              disabled={isLoading}
-            />
+          <div className="flex flex-col gap-4">
+            <div className="border border-dashed border-gray-300 rounded-md p-4 text-center">
+              <Input
+                type="file"
+                accept=".csv,.txt"
+                id="csv-upload"
+                onChange={handleFileChange}
+                disabled={isLoading}
+                className="hidden"
+              />
+              <label 
+                htmlFor="csv-upload" 
+                className="flex flex-col items-center justify-center cursor-pointer py-2"
+              >
+                <FileUp className="h-6 w-6 mb-2 text-gray-500" />
+                <span className="text-sm font-medium">
+                  {csvFile ? csvFile.name : 'Выберите CSV файл'}
+                </span>
+                <span className="text-xs text-gray-500 mt-1">
+                  {csvFile ? `${(csvFile.size / 1024).toFixed(2)} кБ` : 'CSV файл с разделителем ";"'}
+                </span>
+              </label>
+            </div>
+            
+            <Button 
+              onClick={handleImportClick} 
+              disabled={!csvFile || isLoading}
+              className="w-full"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Импорт...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Импортировать из CSV
+                </>
+              )}
+            </Button>
           </div>
-          
-          <Button 
-            onClick={handleImportClick} 
-            disabled={!csvFile || isLoading}
-            className="w-full"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Импорт...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Импортировать из CSV
-              </>
-            )}
-          </Button>
         </CardContent>
       </Card>
     </div>

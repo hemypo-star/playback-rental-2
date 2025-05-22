@@ -1,3 +1,4 @@
+
 import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseServiceClient } from '@/services/supabaseClient';
@@ -241,39 +242,119 @@ export const exportProductsToCSV = async () => {
 
 export const importProductsFromCSV = async (csvContent: string) => {
   try {
-    // Handle different line break styles
+    // Remove UTF-8 BOM if present (to fix Russian text)
+    if (csvContent.charCodeAt(0) === 0xFEFF) {
+      csvContent = csvContent.slice(1);
+    }
+    
+    // Detect and handle different line break styles
     const lines = csvContent.split(/\r\n|\r|\n/).filter(line => line.trim());
     
     if (lines.length === 0) {
       throw new Error('CSV file is empty or invalid');
     }
     
-    const headers = parseCSVLine(lines[0], ';');
+    // Auto-detect delimiter (prioritizing semicolon which is common in Russian locales)
+    const possibleDelimiters = [';', ',', '\t'];
+    let delimiter = ';'; // Default to semicolon
+    
+    // Simple heuristic: count occurrences of each delimiter in first line
+    const firstLine = lines[0];
+    const delimiterCounts = possibleDelimiters.map(d => ({
+      delimiter: d,
+      count: (firstLine.match(new RegExp(d, 'g')) || []).length
+    }));
+    
+    // Choose delimiter with highest count
+    const bestDelimiter = delimiterCounts.sort((a, b) => b.count - a.count)[0];
+    if (bestDelimiter && bestDelimiter.count > 0) {
+      delimiter = bestDelimiter.delimiter;
+    }
+    
+    console.log(`CSV Import: Detected delimiter "${delimiter}"`);
+    
+    // Parse header row to determine column positions dynamically
+    const headerRow = parseCSVLine(lines[0], delimiter);
+    const columnMap = new Map();
+    
+    // Create a mapping between column names and their positions
+    headerRow.forEach((header, index) => {
+      // Normalize headers (lowercase, no spaces)
+      const normalizedHeader = header.toLowerCase().trim();
+      columnMap.set(normalizedHeader, index);
+    });
+    
+    console.log('CSV Import: Detected columns:', Object.fromEntries(columnMap));
+    
+    // Check if we have the minimum required columns
+    const requiredColumns = ['title', 'category'];
+    const missingColumns = requiredColumns.filter(col => 
+      !Array.from(columnMap.keys()).some(key => key.includes(col))
+    );
+    
+    if (missingColumns.length > 0) {
+      throw new Error(`CSV is missing required columns: ${missingColumns.join(', ')}`);
+    }
+    
     const products = [];
     
     // Get existing categories for quick lookup
     const existingCategories = await getCategories();
     const categoryMap = new Map(existingCategories.map(cat => [cat.name.toLowerCase(), cat]));
     
+    // Process data rows
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i].trim()) continue;
       
-      const values = parseCSVLine(lines[i], ';');
+      const values = parseCSVLine(lines[i], delimiter);
       const product: Record<string, any> = {};
       
-      headers.forEach((header, index) => {
-        if (index < values.length) {
-          let value = values[index];
-          
-          if (header === 'available') {
-            product[header] = value.toLowerCase() === 'true' || value === '1';
-          } else if (header === 'price' || header === 'quantity') {
-            product[header] = Number(value) || 0;
-          } else {
-            product[header] = value;
-          }
+      // Map column values to product properties
+      const getColumnValue = (columnName: string, defaultValue: any = null) => {
+        // Try exact match first
+        let index = columnMap.get(columnName.toLowerCase());
+        
+        // If not found, try partial match
+        if (index === undefined) {
+          const foundKey = Array.from(columnMap.keys()).find(key => 
+            key.includes(columnName.toLowerCase()) || columnName.toLowerCase().includes(key)
+          );
+          if (foundKey) index = columnMap.get(foundKey);
         }
-      });
+        
+        // Return value if found and not empty, otherwise default
+        if (index !== undefined && index < values.length && values[index].trim() !== '') {
+          return values[index].trim();
+        }
+        return defaultValue;
+      };
+      
+      // Map essential fields
+      product.id = getColumnValue('id');
+      product.title = getColumnValue('title', '');
+      product.description = getColumnValue('description', '');
+      product.category = getColumnValue('category', '');
+      
+      // Handle numeric fields with proper conversion
+      const price = getColumnValue('price', '0');
+      product.price = parseFloat(price.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+      
+      const quantity = getColumnValue('quantity', '1');
+      product.quantity = parseInt(quantity, 10) || 1;
+      
+      // Handle boolean fields
+      const availableValue = getColumnValue('available', 'true');
+      product.available = availableValue.toLowerCase() === 'true' || availableValue === '1' || availableValue.toLowerCase() === 'да';
+      
+      // Handle image URL special case
+      const imageUrl = getColumnValue('imageurl', '');
+      product.imageurl = imageUrl;
+      
+      // Skip empty rows or rows with missing required fields
+      if (!product.title || !product.category) {
+        console.warn(`Skipping row ${i+1}: Missing required fields`);
+        continue;
+      }
       
       // Ensure category exists or create it
       if (product.category) {
@@ -295,20 +376,27 @@ export const importProductsFromCSV = async (csvContent: string) => {
       products.push(product);
     }
     
-    // Insert products using transaction to ensure all succeed or none
+    console.log(`Processed ${products.length} products from CSV`);
+    
+    // Insert products using individual transactions to ensure better error handling
     for (const product of products) {
-      const { id, ...productData } = product;
-      
-      // Handle existing products (update) vs. new products (insert)
-      if (id) {
-        const existingProduct = await getProductById(id);
-        if (existingProduct) {
-          await updateProduct(id, productData);
+      try {
+        const { id, ...productData } = product;
+        
+        // Handle existing products (update) vs. new products (insert)
+        if (id) {
+          const existingProduct = await getProductById(id);
+          if (existingProduct) {
+            await updateProduct(id, productData);
+          } else {
+            await createProduct(productData);
+          }
         } else {
           await createProduct(productData);
         }
-      } else {
-        await createProduct(productData);
+      } catch (error) {
+        console.error(`Error processing product: ${product.title}`, error);
+        // Continue with next product rather than failing the entire import
       }
     }
     
@@ -319,7 +407,7 @@ export const importProductsFromCSV = async (csvContent: string) => {
   }
 };
 
-// Helper function to parse CSV lines considering quoted fields
+// Enhanced helper function to parse CSV lines considering quoted fields
 function parseCSVLine(line: string, delimiter: string): string[] {
   const result: string[] = [];
   let inQuotes = false;
