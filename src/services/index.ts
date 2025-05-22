@@ -8,8 +8,11 @@ export * from './settingsService';
 export * from './supabaseClient';
 export * from './storageService';
 export * from './promotionService';
-export * from './productCrudService'; // Export from new module
-export * from './productCsvService'; // Export from new module
+export * from './product/productBasicService';
+export * from './product/productCreateService';
+export * from './product/productUpdateService';
+export * from './product/productDeleteService';
+export * from './product/productAvailabilityService';
 
 // Deprecated: Use individual service imports instead
 // This re-export is maintained for backward compatibility
