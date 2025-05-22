@@ -50,6 +50,9 @@ export const useProductImportExport = () => {
     try {
       setIsLoading(true);
       
+      // Enhanced logging to track the import process
+      console.log(`Starting CSV import for file: ${file.name} (${file.size} bytes)`);
+      
       // Read the file content as text with encoding detection
       const fileContent = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -58,11 +61,15 @@ export const useProductImportExport = () => {
           const content = e.target?.result as string;
           resolve(content);
         };
-        reader.onerror = reject;
+        reader.onerror = (e) => {
+          console.error("Error reading CSV file:", e);
+          reject(new Error("Failed to read the CSV file"));
+        };
         reader.readAsText(file);
       });
       
       console.log(`File read successfully, size: ${fileContent.length} bytes`);
+      console.log(`First 100 characters: ${fileContent.substring(0, 100)}`);
 
       // Now pass the string content to importProductsFromCSV
       const importedProducts = await importProductsFromCSV(fileContent);
@@ -75,6 +82,7 @@ export const useProductImportExport = () => {
         description: `Успешно импортировано ${importedProducts.length} товаров`,
       });
     } catch (error) {
+      console.error("Error in handleImport:", error);
       toast({
         title: "Ошибка импорта",
         description: error instanceof Error ? error.message : "Неизвестная ошибка",
