@@ -1,36 +1,11 @@
 import { MapPinIcon, Phone, Send, Facebook, MailIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 const ContactDetails = () => {
   const yandexMapsUrl = `https://yandex.ru/maps/-/CHvDmII7`;
   const twoGisUrl = `https://go.2gis.com/2y9MJ`;
-
-  return (
-    <div className="space-y-8">
+  return <div className="space-y-8">
       <div className="grid gap-6">
-        <div className="flex gap-4">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <MapPinIcon className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-medium mb-1">Наше местоположение</h3>
-            <p className="text-muted-foreground mb-2">
-              г.Кемерово ул. Демьяна Бедного, 6 
-            </p>
-            <div className="flex gap-2">
-              <Button size="xs" variant="outline" asChild>
-                <a href={yandexMapsUrl} target="_blank" rel="noopener noreferrer">
-                  Я.Карты
-                </a>
-              </Button>
-              <Button size="xs" variant="outline" asChild>
-                <a href={twoGisUrl} target="_blank" rel="noopener noreferrer">
-                  2ГИС
-                </a>
-              </Button>
-            </div>
-          </div>
-        </div>
+        
         
         <div className="flex gap-4">
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -104,8 +79,6 @@ const ContactDetails = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default ContactDetails;
