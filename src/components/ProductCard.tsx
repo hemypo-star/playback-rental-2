@@ -96,7 +96,7 @@ const ProductCard = ({
             {product.quantity > 3 ? (
               <span className="text-green-600 font-medium">В наличии: {product.quantity} шт.</span>
             ) : product.quantity > 0 ? (
-              <span className="text-amber-600 font-medium">Осталось всего {product.quantity} шт.</span>
+              <span className="text-amber-600 font-medium">В наличии: {product.quantity} шт.</span>
             ) : (
               <span className="text-red-600 font-medium">Нет в наличии</span>
             )}
