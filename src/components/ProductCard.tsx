@@ -81,15 +81,25 @@ const ProductCard = ({
             <span className="text-sm text-muted-foreground capitalize">
               {product.category}
             </span>
-            {product.quantity > 0 && product.quantity <= 3}
+            {product.quantity > 0 && product.quantity <= 3 && (
+              <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+                Осталось: {product.quantity} шт.
+              </span>
+            )}
           </div>
           
           <h3 className="font-medium leading-tight mb-1 group-hover:text-primary transition-colors line-clamp-2">
             {product.title}
           </h3>
           
-          <div className="text-xs text-muted-foreground h-[40px] overflow-hidden line-clamp-3">
-            {product.description}
+          <div className="text-xs text-muted-foreground mt-1">
+            {product.quantity > 3 ? (
+              <span className="text-green-600 font-medium">В наличии: {product.quantity} шт.</span>
+            ) : product.quantity > 0 ? (
+              <span className="text-amber-600 font-medium">Осталось всего {product.quantity} шт.</span>
+            ) : (
+              <span className="text-red-600 font-medium">Нет в наличии</span>
+            )}
           </div>
         </CardContent>
         
