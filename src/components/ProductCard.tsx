@@ -81,11 +81,6 @@ const ProductCard = ({
             <span className="text-sm text-muted-foreground capitalize">
               {product.category}
             </span>
-            {product.quantity > 0 && product.quantity <= 3 && (
-              <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
-                Осталось: {product.quantity} шт.
-              </span>
-            )}
           </div>
           
           <h3 className="font-medium leading-tight mb-1 group-hover:text-primary transition-colors line-clamp-2">
