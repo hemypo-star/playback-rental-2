@@ -2,7 +2,7 @@
 import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
-import { Clock, CalendarIcon, CheckIcon, XIcon } from 'lucide-react';
+import { Clock, CalendarIcon, CheckIcon, XIcon, Package } from 'lucide-react';
 import RentalFeatures from './RentalFeatures';
 
 interface ProductTabsProps {
@@ -68,6 +68,40 @@ const ProductTabs = ({
     <TabsContent value="details" className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <RentalFeatures />
+        
+        {/* Stock Information Section (replacing description) */}
+        <div className="p-6 rounded-xl glass-card">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-primary/10">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
+            <h3 className="font-medium">Информация о наличии</h3>
+          </div>
+          
+          {product.quantity > 3 ? (
+            <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
+              <CheckIcon className="h-4 w-4" />
+              <span>В наличии: {product.quantity} шт.</span>
+            </div>
+          ) : product.quantity > 0 ? (
+            <div className="text-amber-600 font-medium flex items-center gap-2 mb-4">
+              <CheckIcon className="h-4 w-4" />
+              <span>В наличии: {product.quantity} шт.</span>
+            </div>
+          ) : (
+            <div className="text-red-600 font-medium flex items-center gap-2 mb-4">
+              <XIcon className="h-4 w-4" />
+              <span>Нет в наличии</span>
+            </div>
+          )}
+          
+          {product.description && (
+            <div className="text-sm text-muted-foreground mt-4">
+              <p className="mb-2 font-medium">Дополнительная информация:</p>
+              <p>{product.description}</p>
+            </div>
+          )}
+        </div>
         
         {/* Pricing Section */}
         <div className="p-6 rounded-xl glass-card">

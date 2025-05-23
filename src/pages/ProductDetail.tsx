@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -13,7 +14,6 @@ import { getProductBookings } from '@/services/bookingService';
 import { BookingPeriod } from '@/types/product';
 import { useCartContext } from '@/hooks/useCart';
 import ProductImage from '@/components/product/ProductImage';
-import ProductHeader from '@/components/product/ProductHeader';
 import ProductTabs from '@/components/product/ProductTabs';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ScrollToTopLink } from '@/components/ui/navigation-menu';
@@ -98,6 +98,29 @@ const ProductDetail = () => {
       </div>
     );
   }
+
+  // Function to display stock status
+  const renderStockStatus = () => {
+    if (product.quantity > 3) {
+      return (
+        <div className="text-green-600 font-medium">
+          В наличии: {product.quantity} шт.
+        </div>
+      );
+    } else if (product.quantity > 0) {
+      return (
+        <div className="text-amber-600 font-medium">
+          В наличии: {product.quantity} шт.
+        </div>
+      );
+    } else {
+      return (
+        <div className="text-red-600 font-medium">
+          Нет в наличии
+        </div>
+      );
+    }
+  };
   
   return (
     <div className="min-h-screen">
@@ -137,7 +160,15 @@ const ProductDetail = () => {
           <ProductImage imageUrl={product.imageUrl} title={product.title} />
 
           <div className="space-y-6">
-            <ProductHeader product={product} />
+            <div className="space-y-4">
+              <h1 className="text-3xl font-bold">{product.title}</h1>
+              <div className="flex items-center gap-4">
+                <div className="text-2xl font-bold">{product.price.toLocaleString()} ₽/сутки</div>
+              </div>
+              
+              {/* Display stock status instead of description */}
+              {renderStockStatus()}
+            </div>
 
             <Separator />
 
