@@ -2,7 +2,6 @@
 import ContactHero from "@/components/contact/ContactHero";
 import CompanyDescription from "@/components/contact/CompanyDescription";
 import ContactSection from "@/components/contact/ContactSection";
-import MapSection from "@/components/contact/MapSection";
 
 const Contact = () => {
   return (
@@ -16,9 +15,6 @@ const Contact = () => {
 
         {/* Contact Information & Form Section */}
         <ContactSection />
-        
-        {/* Map Section */}
-        <MapSection />
       </div>
     </div>
   );
