@@ -166,8 +166,17 @@ const ProductDetail = () => {
                 <div className="text-2xl font-bold">{product.price.toLocaleString()} ₽/сутки</div>
               </div>
               
-              {/* Display stock status instead of description */}
+              {/* Display stock status */}
               {renderStockStatus()}
+              
+              {/* Display full description */}
+              {product.description && (
+                <div className="prose prose-sm max-w-none">
+                  <p className="text-muted-foreground leading-relaxed">
+                    {product.description}
+                  </p>
+                </div>
+              )}
             </div>
 
             <Separator />

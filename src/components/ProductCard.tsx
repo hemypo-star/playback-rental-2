@@ -45,6 +45,12 @@ const ProductCard = ({
       });
     }
   };
+
+  // Truncate description to show abbreviation
+  const truncateDescription = (text: string, maxLength: number = 80) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  };
   
   return (
     <Link 
@@ -83,11 +89,17 @@ const ProductCard = ({
             </span>
           </div>
           
-          <h3 className="font-medium leading-tight mb-1 group-hover:text-primary transition-colors line-clamp-2">
+          <h3 className="font-medium leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
             {product.title}
           </h3>
           
-          <div className="text-xs text-muted-foreground mt-1">
+          {product.description && (
+            <p className="text-sm text-muted-foreground mb-2 line-clamp-2 flex-grow">
+              {truncateDescription(product.description)}
+            </p>
+          )}
+          
+          <div className="text-xs text-muted-foreground mt-auto">
             {product.quantity > 3 ? (
               <span className="text-green-600 font-medium">В наличии: {product.quantity} шт.</span>
             ) : product.quantity > 0 ? (
