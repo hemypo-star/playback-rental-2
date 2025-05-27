@@ -22,7 +22,7 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-full">
           <Link to="/" className="flex items-center space-x-2">
             <img src="/logo.svg" alt="Logo" className="h-8 w-8" />
-            <span className="font-medium text-xl">Playback Rental</span>
+            <span className="text-xl py-[6px] font-medium my-0">Playback Rental</span>
           </Link>
 
           <div className="hidden md:flex items-center space-x-6">
