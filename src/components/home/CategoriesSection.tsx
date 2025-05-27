@@ -52,19 +52,9 @@ export const CategoriesSection = () => {
   return (
     <section className="py-20">
       <div className="container px-4 mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div className="text-center md:text-left">
-            <span className="chip mb-3">Наше оборудование</span>
-            <h2 className="heading-2">Категории оборудования</h2>
-          </div>
-          <Button 
-            variant="outline"
-            onClick={handleShowAllClick}
-            className="hidden md:flex items-center"
-          >
-            Посмотреть все
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
+        <div className="text-center md:text-left mb-6">
+          <span className="chip mb-3">Наше оборудование</span>
+          <h2 className="heading-2">Категории оборудования</h2>
         </div>
         
         <p className="body-text max-w-2xl mx-auto md:mx-0 mb-8">
@@ -125,7 +115,7 @@ export const CategoriesSection = () => {
           )}
         </div>
         
-        <div className="mt-8 flex justify-center md:hidden">
+        <div className="mt-8 flex justify-center">
           <Button 
             onClick={handleShowAllClick}
             className="w-full sm:w-auto"
