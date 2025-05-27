@@ -1,4 +1,3 @@
-
 import { ToasterProvider } from "@/hooks/Toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -62,7 +61,7 @@ const App = () => {
               <CartProvider>
                 <div className="flex flex-col min-h-screen">
                   <Navbar />
-                  <main className="flex-1 pt-20">
+                  <main className="flex-1">
                     <Suspense fallback={<Loading />}>
                       <Routes>
                         <Route path="/" element={<Index />} />
