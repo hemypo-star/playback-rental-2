@@ -23,7 +23,7 @@ export const PromotionsSlider = () => {
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto">
-        <h2 className="heading-2 mb-8">Акции</h2>
+        <h2 className="heading-2 mb-8 text-center">Акции</h2>
         
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
