@@ -4,12 +4,18 @@ import { useToast } from '@/hooks/use-toast';
 import { Category } from '@/types/product';
 import * as categoryService from '@/services/categoryService';
 
+// Define the form data type for category operations
+interface CategoryFormData extends Partial<Category> {
+  uploadType?: 'file' | 'url';
+  imageFile?: File;
+}
+
 export const useCategoryManagementHooks = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const addCategoryMutation = useMutation({
-    mutationFn: async (categoryData: Partial<Category>) => {
+    mutationFn: async (categoryData: CategoryFormData) => {
       let imageUrl = categoryData.imageUrl;
       
       if (categoryData.uploadType === 'file' && categoryData.imageFile) {
@@ -40,7 +46,7 @@ export const useCategoryManagementHooks = () => {
   });
 
   const updateCategoryMutation = useMutation({
-    mutationFn: async (category: Partial<Category>) => {
+    mutationFn: async (category: CategoryFormData) => {
       let imageUrl = category.imageUrl;
       
       if (category.uploadType === 'file' && category.imageFile) {
