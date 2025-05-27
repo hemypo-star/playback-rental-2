@@ -41,7 +41,14 @@ const AdminCategories = () => {
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ['categories'],
-    queryFn: categoryService.getCategories,
+    queryFn: async () => {
+      console.log('=== FETCHING CATEGORIES ===');
+      const result = await categoryService.getCategories();
+      console.log('Categories fetched:', result);
+      console.log('Number of categories:', result.length);
+      console.log('Category IDs:', result.map(cat => cat.id));
+      return result;
+    },
   });
 
   const {

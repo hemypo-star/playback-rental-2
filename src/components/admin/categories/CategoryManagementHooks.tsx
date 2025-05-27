@@ -97,7 +97,17 @@ export const useCategoryManagementHooks = () => {
     onSuccess: () => {
       console.log('=== MUTATION onSuccess TRIGGERED ===');
       console.log('Delete mutation successful, invalidating queries');
+      console.log('Current cache state before invalidation:', queryClient.getQueryData(['categories']));
+      
+      // Force remove the query from cache and refetch
+      queryClient.removeQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
+      
+      // Also try to manually refetch
+      queryClient.refetchQueries({ queryKey: ['categories'] });
+      
+      console.log('Query invalidation and refetch completed');
+      
       toast({
         title: 'Категория удалена',
         description: 'Категория успешно удалена.'
