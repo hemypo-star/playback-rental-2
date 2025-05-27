@@ -123,8 +123,8 @@ export default {
 				'spacing': 'margin, padding',
 			},
 			fontFamily: {
-				sans: ['SF Pro Display', 'Inter', 'sans-serif'],
-				mono: ['SF Mono', 'monospace'],
+				sans: ['Inter', 'system-ui', 'sans-serif'],
+				mono: ['Inter', 'monospace'],
 			},
 			boxShadow: {
 				'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
