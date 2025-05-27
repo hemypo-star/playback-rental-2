@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,9 +26,9 @@ export const Navbar = () => {
   }, [location]);
 
   return (
-    <nav className="bg-white border-b border-border sticky top-0 z-50 h-20"> {/* Increased height from default to h-20 */}
-      <div className="container mx-auto px-4 h-full"> {/* Added h-full to use full height */}
-        <div className="flex items-center justify-between h-full"> {/* Added h-full and items-center for proper vertical centering */}
+    <nav className="bg-white border-b border-border sticky top-0 z-50 h-20">
+      <div className="container mx-auto px-4 h-full">
+        <div className="flex items-center justify-between h-full">
           <Link to="/" className="flex items-center space-x-2">
             <img src="/logo.svg" alt="Logo" className="h-8 w-8" />
             <span className="text-xl font-semibold">Playback Rental</span>
@@ -46,7 +47,7 @@ export const Navbar = () => {
             <Link to="/contact" className="hover:text-primary transition-colors duration-200">
               Контакты
             </Link>
-            {user ? (
+            {user && (
               <div className="flex items-center space-x-4">
                 <Link to="/profile">
                   <Avatar className="h-8 w-8">
@@ -56,15 +57,6 @@ export const Navbar = () => {
                 </Link>
                 <Button variant="outline" size="sm" onClick={signOut}>Выйти</Button>
               </div>
-            ) : (
-              <>
-                <Link to="/auth/signin" className="hover:text-primary transition-colors duration-200">
-                  Войти
-                </Link>
-                <Link to="/auth/signup" className="btn-primary rounded-md px-4 py-2 text-sm">
-                  Регистрация
-                </Link>
-              </>
             )}
           </div>
 
@@ -94,22 +86,13 @@ export const Navbar = () => {
                 <Link to="/contact" className="hover:text-primary transition-colors duration-200">
                   Контакты
                 </Link>
-                {user ? (
+                {user && (
                   <div className="flex flex-col space-y-4">
                     <Link to="/profile">
                       Профиль
                     </Link>
                     <Button variant="outline" size="sm" onClick={signOut}>Выйти</Button>
                   </div>
-                ) : (
-                  <>
-                    <Link to="/auth/signin" className="hover:text-primary transition-colors duration-200">
-                      Войти
-                    </Link>
-                    <Link to="/auth/signup" className="btn-primary rounded-md px-4 py-2 text-sm">
-                      Регистрация
-                    </Link>
-                  </>
                 )}
               </div>
             </SheetContent>
