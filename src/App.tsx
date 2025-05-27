@@ -1,3 +1,4 @@
+
 import { ToasterProvider } from "@/hooks/Toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,9 +7,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { seedDatabase } from "./utils/seedDatabase";
 import { CartProvider } from "./hooks/useCart";
-import Navbar from "./components/Navbar";
+import { Navbar } from "./components/Navbar";
 import RequireAuth from "./components/RequireAuth";
 import { resetStoragePermissions } from "./services/storageService";
+import { AuthProvider } from "./contexts/AuthContext";
 
 // Pages
 import Index from "./pages/Index";
@@ -56,34 +58,36 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <ToasterProvider>
-            <CartProvider>
-              <div className="flex flex-col min-h-screen">
-                <Navbar />
-                <main className="flex-1 pt-20">
-                  <Suspense fallback={<Loading />}>
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/catalog" element={<Catalog />} />
-                      <Route path="/product/:id" element={<ProductDetail />} />
-                      <Route path="/checkout" element={<Checkout />} />
-                      <Route path="/how-it-works" element={<HowItWorks />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                      
-                      <Route path="/admin" element={
-                        <RequireAuth>
-                          <Admin />
-                        </RequireAuth>
-                      } />
-                      
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
-                </main>
-                <Footer />
-              </div>
-            </CartProvider>
+            <AuthProvider>
+              <CartProvider>
+                <div className="flex flex-col min-h-screen">
+                  <Navbar />
+                  <main className="flex-1 pt-20">
+                    <Suspense fallback={<Loading />}>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/catalog" element={<Catalog />} />
+                        <Route path="/product/:id" element={<ProductDetail />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/how-it-works" element={<HowItWorks />} />
+                        <Route path="/contact" element={<Contact />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                        
+                        <Route path="/admin" element={
+                          <RequireAuth>
+                            <Admin />
+                          </RequireAuth>
+                        } />
+                        
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Suspense>
+                  </main>
+                  <Footer />
+                </div>
+              </CartProvider>
+            </AuthProvider>
           </ToasterProvider>
         </TooltipProvider>
       </QueryClientProvider>
