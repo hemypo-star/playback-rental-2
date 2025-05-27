@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRightIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
-import { getProducts } from '@/services/productCrudService'; // Update import path to use direct import
+import { getProducts } from '@/services/productCrudService';
 
 export const FeaturedProductsSection = () => {
   const { data: featuredProducts, isLoading: productsLoading } = useQuery({
@@ -14,11 +14,11 @@ export const FeaturedProductsSection = () => {
   });
 
   return (
-    <section className="py-20 bg-secondary/50">
+    <section className="py-24 bg-secondary/50">
       <div className="container px-4 mx-auto">
-        <div className="flex justify-between items-end mb-12">
+        <div className="flex justify-between items-end mb-16">
           <div>
-            <span className="chip mb-3">Тщательно подобранный выбор</span>
+            <span className="chip mb-4">Тщательно подобранный выбор</span>
             <h2 className="heading-2">Рекомендуемое оборудование</h2>
           </div>
           <Link to="/catalog">

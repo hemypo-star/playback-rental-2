@@ -50,14 +50,14 @@ export const CategoriesSection = () => {
   };
 
   return (
-    <section className="py-20">
+    <section className="py-24">
       <div className="container px-4 mx-auto">
-        <div className="text-center md:text-left mb-6">
-          <span className="chip mb-3">Наше оборудование</span>
+        <div className="text-center md:text-left mb-8">
+          <span className="chip mb-4">Наше оборудование</span>
           <h2 className="heading-2">Категории оборудования</h2>
         </div>
         
-        <p className="body-text max-w-2xl mx-auto md:mx-0 mb-8">
+        <p className="body-text max-w-2xl mx-auto md:mx-0 mb-12">
           Выберите из нашего широкого ассортимента профессионального оборудования для вашего следующего проекта
         </p>
         
@@ -115,7 +115,7 @@ export const CategoriesSection = () => {
           )}
         </div>
         
-        <div className="mt-8 flex justify-center">
+        <div className="mt-12 flex justify-center">
           <Button 
             onClick={handleShowAllClick}
             className="w-full sm:w-auto"
