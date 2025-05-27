@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -120,8 +119,17 @@ const AdminCategories = () => {
   });
 
   const deleteCategoryMutation = useMutation({
-    mutationFn: (id: string) => categoryService.deleteCategory(id),
+    mutationFn: async (id: string) => {
+      console.log('Attempting to delete category with ID:', id);
+      const result = await categoryService.deleteCategory(id);
+      console.log('Delete result:', result);
+      if (!result) {
+        throw new Error('Failed to delete category');
+      }
+      return result;
+    },
     onSuccess: () => {
+      console.log('Delete mutation successful, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast({
         title: 'Категория удалена',
@@ -129,6 +137,7 @@ const AdminCategories = () => {
       });
     },
     onError: (error) => {
+      console.error('Delete mutation error:', error);
       toast({
         title: 'Ошибка',
         description: `Не удалось удалить категорию: ${error}`,
@@ -190,9 +199,17 @@ const AdminCategories = () => {
     setOpenDialog(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    console.log('handleDelete called with ID:', id);
     if (window.confirm('Вы уверены, что хотите удалить эту категорию?')) {
-      deleteCategoryMutation.mutate(id);
+      console.log('User confirmed deletion, calling mutation');
+      try {
+        await deleteCategoryMutation.mutateAsync(id);
+      } catch (error) {
+        console.error('Error in handleDelete:', error);
+      }
+    } else {
+      console.log('User cancelled deletion');
     }
   };
 
