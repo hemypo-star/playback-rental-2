@@ -1,3 +1,4 @@
+
 import { Category } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -147,12 +148,37 @@ export const deleteCategory = async (id: string): Promise<boolean> => {
     console.log('ID length in service:', id.length);
     console.log('ID value in service:', id);
     
+    // First, let's check if the category exists before trying to delete
+    console.log('Checking if category exists before deletion...');
+    const { data: existingCategory, error: selectError } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('id', id)
+      .single();
+    
+    console.log('Category existence check:');
+    console.log('- existingCategory:', existingCategory);
+    console.log('- selectError:', selectError);
+    
+    if (selectError) {
+      console.error('Error checking category existence:', selectError);
+      return false;
+    }
+    
+    if (!existingCategory) {
+      console.error('Category not found with ID:', id);
+      return false;
+    }
+    
+    console.log('Category found, proceeding with deletion...');
     console.log('Making Supabase delete call...');
+    
+    // Try delete with count to see how many rows were affected
     const { data, error, count } = await supabase
       .from('categories')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('id', id)
-      .select(); // Add select to see what was deleted
+      .select();
     
     console.log('Supabase delete response:');
     console.log('- data:', data);
@@ -167,6 +193,14 @@ export const deleteCategory = async (id: string): Promise<boolean> => {
       throw error;
     }
     
+    // Check if any rows were actually deleted
+    if (count === 0) {
+      console.error('No rows were deleted - this indicates RLS or permission issues');
+      console.error('The delete query executed but affected 0 rows');
+      return false;
+    }
+    
+    console.log(`Successfully deleted ${count} category/categories`);
     console.log('Delete operation completed successfully');
     console.log('=== SERVICE LAYER DELETE SUCCESS ===');
     return true;
