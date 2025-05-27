@@ -1,4 +1,3 @@
-
 import { Category } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -142,11 +141,44 @@ export const updateCategoriesOrder = async (categories: { id: string, order: num
 
 export const deleteCategory = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase.from('categories').delete().eq('id', id);
-    if (error) throw error;
+    console.log('=== SERVICE LAYER DELETE START ===');
+    console.log('categoryService.deleteCategory called with ID:', id);
+    console.log('ID type in service:', typeof id);
+    console.log('ID length in service:', id.length);
+    console.log('ID value in service:', id);
+    
+    console.log('Making Supabase delete call...');
+    const { data, error, count } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id)
+      .select(); // Add select to see what was deleted
+    
+    console.log('Supabase delete response:');
+    console.log('- data:', data);
+    console.log('- error:', error);
+    console.log('- count:', count);
+    
+    if (error) {
+      console.error('Supabase error details:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Error details:', error.details);
+      throw error;
+    }
+    
+    console.log('Delete operation completed successfully');
+    console.log('=== SERVICE LAYER DELETE SUCCESS ===');
     return true;
   } catch (error) {
+    console.error('=== SERVICE LAYER DELETE FAILED ===');
     console.error('Error deleting category:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error instanceof Error:', error instanceof Error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     return false;
   }
 };

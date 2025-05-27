@@ -76,29 +76,45 @@ export const useCategoryManagementHooks = () => {
 
   const deleteCategoryMutation = useMutation({
     mutationFn: async (id: string) => {
-      console.log('Attempting to delete category with ID:', id);
+      console.log('=== MUTATION FUNCTION START ===');
+      console.log('Delete mutation function called with ID:', id);
+      console.log('ID type in mutation:', typeof id);
+      console.log('ID value in mutation:', id);
+      
+      console.log('Calling categoryService.deleteCategory...');
       const result = await categoryService.deleteCategory(id);
-      console.log('Delete result:', result);
+      console.log('categoryService.deleteCategory result:', result);
+      console.log('Result type:', typeof result);
+      
       if (!result) {
-        throw new Error('Failed to delete category');
+        console.error('Delete operation returned false/null');
+        throw new Error('Failed to delete category - service returned false');
       }
+      
+      console.log('=== MUTATION FUNCTION SUCCESS ===');
       return result;
     },
     onSuccess: () => {
+      console.log('=== MUTATION onSuccess TRIGGERED ===');
       console.log('Delete mutation successful, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast({
         title: 'Категория удалена',
         description: 'Категория успешно удалена.'
       });
+      console.log('=== MUTATION onSuccess COMPLETED ===');
     },
     onError: (error) => {
+      console.error('=== MUTATION onError TRIGGERED ===');
       console.error('Delete mutation error:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
       toast({
         title: 'Ошибка',
         description: `Не удалось удалить категорию: ${error}`,
         variant: 'destructive',
       });
+      console.error('=== MUTATION onError COMPLETED ===');
     }
   });
 
