@@ -31,7 +31,7 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-full">
           <Link to="/" className="flex items-center space-x-2">
             <img src="/logo.svg" alt="Logo" className="h-8 w-8" />
-            <span className="text-xl font-semibold">Playback Rental</span>
+            <span className="text-xl font-semibold leading-relaxed py-1">Playback Rental</span>
           </Link>
 
           <div className="hidden md:flex items-center space-x-6">
