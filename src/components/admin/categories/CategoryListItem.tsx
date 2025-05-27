@@ -13,6 +13,7 @@ type CategoryListItemProps = {
   onDragEnd: () => void;
   onEdit: (category: Category) => void;
   onDelete: (id: string) => void;
+  isDeleting?: boolean;
 };
 
 export default function CategoryListItem({
@@ -25,6 +26,7 @@ export default function CategoryListItem({
   onDragEnd,
   onEdit,
   onDelete,
+  isDeleting = false,
 }: CategoryListItemProps) {
   return (
     <div 
@@ -76,6 +78,7 @@ export default function CategoryListItem({
             variant="ghost"
             className="text-destructive"
             onClick={() => onDelete(category.id)}
+            disabled={isDeleting}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

@@ -1,33 +1,22 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import * as categoryService from '@/services/categoryService';
-import { Category } from '@/types/product';
+import { useCategoryManagementHooks } from './CategoryManagementHooks';
 
 export const useCategoryActions = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { deleteCategoryMutation } = useCategoryManagementHooks();
 
   const handleDelete = async (id: string) => {
     console.log('handleDelete called with ID:', id);
     if (window.confirm('Вы уверены, что хотите удалить эту категорию?')) {
       console.log('User confirmed deletion, calling mutation');
       try {
-        const result = await categoryService.deleteCategory(id);
-        if (result) {
-          queryClient.invalidateQueries({ queryKey: ['categories'] });
-          toast({
-            title: 'Категория удалена',
-            description: 'Категория успешно удалена.'
-          });
-        }
+        await deleteCategoryMutation.mutateAsync(id);
       } catch (error) {
         console.error('Error in handleDelete:', error);
-        toast({
-          title: 'Ошибка',
-          description: `Не удалось удалить категорию: ${error}`,
-          variant: 'destructive',
-        });
+        // Error handling is already done in the mutation
       }
     } else {
       console.log('User cancelled deletion');
@@ -49,7 +38,8 @@ export const useCategoryActions = () => {
       
       if (fileForCategory) {
         try {
-          finalImageUrl = await categoryService.uploadCategoryImage(fileForCategory);
+          const { uploadCategoryImage } = await import('@/services/categoryService');
+          finalImageUrl = await uploadCategoryImage(fileForCategory);
           console.log("Uploaded image URL:", finalImageUrl);
         } catch (error) {
           console.error("Error uploading image:", error);
@@ -61,7 +51,8 @@ export const useCategoryActions = () => {
         }
       }
       
-      await categoryService.addCategory({
+      const { addCategory } = await import('@/services/categoryService');
+      await addCategory({
         name,
         slug,
         description: '',
@@ -89,5 +80,6 @@ export const useCategoryActions = () => {
   return {
     handleDelete,
     handleAddNewCategory,
+    isDeleting: deleteCategoryMutation.isPending,
   };
 };

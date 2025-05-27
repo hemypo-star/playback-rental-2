@@ -63,6 +63,7 @@ const AdminCategories = () => {
   const {
     handleDelete,
     handleAddNewCategory,
+    isDeleting,
   } = useCategoryActions();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -132,6 +133,7 @@ const AdminCategories = () => {
           onDragEnd={handleDragEnd}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          isDeleting={isDeleting}
         />
       )}
       

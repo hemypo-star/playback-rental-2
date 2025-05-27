@@ -11,6 +11,7 @@ type CategoryListProps = {
   onDragEnd: () => void;
   onEdit: (category: Category) => void;
   onDelete: (id: string) => void;
+  isDeleting?: boolean;
 };
 
 export default function CategoryList({
@@ -22,6 +23,7 @@ export default function CategoryList({
   onDragEnd,
   onEdit,
   onDelete,
+  isDeleting = false,
 }: CategoryListProps) {
   return (
     <div className="space-y-4">
@@ -37,6 +39,7 @@ export default function CategoryList({
           onDragEnd={onDragEnd}
           onEdit={onEdit}
           onDelete={onDelete}
+          isDeleting={isDeleting}
         />
       ))}
     </div>
