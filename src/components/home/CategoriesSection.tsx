@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getCategories } from '@/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRightIcon, Layers, ChevronRight } from 'lucide-react';
+import { ArrowRightIcon, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const categoryImages: Record<string, string> = {
@@ -95,10 +95,7 @@ export const CategoriesSection = () => {
                 </div>
                 <CardContent className="relative bg-white p-4 h-full flex flex-col">
                   <div className="flex-grow">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Layers className="h-4 w-4 text-primary" />
-                      <h3 className="text-xl font-medium">{category.name}</h3>
-                    </div>
+                    <h3 className="text-xl font-medium mb-1">{category.name}</h3>
                     {category.description && category.description.trim() && (
                       <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
                         {category.description}
