@@ -146,9 +146,9 @@ const ProductCard = ({
             </p>
           )}
           
-          <div className="text-xs text-muted-foreground mt-auto">
+          <div className="text-xs mt-auto">
             {isLoadingBookings ? (
-              <span className="text-gray-400">Проверяем наличие...</span>
+              <span className="text-gray-400 font-medium">Проверяем наличие...</span>
             ) : hasBookingDates ? (
               isAvailableForDates ? (
                 <span className="text-green-600 font-medium">
@@ -157,10 +157,8 @@ const ProductCard = ({
               ) : (
                 <span className="text-red-600 font-medium">Забронировано на выбранные даты</span>
               )
-            ) : availableQuantity > 3 ? (
-              <span className="text-green-600 font-medium">В наличии: {availableQuantity} шт.</span>
             ) : availableQuantity > 0 ? (
-              <span className="text-amber-600 font-medium">В наличии: {availableQuantity} шт.</span>
+              <span className="text-green-600 font-medium">В наличии: {availableQuantity} шт.</span>
             ) : (
               <span className="text-red-600 font-medium">Нет в наличии</span>
             )}

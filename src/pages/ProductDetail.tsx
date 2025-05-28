@@ -125,16 +125,9 @@ const ProductDetail = () => {
     const hasBookingDates = bookingDates.startDate && bookingDates.endDate;
     const quantityToShow = hasBookingDates ? availableQuantity : product.quantity;
     
-    if (quantityToShow > 3) {
+    if (quantityToShow > 0) {
       return (
         <div className="text-green-600 font-medium">
-          {hasBookingDates ? 'Доступно' : 'В наличии'}: {quantityToShow} шт.
-          {hasBookingDates && ' на выбранные даты'}
-        </div>
-      );
-    } else if (quantityToShow > 0) {
-      return (
-        <div className="text-amber-600 font-medium">
           {hasBookingDates ? 'Доступно' : 'В наличии'}: {quantityToShow} шт.
           {hasBookingDates && ' на выбранные даты'}
         </div>
