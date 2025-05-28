@@ -76,7 +76,7 @@ export const CategoriesSection = () => {
             visibleCategories?.map((category) => (
               <Card 
                 key={category.id} 
-                className="overflow-hidden border-0 transition-all duration-300 hover:shadow-lg cursor-pointer"
+                className="overflow-hidden border-0 transition-all duration-300 hover:shadow-lg cursor-pointer h-full"
                 onClick={() => handleCategoryClick(category.name)}
               >
                 <div className="relative h-48 overflow-hidden">
@@ -93,8 +93,8 @@ export const CategoriesSection = () => {
                     }}
                   />
                 </div>
-                <CardContent className="relative bg-white p-4">
-                  <div>
+                <CardContent className="relative bg-white p-4 h-full flex flex-col">
+                  <div className="flex-grow">
                     <div className="flex items-center gap-2 mb-1">
                       <Layers className="h-4 w-4 text-primary" />
                       <h3 className="text-xl font-medium">{category.name}</h3>
@@ -104,12 +104,12 @@ export const CategoriesSection = () => {
                         {category.description}
                       </p>
                     )}
-                    <div 
-                      className="w-fit group/btn p-0 h-auto text-primary flex items-center"
-                    >
-                      Смотреть
-                      <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                    </div>
+                  </div>
+                  <div 
+                    className="w-fit group/btn p-0 h-auto text-primary flex items-center mt-auto"
+                  >
+                    Смотреть
+                    <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
                   </div>
                 </CardContent>
               </Card>
