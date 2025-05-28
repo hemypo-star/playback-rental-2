@@ -99,9 +99,11 @@ export const CategoriesSection = () => {
                       <Layers className="h-4 w-4 text-primary" />
                       <h3 className="text-xl font-medium">{category.name}</h3>
                     </div>
-                    <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
-                      {category.description || 'Нет описания'}
-                    </p>
+                    {category.description && category.description.trim() && (
+                      <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
+                        {category.description}
+                      </p>
+                    )}
                     <div 
                       className="w-fit group/btn p-0 h-auto text-primary flex items-center"
                     >
