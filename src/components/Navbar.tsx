@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ShoppingCart, Phone, Send } from 'lucide-react';
+import { Menu, X, ShoppingCart, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
+
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const {
@@ -40,7 +42,7 @@ export const Navbar = () => {
             <span className="font-semibold text-lg">Playback Rental</span>
           </Link>
 
-          {/* Right side - Navigation, Cart, Contacts */}
+          {/* Right side - Navigation, Cart, Social Icons */}
           <div className="flex items-center space-x-6">
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-6">
@@ -59,12 +61,8 @@ export const Navbar = () => {
               </Button>
             </Link>
 
-            {/* Contact & Social Icons - Desktop */}
-            <div className="hidden lg:flex items-center space-x-4">
-              <a href="tel:+79001234567" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                <Phone className="h-4 w-4" />
-                +7 (900) 123-45-67
-              </a>
+            {/* Social Icons - Desktop */}
+            <div className="hidden lg:flex items-center space-x-4 ml-8">
               <div className="flex items-center gap-2">
                 <a href="https://vk.com/playbackrental" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
@@ -102,12 +100,8 @@ export const Navbar = () => {
                 Контакты
               </NavLink>
               
-              {/* Contact & Social - Mobile */}
+              {/* Social Icons - Mobile */}
               <div className="px-3 py-2 border-t mt-2 pt-2 space-y-2">
-                <a href="tel:+79001234567" className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  +7 (900) 123-45-67
-                </a>
                 <div className="flex items-center gap-3 pt-1">
                   <a href="https://vk.com/playbackrental" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-5 w-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
