@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +8,6 @@ import { useEffect } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
 import { Menu, ShoppingCart } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCartContext } from '@/hooks/useCart';
 
 export const Navbar = () => {
@@ -50,15 +50,7 @@ export const Navbar = () => {
                 </span>}
             </Link>
             
-            {user && <div className="flex items-center space-x-4">
-                <Link to="/profile">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
-                    <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-                  </Avatar>
-                </Link>
-                <Button variant="outline" size="sm" onClick={signOut}>Выйти</Button>
-              </div>}
+            {user && <Button variant="outline" size="sm" onClick={signOut}>Выйти</Button>}
           </div>
 
           <Sheet>
@@ -93,12 +85,7 @@ export const Navbar = () => {
                     </span>}
                 </Link>
                 
-                {user && <div className="flex flex-col space-y-4">
-                    <Link to="/profile">
-                      Профиль
-                    </Link>
-                    <Button variant="outline" size="sm" onClick={signOut}>Выйти</Button>
-                  </div>}
+                {user && <Button variant="outline" size="sm" onClick={signOut}>Выйти</Button>}
               </div>
             </SheetContent>
           </Sheet>
@@ -107,3 +94,4 @@ export const Navbar = () => {
     </nav>
   );
 };
+
