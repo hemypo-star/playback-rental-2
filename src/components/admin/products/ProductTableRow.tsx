@@ -4,8 +4,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import StatusDropdown from "@/components/admin/StatusDropdown";
 import { Badge } from "@/components/ui/badge";
 import { Image } from "lucide-react";
-import { Product } from "@/types/product";
+import { Product, Category } from "@/types/product";
 import { getProductImageUrl } from "@/utils/imageUtils";
+import { useQuery } from '@tanstack/react-query';
+import { getCategories } from '@/services/categoryService';
 
 type Props = {
   product: Product;
@@ -27,6 +29,15 @@ export default function ProductTableRow({
   onSelectChange = () => {}
 }: Props) {
   const imageUrl = product.imageUrl ? getProductImageUrl(product.imageUrl) : null;
+  
+  // Load categories to get category name by ID
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories
+  });
+  
+  // Find the category name for this product
+  const categoryName = categories?.find(cat => cat.category_id === product.category_id)?.name || 'Без категории';
 
   return (
     <TableRow key={product.id}>
@@ -73,7 +84,7 @@ export default function ProductTableRow({
         </div>
       </TableCell>
       <TableCell>
-        <Badge variant="outline">{product.category}</Badge>
+        <Badge variant="outline">{categoryName}</Badge>
       </TableCell>
       <TableCell className="text-right">{product.price.toLocaleString()} ₽</TableCell>
       <TableCell>{product.quantity}</TableCell>

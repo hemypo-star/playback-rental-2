@@ -64,7 +64,7 @@ export default function CategoryField({
   return (
     <FormField
       control={form.control}
-      name="category"
+      name="category_id"
       render={({ field }) => (
         <FormItem>
           <FormLabel>Категория</FormLabel>
@@ -72,11 +72,13 @@ export default function CategoryField({
             <FormControl className="flex-1">
               <select
                 {...field}
+                value={field.value || ''}
+                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                 className="w-full h-10 rounded-md border border-input bg-background px-3 py-2"
               >
                 <option value="">Выберите категорию</option>
                 {categories.map((category) => (
-                  <option key={category.id} value={category.name}>
+                  <option key={category.id} value={category.category_id}>
                     {category.name}
                   </option>
                 ))}

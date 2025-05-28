@@ -1,4 +1,3 @@
-
 import { Category } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -11,7 +10,8 @@ export const getCategories = async (): Promise<Category[]> => {
     return data?.map(category => ({
       ...category,
       imageUrl: category.imageurl,
-      order: category.order || 0
+      order: category.order || 0,
+      category_id: category.category_id // Ensure category_id is included
     })) || [];
   } catch (error) {
     console.error('Error getting categories:', error);
@@ -28,7 +28,8 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
     return data ? {
       ...data,
       imageUrl: data.imageurl,
-      order: data.order || 0
+      order: data.order || 0,
+      category_id: data.category_id // Ensure category_id is included
     } : null;
   } catch (error) {
     console.error('Error getting category by ID:', error);
@@ -50,7 +51,8 @@ export const getCategoryByName = async (name: string): Promise<Category | null> 
     return data ? {
       ...data,
       imageUrl: data.imageurl,
-      order: data.order || 0
+      order: data.order || 0,
+      category_id: data.category_id // Ensure category_id is included
     } : null;
   } catch (error) {
     console.error('Error getting category by name:', error);
@@ -69,13 +71,28 @@ export const addCategory = async (categoryData: Partial<Category>): Promise<Cate
       }
     }
     
+    // Get the next category_id
+    const { data: maxCategoryData, error: maxError } = await supabase
+      .from('categories')
+      .select('category_id')
+      .order('category_id', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (maxError && maxError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      throw maxError;
+    }
+    
+    const nextCategoryId = (maxCategoryData?.category_id || 0) + 1;
+    
     // Make sure we're using imageurl for the database column and required fields are present
     const dbData: any = {
       name: categoryData.name || '', // Ensure name is never undefined
       imageurl: categoryData.imageUrl || '',
       slug: categoryData.slug,
       description: categoryData.description,
-      order: categoryData.order || 0
+      order: categoryData.order || 0,
+      category_id: nextCategoryId
     };
     
     // Validate that required fields exist
@@ -90,7 +107,8 @@ export const addCategory = async (categoryData: Partial<Category>): Promise<Cate
     return data ? {
       ...data,
       imageUrl: data.imageurl,
-      order: data.order || 0
+      order: data.order || 0,
+      category_id: data.category_id
     } : null;
   } catch (error) {
     console.error('Error adding category:', error);
@@ -109,6 +127,7 @@ export const updateCategory = async (id: string, updates: Partial<Category>): Pr
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.imageUrl !== undefined) dbUpdates.imageurl = updates.imageUrl;
     if (updates.order !== undefined) dbUpdates.order = updates.order;
+    if (updates.category_id !== undefined) dbUpdates.category_id = updates.category_id;
     
     const { data, error } = await supabase.from('categories').update(dbUpdates).eq('id', id).select().single();
     if (error) throw error;
@@ -117,7 +136,8 @@ export const updateCategory = async (id: string, updates: Partial<Category>): Pr
     return data ? {
       ...data,
       imageUrl: data.imageurl,
-      order: data.order || 0
+      order: data.order || 0,
+      category_id: data.category_id
     } : null;
   } catch (error) {
     console.error('Error updating category:', error);

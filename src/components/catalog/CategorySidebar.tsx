@@ -21,16 +21,16 @@ import { cn } from '@/lib/utils';
 interface CategorySidebarProps {
   categories?: Category[];
   activeTab: string;
-  onCategoryChange: (category: string) => void;
+  onCategoryChange: (categoryId: string) => void; // Changed to accept categoryId instead of category name
 }
 
 const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: CategorySidebarProps) => {
   const isMobile = useIsMobile();
   
   // Method to handle category selection that also scrolls to top
-  const handleCategoryChange = (category: string) => {
+  const handleCategoryChange = (categoryId: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    onCategoryChange(category);
+    onCategoryChange(categoryId);
   };
 
   // For mobile view, show a Select dropdown instead of sidebar
@@ -49,7 +49,7 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
               </div>
             </SelectItem>
             {categories?.map((category) => (
-              <SelectItem key={category.id} value={category.name}>
+              <SelectItem key={category.id} value={category.category_id.toString()}>
                 {category.name}
               </SelectItem>
             ))}
@@ -84,10 +84,10 @@ const CategorySidebar = ({ categories = [], activeTab, onCategoryChange }: Categ
           {categories?.map((category) => (
             <li key={category.id}>
               <button
-                onClick={() => handleCategoryChange(category.name)}
+                onClick={() => handleCategoryChange(category.category_id.toString())}
                 className={cn(
                   "w-full text-left flex items-center px-3 py-2 rounded-md",
-                  activeTab === category.name ? "text-[#ea384c] font-semibold bg-muted/50" : "hover:bg-muted"
+                  activeTab === category.category_id.toString() ? "text-[#ea384c] font-semibold bg-muted/50" : "hover:bg-muted"
                 )}
               >
                 <span>{category.name}</span>

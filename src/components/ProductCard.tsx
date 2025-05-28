@@ -4,13 +4,15 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, CalendarIcon } from 'lucide-react';
 import ProductImage from '@/components/product/ProductImage';
-import { Product } from '@/types/product';
+import { Product, Category } from '@/types/product';
 import { useCartContext } from '@/hooks/useCart';
 import { toast } from 'sonner';
 import { formatPriceRub } from '@/utils/pricingUtils';
 import { useState, useEffect } from 'react';
 import { getProductBookings } from '@/services/bookingService';
 import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityUtils';
+import { useQuery } from '@tanstack/react-query';
+import { getCategories } from '@/services/categoryService';
 
 type ProductCardProps = {
   product: Product;
@@ -32,6 +34,15 @@ const ProductCard = ({
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   
   const hasBookingDates = bookingDates?.startDate && bookingDates?.endDate;
+  
+  // Load categories to get category name by ID
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories
+  });
+  
+  // Find the category name for this product
+  const categoryName = categories?.find(cat => cat.category_id === product.category_id)?.name || 'Без категории';
   
   // Load product bookings when component mounts or dates change
   useEffect(() => {
@@ -132,7 +143,7 @@ const ProductCard = ({
         <CardContent className="p-4 flex-grow flex flex-col">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm text-muted-foreground capitalize">
-              {product.category}
+              {categoryName}
             </span>
           </div>
           

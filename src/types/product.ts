@@ -4,7 +4,7 @@ export interface Product {
   title: string;
   description: string;
   price: number;
-  category: string;
+  category_id: number; // Changed from category string to category_id number
   imageUrl: string;
   available: boolean;
   quantity: number;
@@ -27,6 +27,7 @@ export interface BookingPeriod {
 export interface Category {
   id: string;
   name: string;
+  category_id: number; // Added the new category_id field
   slug?: string;
   description?: string;
   imageUrl?: string;

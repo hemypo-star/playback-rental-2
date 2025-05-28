@@ -11,10 +11,11 @@ export const getProducts = async (): Promise<Product[]> => {
     const { data, error } = await supabase.from('products').select('*');
     if (error) throw error;
     
-    // Map imageurl to imageUrl for consistency in the frontend
+    // Map database fields to frontend format
     return data?.map(product => ({
       ...product,
-      imageUrl: product.imageurl
+      imageUrl: product.imageurl,
+      category_id: parseInt(product.category) // Convert category string to category_id number
     })) || [];
   } catch (error) {
     console.error('Error getting products:', error);
@@ -32,10 +33,11 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
     if (error) throw error;
     
-    // Map imageurl to imageUrl for consistency in the frontend
+    // Map database fields to frontend format
     return data ? {
       ...data,
-      imageUrl: data.imageurl
+      imageUrl: data.imageurl,
+      category_id: parseInt(data.category) // Convert category string to category_id number
     } : null;
   } catch (error) {
     console.error('Error getting product by ID:', error);
