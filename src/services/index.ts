@@ -24,7 +24,8 @@ export {
   deleteProduct,
   exportProductsToCSV,
   importProductsFromCSV,
-  getAvailableProducts
+  getAvailableProducts,
+  isProductAvailable
 } from './productService';
 
 export {

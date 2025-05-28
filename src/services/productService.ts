@@ -10,9 +10,14 @@ export {
   getProductById,
   createProduct,
   updateProduct,
-  deleteProduct,
-  getAvailableProducts
+  deleteProduct
 } from './productCrudService';
+
+// Re-export availability operations
+export {
+  getAvailableProducts,
+  isProductAvailable
+} from './product/productAvailabilityService';
 
 // Re-export CSV operations
 export {

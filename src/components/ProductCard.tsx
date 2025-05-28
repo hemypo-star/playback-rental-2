@@ -8,6 +8,8 @@ import { Product } from '@/types/product';
 import { useCartContext } from '@/hooks/useCart';
 import { toast } from 'sonner';
 import { formatPriceRub } from '@/utils/pricingUtils';
+import { useState, useEffect } from 'react';
+import { isProductAvailable } from '@/services/product/productAvailabilityService';
 
 type ProductCardProps = {
   product: Product;
@@ -24,17 +26,29 @@ const ProductCard = ({
   featured = false
 }: ProductCardProps) => {
   const navigate = useNavigate();
-  const {
-    addToCart
-  } = useCartContext();
+  const { addToCart } = useCartContext();
+  const [isAvailableForDates, setIsAvailableForDates] = useState<boolean | null>(null);
   
   const hasBookingDates = bookingDates?.startDate && bookingDates?.endDate;
+  
+  // Check availability for selected dates
+  useEffect(() => {
+    if (hasBookingDates) {
+      const checkAvailability = async () => {
+        const available = await isProductAvailable(product.id, bookingDates.startDate!, bookingDates.endDate!);
+        setIsAvailableForDates(available);
+      };
+      checkAvailability();
+    } else {
+      setIsAvailableForDates(null);
+    }
+  }, [product.id, bookingDates?.startDate, bookingDates?.endDate, hasBookingDates]);
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (hasBookingDates) {
+    if (hasBookingDates && isAvailableForDates) {
       addToCart(product, bookingDates.startDate, bookingDates.endDate);
       toast.success(`Товар "${product.title}" добавлен в корзину`);
     } else {
@@ -51,6 +65,17 @@ const ProductCard = ({
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength).trim() + '...';
   };
+
+  // Determine if product is available considering both general availability and date-specific availability
+  const isProductCurrentlyAvailable = () => {
+    if (!product.available) return false;
+    if (hasBookingDates && isAvailableForDates !== null) {
+      return isAvailableForDates;
+    }
+    return true;
+  };
+
+  const currentlyAvailable = isProductCurrentlyAvailable();
   
   return (
     <Link 
@@ -73,10 +98,10 @@ const ProductCard = ({
               Популярное
             </div>
           )}
-          {product.available === false && (
+          {!currentlyAvailable && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <div className="bg-white/90 text-black font-medium px-3 py-1 rounded">
-                Нет в наличии
+                {hasBookingDates && isAvailableForDates === false ? 'Забронировано на эти даты' : 'Нет в наличии'}
               </div>
             </div>
           )}
@@ -100,7 +125,13 @@ const ProductCard = ({
           )}
           
           <div className="text-xs text-muted-foreground mt-auto">
-            {product.quantity > 3 ? (
+            {hasBookingDates && isAvailableForDates !== null ? (
+              isAvailableForDates ? (
+                <span className="text-green-600 font-medium">Доступно для выбранных дат</span>
+              ) : (
+                <span className="text-red-600 font-medium">Забронировано на выбранные даты</span>
+              )
+            ) : product.quantity > 3 ? (
               <span className="text-green-600 font-medium">В наличии: {product.quantity} шт.</span>
             ) : product.quantity > 0 ? (
               <span className="text-amber-600 font-medium">В наличии: {product.quantity} шт.</span>
@@ -118,12 +149,12 @@ const ProductCard = ({
           </div>
           <Button 
             size="sm" 
-            variant={hasBookingDates ? "default" : "outline"} 
+            variant={hasBookingDates && currentlyAvailable ? "default" : "outline"} 
             className="rounded-full" 
             onClick={handleAddToCart}
-            disabled={product.available === false}
+            disabled={!currentlyAvailable}
           >
-            {hasBookingDates ? <ShoppingCart className="h-4 w-4" /> : <CalendarIcon className="h-4 w-4" />}
+            {hasBookingDates && currentlyAvailable ? <ShoppingCart className="h-4 w-4" /> : <CalendarIcon className="h-4 w-4" />}
           </Button>
         </CardFooter>
       </Card>
