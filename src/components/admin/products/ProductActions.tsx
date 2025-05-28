@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import ProductEditDialog from '@/components/admin/products/ProductEditDialog';
-import { ProductFormValues, productFormSchema } from '@/components/admin/products/ProductForm';
+import { ProductFormValues, productFormSchema } from '@/hooks/useProductForm';
 import { Product } from '@/types/product';
 import { UseMutationResult } from '@tanstack/react-query';
 
@@ -51,7 +51,7 @@ export default function ProductActions({
       title: '',
       description: '',
       price: 0,
-      category: '',
+      category_id: 0,
       imageUrl: '',
       quantity: 1,
       available: true,
