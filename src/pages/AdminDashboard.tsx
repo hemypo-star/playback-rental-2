@@ -31,9 +31,10 @@ const AdminDashboard = () => {
     (booking: BookingPeriod) => booking.status === 'confirmed' && new Date(booking.endDate) >= new Date()
   ).length || 0;
   
+  // Only count revenue from completed bookings
   const totalRevenue = bookings?.reduce(
     (sum: number, booking: BookingPeriod) => 
-      booking.status === 'confirmed' ? sum + (booking.totalPrice || 0) : sum, 
+      booking.status === 'completed' ? sum + (booking.totalPrice || 0) : sum, 
     0
   ) || 0;
 
