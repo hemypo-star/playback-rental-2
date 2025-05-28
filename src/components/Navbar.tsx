@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +6,7 @@ import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
-import { Menu, ShoppingCart } from 'lucide-react';
+import { Menu, ShoppingCart, Settings } from 'lucide-react';
 import { useCartContext } from '@/hooks/useCart';
 
 export const Navbar = () => {
@@ -50,7 +49,14 @@ export const Navbar = () => {
                 </span>}
             </Link>
             
-            {user && <Button variant="outline" size="sm" onClick={signOut}>Выйти</Button>}
+            {user && (
+              <Link to="/admin">
+                <Button variant="outline" size="sm">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Админ-панель
+                </Button>
+              </Link>
+            )}
           </div>
 
           <Sheet>
@@ -85,7 +91,12 @@ export const Navbar = () => {
                     </span>}
                 </Link>
                 
-                {user && <Button variant="outline" size="sm" onClick={signOut}>Выйти</Button>}
+                {user && (
+                  <Link to="/admin" className="flex items-center gap-2 hover:text-primary transition-colors duration-200">
+                    <Settings className="h-4 w-4" />
+                    Админ-панель
+                  </Link>
+                )}
               </div>
             </SheetContent>
           </Sheet>
@@ -94,4 +105,3 @@ export const Navbar = () => {
     </nav>
   );
 };
-
