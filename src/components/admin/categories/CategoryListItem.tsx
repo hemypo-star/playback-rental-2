@@ -60,7 +60,12 @@ export default function CategoryListItem({
           )}
         </div>
         <div className="ml-4 flex-1">
-          <h3 className="font-medium">{category.name}</h3>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-medium">{category.name}</h3>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-mono">
+              ID: {category.category_id}
+            </span>
+          </div>
           {category.description && category.description.trim() && (
             <p className="text-sm text-muted-foreground line-clamp-1">
               {category.description}
