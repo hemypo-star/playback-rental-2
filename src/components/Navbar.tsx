@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,9 +33,6 @@ export const Navbar = () => {
             <Link to="/catalog" className="hover:text-primary transition-colors duration-200">
               Каталог
             </Link>
-            <Link to="/about" className="hover:text-primary transition-colors duration-200">
-              О нас
-            </Link>
             <Link to="/contact" className="hover:text-primary transition-colors duration-200">
               Контакты
             </Link>
@@ -68,9 +66,6 @@ export const Navbar = () => {
                 </Link>
                 <Link to="/catalog" className="hover:text-primary transition-colors duration-200">
                   Каталог
-                </Link>
-                <Link to="/about" className="hover:text-primary transition-colors duration-200">
-                  О нас
                 </Link>
                 <Link to="/contact" className="hover:text-primary transition-colors duration-200">
                   Контакты
