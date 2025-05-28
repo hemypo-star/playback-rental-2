@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
@@ -6,7 +5,6 @@ import { getCategories } from '@/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRightIcon, ChevronRight } from 'lucide-react';
-
 const categoryImages: Record<string, string> = {
   'Компьютеры': 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80',
   'Ноутбуки': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
@@ -14,42 +12,45 @@ const categoryImages: Record<string, string> = {
   'Мониторы': 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80',
   'default': 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80'
 };
-
 export const CategoriesSection = () => {
   const navigate = useNavigate();
   const [showAll, setShowAll] = useState(false);
-  const { data: categories, isLoading } = useQuery({
+  const {
+    data: categories,
+    isLoading
+  } = useQuery({
     queryKey: ['categories'],
-    queryFn: getCategories,
+    queryFn: getCategories
   });
-  
-  const visibleCategories = showAll 
-    ? categories 
-    : categories?.slice(0, 8);
-    
+  const visibleCategories = showAll ? categories : categories?.slice(0, 8);
   const handleCategoryClick = (categoryName: string) => {
-    navigate('/catalog', { 
-      state: { 
+    navigate('/catalog', {
+      state: {
         activeCategory: categoryName,
-        scrollTop: true 
-      } 
+        scrollTop: true
+      }
     });
   };
-  
   const handleShowAllClick = () => {
     if (categories && categories.length > 8) {
       if (!showAll) {
         setShowAll(true);
       } else {
-        navigate('/catalog', { state: { scrollTop: true } });
+        navigate('/catalog', {
+          state: {
+            scrollTop: true
+          }
+        });
       }
     } else {
-      navigate('/catalog', { state: { scrollTop: true } });
+      navigate('/catalog', {
+        state: {
+          scrollTop: true
+        }
+      });
     }
   };
-
-  return (
-    <section className="py-24">
+  return <section className="py-24">
       <div className="container px-4 mx-auto">
         <div className="text-center md:text-left mb-8">
           <span className="chip mb-4">Наше оборудование</span>
@@ -61,75 +62,47 @@ export const CategoriesSection = () => {
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {isLoading ? (
-            Array(8).fill(0).map((_, i) => (
-              <div key={i} className="animate-pulse">
+          {isLoading ? Array(8).fill(0).map((_, i) => <div key={i} className="animate-pulse">
                 <div className="h-48 rounded-t-xl bg-muted"></div>
                 <div className="h-24 rounded-b-xl bg-white p-4">
                   <div className="h-4 w-2/3 bg-muted rounded mb-2"></div>
                   <div className="h-3 w-full bg-muted/50 rounded"></div>
                 </div>
-              </div>
-            ))
-          ) : (
-            visibleCategories?.map((category) => (
-              <Card 
-                key={category.id} 
-                className="group overflow-hidden border-0 transition-all duration-300 hover:shadow-lg cursor-pointer h-full flex flex-col"
-                onClick={() => handleCategoryClick(category.name)}
-              >
+              </div>) : visibleCategories?.map(category => <Card key={category.id} className="group overflow-hidden border-0 transition-all duration-300 hover:shadow-lg cursor-pointer h-full flex flex-col" onClick={() => handleCategoryClick(category.name)}>
                 <div className="relative h-48 overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
-                  <img 
-                    src={category.imageUrl || categoryImages[category.name] || categoryImages.default} 
-                    alt={category.name}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null;
-                      target.src = categoryImages.default;
-                    }}
-                  />
+                  <img src={category.imageUrl || categoryImages[category.name] || categoryImages.default} alt={category.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onError={e => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = categoryImages.default;
+            }} />
                 </div>
                 <CardContent className="relative bg-white p-4 flex-1 flex flex-col">
                   <div className="flex-grow">
                     <h3 className="text-xl font-medium mb-1">{category.name}</h3>
-                    {category.description && category.description.trim() && (
-                      <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
+                    {category.description && category.description.trim() && <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
                         {category.description}
-                      </p>
-                    )}
+                      </p>}
                   </div>
                   <div className="mt-4 pt-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="w-full justify-between text-primary hover:text-primary/80 hover:bg-primary/10 font-medium"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCategoryClick(category.name);
-                      }}
-                    >
+                    <Button variant="ghost" size="sm" onClick={e => {
+                e.stopPropagation();
+                handleCategoryClick(category.name);
+              }} className="w-full justify-between text-primary hover:text-primary/80 hover:bg-primary/10 font-medium text-base">
                       Смотреть
                       <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </div>
                 </CardContent>
-              </Card>
-            ))
-          )}
+              </Card>)}
         </div>
         
         <div className="mt-12 flex justify-center">
-          <Button 
-            onClick={handleShowAllClick}
-            className="w-full sm:w-auto"
-          >
+          <Button onClick={handleShowAllClick} className="w-full sm:w-auto">
             Посмотреть все
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
