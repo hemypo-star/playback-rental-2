@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,20 +8,19 @@ import { Button } from '@/components/ui/button';
 import { Menu, ShoppingCart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCartContext } from '@/hooks/useCart';
-
 export const Navbar = () => {
   const {
     user,
     signOut
   } = useAuth();
-  const { cartCount } = useCartContext();
+  const {
+    cartCount
+  } = useCartContext();
   const location = useLocation();
   const [isCatalogPage, setIsCatalogPage] = useState(false);
-  
   useEffect(() => {
     setIsCatalogPage(location.pathname === '/catalog');
   }, [location]);
-  
   return <nav className="bg-white border-b border-border sticky top-0 z-50 h-20">
       <div className="container mx-auto px-4 h-full">
         <div className="flex items-center justify-between h-full">
@@ -39,20 +36,16 @@ export const Navbar = () => {
             <Link to="/catalog" className="hover:text-primary transition-colors duration-200">
               Каталог
             </Link>
-            <Link to="/how-it-works" className="hover:text-primary transition-colors duration-200">
-              Как это работает
-            </Link>
+            <Link to="/how-it-works" className="hover:text-primary transition-colors duration-200">Как мы работаем</Link>
             <Link to="/contact" className="hover:text-primary transition-colors duration-200">
               Контакты
             </Link>
             
             <Link to="/checkout" className="relative hover:text-primary transition-colors duration-200">
               <ShoppingCart className="h-5 w-5" />
-              {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+              {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                   {cartCount}
-                </span>
-              )}
+                </span>}
             </Link>
             
             {user && <div className="flex items-center space-x-4">
@@ -96,11 +89,9 @@ export const Navbar = () => {
                 <Link to="/checkout" className="flex items-center gap-2 hover:text-primary transition-colors duration-200">
                   <ShoppingCart className="h-4 w-4" />
                   Корзина
-                  {cartCount > 0 && (
-                    <span className="bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                  {cartCount > 0 && <span className="bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                       {cartCount}
-                    </span>
-                  )}
+                    </span>}
                 </Link>
                 
                 {user && <div className="flex flex-col space-y-4">
@@ -116,4 +107,3 @@ export const Navbar = () => {
       </div>
     </nav>;
 };
-
