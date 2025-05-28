@@ -61,9 +61,11 @@ export default function CategoryListItem({
         </div>
         <div className="ml-4 flex-1">
           <h3 className="font-medium">{category.name}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-1">
-            {category.description || 'Нет описания'}
-          </p>
+          {category.description && category.description.trim() && (
+            <p className="text-sm text-muted-foreground line-clamp-1">
+              {category.description}
+            </p>
+          )}
         </div>
         <div className="flex gap-1">
           <Button

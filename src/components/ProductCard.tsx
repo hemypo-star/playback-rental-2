@@ -93,7 +93,7 @@ const ProductCard = ({
             {product.title}
           </h3>
           
-          {product.description && (
+          {product.description && product.description.trim() && (
             <p className="text-sm text-muted-foreground mb-2 line-clamp-2 flex-grow">
               {truncateDescription(product.description)}
             </p>

@@ -19,7 +19,9 @@ const ProductHeader = ({ product }: ProductHeaderProps) => {
         <span className="font-semibold">{product.price}</span>
         <span className="text-muted-foreground"> ₽/в сутки</span>
       </p>
-      <p className="text-muted-foreground">{product.description}</p>
+      {product.description && product.description.trim() && (
+        <p className="text-muted-foreground">{product.description}</p>
+      )}
     </div>
   );
 };
