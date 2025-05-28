@@ -17,6 +17,7 @@ import ProductImage from '@/components/product/ProductImage';
 import ProductTabs from '@/components/product/ProductTabs';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ScrollToTopLink } from '@/components/ui/navigation-menu';
+import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityUtils';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -58,12 +59,24 @@ const ProductDetail = () => {
     });
   };
 
+  // Calculate available quantity considering bookings
+  const availableQuantity = product ? getAvailableQuantity(
+    product, 
+    bookings || [], 
+    bookingDates?.startDate, 
+    bookingDates?.endDate
+  ) : 0;
+
+  const isAvailableForDates = product ? isQuantityAvailable(
+    product, 
+    bookings || [], 
+    1, 
+    bookingDates?.startDate, 
+    bookingDates?.endDate
+  ) : false;
+
   // Check if selected dates conflict with any booking
-  const hasDateConflict = bookingDates.startDate && bookingDates.endDate && bookings && 
-    bookings.some(booking => 
-      booking.startDate.getTime() <= bookingDates.endDate!.getTime() && 
-      booking.endDate.getTime() >= bookingDates.startDate!.getTime()
-    );
+  const hasDateConflict = bookingDates.startDate && bookingDates.endDate && !isAvailableForDates;
 
   const handleAddToCart = () => {
     if (!product || !bookingDates.startDate || !bookingDates.endDate || hasDateConflict) return;
@@ -99,24 +112,37 @@ const ProductDetail = () => {
     );
   }
 
-  // Function to display stock status
+  // Function to display stock status with available quantity
   const renderStockStatus = () => {
-    if (product.quantity > 3) {
+    if (isLoadingBookings) {
       return (
-        <div className="text-green-600 font-medium">
-          В наличии: {product.quantity} шт.
+        <div className="text-gray-400 font-medium">
+          Проверяем наличие...
         </div>
       );
-    } else if (product.quantity > 0) {
+    }
+
+    const hasBookingDates = bookingDates.startDate && bookingDates.endDate;
+    const quantityToShow = hasBookingDates ? availableQuantity : product.quantity;
+    
+    if (quantityToShow > 3) {
+      return (
+        <div className="text-green-600 font-medium">
+          {hasBookingDates ? 'Доступно' : 'В наличии'}: {quantityToShow} шт.
+          {hasBookingDates && ' на выбранные даты'}
+        </div>
+      );
+    } else if (quantityToShow > 0) {
       return (
         <div className="text-amber-600 font-medium">
-          В наличии: {product.quantity} шт.
+          {hasBookingDates ? 'Доступно' : 'В наличии'}: {quantityToShow} шт.
+          {hasBookingDates && ' на выбранные даты'}
         </div>
       );
     } else {
       return (
         <div className="text-red-600 font-medium">
-          Нет в наличии
+          {hasBookingDates ? 'Забронировано на выбранные даты' : 'Нет в наличии'}
         </div>
       );
     }
@@ -166,7 +192,7 @@ const ProductDetail = () => {
                 <div className="text-2xl font-bold">{product.price.toLocaleString()} ₽/сутки</div>
               </div>
               
-              {/* Display stock status */}
+              {/* Display stock status with updated logic */}
               {renderStockStatus()}
               
               {/* Display full description */}

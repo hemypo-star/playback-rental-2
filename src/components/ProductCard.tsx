@@ -9,7 +9,8 @@ import { useCartContext } from '@/hooks/useCart';
 import { toast } from 'sonner';
 import { formatPriceRub } from '@/utils/pricingUtils';
 import { useState, useEffect } from 'react';
-import { isProductAvailable } from '@/services/product/productAvailabilityService';
+import { getProductBookings } from '@/services/bookingService';
+import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityUtils';
 
 type ProductCardProps = {
   product: Product;
@@ -27,20 +28,25 @@ const ProductCard = ({
 }: ProductCardProps) => {
   const navigate = useNavigate();
   const { addToCart } = useCartContext();
-  const [isAvailableForDates, setIsAvailableForDates] = useState<boolean | null>(null);
+  const [productBookings, setProductBookings] = useState([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   
   const hasBookingDates = bookingDates?.startDate && bookingDates?.endDate;
   
-  // Check availability for selected dates
+  // Load product bookings when component mounts or dates change
   useEffect(() => {
     if (hasBookingDates) {
-      const checkAvailability = async () => {
-        const available = await isProductAvailable(product.id, bookingDates.startDate!, bookingDates.endDate!);
-        setIsAvailableForDates(available);
-      };
-      checkAvailability();
-    } else {
-      setIsAvailableForDates(null);
+      setIsLoadingBookings(true);
+      getProductBookings(product.id)
+        .then(bookings => {
+          setProductBookings(bookings);
+        })
+        .catch(error => {
+          console.error('Error loading product bookings:', error);
+        })
+        .finally(() => {
+          setIsLoadingBookings(false);
+        });
     }
   }, [product.id, bookingDates?.startDate, bookingDates?.endDate, hasBookingDates]);
   
@@ -66,13 +72,29 @@ const ProductCard = ({
     return text.substring(0, maxLength).trim() + '...';
   };
 
+  // Calculate available quantity considering bookings
+  const availableQuantity = getAvailableQuantity(
+    product, 
+    productBookings, 
+    bookingDates?.startDate, 
+    bookingDates?.endDate
+  );
+  
+  const isAvailableForDates = isQuantityAvailable(
+    product, 
+    productBookings, 
+    1, 
+    bookingDates?.startDate, 
+    bookingDates?.endDate
+  );
+
   // Determine if product is available considering both general availability and date-specific availability
   const isProductCurrentlyAvailable = () => {
     if (!product.available) return false;
-    if (hasBookingDates && isAvailableForDates !== null) {
+    if (hasBookingDates) {
       return isAvailableForDates;
     }
-    return true;
+    return availableQuantity > 0;
   };
 
   const currentlyAvailable = isProductCurrentlyAvailable();
@@ -101,7 +123,7 @@ const ProductCard = ({
           {!currentlyAvailable && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <div className="bg-white/90 text-black font-medium px-3 py-1 rounded">
-                {hasBookingDates && isAvailableForDates === false ? 'Забронировано на эти даты' : 'Нет в наличии'}
+                {hasBookingDates && !isAvailableForDates ? 'Забронировано на эти даты' : 'Нет в наличии'}
               </div>
             </div>
           )}
@@ -125,16 +147,20 @@ const ProductCard = ({
           )}
           
           <div className="text-xs text-muted-foreground mt-auto">
-            {hasBookingDates && isAvailableForDates !== null ? (
+            {isLoadingBookings ? (
+              <span className="text-gray-400">Проверяем наличие...</span>
+            ) : hasBookingDates ? (
               isAvailableForDates ? (
-                <span className="text-green-600 font-medium">Доступно для выбранных дат</span>
+                <span className="text-green-600 font-medium">
+                  Доступно: {availableQuantity} шт. на выбранные даты
+                </span>
               ) : (
                 <span className="text-red-600 font-medium">Забронировано на выбранные даты</span>
               )
-            ) : product.quantity > 3 ? (
-              <span className="text-green-600 font-medium">В наличии: {product.quantity} шт.</span>
-            ) : product.quantity > 0 ? (
-              <span className="text-amber-600 font-medium">В наличии: {product.quantity} шт.</span>
+            ) : availableQuantity > 3 ? (
+              <span className="text-green-600 font-medium">В наличии: {availableQuantity} шт.</span>
+            ) : availableQuantity > 0 ? (
+              <span className="text-amber-600 font-medium">В наличии: {availableQuantity} шт.</span>
             ) : (
               <span className="text-red-600 font-medium">Нет в наличии</span>
             )}
