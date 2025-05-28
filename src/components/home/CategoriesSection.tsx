@@ -6,7 +6,6 @@ import { getCategories } from '@/services/apiService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRightIcon, ChevronRight } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 const categoryImages: Record<string, string> = {
   'Компьютеры': 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80',
@@ -76,7 +75,7 @@ export const CategoriesSection = () => {
             visibleCategories?.map((category) => (
               <Card 
                 key={category.id} 
-                className="overflow-hidden border-0 transition-all duration-300 hover:shadow-lg cursor-pointer h-full"
+                className="group overflow-hidden border-0 transition-all duration-300 hover:shadow-lg cursor-pointer h-full flex flex-col"
                 onClick={() => handleCategoryClick(category.name)}
               >
                 <div className="relative h-48 overflow-hidden">
@@ -86,14 +85,13 @@ export const CategoriesSection = () => {
                     alt={category.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     onError={(e) => {
-                      // If the image fails to load, use the default image
                       const target = e.target as HTMLImageElement;
-                      target.onerror = null; // Prevent infinite loop
+                      target.onerror = null;
                       target.src = categoryImages.default;
                     }}
                   />
                 </div>
-                <CardContent className="relative bg-white p-4 h-full flex flex-col">
+                <CardContent className="relative bg-white p-4 flex-1 flex flex-col">
                   <div className="flex-grow">
                     <h3 className="text-xl font-medium mb-1">{category.name}</h3>
                     {category.description && category.description.trim() && (
@@ -102,18 +100,20 @@ export const CategoriesSection = () => {
                       </p>
                     )}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="w-fit p-0 h-auto text-primary hover:text-primary/80 mt-auto"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCategoryClick(category.name);
-                    }}
-                  >
-                    Смотреть
-                    <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Button>
+                  <div className="mt-4 pt-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="w-full justify-between text-primary hover:text-primary/80 hover:bg-primary/10 font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCategoryClick(category.name);
+                      }}
+                    >
+                      Смотреть
+                      <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))
