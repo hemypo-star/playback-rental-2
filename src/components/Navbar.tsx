@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, ShoppingCart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCartContext } from '@/hooks/useCart';
+
 export const Navbar = () => {
   const {
     user,
@@ -18,21 +20,21 @@ export const Navbar = () => {
   } = useCartContext();
   const location = useLocation();
   const [isCatalogPage, setIsCatalogPage] = useState(false);
+  
   useEffect(() => {
     setIsCatalogPage(location.pathname === '/catalog');
   }, [location]);
-  return <nav className="bg-white border-b border-border sticky top-0 z-50 h-20">
+
+  return (
+    <nav className="bg-white border-b border-border sticky top-0 z-50 h-20">
       <div className="container mx-auto px-4 h-full">
         <div className="flex items-center justify-between h-full">
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200">
             <img src="/logo.svg" alt="Logo" className="h-8 w-8" />
             <span className="text-xl py-[6px] font-medium my-0">Playback Rental</span>
           </Link>
 
           <div className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="hover:text-primary transition-colors duration-200">
-              Главная
-            </Link>
             <Link to="/catalog" className="hover:text-primary transition-colors duration-200">
               Каталог
             </Link>
@@ -73,9 +75,6 @@ export const Navbar = () => {
                 </SheetDescription>
               </SheetHeader>
               <div className="grid gap-4 py-4">
-                <Link to="/" className="hover:text-primary transition-colors duration-200">
-                  Главная
-                </Link>
                 <Link to="/catalog" className="hover:text-primary transition-colors duration-200">
                   Каталог
                 </Link>
@@ -105,5 +104,6 @@ export const Navbar = () => {
           </Sheet>
         </div>
       </div>
-    </nav>;
+    </nav>
+  );
 };
