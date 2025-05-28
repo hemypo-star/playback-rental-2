@@ -105,12 +105,18 @@ export const CategoriesSection = () => {
                       </p>
                     )}
                   </div>
-                  <div 
-                    className="w-fit group/btn p-0 h-auto text-primary flex items-center mt-auto"
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="w-fit p-0 h-auto text-primary hover:text-primary/80 mt-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCategoryClick(category.name);
+                    }}
                   >
                     Смотреть
-                    <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                  </div>
+                    <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Button>
                 </CardContent>
               </Card>
             ))
