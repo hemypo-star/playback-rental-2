@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
@@ -79,7 +80,7 @@ const Catalog = () => {
       product.title.toLowerCase().includes(search.toLowerCase()) || 
       product.description.toLowerCase().includes(search.toLowerCase());
       
-    const matchesCategory = activeTab === 'all' || product.category === activeTab;
+    const matchesCategory = activeTab === 'all' || product.category_id.toString() === activeTab;
     
     return matchesSearch && matchesCategory;
   }) || [];

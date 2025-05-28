@@ -20,7 +20,11 @@ const BitrixService = {
     let filtered = [...products];
     
     if (params.category) {
-      filtered = filtered.filter(p => p.category === params.category);
+      // Since we now use category_id, we need to filter by category_id
+      const categoryId = parseInt(params.category);
+      if (!isNaN(categoryId)) {
+        filtered = filtered.filter(p => p.category_id === categoryId);
+      }
     }
     
     if (params.search) {

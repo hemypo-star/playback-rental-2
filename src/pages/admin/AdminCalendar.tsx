@@ -40,23 +40,26 @@ const AdminCalendar = () => {
 
   // Combine bookings with product names
   useEffect(() => {
-    if (bookings && products) {
+    if (bookings && products && categories) {
       const extended = bookings.map(booking => {
         const product = products.find(p => p.id === booking.productId);
+        const categoryName = categories.find(cat => cat.category_id === product?.category_id)?.name || 'Неизвестная категория';
         return {
           ...booking,
           productName: product?.title || 'Неизвестный товар',
-          productCategory: product?.category || 'Неизвестная категория'
+          productCategory: categoryName
         } as ExtendedBooking;
       });
       setExtendedBookings(extended);
     }
-  }, [bookings, products]);
+  }, [bookings, products, categories]);
 
   // Filter products by category
-  const filteredProducts = products?.filter(product => 
-    !filteredCategory || product.category === filteredCategory
-  ) || [];
+  const filteredProducts = products?.filter(product => {
+    if (!filteredCategory) return true;
+    const categoryName = categories.find(cat => cat.category_id === product.category_id)?.name;
+    return categoryName === filteredCategory;
+  }) || [];
 
   // Generate days to display
   const days = Array.from({ length: daysToShow }, (_, i) => 

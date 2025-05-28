@@ -37,7 +37,7 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File 
       title: product.title || '',
       description: product.description || '',
       price: product.price || 0,
-      category: product.category || '',
+      category: product.category_id?.toString() || '',
       imageurl: imageFileName, // Use the uploaded image filename or URL
       quantity: product.quantity || 1,
       available: product.available !== undefined ? product.available : true
@@ -65,10 +65,11 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File 
     
     console.log("Product created:", data);
     
-    // Map imageurl to imageUrl for consistency in the frontend
+    // Map imageurl to imageUrl and category to category_id for consistency in the frontend
     return {
       ...data,
-      imageUrl: data.imageurl
+      imageUrl: data.imageurl,
+      category_id: parseInt(data.category) // Convert category string to category_id number
     };
   } catch (error) {
     console.error('Error creating product:', error);

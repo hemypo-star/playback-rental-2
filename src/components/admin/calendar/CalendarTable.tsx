@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { BookingPeriod, Product } from '@/types/product';
+import { useQuery } from '@tanstack/react-query';
+import { getCategories } from '@/services/categoryService';
 
 // Interface for bookings with display name
 interface ExtendedBooking extends BookingPeriod {
@@ -29,6 +31,12 @@ const CalendarTable = ({
   extendedBookings,
   isLoadingProducts,
 }: CalendarTableProps) => {
+  
+  // Load categories to get category names by ID
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories
+  });
   
   // Get status color
   const getStatusColor = (status: BookingPeriod['status']) => {
@@ -121,6 +129,9 @@ const CalendarTable = ({
             products.map((product) => {
               const productBookings = getActiveBookingsForProduct(product.id);
               
+              // Find the category name for this product
+              const categoryName = categories?.find(cat => cat.category_id === product.category_id)?.name || 'Без категории';
+              
               return (
                 <tr key={product.id} className="border-t hover:bg-muted/30">
                   <td className="sticky left-0 z-10 bg-card p-3 font-medium border-r">
@@ -133,7 +144,7 @@ const CalendarTable = ({
                       )}
                       <div>
                         <div className="truncate max-w-[150px]">{product.title}</div>
-                        <div className="text-xs text-muted-foreground">{product.category}</div>
+                        <div className="text-xs text-muted-foreground">{categoryName}</div>
                       </div>
                     </div>
                   </td>

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { addDays } from 'date-fns';
 
@@ -7,7 +8,7 @@ const sampleProducts = [
     title: 'Sony Alpha A7 III',
     description: 'Полнокадровая беззеркальная камера с разрешением 24.2 МП',
     price: 4500,
-    category: 'Фотокамеры',
+    category: '1', // Store as string in database
     imageurl: 'https://images.unsplash.com/photo-1516724562728-afc824a36e84',
     available: true,
     quantity: 3
@@ -16,7 +17,7 @@ const sampleProducts = [
     title: 'Canon EF 70-200mm f/2.8L IS III USM',
     description: 'Телеобъектив с постоянной диафрагмой для профессиональных фотографов',
     price: 2800,
-    category: 'Объективы',
+    category: '2', // Store as string in database
     imageurl: 'https://images.unsplash.com/photo-1499085650423-45149d8166a6',
     available: true,
     quantity: 2
@@ -25,7 +26,7 @@ const sampleProducts = [
     title: 'Godox SL-60W LED',
     description: 'Постоянный LED свет мощностью 60Вт с управлением через пульт',
     price: 1200,
-    category: 'Освещение',
+    category: '3', // Store as string in database
     imageurl: 'https://images.unsplash.com/photo-1534003276576-0cbfc449fb6f',
     available: true,
     quantity: 5
@@ -34,7 +35,7 @@ const sampleProducts = [
     title: 'Rode VideoMic Pro+',
     description: 'Направленный микрофон для камер и DSLR с улучшенным качеством звука',
     price: 950,
-    category: 'Аудио',
+    category: '4', // Store as string in database
     imageurl: 'https://images.unsplash.com/photo-1520170350707-b2da59970118',
     available: false,
     quantity: 4
@@ -43,7 +44,7 @@ const sampleProducts = [
     title: 'DJI Ronin-S',
     description: 'Трехосевой стабилизатор для DSLR и беззеркальных камер',
     price: 2100,
-    category: 'Стабилизаторы',
+    category: '5', // Store as string in database
     imageurl: 'https://images.unsplash.com/photo-1542192143-6cb2c972e497',
     available: true,
     quantity: 2
@@ -52,7 +53,7 @@ const sampleProducts = [
     title: 'Blackmagic Pocket Cinema Camera 6K',
     description: 'Кинокамера с разрешением 6K и записью в Blackmagic RAW',
     price: 5200,
-    category: 'Видеокамеры',
+    category: '6', // Store as string in database
     imageurl: 'https://images.unsplash.com/photo-1585939268110-1fa0f2a708b5',
     available: true,
     quantity: 1
@@ -61,7 +62,7 @@ const sampleProducts = [
     title: 'DJI Mavic 3',
     description: 'Профессиональный дрон с камерой Hasselblad и увеличенным временем полета',
     price: 6500,
-    category: 'Дроны',
+    category: '7', // Store as string in database
     imageurl: 'https://images.unsplash.com/photo-1508444845599-5c89863b1c44',
     available: true,
     quantity: 2
@@ -70,23 +71,11 @@ const sampleProducts = [
     title: 'Zoom H6',
     description: 'Портативный аудиорекордер с 6 входами и сменными микрофонными капсюлями',
     price: 1800,
-    category: 'Аудио',
+    category: '4', // Store as string in database
     imageurl: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04',
     available: true,
     quantity: 3
   }
-];
-
-// Sample categories data
-const sampleCategories = [
-  { name: 'Фотокамеры', slug: 'photo-cameras' },
-  { name: 'Видеокамеры', slug: 'video-cameras' },
-  { name: 'Объективы', slug: 'lenses' },
-  { name: 'Освещение', slug: 'lighting' },
-  { name: 'Аудио', slug: 'audio' },
-  { name: 'Стабилизаторы', slug: 'stabilizers' },
-  { name: 'Дроны', slug: 'drones' },
-  { name: 'Аксессуары', slug: 'accessories' }
 ];
 
 // Function to seed the database with initial data
@@ -99,31 +88,56 @@ export const seedDatabase = async () => {
     if ((!existingCategories || existingCategories.length === 0) && (!existingProducts || existingProducts.length === 0)) {
       console.log('Seeding database with initial data...');
       
-      // Add categories
+      // Add categories with category_id
       const categories = [
         {
-          name: 'Компьютеры',
-          slug: 'computers',
-          description: 'Настольные компьютеры и серверы',
-          imageUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80'
+          name: 'Фотокамеры',
+          category_id: 1,
+          slug: 'photo-cameras',
+          description: 'Профессиональные и любительские фотокамеры',
+          imageurl: 'https://images.unsplash.com/photo-1516724562728-afc824a36e84?auto=format&fit=crop&w=800&q=80'
         },
         {
-          name: 'Ноутбуки',
-          slug: 'laptops',
-          description: 'Портативные компьютеры для работы и учебы',
-          imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80'
+          name: 'Объективы',
+          category_id: 2,
+          slug: 'lenses',
+          description: 'Объективы для различных типов съемки',
+          imageurl: 'https://images.unsplash.com/photo-1499085650423-45149d8166a6?auto=format&fit=crop&w=800&q=80'
         },
         {
-          name: 'Планшеты',
-          slug: 'tablets',
-          description: 'Мобильные устройства для работы и развлечений',
-          imageUrl: 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=800&q=80'
+          name: 'Освещение',
+          category_id: 3,
+          slug: 'lighting',
+          description: 'Профессиональное световое оборудование',
+          imageurl: 'https://images.unsplash.com/photo-1534003276576-0cbfc449fb6f?auto=format&fit=crop&w=800&q=80'
         },
         {
-          name: 'Мониторы',
-          slug: 'monitors',
-          description: 'Дисплеи для компьютеров и ноутбуков',
-          imageUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80'
+          name: 'Аудио',
+          category_id: 4,
+          slug: 'audio',
+          description: 'Микрофоны и звукозаписывающее оборудование',
+          imageurl: 'https://images.unsplash.com/photo-1520170350707-b2da59970118?auto=format&fit=crop&w=800&q=80'
+        },
+        {
+          name: 'Стабилизаторы',
+          category_id: 5,
+          slug: 'stabilizers',
+          description: 'Стабилизирующее оборудование для камер',
+          imageurl: 'https://images.unsplash.com/photo-1542192143-6cb2c972e497?auto=format&fit=crop&w=800&q=80'
+        },
+        {
+          name: 'Видеокамеры',
+          category_id: 6,
+          slug: 'video-cameras',
+          description: 'Профессиональные видеокамеры',
+          imageurl: 'https://images.unsplash.com/photo-1585939268110-1fa0f2a708b5?auto=format&fit=crop&w=800&q=80'
+        },
+        {
+          name: 'Дроны',
+          category_id: 7,
+          slug: 'drones',
+          description: 'Беспилотные летательные аппараты для съемки',
+          imageurl: 'https://images.unsplash.com/photo-1508444845599-5c89863b1c44?auto=format&fit=crop&w=800&q=80'
         }
       ];
       

@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getProducts } from "@/services/product/productBasicService";
+import { getCategories } from "@/services/categoryService";
 
 export const useProductQueries = () => {
   // Query to fetch products
@@ -9,15 +10,10 @@ export const useProductQueries = () => {
     queryFn: getProducts,
   });
 
-  // Query to fetch categories from products
+  // Query to fetch categories
   const categoriesQuery = useQuery({
     queryKey: ['categories'],
-    queryFn: async () => {
-      const products = await getProducts();
-      const uniqueCategories = [...new Set(products.map(prod => prod.category))];
-      return uniqueCategories.map(cat => ({ name: cat }));
-    },
-    enabled: !!productsQuery.data,
+    queryFn: getCategories,
   });
 
   return {

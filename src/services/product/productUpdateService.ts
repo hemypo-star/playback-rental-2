@@ -40,7 +40,7 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.price !== undefined) dbUpdates.price = updates.price;
-    if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.category_id !== undefined) dbUpdates.category = updates.category_id.toString();
     if (updates.available !== undefined) dbUpdates.available = updates.available;
     if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
     if (fileName !== null) dbUpdates.imageurl = fileName;
@@ -68,10 +68,11 @@ export const updateProduct = async (id: string, updates: Partial<Product>, image
     
     console.log("Product updated:", data);
     
-    // Map imageurl to imageUrl for consistency in the frontend
+    // Map imageurl to imageUrl and category to category_id for consistency in the frontend
     return data ? {
       ...data,
-      imageUrl: data.imageurl
+      imageUrl: data.imageurl,
+      category_id: parseInt(data.category) // Convert category string to category_id number
     } : null;
   } catch (error) {
     console.error('Error updating product:', error);

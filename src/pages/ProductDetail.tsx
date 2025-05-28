@@ -11,6 +11,7 @@ import BookingCalendar from '@/components/BookingCalendar';
 import PricingCalculator from '@/components/PricingCalculator';
 import { getProductById } from '@/services/apiService';
 import { getProductBookings } from '@/services/bookingService';
+import { getCategories } from '@/services/categoryService';
 import { BookingPeriod } from '@/types/product';
 import { useCartContext } from '@/hooks/useCart';
 import ProductImage from '@/components/product/ProductImage';
@@ -50,6 +51,12 @@ const ProductDetail = () => {
     queryKey: ['bookings', id],
     queryFn: () => getProductBookings(id || ''),
     enabled: !!id
+  });
+
+  // Load categories to get category name by ID
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories
   });
 
   const handleBookingChange = (bookingPeriod: BookingPeriod) => {
@@ -112,6 +119,9 @@ const ProductDetail = () => {
     );
   }
 
+  // Find the category name for this product
+  const categoryName = categories?.find(cat => cat.category_id === product.category_id)?.name || 'Без категории';
+
   // Function to display stock status with available quantity
   const renderStockStatus = () => {
     if (isLoadingBookings) {
@@ -162,9 +172,9 @@ const ProductDetail = () => {
               <BreadcrumbLink asChild>
                 <ScrollToTopLink 
                   to="/catalog" 
-                  state={{ activeCategory: product.category, scrollTop: true }}
+                  state={{ activeCategory: product.category_id.toString(), scrollTop: true }}
                 >
-                  {product.category}
+                  {categoryName}
                 </ScrollToTopLink>
               </BreadcrumbLink>
             </BreadcrumbItem>

@@ -15,7 +15,7 @@ export const productFormSchema = z.object({
   price: z.coerce.number().min(1, {
     message: 'Цена должна быть больше 0',
   }),
-  category: z.string().min(1, {
+  category_id: z.coerce.number().min(1, {
     message: 'Выберите категорию',
   }),
   imageUrl: z.string().optional(),
@@ -46,7 +46,7 @@ export const useProductForm = (
       title: editProduct?.title || '',
       description: editProduct?.description || '',
       price: editProduct?.price || 0,
-      category: editProduct?.category || '',
+      category_id: editProduct?.category_id || 0,
       imageUrl: editProduct?.imageUrl || '',
       quantity: editProduct?.quantity || 1,
       available: editProduct?.available ?? true,
@@ -68,14 +68,16 @@ export const useProductForm = (
 
       const slug = newCategoryName.toLowerCase().replace(/\s+/g, '-');
       
-      form.setValue('category', newCategoryName);
+      // Note: We would need to implement category creation here
+      // For now, just show a message that this feature needs to be implemented
+      toast({
+        title: 'Функция в разработке',
+        description: 'Создание новых категорий будет добавлено позже',
+        variant: 'destructive',
+      });
+      
       setShowCategoryInput(false);
       setNewCategoryName('');
-      
-      toast({
-        title: 'Категория добавлена',
-        description: 'Новая категория успешно добавлена',
-      });
     } catch (error) {
       toast({
         title: 'Ошибка',
