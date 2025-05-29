@@ -32,12 +32,26 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File 
       }
     }
     
-    // Make sure we're using imageurl for the database column and all required fields are present
+    // Prepare database product - use category_id if provided, otherwise convert category string to category_id
+    let categoryValue = '';
+    
+    if (product.category_id !== undefined) {
+      // Use the numeric category_id directly
+      categoryValue = product.category_id.toString();
+      console.log("Using provided category_id:", product.category_id);
+    } else if (product.category) {
+      // Legacy: if we get a category string, use it as is (for backward compatibility)
+      categoryValue = product.category.toString();
+      console.log("Using legacy category string:", product.category);
+    } else {
+      throw new Error("Product must have either category_id or category field");
+    }
+    
     const dbProduct = {
       title: product.title || '',
       description: product.description || '',
       price: product.price || 0,
-      category: product.category_id?.toString() || '',
+      category: categoryValue, // Store as string in the database
       imageurl: imageFileName, // Use the uploaded image filename or URL
       quantity: product.quantity || 1,
       available: product.available !== undefined ? product.available : true
@@ -48,7 +62,7 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File 
       throw new Error("Product title and category are required fields");
     }
     
-    console.log("Inserting product with imageurl:", dbProduct.imageurl);
+    console.log("Inserting product with category:", dbProduct.category, "and imageurl:", dbProduct.imageurl);
     
     // Insert the product
     const { data, error } = await supabase.from('products').insert([dbProduct]).select().single();

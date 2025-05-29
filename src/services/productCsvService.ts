@@ -96,10 +96,14 @@ export const importProductsFromCSV = async (csvContent: string) => {
     
     const products = [];
     
-    // Get existing categories for quick lookup
+    // Get existing categories for quick lookup by category_id
     const { getCategories } = await import('@/services/categoryService');
     const existingCategories = await getCategories();
-    const categoryMap = new Map(existingCategories.map(cat => [cat.name.toLowerCase(), cat]));
+    const categoryIdMap = new Map(existingCategories.map(cat => [cat.category_id, cat]));
+    const categoryNameMap = new Map(existingCategories.map(cat => [cat.name.toLowerCase(), cat]));
+    
+    console.log('Available categories by ID:', Object.fromEntries(categoryIdMap));
+    console.log('Available categories by name:', Array.from(categoryNameMap.keys()));
     
     // Process data rows
     for (let i = 1; i < lines.length; i++) {
@@ -132,7 +136,7 @@ export const importProductsFromCSV = async (csvContent: string) => {
       product.id = getColumnValue('id');
       product.title = getColumnValue('title', '');
       product.description = getColumnValue('description', '');
-      product.category = getColumnValue('category', '');
+      const categoryValue = getColumnValue('category', '');
       
       // Handle numeric fields with proper conversion
       const price = getColumnValue('price', '0');
@@ -152,26 +156,52 @@ export const importProductsFromCSV = async (csvContent: string) => {
       console.log(`Row ${i}: Extracted image URL: "${imageUrl}"`);
       
       // Skip empty rows or rows with missing required fields
-      if (!product.title || !product.category) {
+      if (!product.title || !categoryValue) {
         console.warn(`Skipping row ${i+1}: Missing required fields`);
         continue;
       }
       
-      // Ensure category exists or create it
-      if (product.category) {
-        const categoryExists = categoryMap.has(product.category.toLowerCase());
+      // Handle category - check if it's numeric ID or string name
+      let categoryToUse = null;
+      
+      // Try to parse as category_id first
+      const categoryId = parseInt(categoryValue, 10);
+      if (!isNaN(categoryId) && categoryIdMap.has(categoryId)) {
+        // It's a valid category_id
+        categoryToUse = categoryIdMap.get(categoryId);
+        product.category_id = categoryId;
+        console.log(`Row ${i}: Using existing category ID ${categoryId}: ${categoryToUse?.name}`);
+      } else {
+        // It's a category name - try to find existing category or create new one
+        const categoryExists = categoryNameMap.has(categoryValue.toLowerCase());
         
-        if (!categoryExists) {
-          console.log(`Creating new category: ${product.category}`);
+        if (categoryExists) {
+          categoryToUse = categoryNameMap.get(categoryValue.toLowerCase());
+          product.category_id = categoryToUse?.category_id;
+          console.log(`Row ${i}: Using existing category by name "${categoryValue}": ID ${categoryToUse?.category_id}`);
+        } else {
+          console.log(`Row ${i}: Creating new category: ${categoryValue}`);
           const newCategory = await addCategory({ 
-            name: product.category,
-            slug: product.category.toLowerCase().replace(/\s+/g, '-')
+            name: categoryValue,
+            slug: categoryValue.toLowerCase().replace(/\s+/g, '-')
           });
           
           if (newCategory) {
-            categoryMap.set(newCategory.name.toLowerCase(), newCategory);
+            categoryIdMap.set(newCategory.category_id, newCategory);
+            categoryNameMap.set(newCategory.name.toLowerCase(), newCategory);
+            categoryToUse = newCategory;
+            product.category_id = newCategory.category_id;
+            console.log(`Row ${i}: Created new category "${categoryValue}" with ID ${newCategory.category_id}`);
+          } else {
+            console.error(`Row ${i}: Failed to create category ${categoryValue}`);
+            continue;
           }
         }
+      }
+      
+      if (!categoryToUse) {
+        console.error(`Row ${i}: No valid category found for "${categoryValue}"`);
+        continue;
       }
       
       products.push(product);
@@ -184,8 +214,8 @@ export const importProductsFromCSV = async (csvContent: string) => {
       try {
         const { id, ...productData } = product;
         
-        // Log the image URL before creating/updating product
-        console.log(`Processing product "${productData.title}" with image URL: "${productData.imageurl}"`);
+        // Log the image URL and category_id before creating/updating product
+        console.log(`Processing product "${productData.title}" with category_id: ${productData.category_id}, image URL: "${productData.imageurl}"`);
         
         // Handle existing products (update) vs. new products (insert)
         if (id) {
