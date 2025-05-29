@@ -34,6 +34,7 @@ import CheckoutForm from '@/components/checkout/CheckoutForm';
 import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
 import CheckoutSuccess from '@/components/checkout/CheckoutSuccess';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { sendCheckoutNotification } from '@/services/telegramService';
 
 const Checkout = () => {
   const [loading, setLoading] = useState(false);
@@ -108,6 +109,7 @@ const Checkout = () => {
     
     setLoading(true);
     try {
+      // Create bookings first
       for (const item of cartItems) {
         await createBooking({
           productId: item.productId,
@@ -120,6 +122,31 @@ const Checkout = () => {
           totalPrice: calculateRentalPrice(item.price, item.startDate, item.endDate),
           notes: `Бронирование из корзины: ${item.title}`
         });
+      }
+      
+      // Send Telegram notification
+      try {
+        const telegramSuccess = await sendCheckoutNotification({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          items: cartItems.map(item => ({
+            title: item.title,
+            price: item.price,
+            startDate: item.startDate.toISOString(),
+            endDate: item.endDate.toISOString()
+          })),
+          totalAmount: getCartTotal()
+        });
+        
+        if (telegramSuccess) {
+          console.log('Telegram notification sent successfully');
+        } else {
+          console.warn('Failed to send Telegram notification, but order was processed');
+        }
+      } catch (telegramError) {
+        console.error('Error sending Telegram notification:', telegramError);
+        // Don't fail the order if notification fails
       }
       
       clearCart();

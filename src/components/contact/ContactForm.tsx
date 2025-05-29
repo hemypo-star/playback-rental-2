@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { usePhoneInputMask } from "@/hooks/usePhoneInputMask";
+import { sendContactNotification } from "@/services/telegramService";
 
 const phoneRegex = /^\+7\d{10}$/;
 const nameRegex = /^[A-Za-zА-Яа-яЁё\s\-]+$/;
@@ -80,20 +80,38 @@ const ContactForm = () => {
     }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
       return;
     }
+    
     setIsSubmitting(true);
+    
+    try {
+      // Send Telegram notification
+      const telegramSuccess = await sendContactNotification({
+        name: formState.name,
+        email: formState.email,
+        phone: formState.phone,
+        subject: formState.subject,
+        message: formState.message
+      });
 
-    // Simulate form submission
-    setTimeout(() => {
+      if (telegramSuccess) {
+        console.log('Telegram notification sent successfully');
+      } else {
+        console.warn('Failed to send Telegram notification, but continuing with form submission');
+      }
+
+      // Simulate form submission (replace with actual form handling if needed)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       toast({
         title: "Message sent!",
         description: "We'll get back to you as soon as possible."
       });
-      setIsSubmitting(false);
+      
       setFormState({
         name: "",
         email: "",
@@ -102,7 +120,16 @@ const ContactForm = () => {
         message: ""
       });
       setErrors({});
-    }, 1500);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -171,6 +198,19 @@ const ContactForm = () => {
             placeholder="example@email.com" 
           />
           {errors.email && <p className="text-destructive text-sm">{errors.email}</p>}
+        </div>
+        
+        <div className="space-y-2">
+          <label htmlFor="subject" className="text-sm font-medium">
+            Тема (необязательно)
+          </label>
+          <Input 
+            id="subject" 
+            name="subject" 
+            value={formState.subject} 
+            onChange={handleChange} 
+            autoComplete="off" 
+          />
         </div>
         
         <div className="space-y-2">
