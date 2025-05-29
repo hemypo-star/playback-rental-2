@@ -32,19 +32,15 @@ export const createProduct = async (product: Partial<Product>, imageFile?: File 
       }
     }
     
-    // Prepare database product - use category_id if provided, otherwise convert category string to category_id
+    // Prepare database product - use category_id
     let categoryValue = '';
     
     if (product.category_id !== undefined) {
       // Use the numeric category_id directly
       categoryValue = product.category_id.toString();
       console.log("Using provided category_id:", product.category_id);
-    } else if (product.category) {
-      // Legacy: if we get a category string, use it as is (for backward compatibility)
-      categoryValue = product.category.toString();
-      console.log("Using legacy category string:", product.category);
     } else {
-      throw new Error("Product must have either category_id or category field");
+      throw new Error("Product must have category_id field");
     }
     
     const dbProduct = {
