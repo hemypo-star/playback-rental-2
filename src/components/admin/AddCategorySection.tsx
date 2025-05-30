@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import ImageUploadField from "@/components/ImageUploadField";
+import { uploadCategoryImage } from "@/utils/imageUtils";
 import { toast } from "sonner";
 
 type Props = {
@@ -13,8 +14,8 @@ type Props = {
   setShow: (show: boolean) => void;
   newCategoryName: string;
   setNewCategoryName: (v: string) => void;
-  fileForCategory: string | null; // Changed to string for URL
-  setFileForCategory: (f: string | null) => void;
+  fileForCategory: File | null; // This is correctly typed as File | null
+  setFileForCategory: (f: File | null) => void;
   isPending: boolean;
 };
 
@@ -39,18 +40,29 @@ export default function AddCategorySection({
     
     try {
       setIsUploading(true);
+      let imageUrl;
+      
+      if (fileForCategory) {
+        // We pass File type here, which is what uploadCategoryImage expects
+        imageUrl = await uploadCategoryImage(fileForCategory);
+      }
       
       onAddCategory({
         name: newCategoryName,
         slug: newCategoryName.toLowerCase().replace(/\s+/g, "-"),
-        imageUrl: fileForCategory || undefined
+        imageUrl
       });
       
-      // Clear the URL after successful submission
+      // Clear the file after successful upload
       setFileForCategory(null);
     } catch (error) {
-      console.error("Error adding category:", error);
-      toast.error("Не удалось создать категорию.");
+      console.error("Error uploading category image:", error);
+      toast.error("Не удалось загрузить изображение. Категория будет создана без изображения.");
+      
+      onAddCategory({
+        name: newCategoryName,
+        slug: newCategoryName.toLowerCase().replace(/\s+/g, "-")
+      });
     } finally {
       setIsUploading(false);
     }
@@ -67,8 +79,15 @@ export default function AddCategorySection({
       />
       <ImageUploadField
         label=""
-        previewUrl={fileForCategory}
-        onChange={(url) => setFileForCategory(url)}
+        previewUrl={fileForCategory ? URL.createObjectURL(fileForCategory) : null}
+        onChange={f => {
+          // Only accept File type for fileForCategory, not string
+          if (f instanceof File) {
+            setFileForCategory(f);
+          } else {
+            toast.error("URLs are not supported for categories. Please upload a file.");
+          }
+        }}
         disabled={isPending || isUploading}
       />
       <Button

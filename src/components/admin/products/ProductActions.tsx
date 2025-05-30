@@ -15,12 +15,12 @@ type ProductActionsProps = {
   setShowCategoryInput: (show: boolean) => void;
   newCategoryName: string;
   setNewCategoryName: (name: string) => void;
-  fileForProduct: string | null;
-  setFileForProduct: (url: string | null) => void;
-  fileForCategory: string | null;
-  setFileForCategory: (file: string | null) => void;
+  fileForProduct: File | string | null;
+  setFileForProduct: (file: File | string | null) => void;
+  fileForCategory: File | null;
+  setFileForCategory: (file: File | null) => void;
   addCategoryMutation: UseMutationResult<any, unknown, any, unknown>;
-  onSubmit: (values: ProductFormValues, imageUrl: string | null) => void;
+  onSubmit: (values: ProductFormValues, imageFile: File | string | null) => void;
   handleAddCategory: (values: any) => void;
   createPending: boolean;
   updatePending: boolean;
@@ -69,8 +69,8 @@ export default function ProductActions({
       setShowCategoryInput={setShowCategoryInput}
       newCategoryName={newCategoryName}
       setNewCategoryName={setNewCategoryName}
-      imageForProduct={fileForProduct}
-      setImageForProduct={setFileForProduct}
+      fileForProduct={fileForProduct}
+      setFileForProduct={setFileForProduct}
       fileForCategory={fileForCategory}
       setFileForCategory={setFileForCategory}
       addCategoryMutation={addCategoryMutation}

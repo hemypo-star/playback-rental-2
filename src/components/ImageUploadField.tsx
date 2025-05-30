@@ -1,12 +1,12 @@
 
-import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import ImagePreview from "./image-upload/ImagePreview";
+import { useEffect, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FileUploader from "./image-upload/FileUploader";
+import UrlUploader from "./image-upload/UrlUploader";
 
 type Props = {
   label?: string;
-  onChange: (url: string) => void;
+  onChange: (file: File | string) => void;
   previewUrl?: string | null;
   disabled?: boolean;
   className?: string;
@@ -21,70 +21,62 @@ export default function ImageUploadField({
   className,
   onError
 }: Props) {
-  const [imageUrl, setImageUrl] = useState<string>('');
   const [imageError, setImageError] = useState(false);
+  const [uploadType, setUploadType] = useState<'file' | 'link'>('file');
 
   // Reset error state when previewUrl changes
   useEffect(() => {
     if (previewUrl) {
       setImageError(false);
-      setImageUrl(previewUrl);
     }
   }, [previewUrl]);
 
-  const handleImageError = () => {
-    setImageError(true);
-    if (onError) {
-      onError(new Error(`Failed to load image from URL: ${imageUrl}`));
-    }
+  const handleFileSelected = (file: File) => {
+    onChange(file);
   };
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const url = e.target.value;
-    setImageUrl(url);
-    
-    if (url) {
-      // Basic URL validation
-      const urlRegex = /^https?:\/\/.+/i;
-      if (urlRegex.test(url)) {
-        onChange(url);
-        setImageError(false);
-      } else {
-        setImageError(true);
-        if (onError) {
-          onError(new Error('Please enter a valid URL starting with http:// or https://'));
-        }
-      }
-    } else {
-      onChange('');
-      setImageError(false);
+  const handleUrlSelected = (url: string) => {
+    onChange(url);
+  };
+
+  const handleError = (error: Error) => {
+    setImageError(true);
+    if (onError) {
+      onError(error);
     }
   };
 
   return (
-    <div className={`space-y-3 ${className || ''}`}>
-      {label && <Label className="text-sm font-medium">{label}</Label>}
+    <div className={`space-y-2 ${className || ''}`}>
+      {label && <span className="block text-sm">{label}</span>}
       
-      <div className="flex items-center gap-3">
-        <ImagePreview 
-          previewUrl={previewUrl}
-          imageError={imageError}
-          handleImageError={handleImageError}
-        />
+      <Tabs defaultValue="file" onValueChange={(value) => setUploadType(value as 'file' | 'link')}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="file">Файл</TabsTrigger>
+          <TabsTrigger value="link">Ссылка</TabsTrigger>
+        </TabsList>
         
-        <div className="flex-1">
-          <Input
-            placeholder="https://example.com/image.jpg"
-            value={imageUrl}
-            onChange={handleUrlChange}
+        <TabsContent value="file" className="space-y-4 pt-4">
+          <FileUploader
+            previewUrl={previewUrl}
+            onChange={handleFileSelected}
             disabled={disabled}
+            onError={handleError}
           />
-        </div>
-      </div>
+        </TabsContent>
+        
+        <TabsContent value="link" className="space-y-4 pt-4">
+          <UrlUploader
+            onChange={handleUrlSelected}
+            disabled={disabled}
+            onError={handleError}
+          />
+        </TabsContent>
+      </Tabs>
       
       {imageError && (
         <p className="text-sm text-destructive mt-1">
-          Не удалось загрузить изображение. Пожалуйста, проверьте URL-адрес.
+          Не удалось загрузить изображение. Пожалуйста, попробуйте другой файл или ссылку.
         </p>
       )}
     </div>

@@ -5,6 +5,7 @@ export interface ProductFormValues {
   price: number;
   category: string;
   imageUrl?: string;
+  imageFile?: File | null;
   available: boolean;
   quantity: number;
 }

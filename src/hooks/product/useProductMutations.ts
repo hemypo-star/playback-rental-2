@@ -10,6 +10,7 @@ import {
 import { 
   deleteProduct 
 } from "@/services/product/productDeleteService";
+import { uploadProductImage } from "@/utils/imageUtils";
 import { Product } from "@/types/product";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { ProductFormValues } from "@/types/product-form";
@@ -24,11 +25,22 @@ export const useProductMutations = () => {
     mutationFn: async (productData: ProductFormValues) => {
       setIsLoading(true);
       try {
-        // Create product with the image URL
+        let imageUrl = productData.imageUrl;
+        
+        // Handle image upload if it's a File object
+        if (productData.imageFile && productData.imageFile instanceof File) {
+          imageUrl = await uploadProductImage(productData.imageFile);
+        } else if (productData.imageUrl?.startsWith('http')) {
+          // For external URLs, use them directly
+          imageUrl = productData.imageUrl;
+          console.log('Using external image URL directly:', imageUrl);
+        }
+
+        // Create product with the image URL (either uploaded or external URL)
         const newProduct = await createProduct({
           ...productData,
-          imageUrl: productData.imageUrl || '',
-        }, productData.imageUrl);
+          imageUrl: imageUrl || '',
+        }, productData.imageFile); // Fixed: Using productData.imageFile instead of undefined imageFile
 
         return newProduct;
       } finally {
@@ -56,11 +68,23 @@ export const useProductMutations = () => {
     mutationFn: async ({ id, data }: { id: string; data: ProductFormValues }) => {
       setIsLoading(true);
       try {
-        // Update product with the image URL
+        let imageUrl = data.imageUrl;
+        let imageFile = data.imageFile;
+        
+        // Handle image upload if it's a File object
+        if (data.imageFile && data.imageFile instanceof File) {
+          imageUrl = await uploadProductImage(data.imageFile, id);
+        } else if (data.imageUrl?.startsWith('http')) {
+          // For external URLs, use them directly
+          imageUrl = data.imageUrl;
+          console.log('Using external image URL directly:', imageUrl);
+        }
+
+        // Update product with the image URL (either newly uploaded or existing)
         const updatedProduct = await updateProduct(id, {
           ...data,
-          imageUrl: data.imageUrl || '',
-        }, data.imageUrl);
+          imageUrl: imageUrl || '',
+        }, imageFile);
 
         return updatedProduct;
       } finally {

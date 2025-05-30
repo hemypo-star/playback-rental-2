@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -44,10 +45,10 @@ const AdminProducts = () => {
     handleStorageInitialized
   } = useStorageStatus();
 
-  const onSubmit = async (formData: ProductFormValues, imageUrl: string | null) => {
-    console.log("Submitting product form:", { formData, imageUrl, editProduct });
+  const onSubmit = async (formData: ProductFormValues, imageFile: File | string | null) => {
+    console.log("Submitting product form:", { formData, imageFile, editProduct });
     
-    setImageForProduct(imageUrl);
+    setImageForProduct(imageFile);
   
     try {
       if (editProduct) {
@@ -57,13 +58,13 @@ const AdminProducts = () => {
           id: editProduct.id,
           data: {
             ...formData,
-            imageUrl: imageUrl || formData.imageUrl || ''
+            imageFile: imageFile instanceof File ? imageFile : undefined
           }
         });
       } else {
         // Creating new product
         console.log("Creating new product");
-        await addProduct(formData, imageUrl);
+        await addProduct(formData, imageFile);
       }
       
       // Close dialog and reset form

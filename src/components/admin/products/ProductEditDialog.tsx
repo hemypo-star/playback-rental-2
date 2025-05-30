@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -17,12 +18,12 @@ type ProductEditDialogProps = {
   setShowCategoryInput?: (show: boolean) => void;
   newCategoryName?: string;
   setNewCategoryName?: (name: string) => void;
-  imageForProduct: string | null;
-  setImageForProduct: (url: string | null) => void;
+  fileForProduct: File | string | null;
+  setFileForProduct: (file: File | string | null) => void;
   fileForCategory?: File | null;
   setFileForCategory?: (file: File | null) => void;
   addCategoryMutation?: UseMutationResult<any, unknown, any, unknown>;
-  onSubmit: (values: ProductFormValues, imageUrl: string | null) => void;
+  onSubmit: (values: ProductFormValues, imageFile: File | string | null) => void;
   handleAddCategory?: (values: any) => void;
   createPending: boolean;
   updatePending: boolean;
@@ -33,8 +34,8 @@ export default function ProductEditDialog({
   setOpen,
   editProduct,
   categories,
-  imageForProduct,
-  setImageForProduct,
+  fileForProduct,
+  setFileForProduct,
   createPending,
   updatePending,
   onSubmit,
@@ -43,12 +44,12 @@ export default function ProductEditDialog({
   
   const handleCancel = () => {
     setOpen(false);
-    setImageForProduct(null);
+    setFileForProduct(null);
   };
 
   const handleSubmit = (values: ProductFormValues) => {
     console.log("Dialog submitting form:", values);
-    onSubmit(values, imageForProduct);
+    onSubmit(values, fileForProduct);
   };
 
   const handleOpenDialog = () => {
