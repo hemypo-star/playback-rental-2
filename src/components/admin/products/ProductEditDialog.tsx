@@ -48,12 +48,18 @@ export default function ProductEditDialog({
   };
 
   const handleSubmit = (values: ProductFormValues) => {
+    console.log("Dialog submitting form:", values);
     onSubmit(values, fileForProduct);
+  };
+
+  const handleOpenDialog = () => {
+    console.log("Opening product dialog for:", editProduct ? 'edit' : 'create');
+    setOpen(true);
   };
 
   return (
     <div>
-      <Button onClick={() => setOpen(true)}>
+      <Button onClick={handleOpenDialog}>
         <Plus className="mr-2 h-4 w-4" /> Добавить товар
       </Button>
       

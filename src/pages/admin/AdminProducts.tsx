@@ -26,6 +26,7 @@ const AdminProducts = () => {
     deleteProductMutation,
     handleEditProduct,
     handleDeleteProduct,
+    addProduct,
   } = useProductManagement();
 
   const {
@@ -45,20 +46,33 @@ const AdminProducts = () => {
   } = useStorageStatus();
 
   const onSubmit = async (formData: ProductFormValues, imageFile: File | string | null) => {
-    if (!editProduct) return;
+    console.log("Submitting product form:", { formData, imageFile, editProduct });
     
     setImageForProduct(imageFile);
   
     try {
-      await updateProductMutation.mutateAsync({
-        id: editProduct.id,
-        data: {
-          ...formData,
-          imageFile: imageFile instanceof File ? imageFile : undefined
-        }
-      });
+      if (editProduct) {
+        // Updating existing product
+        console.log("Updating existing product:", editProduct.id);
+        await updateProductMutation.mutateAsync({
+          id: editProduct.id,
+          data: {
+            ...formData,
+            imageFile: imageFile instanceof File ? imageFile : undefined
+          }
+        });
+      } else {
+        // Creating new product
+        console.log("Creating new product");
+        await addProduct(formData, imageFile);
+      }
+      
+      // Close dialog and reset form
+      setOpenDialog(false);
+      setEditProduct(null);
+      setImageForProduct(null);
     } catch (error) {
-      console.error('Ошибка при обновлении товара:', error);
+      console.error('Ошибка при сохранении товара:', error);
     }
   };
 

@@ -19,9 +19,7 @@ export const useProductManagement = () => {
     isLoading: mutationLoading, 
     createProductMutation, 
     updateProductMutation, 
-    deleteProductMutation,
-    addProduct,
-    updateProduct
+    deleteProductMutation 
   } = useProductMutations();
   const { 
     isLoading: importExportLoading, 
@@ -33,12 +31,27 @@ export const useProductManagement = () => {
   const isLoading = mutationLoading || importExportLoading;
 
   const handleEditProduct = (product: Product) => {
+    console.log("Setting product for editing:", product);
     setEditProduct(product);
     setOpenDialog(true);
   };
 
   const handleDeleteProduct = (id: string) => {
     deleteProductMutation.mutate(id);
+  };
+
+  const addProduct = async (formData: ProductFormValues, imageFile: File | string | null) => {
+    console.log("Adding new product:", formData);
+    try {
+      await createProductMutation.mutateAsync({
+        data: formData,
+        imageFile: imageFile instanceof File ? imageFile : (typeof imageFile === 'string' ? imageFile : undefined)
+      });
+      console.log("Product created successfully");
+    } catch (error) {
+      console.error("Failed to create product:", error);
+      throw error;
+    }
   };
 
   return {
