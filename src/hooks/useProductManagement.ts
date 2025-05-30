@@ -11,7 +11,7 @@ export type { ProductFormValues } from "@/types/product-form";
 export const useProductManagement = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
+  const [imageForProduct, setImageForProduct] = useState<string | null>(null);
 
   // Import product hooks
   const { products, categories, isLoadingProducts } = useProductQueries();
@@ -33,6 +33,7 @@ export const useProductManagement = () => {
   const handleEditProduct = (product: Product) => {
     console.log("Setting product for editing:", product);
     setEditProduct(product);
+    setImageForProduct(product.imageUrl || null);
     setOpenDialog(true);
   };
 
@@ -40,14 +41,13 @@ export const useProductManagement = () => {
     deleteProductMutation.mutate(id);
   };
 
-  const addProduct = async (formData: ProductFormValues, imageFile: File | string | null) => {
+  const addProduct = async (formData: ProductFormValues, imageUrl: string | null) => {
     console.log("Adding new product:", formData);
     try {
-      // Prepare the data with the imageFile properly typed
+      // Prepare the data with the imageUrl
       const productData: ProductFormValues = {
         ...formData,
-        imageFile: imageFile instanceof File ? imageFile : null,
-        imageUrl: typeof imageFile === 'string' ? imageFile : formData.imageUrl
+        imageUrl: imageUrl || formData.imageUrl || ''
       };
 
       await createProductMutation.mutateAsync(productData);

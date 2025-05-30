@@ -8,17 +8,15 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import CategoryField from "./CategoryField";
 import FormActions from "./FormActions";
-import StorageStatusAlert from "./StorageStatusAlert";
 import ProductFormField from "./ProductFormField";
 import ProductImageField from "./ProductImageField";
 import { useProductForm, ProductFormValues } from "@/hooks/useProductForm";
-import { useStorageStatus } from "@/hooks/useStorageStatus";
 
 type ProductFormProps = {
   editProduct: Product | null;
   categories: Category[];
   isSubmitting: boolean;
-  onSubmit: (values: ProductFormValues, imageFile: File | string | null) => void;
+  onSubmit: (values: ProductFormValues, imageUrl: string | null) => void;
   onCancel: () => void;
 };
 
@@ -30,29 +28,11 @@ export default function ProductForm({
   onCancel,
 }: ProductFormProps) {
   const { toast } = useToast();
-  const [imageForProduct, setImageForProduct] = useState<File | string | null>(null);
-  const { 
-    storageInitialized, 
-    storageError,
-    isCheckingStorage, 
-    checkStorageConnection 
-  } = useStorageStatus();
+  const [imageForProduct, setImageForProduct] = useState<string | null>(null);
 
   const handleSubmitWithImage = (values: ProductFormValues) => {
     console.log("Form submitted with values:", values);
-    console.log("Image for product:", imageForProduct);
-    
-    // For external URLs, check if storage is needed
-    const needsStorage = imageForProduct && imageForProduct instanceof File;
-    
-    // Check if the storage buckets are ready (only if we're uploading a file)
-    if (needsStorage && !storageInitialized) {
-      toast({
-        title: 'Предупреждение',
-        description: 'Хранилище для изображений не готово. Изображение может не быть загружено.',
-        variant: 'warning',
-      });
-    }
+    console.log("Image URL for product:", imageForProduct);
     
     onSubmit(values, imageForProduct);
   };
@@ -71,14 +51,6 @@ export default function ProductForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-        {storageError && !imageForProduct?.toString().startsWith('http') && (
-          <StorageStatusAlert 
-            error={storageError}
-            isCheckingStorage={isCheckingStorage}
-            onCheckStorage={checkStorageConnection}
-          />
-        )}
-
         <ProductFormField 
           form={form}
           name="title"
@@ -128,7 +100,6 @@ export default function ProductForm({
           form={form}
           imageForProduct={imageForProduct}
           setImageForProduct={setImageForProduct}
-          isCheckingStorage={isCheckingStorage}
           isSubmitting={isSubmitting}
         />
 

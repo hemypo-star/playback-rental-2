@@ -30,7 +30,7 @@ export type ProductFormValues = z.infer<typeof productFormSchema>;
 export const useProductForm = (
   editProduct: Product | null,
   onSubmit: (values: ProductFormValues) => void,
-  setImageForProduct: (file: File | string | null) => void
+  setImageForProduct: (url: string | null) => void
 ) => {
   const { toast } = useToast();
   
