@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -126,6 +127,7 @@ const Checkout = () => {
       
       // Send Telegram notification
       try {
+        console.log('Sending Telegram notification for checkout...');
         const telegramSuccess = await sendCheckoutNotification({
           name: formData.name,
           email: formData.email,
@@ -141,12 +143,14 @@ const Checkout = () => {
         
         if (telegramSuccess) {
           console.log('Telegram notification sent successfully');
+          toast.success('Уведомление отправлено!');
         } else {
           console.warn('Failed to send Telegram notification, but order was processed');
+          toast.warning('Заказ обработан, но уведомление не отправлено');
         }
       } catch (telegramError) {
         console.error('Error sending Telegram notification:', telegramError);
-        // Don't fail the order if notification fails
+        toast.warning('Заказ обработан, но произошла ошибка при отправке уведомления');
       }
       
       clearCart();
