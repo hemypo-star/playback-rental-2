@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { usePhoneInputMask } from "@/hooks/usePhoneInputMask";
 import { sendContactNotification } from "@/services/telegramService";
+import { isPhoneComplete } from "@/utils/phoneMask";
 
-const phoneRegex = /^\+7\d{10}$/;
 const nameRegex = /^[A-Za-zА-Яа-яЁё\s\-]+$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -53,8 +54,8 @@ const ContactForm = () => {
     }
     if (!formState.phone.trim()) {
       nextErrors.phone = "Введите телефон";
-    } else if (!phoneRegex.test(formState.phone.trim())) {
-      nextErrors.phone = "Телефон должен быть в формате +79999999999";
+    } else if (!isPhoneComplete(formState.phone)) {
+      nextErrors.phone = "Телефон должен содержать 10 цифр в формате +7 (XXX) XXX-XX-XX";
     }
     if (!formState.email.trim()) {
       nextErrors.email = "Введите email";
