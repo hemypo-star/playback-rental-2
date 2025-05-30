@@ -10,7 +10,6 @@ import { Loader2 } from 'lucide-react';
 
 const HeroBannerSettings = () => {
   const { toast } = useToast();
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -43,17 +42,15 @@ const HeroBannerSettings = () => {
     fetchCurrentBanner();
   }, []);
 
-  const handleImageChange = (file: File) => {
-    setImageFile(file);
-    const previewUrl = URL.createObjectURL(file);
-    setImageUrl(previewUrl);
+  const handleImageChange = (url: string) => {
+    setImageUrl(url);
   };
 
   const handleSave = async () => {
-    if (!imageFile) {
+    if (!imageUrl) {
       toast({
         title: 'Ошибка',
-        description: 'Сначала выберите изображение',
+        description: 'Сначала введите URL изображения',
         variant: 'destructive'
       });
       return;
@@ -61,30 +58,13 @@ const HeroBannerSettings = () => {
 
     try {
       setIsLoading(true);
-      
-      // Upload file to storage
-      const fileName = `hero_banner_${Date.now()}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('hero-banners')
-        .upload(fileName, imageFile);
-      
-      if (uploadError) {
-        throw new Error(uploadError.message);
-      }
-
-      // Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('hero-banners')
-        .getPublicUrl(fileName);
-
-      const publicUrl = publicUrlData.publicUrl;
 
       // Update setting in database
       const { error: settingsError } = await supabase
         .from('settings')
         .upsert({ 
           key: 'hero_banner_image',
-          value: publicUrl,
+          value: imageUrl,
           updated_at: new Date().toISOString()
         });
 
@@ -97,7 +77,6 @@ const HeroBannerSettings = () => {
         description: 'Баннер главной страницы обновлен',
       });
 
-      setImageUrl(publicUrl);
     } catch (error: any) {
       toast({
         title: 'Ошибка при сохранении',
@@ -114,14 +93,14 @@ const HeroBannerSettings = () => {
       <CardHeader>
         <CardTitle>Баннер главной страницы</CardTitle>
         <CardDescription>
-          Загрузите изображение для баннера главной страницы. 
+          Введите URL изображения для баннера главной страницы. 
           Рекомендуемый размер: 1920x1080px.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="hero-banner">Изображение баннера</Label>
+            <Label htmlFor="hero-banner">URL изображения баннера</Label>
             <div className="mt-2">
               <ImageUploadField
                 onChange={handleImageChange}
@@ -148,7 +127,7 @@ const HeroBannerSettings = () => {
       <CardFooter className="flex justify-end">
         <Button 
           onClick={handleSave} 
-          disabled={!imageFile || isLoading}
+          disabled={!imageUrl || isLoading}
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Сохранить
