@@ -43,10 +43,14 @@ export const useProductManagement = () => {
   const addProduct = async (formData: ProductFormValues, imageFile: File | string | null) => {
     console.log("Adding new product:", formData);
     try {
-      await createProductMutation.mutateAsync({
-        data: formData,
-        imageFile: imageFile instanceof File ? imageFile : (typeof imageFile === 'string' ? imageFile : undefined)
-      });
+      // Prepare the data with the imageFile properly typed
+      const productData: ProductFormValues = {
+        ...formData,
+        imageFile: imageFile instanceof File ? imageFile : null,
+        imageUrl: typeof imageFile === 'string' ? imageFile : formData.imageUrl
+      };
+
+      await createProductMutation.mutateAsync(productData);
       console.log("Product created successfully");
     } catch (error) {
       console.error("Failed to create product:", error);
