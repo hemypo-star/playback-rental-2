@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { addDays } from 'date-fns';
 import { getBookings } from '@/services/bookingService';
@@ -54,12 +54,37 @@ const AdminCalendar = () => {
     }
   }, [bookings, products, categories]);
 
-  // Filter products by category
-  const filteredProducts = products?.filter(product => {
-    if (!filteredCategory) return true;
-    const categoryName = categories.find(cat => cat.category_id === product.category_id)?.name;
-    return categoryName === filteredCategory;
-  }) || [];
+  // Check if a product has active bookings
+  const hasActiveBookings = (productId: string): boolean => {
+    return extendedBookings.some(booking => 
+      booking.productId === productId && 
+      ['confirmed', 'pending'].includes(booking.status)
+    );
+  };
+
+  // Sort and filter products with active bookings first
+  const sortedProducts = useMemo(() => {
+    if (!products) return [];
+
+    // First filter by category if selected
+    const categoryFiltered = products.filter(product => {
+      if (!filteredCategory) return true;
+      const categoryName = categories.find(cat => cat.category_id === product.category_id)?.name;
+      return categoryName === filteredCategory;
+    });
+
+    // Then sort by active bookings
+    const productsWithActiveBookings = categoryFiltered.filter(product => 
+      hasActiveBookings(product.id)
+    );
+    
+    const productsWithoutActiveBookings = categoryFiltered.filter(product => 
+      !hasActiveBookings(product.id)
+    );
+
+    // Return products with active bookings first, then the rest
+    return [...productsWithActiveBookings, ...productsWithoutActiveBookings];
+  }, [products, categories, filteredCategory, extendedBookings]);
 
   // Generate days to display
   const days = Array.from({ length: daysToShow }, (_, i) => 
@@ -105,9 +130,10 @@ const AdminCalendar = () => {
       
       <CalendarTable 
         days={days}
-        products={filteredProducts}
+        products={sortedProducts}
         extendedBookings={extendedBookings}
         isLoadingProducts={isLoadingProducts}
+        hasActiveBookings={hasActiveBookings}
       />
       
       <StatusLegend />
