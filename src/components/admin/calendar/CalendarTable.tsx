@@ -99,94 +99,8 @@ const CalendarTable = ({
       .filter(Boolean);
   };
 
-  // Group products into those with and without active bookings
-  const productsWithActiveBookings = products.filter(product => hasActiveBookings(product.id));
-  const productsWithoutActiveBookings = products.filter(product => !hasActiveBookings(product.id));
-
-  const renderProductRows = (productList: Product[], showSeparator: boolean = false) => {
-    return productList.map((product, index) => {
-      const productBookings = getActiveBookingsForProduct(product.id);
-      
-      // Find the category name for this product
-      const categoryName = categories?.find(cat => cat.category_id === product.category_id)?.name || 'Без категории';
-      
-      return (
-        <tr 
-          key={product.id} 
-          className={`border-t hover:bg-muted/30 ${
-            showSeparator && index === 0 ? 'border-t-2 border-muted-foreground/20' : ''
-          }`}
-        >
-          <td className="sticky left-0 z-10 bg-card p-3 font-medium border-r">
-            <div className="flex items-center gap-2">
-              {product.imageUrl && (
-                <div 
-                  className="w-8 h-8 rounded bg-center bg-cover flex-shrink-0"
-                  style={{ backgroundImage: `url(${product.imageUrl})` }}
-                />
-              )}
-              <div>
-                <div className="truncate max-w-[150px]">{product.title}</div>
-                <div className="text-xs text-muted-foreground">{categoryName}</div>
-              </div>
-            </div>
-          </td>
-          
-          {/* Render booking spans across days */}
-          <td colSpan={days.length} className="relative p-0">
-            <div className="h-12 relative w-full">
-              {productBookings?.map((bookingData, idx) => {
-                if (!bookingData) return null;
-                const { booking, index, span } = bookingData;
-                
-                const leftPosition = (index / days.length) * 100;
-                const width = (span / days.length) * 100;
-                
-                return (
-                  <TooltipProvider key={booking.id}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div 
-                          className={`absolute h-6 ${getStatusColor(booking.status)} rounded-sm flex items-center justify-center text-white text-xs whitespace-nowrap overflow-hidden px-2`}
-                          style={{ 
-                            left: `${leftPosition}%`, 
-                            width: `${width}%`,
-                            top: '12px'
-                          }}
-                        >
-                          {booking.customerName.split(' ')[0]}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="p-0">
-                        <div className="p-3 max-w-[250px]">
-                          <div className="font-medium mb-1">{booking.customerName}</div>
-                          <div className="text-xs mb-2">
-                            {format(new Date(booking.startDate), 'dd.MM.yyyy')} - {format(new Date(booking.endDate), 'dd.MM.yyyy')}
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <div className="text-xs text-muted-foreground">{booking.customerPhone}</div>
-                            <Badge variant="outline">
-                              {booking.status === 'confirmed' 
-                                ? 'Подтверждено' 
-                                : booking.status === 'pending' 
-                                ? 'В ожидании'
-                                : booking.status === 'cancelled'
-                                ? 'Отменено'
-                                : 'Завершено'}
-                            </Badge>
-                          </div>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                );
-              })}
-            </div>
-          </td>
-        </tr>
-      );
-    });
-  };
+  // Find the index where products without active bookings start
+  const separatorIndex = products.findIndex(product => !hasActiveBookings(product.id));
 
   return (
     <div className="rounded-md border bg-card overflow-x-auto">
@@ -217,14 +131,91 @@ const CalendarTable = ({
               </td>
             </tr>
           ) : (
-            <>
-              {/* Products with active bookings */}
-              {renderProductRows(productsWithActiveBookings)}
+            products.map((product, index) => {
+              const productBookings = getActiveBookingsForProduct(product.id);
               
-              {/* Products without active bookings (with visual separator if there are products with bookings) */}
-              {productsWithoutActiveBookings.length > 0 && 
-               renderProductRows(productsWithoutActiveBookings, productsWithActiveBookings.length > 0)}
-            </>
+              // Find the category name for this product
+              const categoryName = categories?.find(cat => cat.category_id === product.category_id)?.name || 'Без категории';
+              
+              // Show separator before products without active bookings
+              const showSeparator = separatorIndex !== -1 && index === separatorIndex;
+              
+              return (
+                <tr 
+                  key={product.id} 
+                  className={`border-t hover:bg-muted/30 ${
+                    showSeparator ? 'border-t-2 border-muted-foreground/20' : ''
+                  }`}
+                >
+                  <td className="sticky left-0 z-10 bg-card p-3 font-medium border-r">
+                    <div className="flex items-center gap-2">
+                      {product.imageUrl && (
+                        <div 
+                          className="w-8 h-8 rounded bg-center bg-cover flex-shrink-0"
+                          style={{ backgroundImage: `url(${product.imageUrl})` }}
+                        />
+                      )}
+                      <div>
+                        <div className="truncate max-w-[150px]">{product.title}</div>
+                        <div className="text-xs text-muted-foreground">{categoryName}</div>
+                      </div>
+                    </div>
+                  </td>
+                  
+                  {/* Render booking spans across days */}
+                  <td colSpan={days.length} className="relative p-0">
+                    <div className="h-12 relative w-full">
+                      {productBookings?.map((bookingData, idx) => {
+                        if (!bookingData) return null;
+                        const { booking, index, span } = bookingData;
+                        
+                        const leftPosition = (index / days.length) * 100;
+                        const width = (span / days.length) * 100;
+                        
+                        return (
+                          <TooltipProvider key={booking.id}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div 
+                                  className={`absolute h-6 ${getStatusColor(booking.status)} rounded-sm flex items-center justify-center text-white text-xs whitespace-nowrap overflow-hidden px-2`}
+                                  style={{ 
+                                    left: `${leftPosition}%`, 
+                                    width: `${width}%`,
+                                    top: '12px'
+                                  }}
+                                >
+                                  {booking.customerName.split(' ')[0]}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent className="p-0">
+                                <div className="p-3 max-w-[250px]">
+                                  <div className="font-medium mb-1">{booking.customerName}</div>
+                                  <div className="text-xs mb-2">
+                                    {format(new Date(booking.startDate), 'dd.MM.yyyy')} - {format(new Date(booking.endDate), 'dd.MM.yyyy')}
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <div className="text-xs text-muted-foreground">{booking.customerPhone}</div>
+                                    <Badge variant="outline">
+                                      {booking.status === 'confirmed' 
+                                        ? 'Подтверждено' 
+                                        : booking.status === 'pending' 
+                                        ? 'В ожидании'
+                                        : booking.status === 'cancelled'
+                                        ? 'Отменено'
+                                        : 'Завершено'}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      })}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
