@@ -10,7 +10,7 @@ const CheckoutSuccess = () => (
     </div>
     <h1 className="heading-2 mb-4 text-center">Бронирование подтверждено!</h1>
     <p className="text-xl text-center text-muted-foreground mb-8 max-w-md">
-      Ваш прокат оборудования подтвержден. Вскоре вы получите электронное письмо с подтверждением бронирования.
+      Ваш прокат оборудования подтвержден. Наш менеджер свяжется с вами в ближайшее время!
     </p>
     <div className="flex flex-col sm:flex-row gap-4">
       <Button asChild size="lg">
