@@ -1,9 +1,10 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Trash2 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { BookingWithProduct } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
+import { Button } from '@/components/ui/button';
 
 interface BookingsTableProps {
   bookings: BookingWithProduct[];
@@ -11,9 +12,17 @@ interface BookingsTableProps {
   isError: boolean;
   onViewDetails: (booking: BookingWithProduct) => void;
   onStatusUpdate?: (id: string, status: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-export const BookingsTable = ({ bookings, isLoading, isError, onViewDetails, onStatusUpdate }: BookingsTableProps) => {
+export const BookingsTable = ({ 
+  bookings, 
+  isLoading, 
+  isError, 
+  onViewDetails, 
+  onStatusUpdate,
+  onDelete 
+}: BookingsTableProps) => {
   
   // Helper function to safely format dates
   const formatSafeDate = (dateValue: string | Date | undefined | null, formatStr: string): string => {
@@ -22,6 +31,13 @@ export const BookingsTable = ({ bookings, isLoading, isError, onViewDetails, onS
     const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
     
     return isValid(date) ? format(date, formatStr) : 'Недействительная дата';
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, bookingId: string) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(bookingId);
+    }
   };
 
   return (
@@ -35,12 +51,13 @@ export const BookingsTable = ({ bookings, isLoading, isError, onViewDetails, onS
           <TableHead>Дата начала</TableHead>
           <TableHead>Дата окончания</TableHead>
           <TableHead>Статус</TableHead>
+          <TableHead>Действия</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {isLoading ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center py-4">
+            <TableCell colSpan={8} className="text-center py-4">
               <div className="flex items-center justify-center">
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                 <span>Загрузка бронирований...</span>
@@ -49,13 +66,13 @@ export const BookingsTable = ({ bookings, isLoading, isError, onViewDetails, onS
           </TableRow>
         ) : isError ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center py-4 text-red-500">
+            <TableCell colSpan={8} className="text-center py-4 text-red-500">
               Ошибка загрузки бронирований. Пожалуйста, попробуйте снова.
             </TableCell>
           </TableRow>
         ) : bookings.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center py-4">
+            <TableCell colSpan={8} className="text-center py-4">
               Бронирования не найдены.
             </TableCell>
           </TableRow>
@@ -89,6 +106,16 @@ export const BookingsTable = ({ bookings, isLoading, isError, onViewDetails, onS
                   booking={booking}
                   onStatusUpdate={onStatusUpdate}
                 />
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => handleDeleteClick(e, booking.id)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </TableCell>
             </TableRow>
           ))

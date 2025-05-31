@@ -1,4 +1,3 @@
-
 import { BookingPeriod, BookingFormData } from '@/types/product';
 import { supabaseServiceClient } from './supabaseClient';
 import { getProducts } from './productService';
@@ -124,6 +123,21 @@ export const updateBookingStatus = async (bookingId: string, status: BookingPeri
     return data;
   } catch (error) {
     console.error('Error updating booking status:', error);
+    throw error;
+  }
+};
+
+export const deleteBooking = async (bookingId: string) => {
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('id', bookingId);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting booking:', error);
     throw error;
   }
 };

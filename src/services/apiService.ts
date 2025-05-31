@@ -18,5 +18,5 @@ export const checkAuth = () => {
 // This file is maintained for backward compatibility
 export { getProducts, getProductById, createProduct, updateProduct, deleteProduct } from './productService';
 export { getCategories, getCategoryById, addCategory, updateCategory, deleteCategory } from './categoryService';
-export { getBookings, getProductBookings, createBooking, updateBookingStatus } from './bookingService';
+export { getBookings, getProductBookings, createBooking, updateBookingStatus, deleteBooking } from './bookingService';
 export { getSettings, updateSettings } from './settingsService';

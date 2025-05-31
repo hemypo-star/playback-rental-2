@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { getProducts } from '@/services/productService';
-import { getBookings, updateBookingStatus } from '@/services/bookingService';
+import { getBookings, updateBookingStatus, deleteBooking } from '@/services/bookingService';
 import { BookingWithProduct } from '@/components/admin/bookings/types';
 import { BookingFilters } from '@/components/admin/bookings/BookingFilters';
 import { BookingsTable } from '@/components/admin/bookings/BookingsTable';
@@ -81,6 +81,32 @@ const AdminBookings = () => {
     }
   };
 
+  const handleDeleteBooking = async (id: string) => {
+    if (!confirm('Вы уверены, что хотите удалить это бронирование? Это действие нельзя отменить.')) {
+      return;
+    }
+
+    try {
+      await deleteBooking(id);
+      toast({
+        title: 'Успех',
+        description: 'Бронирование успешно удалено.'
+      });
+      refetch();
+      // Если удаляемое бронирование открыто в диалоге, закрываем его
+      if (selectedBooking?.id === id) {
+        setDialogOpen(false);
+        setSelectedBooking(null);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Ошибка',
+        description: error.message || 'Не удалось удалить бронирование.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleOpenDetails = (booking: BookingWithProduct) => {
     setSelectedBooking(booking);
     setDialogOpen(true);
@@ -106,6 +132,7 @@ const AdminBookings = () => {
             isError={isError}
             onViewDetails={handleOpenDetails}
             onStatusUpdate={handleStatusUpdate}
+            onDelete={handleDeleteBooking}
           />
         </CardContent>
       </Card>
