@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { UseMutationResult, useQueryClient } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Product } from '@/types/product';
 import ProductTableRow from '@/components/admin/products/ProductTableRow';
+import ProductSearch from '@/components/admin/products/ProductSearch';
 import { Loader2, Trash } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -32,8 +33,23 @@ export default function ProductList({
 }: ProductListProps) {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Filter products based on search query
+  const filteredProducts = useMemo(() => {
+    if (!products || !searchQuery.trim()) {
+      return products || [];
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    return products.filter(product => 
+      product.title.toLowerCase().includes(query) ||
+      product.id.toLowerCase().includes(query) ||
+      product.category_id.toString().includes(query)
+    );
+  }, [products, searchQuery]);
 
   const toggleProductSelection = (productId: string) => {
     setSelectedProducts(prev => 
@@ -44,13 +60,13 @@ export default function ProductList({
   };
 
   const toggleAllProducts = () => {
-    if (products && products.length > 0) {
-      if (selectedProducts.length === products.length) {
+    if (filteredProducts && filteredProducts.length > 0) {
+      if (selectedProducts.length === filteredProducts.length) {
         // If all are selected, unselect all
         setSelectedProducts([]);
       } else {
         // Otherwise, select all
-        setSelectedProducts(products.map(p => p.id));
+        setSelectedProducts(filteredProducts.map(p => p.id));
       }
     }
   };
@@ -89,10 +105,19 @@ export default function ProductList({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Список товаров</CardTitle>
-        <CardDescription>
-          Управляйте товарами в вашем каталоге. Вы можете добавлять, редактировать и удалять товары.
-        </CardDescription>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <CardTitle>Список товаров</CardTitle>
+            <CardDescription>
+              Управляйте товарами в вашем каталоге. Вы можете добавлять, редактировать и удалять товары.
+            </CardDescription>
+          </div>
+          <ProductSearch
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Поиск по названию, ID или категории..."
+          />
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -106,10 +131,10 @@ export default function ProductList({
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox 
-                      checked={products?.length ? selectedProducts.length === products.length : false}
+                      checked={filteredProducts?.length ? selectedProducts.length === filteredProducts.length : false}
                       onCheckedChange={toggleAllProducts}
                       aria-label="Select all products"
-                      disabled={!products?.length}
+                      disabled={!filteredProducts?.length}
                     />
                   </TableHead>
                   <TableHead style={{ width: 50 }}>Фото</TableHead>
@@ -122,14 +147,14 @@ export default function ProductList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(!products || products.length === 0) ? (
+                {(!filteredProducts || filteredProducts.length === 0) ? (
                   <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center">
-                      Нет товаров
+                      {searchQuery ? "Товары не найдены по запросу" : "Нет товаров"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  products.map((product) => (
+                  filteredProducts.map((product) => (
                     <ProductTableRow
                       key={product.id}
                       product={product}
@@ -148,10 +173,15 @@ export default function ProductList({
         )}
       </CardContent>
       <CardFooter className="flex justify-between">
-        <div>
+        <div className="flex flex-col gap-1">
           {selectedProducts.length > 0 && (
             <span className="text-sm text-muted-foreground">
               Выбрано товаров: {selectedProducts.length}
+            </span>
+          )}
+          {searchQuery && filteredProducts && (
+            <span className="text-sm text-muted-foreground">
+              Найдено: {filteredProducts.length} из {products?.length || 0}
             </span>
           )}
         </div>
