@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { getProducts } from '@/services/productService';
@@ -17,6 +17,7 @@ const AdminBookings = () => {
   const [selectedBooking, setSelectedBooking] = useState<BookingWithProduct | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: products } = useQuery({
     queryKey: ['admin-products'],
@@ -71,7 +72,9 @@ const AdminBookings = () => {
         title: 'Успех',
         description: 'Статус бронирования успешно обновлен.'
       });
-      refetch();
+      
+      // Инвалидируем кеш для принудительного обновления
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       setDialogOpen(false);
     } catch (error: any) {
       console.error('Error updating booking status:', error);
@@ -103,8 +106,9 @@ const AdminBookings = () => {
         description: 'Бронирование успешно удалено.'
       });
       
-      console.log('Refetching bookings');
-      refetch();
+      console.log('Invalidating queries to refresh data');
+      // Принудительно инвалидируем кеш и перезагружаем данные
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       
       // Если удаляемое бронирование открыто в диалоге, закрываем его
       if (selectedBooking?.id === id) {
