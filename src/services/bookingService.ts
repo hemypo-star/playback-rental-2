@@ -6,13 +6,18 @@ import { formatDateRu, isDateRangeAvailable } from '@/utils/dateUtils';
 
 export const getBookings = async (): Promise<BookingPeriod[]> => {
   try {
+    console.log('Fetching bookings from database...');
     const { data, error } = await supabase
       .from('bookings')
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching bookings:', error);
+      throw error;
+    }
     
+    console.log('Successfully fetched bookings:', data?.length || 0);
     return data.map(b => ({
       id: b.id,
       productId: b.product_id,
@@ -112,6 +117,7 @@ export const createBooking = async (booking: {
 
 export const updateBookingStatus = async (bookingId: string, status: BookingPeriod['status']) => {
   try {
+    console.log('Updating booking status in database:', bookingId, status);
     const { data, error } = await supabase
       .from('bookings')
       .update({ status })
@@ -119,7 +125,12 @@ export const updateBookingStatus = async (bookingId: string, status: BookingPeri
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating booking status:', error);
+      throw error;
+    }
+    
+    console.log('Successfully updated booking status:', data);
     return data;
   } catch (error) {
     console.error('Error updating booking status:', error);
@@ -127,17 +138,39 @@ export const updateBookingStatus = async (bookingId: string, status: BookingPeri
   }
 };
 
-export const deleteBooking = async (bookingId: string) => {
+export const deleteBooking = async (bookingId: string): Promise<boolean> => {
   try {
+    console.log('Attempting to delete booking with ID:', bookingId);
+    
+    // First, check if the booking exists
+    const { data: existingBooking, error: checkError } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('id', bookingId)
+      .single();
+    
+    if (checkError) {
+      console.error('Error checking if booking exists:', checkError);
+      throw new Error(`Booking with ID ${bookingId} does not exist or cannot be accessed`);
+    }
+    
+    console.log('Booking exists, proceeding with deletion:', existingBooking);
+    
+    // Perform the deletion
     const { error } = await supabase
       .from('bookings')
       .delete()
       .eq('id', bookingId);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error deleting booking:', error);
+      throw new Error(`Failed to delete booking: ${error.message}`);
+    }
+    
+    console.log('Successfully deleted booking with ID:', bookingId);
     return true;
   } catch (error) {
-    console.error('Error deleting booking:', error);
+    console.error('Error in deleteBooking function:', error);
     throw error;
   }
 };

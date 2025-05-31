@@ -1,6 +1,6 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { RefreshCw, Trash2 } from 'lucide-react';
+import { RefreshCw, Trash2, Loader2 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { BookingWithProduct } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
@@ -13,6 +13,7 @@ interface BookingsTableProps {
   onViewDetails: (booking: BookingWithProduct) => void;
   onStatusUpdate?: (id: string, status: string) => void;
   onDelete?: (id: string) => void;
+  isDeleting?: string | null;
 }
 
 export const BookingsTable = ({ 
@@ -21,7 +22,8 @@ export const BookingsTable = ({
   isError, 
   onViewDetails, 
   onStatusUpdate,
-  onDelete 
+  onDelete,
+  isDeleting 
 }: BookingsTableProps) => {
   
   // Helper function to safely format dates
@@ -33,14 +35,14 @@ export const BookingsTable = ({
     return isValid(date) ? format(date, formatStr) : 'Недействительная дата';
   };
 
-  const handleDeleteClick = (e: React.MouseEvent, bookingId: string) => {
+  const handleDeleteClick = async (e: React.MouseEvent, bookingId: string) => {
     e.preventDefault();
     e.stopPropagation();
     console.log('Delete button clicked for booking:', bookingId);
     
     if (onDelete) {
       console.log('Calling onDelete function');
-      onDelete(bookingId);
+      await onDelete(bookingId);
     } else {
       console.log('onDelete function not provided');
     }
@@ -122,9 +124,14 @@ export const BookingsTable = ({
                   variant="outline"
                   size="sm"
                   onClick={(e) => handleDeleteClick(e, booking.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  disabled={isDeleting === booking.id}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {isDeleting === booking.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
                 </Button>
               </TableCell>
             </TableRow>

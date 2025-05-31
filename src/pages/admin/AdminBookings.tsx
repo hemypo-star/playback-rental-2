@@ -16,6 +16,7 @@ const AdminBookings = () => {
   const [statusFilter, setStatusFilter] = useState<BookingPeriod['status'] | 'all'>('all');
   const [selectedBooking, setSelectedBooking] = useState<BookingWithProduct | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -89,6 +90,12 @@ const AdminBookings = () => {
   const handleDeleteBooking = async (id: string) => {
     console.log('handleDeleteBooking called with id:', id);
     
+    // Prevent multiple deletion attempts
+    if (isDeleting === id) {
+      console.log('Already deleting this booking, ignoring request');
+      return;
+    }
+
     const confirmed = confirm('Вы уверены, что хотите удалить это бронирование? Это действие нельзя отменить.');
     console.log('User confirmed deletion:', confirmed);
     
@@ -96,10 +103,12 @@ const AdminBookings = () => {
       return;
     }
 
+    setIsDeleting(id);
+
     try {
-      console.log('Calling deleteBooking service');
-      await deleteBooking(id);
-      console.log('Booking deleted successfully');
+      console.log('Calling deleteBooking service for ID:', id);
+      const result = await deleteBooking(id);
+      console.log('Booking deletion result:', result);
       
       toast({
         title: 'Успех',
@@ -123,6 +132,8 @@ const AdminBookings = () => {
         description: error.message || 'Не удалось удалить бронирование.',
         variant: 'destructive'
       });
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -153,6 +164,7 @@ const AdminBookings = () => {
             onViewDetails={handleOpenDetails}
             onStatusUpdate={handleStatusUpdate}
             onDelete={handleDeleteBooking}
+            isDeleting={isDeleting}
           />
         </CardContent>
       </Card>
