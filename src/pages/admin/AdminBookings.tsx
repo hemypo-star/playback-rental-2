@@ -65,6 +65,7 @@ const AdminBookings = () => {
 
   const handleStatusUpdate = async (id: string, status: BookingPeriod['status']) => {
     try {
+      console.log('Updating booking status:', id, status);
       await updateBookingStatus(id, status);
       toast({
         title: 'Успех',
@@ -73,6 +74,7 @@ const AdminBookings = () => {
       refetch();
       setDialogOpen(false);
     } catch (error: any) {
+      console.error('Error updating booking status:', error);
       toast({
         title: 'Ошибка',
         description: error.message || 'Не удалось обновить статус бронирования.',
@@ -82,23 +84,36 @@ const AdminBookings = () => {
   };
 
   const handleDeleteBooking = async (id: string) => {
-    if (!confirm('Вы уверены, что хотите удалить это бронирование? Это действие нельзя отменить.')) {
+    console.log('handleDeleteBooking called with id:', id);
+    
+    const confirmed = confirm('Вы уверены, что хотите удалить это бронирование? Это действие нельзя отменить.');
+    console.log('User confirmed deletion:', confirmed);
+    
+    if (!confirmed) {
       return;
     }
 
     try {
+      console.log('Calling deleteBooking service');
       await deleteBooking(id);
+      console.log('Booking deleted successfully');
+      
       toast({
         title: 'Успех',
         description: 'Бронирование успешно удалено.'
       });
+      
+      console.log('Refetching bookings');
       refetch();
+      
       // Если удаляемое бронирование открыто в диалоге, закрываем его
       if (selectedBooking?.id === id) {
+        console.log('Closing dialog for deleted booking');
         setDialogOpen(false);
         setSelectedBooking(null);
       }
     } catch (error: any) {
+      console.error('Error deleting booking:', error);
       toast({
         title: 'Ошибка',
         description: error.message || 'Не удалось удалить бронирование.',
@@ -108,6 +123,7 @@ const AdminBookings = () => {
   };
 
   const handleOpenDetails = (booking: BookingWithProduct) => {
+    console.log('Opening details for booking:', booking.id);
     setSelectedBooking(booking);
     setDialogOpen(true);
   };

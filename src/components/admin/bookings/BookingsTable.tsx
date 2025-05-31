@@ -34,10 +34,20 @@ export const BookingsTable = ({
   };
 
   const handleDeleteClick = (e: React.MouseEvent, bookingId: string) => {
+    e.preventDefault();
     e.stopPropagation();
+    console.log('Delete button clicked for booking:', bookingId);
+    
     if (onDelete) {
+      console.log('Calling onDelete function');
       onDelete(bookingId);
+    } else {
+      console.log('onDelete function not provided');
     }
+  };
+
+  const handleStatusSelectClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   return (
@@ -101,7 +111,7 @@ export const BookingsTable = ({
                   'Недействительная дата'
                 )}
               </TableCell>
-              <TableCell>
+              <TableCell onClick={handleStatusSelectClick}>
                 <BookingStatusSelect
                   booking={booking}
                   onStatusUpdate={onStatusUpdate}
