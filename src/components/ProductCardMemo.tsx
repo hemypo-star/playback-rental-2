@@ -1,5 +1,5 @@
 
-import React, { memo } from 'react';
+import React, { memo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ const ProductCardMemo = memo(({
   const navigate = useNavigate();
   const { addToCart } = useCartContext();
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -51,24 +51,60 @@ const ProductCardMemo = memo(({
         }
       });
     }
-  };
+  }, [hasBookingDates, isAvailableForDates, addToCart, product, bookingDates, navigate]);
 
-  // Truncate description to show abbreviation
-  const truncateDescription = (text: string, maxLength: number = 80) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength).trim() + '...';
-  };
+  // Memoize truncate function to prevent re-computation
+  const truncatedDescription = React.useMemo(() => {
+    if (!product.description || !product.description.trim()) return '';
+    const maxLength = 80;
+    if (product.description.length <= maxLength) return product.description;
+    return product.description.substring(0, maxLength).trim() + '...';
+  }, [product.description]);
 
   // Determine if product is available considering both general availability and date-specific availability
-  const isProductCurrentlyAvailable = () => {
+  const currentlyAvailable = React.useMemo(() => {
     if (!product.available) return false;
     if (hasBookingDates) {
       return isAvailableForDates;
     }
     return availableQuantity > 0;
-  };
+  }, [product.available, hasBookingDates, isAvailableForDates, availableQuantity]);
 
-  const currentlyAvailable = isProductCurrentlyAvailable();
+  // Memoize the availability status text
+  const availabilityStatus = React.useMemo(() => {
+    if (isLoadingBookings) {
+      return { text: "Проверяем наличие...", className: "text-gray-400 font-medium" };
+    }
+    
+    if (hasBookingDates) {
+      if (isAvailableForDates) {
+        return {
+          text: `Доступно: ${availableQuantity} шт. на выбранные даты`,
+          className: "text-green-600 font-medium"
+        };
+      } else {
+        return {
+          text: "Забронировано на выбранные даты",
+          className: "text-red-600 font-medium"
+        };
+      }
+    }
+    
+    if (availableQuantity > 0) {
+      return {
+        text: `В наличии: ${availableQuantity} шт.`,
+        className: "text-green-600 font-medium"
+      };
+    } else {
+      return {
+        text: "Нет в наличии",
+        className: "text-red-600 font-medium"
+      };
+    }
+  }, [isLoadingBookings, hasBookingDates, isAvailableForDates, availableQuantity]);
+
+  // Memoize formatted price
+  const formattedPrice = React.useMemo(() => formatPriceRub(product.price), [product.price]);
   
   return (
     <Link 
@@ -80,11 +116,11 @@ const ProductCardMemo = memo(({
       }} 
       className="group block h-full"
     >
-      <Card className={`h-full flex flex-col overflow-hidden transition-all duration-200 hover:shadow-md ${featured ? 'border-primary/20' : ''}`}>
+      <Card className={`h-full flex flex-col overflow-hidden card-hover ${featured ? 'border-primary/20' : ''}`}>
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <ProductImage 
             product={product}
-            className="h-full w-full object-cover object-center transition-transform duration-200 group-hover:scale-105" 
+            className="h-full w-full object-cover object-center smooth-transition group-hover:scale-105" 
           />
           {featured && (
             <div className="absolute top-2 left-2 bg-primary text-white text-xs font-medium px-2 py-1 rounded">
@@ -107,45 +143,33 @@ const ProductCardMemo = memo(({
             </span>
           </div>
           
-          <h3 className="font-medium leading-tight mb-2 group-hover:text-primary transition-colors duration-200 line-clamp-2">
+          <h3 className="font-medium leading-tight mb-2 group-hover:text-primary smooth-transition line-clamp-2">
             {product.title}
           </h3>
           
-          {product.description && product.description.trim() && (
+          {truncatedDescription && (
             <p className="text-sm text-muted-foreground mb-2 line-clamp-2 flex-grow">
-              {truncateDescription(product.description)}
+              {truncatedDescription}
             </p>
           )}
           
           <div className="text-xs mt-auto">
-            {isLoadingBookings ? (
-              <span className="text-gray-400 font-medium">Проверяем наличие...</span>
-            ) : hasBookingDates ? (
-              isAvailableForDates ? (
-                <span className="text-green-600 font-medium">
-                  Доступно: {availableQuantity} шт. на выбранные даты
-                </span>
-              ) : (
-                <span className="text-red-600 font-medium">Забронировано на выбранные даты</span>
-              )
-            ) : availableQuantity > 0 ? (
-              <span className="text-green-600 font-medium">В наличии: {availableQuantity} шт.</span>
-            ) : (
-              <span className="text-red-600 font-medium">Нет в наличии</span>
-            )}
+            <span className={availabilityStatus.className}>
+              {availabilityStatus.text}
+            </span>
           </div>
         </CardContent>
         
         <CardFooter className="p-4 pt-0 mt-auto flex items-center justify-between">
           <div>
             <div className="font-semibold">
-              {formatPriceRub(product.price)} / сутки
+              {formattedPrice} / сутки
             </div>
           </div>
           <Button 
             size="sm" 
             variant={hasBookingDates && currentlyAvailable ? "default" : "outline"} 
-            className="rounded-full" 
+            className="rounded-full smooth-transition" 
             onClick={handleAddToCart}
             disabled={!currentlyAvailable}
           >
@@ -154,6 +178,23 @@ const ProductCardMemo = memo(({
         </CardFooter>
       </Card>
     </Link>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison function to prevent unnecessary re-renders
+  return (
+    prevProps.product.id === nextProps.product.id &&
+    prevProps.product.title === nextProps.product.title &&
+    prevProps.product.price === nextProps.product.price &&
+    prevProps.product.imageUrl === nextProps.product.imageUrl &&
+    prevProps.product.available === nextProps.product.available &&
+    prevProps.categoryName === nextProps.categoryName &&
+    prevProps.availableQuantity === nextProps.availableQuantity &&
+    prevProps.isAvailableForDates === nextProps.isAvailableForDates &&
+    prevProps.isLoadingBookings === nextProps.isLoadingBookings &&
+    prevProps.hasBookingDates === nextProps.hasBookingDates &&
+    prevProps.featured === nextProps.featured &&
+    prevProps.bookingDates?.startDate?.getTime() === nextProps.bookingDates?.startDate?.getTime() &&
+    prevProps.bookingDates?.endDate?.getTime() === nextProps.bookingDates?.endDate?.getTime()
   );
 });
 

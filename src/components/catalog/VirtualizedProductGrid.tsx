@@ -1,6 +1,5 @@
 
-import { useState, useMemo } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import { useState, useMemo, useCallback } from 'react';
 import ProductCardMemo from '@/components/ProductCardMemo';
 import { Product } from '@/types/product';
 import { Loader2 } from 'lucide-react';
@@ -34,8 +33,6 @@ const VirtualizedProductGrid = ({
   const [visibleProducts, setVisibleProducts] = useState(8);
   const isMobile = useIsMobile();
   
-  const productsPerPage = isMobile ? 6 : 8;
-  const itemsPerRow = isMobile ? 2 : 4;
   const hasBookingDates = Boolean(bookingDates?.startDate && bookingDates?.endDate);
 
   // Load categories with memoization
@@ -110,9 +107,17 @@ const VirtualizedProductGrid = ({
     });
   }, [products, categoryMap, allBookings, bookingDates]);
 
-  const handleLoadMore = () => {
+  const handleLoadMore = useCallback(() => {
     setVisibleProducts(prev => prev + (isMobile ? 6 : 16));
-  };
+  }, [isMobile]);
+
+  // Memoize the visible products slice to prevent unnecessary re-calculations
+  const visibleProductsData = useMemo(() => {
+    return productsWithAvailability.slice(0, visibleProducts);
+  }, [productsWithAvailability, visibleProducts]);
+
+  const currentlyVisible = Math.min(visibleProducts, products.length);
+  const hasMoreToLoad = currentlyVisible < products.length;
 
   if (isLoading) {
     return (
@@ -148,18 +153,15 @@ const VirtualizedProductGrid = ({
     );
   }
 
-  const currentlyVisible = Math.min(visibleProducts, products.length);
-  const hasMoreToLoad = currentlyVisible < products.length;
-
   return (
-    <div className="flex-1 flex flex-col w-full">
+    <div className="flex-1 flex flex-col w-full scroll-container">
       <div className="mb-6 flex justify-between items-center flex-wrap gap-2">
         <h2 className="text-base sm:text-xl font-medium">
           Найдено товаров: <span className="text-primary">{products.length}</span>
         </h2>
       </div>
-      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 w-full">
-        {productsWithAvailability.slice(0, visibleProducts).map(product => (
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 w-full ios-scroll">
+        {visibleProductsData.map(product => (
           <ProductCardMemo 
             key={product.id}
             product={product}
@@ -177,7 +179,7 @@ const VirtualizedProductGrid = ({
           <Button 
             onClick={handleLoadMore} 
             variant="outline"
-            className="px-8"
+            className="px-8 smooth-transition"
           >
             Показать ещё ({products.length - currentlyVisible})
           </Button>

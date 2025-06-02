@@ -72,99 +72,145 @@
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
-    /* Optimize for smooth scrolling */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  /* Critical iOS scrolling optimizations */
+  html {
+    /* iOS-specific scrolling improvements */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent iOS zoom on input focus */
+    -webkit-text-size-adjust: 100%;
+    /* Smooth scrolling with better performance */
+    scroll-behavior: smooth;
+    /* Optimize for mobile */
+    touch-action: manipulation;
   }
 
-  /* Performance optimizations for mobile */
-  html {
-    scroll-behavior: smooth;
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* Critical iOS performance optimizations */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent iOS scrolling issues */
+    overscroll-behavior: none;
+    /* Disable pull-to-refresh on iOS */
+    overscroll-behavior-y: none;
+    /* Improve iOS momentum scrolling */
     -webkit-overflow-scrolling: touch;
+    /* Optimize text rendering */
+    text-rendering: optimizeLegibility;
   }
 
   /* Import Inter font from Google Fonts */
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 }
 
-/* Custom utility classes */
+/* iOS-optimized utility classes */
 @layer components {
   .glass-panel {
     @apply bg-white/70 dark:bg-black/70 backdrop-blur-md border border-white/20 dark:border-white/10;
+    /* Optimize for iOS */
+    transform: translateZ(0);
+    will-change: auto;
   }
   
   .glass-card {
     @apply bg-white/60 dark:bg-black/60 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-glass;
+    /* iOS performance optimization */
+    transform: translateZ(0);
+    will-change: auto;
   }
   
   .btn-ghost {
-    @apply bg-white/10 hover:bg-white/20 dark:bg-black/10 dark:hover:bg-black/20 backdrop-blur-sm transition-all duration-200;
+    @apply bg-white/10 hover:bg-white/20 dark:bg-black/10 dark:hover:bg-black/20 backdrop-blur-sm;
+    /* Optimized transition for iOS */
+    transition: background-color 0.15s ease-out;
+    transform: translateZ(0);
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:opacity-90 transition-all duration-200;
+    @apply bg-primary text-primary-foreground;
+    /* Optimized transition for iOS */
+    transition: opacity 0.15s ease-out;
+    transform: translateZ(0);
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
   }
 
   .subtle-ring {
     @apply ring-1 ring-black/5 dark:ring-white/10;
   }
   
+  /* Optimized animations for iOS */
   .animate-in {
-    @apply opacity-100 animate-fade-in;
+    @apply opacity-100;
+    animation: fade-in 0.2s ease-out;
   }
   
   .animate-in-up {
-    @apply opacity-100 animate-slide-up;
+    @apply opacity-100;
+    animation: slide-up 0.2s ease-out;
   }
   
   .animate-in-down {
-    @apply opacity-100 animate-slide-down;
+    @apply opacity-100;
+    animation: slide-down 0.2s ease-out;
   }
   
   .animate-in-scale {
-    @apply opacity-100 animate-scale-in;
-  }
-
-  /* Fix for data-state=open animation opacity issue */
-  .data-\[state\=open\]\:animate-in[data-state=open] {
     @apply opacity-100;
+    animation: scale-in 0.15s ease-out;
   }
 
-  /* Optimized transition classes for performance */
-  .smooth-transition {
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-    will-change: transform, opacity;
-  }
-
-  /* Reduce GPU usage on mobile by limiting will-change */
+  /* iOS-optimized card hover effects */
   .card-hover {
-    transition: box-shadow 0.2s ease-out, transform 0.2s ease-out;
+    /* Minimal, iOS-friendly transitions */
+    transition: box-shadow 0.15s ease-out;
+    transform: translateZ(0);
   }
 
   .card-hover:hover {
-    will-change: transform;
+    /* Only apply will-change on hover to reduce GPU usage */
+    will-change: box-shadow;
+  }
+
+  .card-hover:not(:hover) {
+    will-change: auto;
+  }
+
+  /* Scrolling container optimizations for iOS */
+  .scroll-container {
+    /* Critical iOS scrolling fixes */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    transform: translateZ(0);
   }
 
   .page-container {
     @apply container px-4 py-8 mx-auto max-w-7xl;
+    /* iOS scroll optimization */
+    transform: translateZ(0);
   }
 
   .heading-1 {
     @apply text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight;
+    /* Text rendering optimization */
+    text-rendering: optimizeLegibility;
   }
 
   .heading-2 {
     @apply text-3xl md:text-4xl font-semibold tracking-tight mb-2;
+    text-rendering: optimizeLegibility;
   }
 
   .heading-3 {
     @apply text-2xl md:text-3xl font-medium tracking-tight;
+    text-rendering: optimizeLegibility;
   }
 
   .heading-4 {
     @apply text-xl md:text-2xl font-medium;
+    text-rendering: optimizeLegibility;
   }
 
   .body-text {
@@ -179,19 +225,75 @@
     @apply px-3 py-1 text-xs rounded-full inline-flex items-center bg-secondary text-secondary-foreground;
   }
 
-  /* Performance optimization for images */
+  /* Critical iOS image optimization */
   img {
+    /* Optimize image rendering for iOS */
     content-visibility: auto;
+    contain-intrinsic-size: 200px 200px;
+    transform: translateZ(0);
   }
 
-  /* Reduce layout thrashing on mobile */
-  @media (max-width: 768px) {
-    .grid {
-      contain: layout style;
-    }
-    
-    .card {
-      contain: layout style;
-    }
+  /* iOS-specific grid optimizations */
+  .grid {
+    /* Optimize grid layouts for iOS */
+    contain: layout style;
+    transform: translateZ(0);
+  }
+  
+  .card {
+    /* Optimize card rendering for iOS */
+    contain: layout style;
+    transform: translateZ(0);
+  }
+
+  /* iOS momentum scrolling fix for specific containers */
+  .ios-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    transform: translateZ(0);
+  }
+
+  /* Prevent iOS input zoom */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+
+  /* iOS-optimized transitions */
+  .smooth-transition {
+    transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+    transform: translateZ(0);
+  }
+}
+
+/* iOS-specific performance optimizations */
+@supports (-webkit-touch-callout: none) {
+  /* Target iOS Safari specifically */
+  
+  body {
+    /* Additional iOS-specific fixes */
+    position: relative;
+    overflow-x: hidden;
+  }
+  
+  /* Fix iOS Safari bounce scrolling issues */
+  .main-content {
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
+  
+  /* Optimize transforms for iOS */
+  .transform {
+    transform: translateZ(0);
+  }
+  
+  /* iOS-specific card optimizations */
+  .card {
+    backface-visibility: hidden;
+    perspective: 1000px;
   }
 }

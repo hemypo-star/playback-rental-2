@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product } from '@/types/product';
 import { useToast } from '@/hooks/use-toast';
 import { calculateRentalPrice } from '@/utils/pricingUtils';
@@ -43,7 +43,7 @@ export const useCart = () => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (product: Product, startDate?: Date, endDate?: Date) => {
+  const addToCart = useCallback((product: Product, startDate?: Date, endDate?: Date) => {
     // Check if required dates are provided
     if (!startDate || !endDate) {
       toast({
@@ -78,24 +78,24 @@ export const useCart = () => {
     });
 
     return true;
-  };
+  }, [toast]);
 
-  const removeFromCart = (itemId: string) => {
+  const removeFromCart = useCallback((itemId: string) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
 
     toast({
       title: "Удалено из корзины",
       description: "Товар удален из корзины.",
     });
-  };
+  }, [toast]);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCartItems([]);
     localStorage.removeItem('cart');
-  };
+  }, []);
 
   // Update cart dates for all items - prevent duplicate updates
-  const updateCartDates = (startDate: Date, endDate: Date) => {
+  const updateCartDates = useCallback((startDate: Date, endDate: Date) => {
     if (!startDate || !endDate) {
       return false;
     }
@@ -124,9 +124,9 @@ export const useCart = () => {
     });
 
     return true;
-  };
+  }, [cartItems, toast]);
 
-  const getCartTotal = () => {
+  const getCartTotal = useCallback(() => {
     const total = cartItems.reduce((total, item) => {
       const itemTotal = calculateRentalPrice(item.price, item.startDate, item.endDate);
       return total + (itemTotal * item.quantity);
@@ -134,17 +134,20 @@ export const useCart = () => {
     
     // Ensure the final total is properly rounded
     return Math.round(total);
-  };
+  }, [cartItems]);
 
-  return {
+  const cartCount = useMemo(() => cartItems.length, [cartItems]);
+
+  // Memoize the return value to prevent unnecessary re-renders
+  return useMemo(() => ({
     cartItems,
     addToCart,
     removeFromCart,
     clearCart,
     updateCartDates,
     getCartTotal,
-    cartCount: cartItems.length
-  };
+    cartCount
+  }), [cartItems, addToCart, removeFromCart, clearCart, updateCartDates, getCartTotal, cartCount]);
 };
 
 // Create a CartProvider for global state management
@@ -155,10 +158,10 @@ type CartContextType = ReturnType<typeof useCart>;
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const cart = useCart();
+  const cartValue = useCart();
   
   return (
-    <CartContext.Provider value={cart}>
+    <CartContext.Provider value={cartValue}>
       {children}
     </CartContext.Provider>
   );

@@ -1,9 +1,10 @@
+
 import { ToasterProvider } from "@/hooks/Toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
 import { seedDatabase } from "./utils/seedDatabase";
 import { CartProvider } from "./hooks/useCart";
 import { Navbar } from "./components/Navbar";
@@ -32,11 +33,13 @@ const Loading = () => (
   </div>
 );
 
+// Memoize the QueryClient to prevent recreation on every render
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes default stale time
     },
   },
 });
@@ -52,6 +55,36 @@ const App = () => {
     });
   }, []);
 
+  // Memoize the main app structure to prevent unnecessary re-renders
+  const appContent = useMemo(() => (
+    <div className="flex flex-col min-h-screen main-content">
+      <Navbar />
+      <main className="flex-1 ios-scroll">
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/catalog" element={<Catalog />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            
+            <Route path="/admin" element={
+              <RequireAuth>
+                <Admin />
+              </RequireAuth>
+            } />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </main>
+      <Footer />
+    </div>
+  ), []);
+
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
@@ -59,32 +92,7 @@ const App = () => {
           <ToasterProvider>
             <AuthProvider>
               <CartProvider>
-                <div className="flex flex-col min-h-screen">
-                  <Navbar />
-                  <main className="flex-1">
-                    <Suspense fallback={<Loading />}>
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/catalog" element={<Catalog />} />
-                        <Route path="/product/:id" element={<ProductDetail />} />
-                        <Route path="/checkout" element={<Checkout />} />
-                        <Route path="/how-it-works" element={<HowItWorks />} />
-                        <Route path="/contact" element={<Contact />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                        
-                        <Route path="/admin" element={
-                          <RequireAuth>
-                            <Admin />
-                          </RequireAuth>
-                        } />
-                        
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </Suspense>
-                  </main>
-                  <Footer />
-                </div>
+                {appContent}
               </CartProvider>
             </AuthProvider>
           </ToasterProvider>
