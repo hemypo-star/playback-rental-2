@@ -18,7 +18,7 @@ export const calculateRentalPrice = (
   
   // Short-term rental: 4 hours or less gets a fixed price (70% of daily rate)
   if (hours <= 4) {
-    return basePrice * 0.7;
+    return Math.round(basePrice * 0.7);
   }
   
   // Apply discount based on duration
@@ -30,7 +30,7 @@ export const calculateRentalPrice = (
   }
   
   const pricePerDay = basePrice * (1 - discount);
-  return pricePerDay * days;
+  return Math.round(pricePerDay * days);
 };
 
 // Calculate rental price details (expanded version)
@@ -56,10 +56,10 @@ export const calculateRentalDetails = (
   // Short-term rental: 4 hours or less
   if (hours <= 4) {
     // For 4 hours, charge 70% of daily rate
-    total = basePrice * 0.7;
+    total = Math.round(basePrice * 0.7);
     subtotal = basePrice; // Original daily price
-    discountAmount = basePrice * 0.3; // 30% discount
-    hourlyRate = total / 4; // Rate per hour
+    discountAmount = Math.round(basePrice * 0.3); // 30% discount
+    hourlyRate = Math.round((total / 4) * 100) / 100; // Rate per hour, rounded to 2 decimals
     dayDiscount = 30; // 30% discount percentage
   } 
   // More than 4 hours - regular daily rate with possible multi-day discounts
@@ -70,9 +70,9 @@ export const calculateRentalDetails = (
       dayDiscount = 10; // 10% discount for 3-4 days
     }
     
-    hourlyRate = basePrice / 24; // Per hour for full day rental
-    subtotal = days * basePrice;
-    discountAmount = subtotal * (dayDiscount / 100);
+    hourlyRate = Math.round((basePrice / 24) * 100) / 100; // Per hour for full day rental, rounded to 2 decimals
+    subtotal = Math.round(days * basePrice);
+    discountAmount = Math.round(subtotal * (dayDiscount / 100));
     total = subtotal - discountAmount;
   }
   
@@ -90,12 +90,15 @@ export const calculatePrice = calculateRentalPrice;
 
 // Format currency to locale string
 export const formatCurrency = (amount: number, currency: string = 'RUB'): string => {
+  // Ensure the amount is properly rounded before formatting
+  const roundedAmount = Math.round(amount);
+  
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
     currency: currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
-  }).format(amount);
+  }).format(roundedAmount);
 };
 
 // Format price specifically in rubles (common function used across the app)
@@ -107,7 +110,7 @@ export const formatPriceRub = (amount: number): string => {
 export const calculateHourlyRate = (dailyPrice: number, hours: number): number => {
   // For 4 hours, charge 70% of daily rate
   if (hours <= 4) {
-    return dailyPrice * 0.7;
+    return Math.round(dailyPrice * 0.7);
   }
   // Otherwise, charge full daily rate
   return dailyPrice;

@@ -127,10 +127,13 @@ export const useCart = () => {
   };
 
   const getCartTotal = () => {
-    return cartItems.reduce((total, item) => {
+    const total = cartItems.reduce((total, item) => {
       const itemTotal = calculateRentalPrice(item.price, item.startDate, item.endDate);
       return total + (itemTotal * item.quantity);
     }, 0);
+    
+    // Ensure the final total is properly rounded
+    return Math.round(total);
   };
 
   return {
