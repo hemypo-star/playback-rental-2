@@ -51,6 +51,7 @@ const BookingCalendar = ({
         endDate: newRange.end,
         status: 'pending',
         totalPrice: 0,
+        quantity: 1, // Added missing quantity field
         createdAt: new Date(),
         notes: ''
       });

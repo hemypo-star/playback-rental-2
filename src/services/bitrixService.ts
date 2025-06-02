@@ -77,6 +77,7 @@ const BitrixService = {
       endDate: bookingData.endDate.toISOString(),
       status: 'pending' as BookingPeriod['status'],
       totalPrice: bookingData.notes ? parseFloat(bookingData.notes) : 0, // Assuming notes might contain price info
+      quantity: 1, // Added missing quantity field
       notes: bookingData.address || ''
     };
     
@@ -107,6 +108,7 @@ const BitrixService = {
       customerPhone: result.customer_phone,
       status: result.status as BookingPeriod['status'],
       totalPrice: result.total_price,
+      quantity: result.quantity || 1, // Added missing quantity field
       notes: result.notes || '',
       createdAt: new Date(result.created_at || Date.now())
     };

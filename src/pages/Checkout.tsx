@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -130,6 +129,7 @@ const Checkout = () => {
           endDate: item.endDate.toISOString(),
           status: 'pending',
           totalPrice: calculateRentalPrice(item.price, item.startDate, item.endDate),
+          quantity: 1, // Added missing quantity field
           notes: `Бронирование из корзины: ${item.title}`
         });
       }
