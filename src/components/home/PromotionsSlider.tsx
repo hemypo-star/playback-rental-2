@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
+import OptimizedImage from '@/components/OptimizedImage';
 
 export const PromotionsSlider = () => {
   const { data: promotions, isLoading, error } = useQuery({
@@ -46,20 +47,18 @@ export const PromotionsSlider = () => {
             className="w-full"
           >
             <CarouselContent>
-              {promotions?.map((promotion) => (
+              {promotions?.map((promotion, index) => (
                 <CarouselItem key={promotion.id} className="md:basis-1/4 lg:basis-1/5">
                   <Link to={promotion.linkurl} className="block h-full">
                     <Card className="relative overflow-hidden h-full">
                       <AspectRatio ratio={3/4} className="bg-muted">
-                        <img 
-                          src={promotion.imageurl.startsWith('http') ? promotion.imageurl : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageurl}`}
+                        <OptimizedImage 
+                          src={promotion.imageurl}
                           alt={promotion.title}
                           className="object-cover w-full h-full"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.onerror = null;
-                            target.src = '/placeholder.svg';
-                          }}
+                          width={300}
+                          height={400}
+                          priority={index < 3}
                         />
                         <div className="absolute bottom-0 left-0 right-0 p-2 pb-3 flex justify-center">
                           <Button variant="default" size="sm" className="z-10 text-xs">
