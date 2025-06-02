@@ -24,14 +24,16 @@ export const getAvailableQuantity = (
     return product.quantity;
   }
 
-  // Filter bookings that overlap with the requested period
-  const overlappingBookings = bookings.filter(booking => 
-    ['confirmed', 'pending'].includes(booking.status) &&
-    !(new Date(booking.endDate) <= startDate || new Date(booking.startDate) >= endDate)
-  );
+  // Filter bookings that overlap with the requested period and sum their quantities
+  const overlappingBookedQuantity = bookings
+    .filter(booking => 
+      ['confirmed', 'pending'].includes(booking.status) &&
+      !(new Date(booking.endDate) <= startDate || new Date(booking.startDate) >= endDate)
+    )
+    .reduce((total, booking) => total + (booking.quantity || 1), 0);
 
   // Calculate available quantity
-  const availableQuantity = product.quantity - overlappingBookings.length;
+  const availableQuantity = product.quantity - overlappingBookedQuantity;
   return Math.max(0, availableQuantity);
 };
 

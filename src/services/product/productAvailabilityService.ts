@@ -27,8 +27,11 @@ export const getAvailableProducts = async (startDate: Date, endDate: Date): Prom
         !(new Date(booking.endDate) <= startDate || new Date(booking.startDate) >= endDate)
       );
       
-      // If the product has quantity > number of overlapping bookings, it's still available
-      return productBookings.length < (product.quantity || 1);
+      // Calculate total booked quantity for overlapping periods
+      const totalBookedQuantity = productBookings.reduce((total, booking) => total + (booking.quantity || 1), 0);
+      
+      // If the product has quantity > total booked quantity, it's still available
+      return totalBookedQuantity < product.quantity;
     });
   } catch (error) {
     console.error('Error getting available products:', error);
@@ -59,8 +62,11 @@ export const isProductAvailable = async (productId: string, startDate: Date, end
       !(new Date(booking.endDate) <= startDate || new Date(booking.startDate) >= endDate)
     );
     
-    // Product is available if it has more quantity than conflicting bookings
-    return conflictingBookings.length < (product.quantity || 1);
+    // Calculate total booked quantity for conflicting periods
+    const totalBookedQuantity = conflictingBookings.reduce((total, booking) => total + (booking.quantity || 1), 0);
+    
+    // Product is available if it has more quantity than total booked quantities
+    return totalBookedQuantity < product.quantity;
   } catch (error) {
     console.error('Error checking product availability:', error);
     return false;

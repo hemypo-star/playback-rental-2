@@ -28,6 +28,7 @@ export const getBookings = async (): Promise<BookingPeriod[]> => {
       endDate: new Date(b.end_date),
       status: b.status as BookingPeriod['status'],
       totalPrice: b.total_price,
+      quantity: b.quantity || 1, // Use the new quantity field with fallback
       notes: b.notes || '',
       createdAt: new Date(b.created_at || Date.now())
     }));
@@ -57,6 +58,7 @@ export const getProductBookings = async (productId: string): Promise<BookingPeri
       customerPhone: booking.customer_phone,
       status: booking.status as BookingPeriod['status'],
       totalPrice: booking.total_price,
+      quantity: booking.quantity || 1, // Use the new quantity field with fallback
       notes: booking.notes || '',
       createdAt: new Date(booking.created_at || Date.now())
     }));
@@ -75,6 +77,7 @@ export const createBooking = async (booking: {
   endDate: string;
   status: BookingPeriod['status'];
   totalPrice: number;
+  quantity: number; // Added quantity parameter
   notes?: string;
 }): Promise<BookingPeriod> => {
   try {
@@ -89,6 +92,7 @@ export const createBooking = async (booking: {
         end_date: booking.endDate,
         status: booking.status,
         total_price: booking.totalPrice,
+        quantity: booking.quantity, // Include quantity in the insert
         notes: booking.notes || ''
       })
       .select()
@@ -106,6 +110,7 @@ export const createBooking = async (booking: {
       endDate: new Date(data.end_date),
       status: data.status as BookingPeriod['status'],
       totalPrice: data.total_price,
+      quantity: data.quantity || 1, // Include quantity in the response
       notes: data.notes || '',
       createdAt: new Date(data.created_at || Date.now())
     };
@@ -205,21 +210,17 @@ export const getAvailableProducts = async (startDate: Date, endDate: Date) => {
         return true; // No bookings for this product, it's available
       }
       
-      // Convert bookings to date ranges
-      const bookedRanges = productBookings.map(booking => ({
-        start: booking.startDate,
-        end: booking.endDate
-      }));
+      // Calculate total booked quantity for overlapping bookings
+      const overlappingBookedQuantity = productBookings
+        .filter(booking => 
+          !(endDate <= booking.startDate || startDate >= booking.endDate)
+        )
+        .reduce((total, booking) => total + (booking.quantity || 1), 0);
       
-      // Check if the current product quantity can handle another booking
-      const overlappingBookingsCount = bookedRanges.filter(range => 
-        !(endDate <= range.start || startDate >= range.end)
-      ).length;
+      // Product is available if it has more quantity than overlapping booked quantities
+      const isAvailable = overlappingBookedQuantity < product.quantity;
       
-      // Product is available if it has more quantity than overlapping bookings
-      const isAvailable = overlappingBookingsCount < (product.quantity || 1);
-      
-      console.log(`Product ${product.id} (${product.title}): ${isAvailable ? 'available' : 'not available'} - ${overlappingBookingsCount} overlapping bookings out of ${product.quantity} quantity`);
+      console.log(`Product ${product.id} (${product.title}): ${isAvailable ? 'available' : 'not available'} - ${overlappingBookedQuantity} booked quantity out of ${product.quantity} total quantity`);
       
       return isAvailable;
     });

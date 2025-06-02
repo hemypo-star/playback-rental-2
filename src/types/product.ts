@@ -20,6 +20,7 @@ export interface BookingPeriod {
   customerPhone: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   totalPrice: number;
+  quantity: number; // Added quantity field to track how many items are booked
   notes?: string;
   createdAt: Date;
 }
