@@ -110,15 +110,15 @@ const storeFailedNotification = async (
   try {
     console.log('Storing failed notification for later retry...');
     
-    const { error: storageError } = await supabase
-      .from('failed_notifications')
-      .insert({
+    // Use the store-failed-notification edge function
+    const { error: storageError } = await supabase.functions.invoke('store-failed-notification', {
+      body: {
         type,
-        data: JSON.stringify(data),
+        data,
         error_message: error instanceof Error ? error.message : 'Unknown error',
-        attempts: MAX_RETRIES,
-        status: 'failed'
-      });
+        attempts: MAX_RETRIES
+      }
+    });
     
     if (storageError) {
       console.error('Failed to store notification for retry:', storageError);

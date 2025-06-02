@@ -89,6 +89,42 @@ export type Database = {
         }
         Relationships: []
       }
+      failed_notifications: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          data: Json
+          error_message: string | null
+          id: string
+          next_retry_at: string | null
+          status: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string | null
+          data: Json
+          error_message?: string | null
+          id?: string
+          next_retry_at?: string | null
+          status?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string | null
+          data?: Json
+          error_message?: string | null
+          id?: string
+          next_retry_at?: string | null
+          status?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           available: boolean
