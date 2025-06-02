@@ -71,8 +71,13 @@ const OptimizedImage = ({
 
     let optimizedSrc = src;
 
-    // Only apply Supabase optimization to Supabase URLs
-    if (src.includes('supabase.co/storage/v1/object/public/')) {
+    // Handle incomplete file paths (just filename without domain)
+    if (!src.startsWith('http') && !src.startsWith('/')) {
+      console.log('Incomplete path detected, constructing full Supabase URL:', src);
+      optimizedSrc = `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${src}`;
+    }
+    // Handle full Supabase URLs - apply optimization
+    else if (src.includes('supabase.co/storage/v1/object/public/')) {
       try {
         const url = new URL(src);
         if (width) url.searchParams.set('width', width.toString());
@@ -86,9 +91,17 @@ const OptimizedImage = ({
         console.error('Error applying Supabase optimization:', error);
         optimizedSrc = src;
       }
-    } else {
-      console.log('External URL detected, using original:', src);
-      // For external URLs, use them as-is
+    }
+    // Handle external URLs - validate and use as-is or proxy if needed
+    else if (src.startsWith('http')) {
+      console.log('External URL detected:', src);
+      // For external URLs that might be problematic, we could implement a proxy
+      // For now, we'll try to use them directly but with a shorter timeout
+      optimizedSrc = src;
+    }
+    // Handle relative paths
+    else {
+      console.log('Relative path detected, using as-is:', src);
       optimizedSrc = src;
     }
 
@@ -96,14 +109,16 @@ const OptimizedImage = ({
     setImageLoaded(false);
     setIsError(false);
     
-    // Set a timeout to handle stuck loading states
+    // Set a shorter timeout for external URLs, longer for Supabase
+    const timeoutDuration = src.startsWith('http') && !src.includes('supabase.co') ? 5000 : 10000;
+    
     timeoutRef.current = setTimeout(() => {
       if (!imageLoaded) {
-        console.warn('Image loading timeout:', optimizedSrc);
+        console.warn(`Image loading timeout (${timeoutDuration}ms):`, optimizedSrc);
         setIsError(true);
         setIsLoading(false);
       }
-    }, 10000); // 10 second timeout
+    }, timeoutDuration);
 
     return () => {
       if (timeoutRef.current) {
@@ -131,6 +146,7 @@ const OptimizedImage = ({
       clearTimeout(timeoutRef.current);
     }
     
+    // If current src is not the fallback, try the fallback
     if (currentSrc !== fallbackSrc) {
       console.log('Trying fallback image:', fallbackSrc);
       setCurrentSrc(fallbackSrc);
@@ -160,13 +176,13 @@ const OptimizedImage = ({
     );
   }
 
-  // Show error state
+  // Show error state with better styling
   if (isError) {
     return (
-      <div className={cn("flex items-center justify-center bg-gray-100", className)}>
+      <div className={cn("flex flex-col items-center justify-center bg-gray-50 border-2 border-gray-200 rounded-lg", className)}>
         <div className="text-gray-400 text-center p-4">
-          <Image className="h-8 w-8 mx-auto mb-2" />
-          <div className="text-sm">Изображение недоступно</div>
+          <Image className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <div className="text-sm text-gray-500">Изображение недоступно</div>
         </div>
       </div>
     );

@@ -1,6 +1,8 @@
 
 import OptimizedImage from '@/components/OptimizedImage';
 import { Product } from '@/types/product';
+import { validateAndFixImageUrl } from '@/utils/optimizedImageUtils';
+import { useEffect, useState } from 'react';
 
 type ProductImageProps = {
   imageUrl: string;
@@ -22,11 +24,23 @@ const ProductImage = (props: ProductImageProps) => {
   const imageUrl = 'product' in props ? props.product.imageUrl : props.imageUrl;
   const title = 'product' in props ? props.product.title : props.title;
   const { className, width = 400, height = 300, priority = false } = props;
+  
+  const [validatedImageUrl, setValidatedImageUrl] = useState<string>(imageUrl);
 
   console.log('ProductImage render:', { imageUrl, title, width, height, priority });
 
-  if (!imageUrl) {
-    console.log('No image URL provided, using placeholder');
+  // Validate and fix the image URL on component mount
+  useEffect(() => {
+    const validateUrl = async () => {
+      const validUrl = await validateAndFixImageUrl(imageUrl);
+      setValidatedImageUrl(validUrl);
+    };
+    
+    validateUrl();
+  }, [imageUrl]);
+
+  if (!validatedImageUrl) {
+    console.log('No valid image URL, using placeholder');
     return (
       <OptimizedImage
         src="/placeholder.svg"
@@ -39,10 +53,10 @@ const ProductImage = (props: ProductImageProps) => {
     );
   }
 
-  // Pass the original URL directly to OptimizedImage - let it handle optimization
+  // Pass the validated URL directly to OptimizedImage
   return (
     <OptimizedImage
-      src={imageUrl}
+      src={validatedImageUrl}
       alt={title}
       className={className}
       width={width}

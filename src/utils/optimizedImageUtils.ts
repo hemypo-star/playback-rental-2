@@ -6,6 +6,22 @@ const imageCache = new Map<string, string>();
 const prefetchCache = new Set<string>();
 
 /**
+ * Check if a Supabase file exists
+ */
+const checkSupabaseFileExists = async (filePath: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.storage
+      .from('products')
+      .download(filePath);
+    
+    return !error && data !== null;
+  } catch (error) {
+    console.error('Error checking file existence:', error);
+    return false;
+  }
+};
+
+/**
  * Enhanced image URL processing with caching and optimization
  */
 export const getOptimizedImageUrl = (
@@ -33,9 +49,30 @@ export const getOptimizedImageUrl = (
   
   let optimizedUrl = imageUrl;
   
+  // Handle incomplete file paths (just filename)
+  if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+    console.log('Constructing full Supabase URL for incomplete path:', imageUrl);
+    try {
+      const fullUrl = `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${imageUrl}`;
+      const url = new URL(fullUrl);
+      url.searchParams.set('width', width.toString());
+      url.searchParams.set('height', height.toString());
+      url.searchParams.set('resize', 'cover');
+      url.searchParams.set('format', format);
+      url.searchParams.set('quality', quality.toString());
+      optimizedUrl = url.toString();
+      console.log('Created optimized URL from incomplete path:', optimizedUrl);
+    } catch (error) {
+      console.error('Error creating URL from incomplete path:', error);
+      optimizedUrl = `/placeholder.svg`;
+    }
+    
+    imageCache.set(cacheKey, optimizedUrl);
+    return optimizedUrl;
+  }
+  
   // Handle external URLs - only apply optimization to Supabase URLs
   if (imageUrl.startsWith('http')) {
-    // Only optimize Supabase URLs, leave external URLs as-is
     if (imageUrl.includes('supabase.co/storage/v1/object/public/')) {
       try {
         const url = new URL(imageUrl);
@@ -45,13 +82,13 @@ export const getOptimizedImageUrl = (
         url.searchParams.set('format', format);
         url.searchParams.set('quality', quality.toString());
         optimizedUrl = url.toString();
-        console.log('Applied Supabase optimization to:', optimizedUrl);
+        console.log('Applied Supabase optimization to full URL:', optimizedUrl);
       } catch (error) {
         console.error('Error optimizing Supabase URL:', error);
       }
     } else {
       console.log('External URL detected, using original:', imageUrl);
-      // For external URLs (like UserAPI), use them as-is
+      // For external URLs, use them as-is
       optimizedUrl = imageUrl;
     }
     
@@ -59,22 +96,16 @@ export const getOptimizedImageUrl = (
     return optimizedUrl;
   }
   
-  // Handle Supabase storage paths
-  try {
-    const fullUrl = `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${imageUrl}`;
-    const url = new URL(fullUrl);
-    url.searchParams.set('width', width.toString());
-    url.searchParams.set('height', height.toString());
-    url.searchParams.set('resize', 'cover');
-    url.searchParams.set('format', format);
-    url.searchParams.set('quality', quality.toString());
-    optimizedUrl = url.toString();
-    console.log('Created optimized Supabase URL from path:', optimizedUrl);
-  } catch (error) {
-    console.error('Error creating optimized URL:', error);
-    optimizedUrl = `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${imageUrl}`;
+  // Handle relative paths
+  if (imageUrl.startsWith('/')) {
+    optimizedUrl = imageUrl;
+    imageCache.set(cacheKey, optimizedUrl);
+    return optimizedUrl;
   }
   
+  // Fallback for any other cases
+  console.warn('Unhandled image URL format:', imageUrl);
+  optimizedUrl = '/placeholder.svg';
   imageCache.set(cacheKey, optimizedUrl);
   return optimizedUrl;
 };
@@ -182,4 +213,50 @@ export const uploadProductImage = async (imageFile: File | string, productId?: s
     console.error('Error in uploadProductImage:', error);
     throw error;
   }
+};
+
+/**
+ * Check Supabase storage accessibility
+ */
+export const checkStorageAccessibility = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.storage.getBucket('products');
+    if (error) {
+      console.error('Error accessing storage bucket:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error checking storage accessibility:', error);
+    return false;
+  }
+};
+
+/**
+ * Validate and fix image URLs
+ */
+export const validateAndFixImageUrl = async (imageUrl: string): Promise<string> => {
+  if (!imageUrl) return '/placeholder.svg';
+  
+  // If it's a complete URL, return as-is (external or Supabase)
+  if (imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
+  
+  // If it's just a filename, construct the full Supabase URL
+  if (!imageUrl.startsWith('/')) {
+    const fullUrl = `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${imageUrl}`;
+    
+    // Optionally check if the file exists (commented out to avoid too many requests)
+    // const exists = await checkSupabaseFileExists(imageUrl);
+    // if (!exists) {
+    //   console.warn('File does not exist in Supabase:', imageUrl);
+    //   return '/placeholder.svg';
+    // }
+    
+    return fullUrl;
+  }
+  
+  // Return relative paths as-is
+  return imageUrl;
 };
