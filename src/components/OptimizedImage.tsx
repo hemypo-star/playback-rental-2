@@ -39,10 +39,15 @@ const OptimizedImage = ({
   const observerRef = useRef<IntersectionObserver>();
   const timeoutRef = useRef<NodeJS.Timeout>();
 
-  console.log('OptimizedImage render:', { src, skipOptimization, isLoading, isError, isInView, imageLoaded, currentSrc });
+  // Auto-detect external URLs (not from Supabase) and skip optimization for them
+  const isExternalUrl = src && src.startsWith('http') && !src.includes('supabase.co');
+  const shouldSkipOptimization = skipOptimization || isExternalUrl;
 
-  // If skipOptimization is true, return a simple img tag without any processing
-  if (skipOptimization) {
+  console.log('OptimizedImage render:', { src, isExternalUrl, shouldSkipOptimization, isLoading, isError, isInView, imageLoaded, currentSrc });
+
+  // If skipOptimization is true or it's an external URL, return a simple img tag without any processing
+  if (shouldSkipOptimization) {
+    console.log('Using simple img tag for:', src);
     return (
       <img
         src={src}
@@ -130,8 +135,8 @@ const OptimizedImage = ({
     setImageLoaded(false);
     setIsError(false);
     
-    // Set timeout only for Supabase URLs, not for external URLs
-    const timeoutDuration = src.includes('supabase.co') ? 10000 : 15000;
+    // Set different timeouts based on URL type
+    const timeoutDuration = src.includes('supabase.co') ? 8000 : 12000;
     
     timeoutRef.current = setTimeout(() => {
       if (!imageLoaded) {
@@ -165,6 +170,18 @@ const OptimizedImage = ({
     setImageLoaded(false);
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+    }
+    
+    // For Supabase images, try fallback to original URL without optimization
+    if (currentSrc.includes('supabase.co') && currentSrc.includes('?')) {
+      const baseUrl = currentSrc.split('?')[0];
+      if (currentSrc !== baseUrl) {
+        console.log('Trying Supabase image without optimization:', baseUrl);
+        setCurrentSrc(baseUrl);
+        setIsError(false);
+        setIsLoading(true);
+        return;
+      }
     }
     
     // If current src is not the fallback, try the fallback

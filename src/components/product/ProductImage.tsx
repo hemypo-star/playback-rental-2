@@ -29,13 +29,12 @@ const ProductImage = (props: ProductImageProps) => {
 
   console.log('ProductImage render:', { imageUrl, title, width, height, priority });
 
-  // Check if this is an external URL that should skip optimization
+  // Check if this is an external URL - OptimizedImage will handle this automatically now
   const isExternalUrl = imageUrl && imageUrl.startsWith('http') && !imageUrl.includes('supabase.co');
-  const skipOptimization = isExternalUrl;
 
   // Validate and fix the image URL on component mount (only for non-external URLs)
   useEffect(() => {
-    if (skipOptimization) {
+    if (isExternalUrl) {
       // For external URLs, use them directly without validation
       setValidatedImageUrl(imageUrl);
       return;
@@ -47,7 +46,7 @@ const ProductImage = (props: ProductImageProps) => {
     };
     
     validateUrl();
-  }, [imageUrl, skipOptimization]);
+  }, [imageUrl, isExternalUrl]);
 
   if (!validatedImageUrl) {
     console.log('No valid image URL, using placeholder');
@@ -63,7 +62,7 @@ const ProductImage = (props: ProductImageProps) => {
     );
   }
 
-  // Pass the validated URL and skipOptimization flag to OptimizedImage
+  // Pass the validated URL to OptimizedImage - it will auto-detect external URLs
   return (
     <OptimizedImage
       src={validatedImageUrl}
@@ -72,7 +71,6 @@ const ProductImage = (props: ProductImageProps) => {
       width={width}
       height={height}
       priority={priority}
-      skipOptimization={skipOptimization}
       sizes={props.className?.includes('w-10') ? '40px' : 
              props.className?.includes('w-8') ? '32px' :
              `(max-width: 768px) ${Math.min(width, 300)}px, ${width}px`}
