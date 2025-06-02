@@ -13,7 +13,7 @@ import QuantitySelector from "@/components/QuantitySelector";
 const CartList = () => {
   const { cartItems, removeFromCart, updateItemQuantity } = useCartContext();
 
-  // Get bookings for all products in cart to calculate available quantities
+  // Get bookings for all products in cart to calculate available quantities with real-time updates
   const cartProductIds = [...new Set(cartItems.map(item => item.productId))];
   
   const { data: productData = {} } = useQuery({
@@ -34,7 +34,9 @@ const CartList = () => {
         return acc;
       }, {} as Record<string, any>);
     },
-    enabled: cartProductIds.length > 0
+    enabled: cartProductIds.length > 0,
+    staleTime: 30 * 1000, // 30 seconds for real-time updates
+    refetchInterval: 60 * 1000 // Refetch every minute
   });
 
   if (cartItems.length === 0) {
@@ -73,7 +75,7 @@ const CartList = () => {
             const pricingDetails = calculateRentalDetails(item.price, hours);
             const itemTotal = pricingDetails.total * item.quantity;
 
-            // Calculate available quantity for this item
+            // Calculate available quantity for this item with real-time data
             const productInfo = productData[item.productId];
             const availableQuantity = productInfo ? 
               getAvailableQuantity(productInfo.product, productInfo.bookings, item.startDate, item.endDate) : 

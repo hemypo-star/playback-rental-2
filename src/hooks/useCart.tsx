@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product } from '@/types/product';
 import { useToast } from '@/hooks/use-toast';
@@ -6,6 +5,7 @@ import { calculateRentalPrice } from '@/utils/pricingUtils';
 import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityUtils';
 import { getProductById } from '@/services/apiService';
 import { getProductBookings } from '@/services/bookingService';
+import { useQueryClient } from '@tanstack/react-query';
 
 export interface CartItem {
   id: string;
@@ -21,6 +21,7 @@ export interface CartItem {
 export const useCart = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Load cart from localStorage on initial render
   useEffect(() => {
@@ -109,22 +110,42 @@ export const useCart = () => {
       }
     ]);
 
+    // Invalidate product data to refresh availability
+    await queryClient.invalidateQueries({ 
+      queryKey: ['product-bookings', product.id] 
+    });
+    await queryClient.invalidateQueries({ 
+      queryKey: ['cart-products'] 
+    });
+
     toast({
       title: "Добавлено в корзину",
       description: `${product.title} ${quantity > 1 ? `(${quantity} шт.)` : ''} добавлен в корзину.`,
     });
 
     return true;
-  }, [toast, checkProductAvailability]);
+  }, [toast, checkProductAvailability, queryClient]);
 
-  const removeFromCart = useCallback((itemId: string) => {
+  const removeFromCart = useCallback(async (itemId: string) => {
+    const item = cartItems.find(cartItem => cartItem.id === itemId);
+    
     setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
+
+    // Invalidate related caches if we have the product info
+    if (item) {
+      await queryClient.invalidateQueries({ 
+        queryKey: ['product-bookings', item.productId] 
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ['cart-products'] 
+      });
+    }
 
     toast({
       title: "Удалено из корзины",
       description: "Товар удален из корзины.",
     });
-  }, [toast]);
+  }, [toast, cartItems, queryClient]);
 
   const updateItemQuantity = useCallback(async (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -155,6 +176,14 @@ export const useCart = () => {
             : cartItem
         )
       );
+      
+      // Invalidate caches
+      await queryClient.invalidateQueries({ 
+        queryKey: ['product-bookings', item.productId] 
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ['cart-products'] 
+      });
       return;
     }
 
@@ -166,16 +195,36 @@ export const useCart = () => {
       )
     );
 
+    // Invalidate caches
+    await queryClient.invalidateQueries({ 
+      queryKey: ['product-bookings', item.productId] 
+    });
+    await queryClient.invalidateQueries({ 
+      queryKey: ['cart-products'] 
+    });
+
     toast({
       title: "Количество обновлено",
       description: "Количество товара в корзине обновлено.",
     });
-  }, [cartItems, removeFromCart, toast, checkProductAvailability]);
+  }, [cartItems, removeFromCart, toast, checkProductAvailability, queryClient]);
 
-  const clearCart = useCallback(() => {
+  const clearCart = useCallback(async () => {
+    const productIds = [...new Set(cartItems.map(item => item.productId))];
+    
     setCartItems([]);
     localStorage.removeItem('cart');
-  }, []);
+    
+    // Invalidate caches for all products that were in the cart
+    for (const productId of productIds) {
+      await queryClient.invalidateQueries({ 
+        queryKey: ['product-bookings', productId] 
+      });
+    }
+    await queryClient.invalidateQueries({ 
+      queryKey: ['cart-products'] 
+    });
+  }, [cartItems, queryClient]);
 
   // Update cart dates for all items - prevent duplicate updates
   const updateCartDates = useCallback((startDate: Date, endDate: Date) => {

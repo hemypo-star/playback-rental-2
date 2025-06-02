@@ -30,36 +30,27 @@ const ProductCard = ({
 }: ProductCardProps) => {
   const navigate = useNavigate();
   const { addToCart } = useCartContext();
-  const [productBookings, setProductBookings] = useState([]);
-  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   
   const hasBookingDates = bookingDates?.startDate && bookingDates?.endDate;
   
   // Load categories to get category name by ID
   const { data: categories } = useQuery({
     queryKey: ['categories'],
-    queryFn: getCategories
+    queryFn: getCategories,
+    staleTime: 5 * 60 * 1000 // 5 minutes
+  });
+  
+  // Load product bookings with shorter stale time for real-time updates
+  const { data: productBookings = [], isLoading: isLoadingBookings } = useQuery({
+    queryKey: ['product-bookings', product.id],
+    queryFn: () => getProductBookings(product.id),
+    staleTime: 30 * 1000, // 30 seconds - shorter for real-time updates
+    refetchInterval: 60 * 1000, // Refetch every minute
+    enabled: !!product.id
   });
   
   // Find the category name for this product
   const categoryName = categories?.find(cat => cat.category_id === product.category_id)?.name || 'Без категории';
-  
-  // Load product bookings when component mounts or dates change
-  useEffect(() => {
-    if (hasBookingDates) {
-      setIsLoadingBookings(true);
-      getProductBookings(product.id)
-        .then(bookings => {
-          setProductBookings(bookings);
-        })
-        .catch(error => {
-          console.error('Error loading product bookings:', error);
-        })
-        .finally(() => {
-          setIsLoadingBookings(false);
-        });
-    }
-  }, [product.id, bookingDates?.startDate, bookingDates?.endDate, hasBookingDates]);
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();

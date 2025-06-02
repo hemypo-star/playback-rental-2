@@ -37,6 +37,7 @@ import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
 import CheckoutSuccess from '@/components/checkout/CheckoutSuccess';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { sendCheckoutNotification } from '@/services/telegramService';
+import { useQueryClient } from '@tanstack/react-query';
 
 const Checkout = () => {
   const [loading, setLoading] = useState(false);
@@ -64,6 +65,7 @@ const Checkout = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -131,6 +133,20 @@ const Checkout = () => {
           totalPrice: calculateRentalPrice(item.price, item.startDate, item.endDate),
           quantity: 1, // Added missing quantity field
           notes: `Бронирование из корзины: ${item.title}`
+        });
+      }
+      
+      // Invalidate all relevant caches after successful booking creation
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+      
+      // Invalidate specific product bookings for each cart item
+      for (const item of cartItems) {
+        await queryClient.invalidateQueries({ 
+          queryKey: ['product-bookings', item.productId] 
+        });
+        await queryClient.invalidateQueries({ 
+          queryKey: ['cart-products'] 
         });
       }
       
