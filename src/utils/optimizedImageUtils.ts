@@ -22,16 +22,20 @@ export const getOptimizedImageUrl = (
   const { width = 800, height = 600, quality = 85, format = 'webp' } = options;
   const cacheKey = `${imageUrl}_${width}_${height}_${quality}_${format}`;
   
+  console.log('getOptimizedImageUrl called:', { imageUrl, options });
+  
   // Return cached URL if available
   if (imageCache.has(cacheKey)) {
-    return imageCache.get(cacheKey)!;
+    const cachedUrl = imageCache.get(cacheKey)!;
+    console.log('Returning cached URL:', cachedUrl);
+    return cachedUrl;
   }
   
   let optimizedUrl = imageUrl;
   
-  // Handle external URLs
+  // Handle external URLs - only apply optimization to Supabase URLs
   if (imageUrl.startsWith('http')) {
-    // For Supabase URLs, add optimization parameters
+    // Only optimize Supabase URLs, leave external URLs as-is
     if (imageUrl.includes('supabase.co/storage/v1/object/public/')) {
       try {
         const url = new URL(imageUrl);
@@ -41,9 +45,14 @@ export const getOptimizedImageUrl = (
         url.searchParams.set('format', format);
         url.searchParams.set('quality', quality.toString());
         optimizedUrl = url.toString();
+        console.log('Applied Supabase optimization to:', optimizedUrl);
       } catch (error) {
         console.error('Error optimizing Supabase URL:', error);
       }
+    } else {
+      console.log('External URL detected, using original:', imageUrl);
+      // For external URLs (like UserAPI), use them as-is
+      optimizedUrl = imageUrl;
     }
     
     imageCache.set(cacheKey, optimizedUrl);
@@ -60,6 +69,7 @@ export const getOptimizedImageUrl = (
     url.searchParams.set('format', format);
     url.searchParams.set('quality', quality.toString());
     optimizedUrl = url.toString();
+    console.log('Created optimized Supabase URL from path:', optimizedUrl);
   } catch (error) {
     console.error('Error creating optimized URL:', error);
     optimizedUrl = `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${imageUrl}`;

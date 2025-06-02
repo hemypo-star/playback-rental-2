@@ -32,8 +32,12 @@ const OptimizedImage = ({
   const [isError, setIsError] = useState(false);
   const [isInView, setIsInView] = useState(priority);
   const [currentSrc, setCurrentSrc] = useState<string>('');
+  const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const observerRef = useRef<IntersectionObserver>();
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  console.log('OptimizedImage render:', { src, isLoading, isError, isInView, imageLoaded, currentSrc });
 
   // Set up intersection observer for lazy loading
   useEffect(() => {
@@ -43,6 +47,7 @@ const OptimizedImage = ({
       (entries) => {
         const [entry] = entries;
         if (entry.isIntersecting) {
+          console.log('Image entered viewport:', src);
           setIsInView(true);
           observerRef.current?.disconnect();
         }
@@ -58,7 +63,7 @@ const OptimizedImage = ({
     return () => {
       observerRef.current?.disconnect();
     };
-  }, [priority]);
+  }, [priority, src]);
 
   // Generate optimized image sources
   useEffect(() => {
@@ -66,42 +71,83 @@ const OptimizedImage = ({
 
     let optimizedSrc = src;
 
-    // If it's a Supabase URL, add optimization parameters
+    // Only apply Supabase optimization to Supabase URLs
     if (src.includes('supabase.co/storage/v1/object/public/')) {
-      const url = new URL(src);
-      url.searchParams.set('width', width?.toString() || '800');
-      url.searchParams.set('height', height?.toString() || '600');
-      url.searchParams.set('resize', 'cover');
-      url.searchParams.set('format', 'webp');
-      url.searchParams.set('quality', '85');
-      optimizedSrc = url.toString();
+      try {
+        const url = new URL(src);
+        if (width) url.searchParams.set('width', width.toString());
+        if (height) url.searchParams.set('height', height.toString());
+        url.searchParams.set('resize', 'cover');
+        url.searchParams.set('format', 'webp');
+        url.searchParams.set('quality', '85');
+        optimizedSrc = url.toString();
+        console.log('Applied Supabase optimization:', optimizedSrc);
+      } catch (error) {
+        console.error('Error applying Supabase optimization:', error);
+        optimizedSrc = src;
+      }
+    } else {
+      console.log('External URL detected, using original:', src);
+      // For external URLs, use them as-is
+      optimizedSrc = src;
     }
 
     setCurrentSrc(optimizedSrc);
-  }, [isInView, src, width, height]);
+    setImageLoaded(false);
+    setIsError(false);
+    
+    // Set a timeout to handle stuck loading states
+    timeoutRef.current = setTimeout(() => {
+      if (!imageLoaded) {
+        console.warn('Image loading timeout:', optimizedSrc);
+        setIsError(true);
+        setIsLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [isInView, src, width, height, imageLoaded]);
 
   const handleLoad = () => {
+    console.log('Image loaded successfully:', currentSrc);
     setIsLoading(false);
     setIsError(false);
+    setImageLoaded(true);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     onLoad?.();
   };
 
   const handleError = () => {
     console.error(`Failed to load image: ${currentSrc}`);
     setIsLoading(false);
-    setIsError(true);
+    setImageLoaded(false);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
     if (currentSrc !== fallbackSrc) {
+      console.log('Trying fallback image:', fallbackSrc);
       setCurrentSrc(fallbackSrc);
+      setIsError(false);
+      setIsLoading(true);
+    } else {
+      setIsError(true);
     }
     onError?.();
   };
 
-  // Show loading placeholder
-  if (!isInView || isLoading) {
+  // Show loading placeholder when not in view or when loading and no image has been loaded yet
+  if (!isInView || (isLoading && !imageLoaded)) {
     return (
       <div 
         ref={imgRef}
-        className={cn("flex items-center justify-center bg-gray-100 animate-pulse", className)}
+        className={cn("flex items-center justify-center bg-gray-100", className)}
         style={{ width, height }}
       >
         {isInView && (
@@ -115,7 +161,7 @@ const OptimizedImage = ({
   }
 
   // Show error state
-  if (isError && currentSrc === fallbackSrc) {
+  if (isError) {
     return (
       <div className={cn("flex items-center justify-center bg-gray-100", className)}>
         <div className="text-gray-400 text-center p-4">

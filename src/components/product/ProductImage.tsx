@@ -1,7 +1,6 @@
 
 import OptimizedImage from '@/components/OptimizedImage';
 import { Product } from '@/types/product';
-import { getOptimizedImageUrl } from '@/utils/optimizedImageUtils';
 
 type ProductImageProps = {
   imageUrl: string;
@@ -24,7 +23,10 @@ const ProductImage = (props: ProductImageProps) => {
   const title = 'product' in props ? props.product.title : props.title;
   const { className, width = 400, height = 300, priority = false } = props;
 
+  console.log('ProductImage render:', { imageUrl, title, width, height, priority });
+
   if (!imageUrl) {
+    console.log('No image URL provided, using placeholder');
     return (
       <OptimizedImage
         src="/placeholder.svg"
@@ -37,15 +39,10 @@ const ProductImage = (props: ProductImageProps) => {
     );
   }
 
-  const optimizedSrc = getOptimizedImageUrl(imageUrl, { 
-    width, 
-    height, 
-    quality: priority ? 90 : 85 
-  });
-
+  // Pass the original URL directly to OptimizedImage - let it handle optimization
   return (
     <OptimizedImage
-      src={optimizedSrc}
+      src={imageUrl}
       alt={title}
       className={className}
       width={width}
