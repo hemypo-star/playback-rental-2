@@ -23,6 +23,14 @@ interface TelegramNotificationRequest {
     }>;
     totalAmount?: number;
   };
+  attempt?: number;
+}
+
+interface ChatResult {
+  chatId: string;
+  success: boolean;
+  error?: string;
+  statusCode?: number;
 }
 
 const formatContactMessage = (data: any): string => {
@@ -61,7 +69,7 @@ const formatCheckoutMessage = (data: any): string => {
 const getAllChatIds = (): string[] => {
   const chatIds: string[] = [];
   
-  // Получаем все chat ID из переменных окружения
+  // Get all chat IDs from environment variables
   const primaryChatId = Deno.env.get('TELEGRAM_CHAT_ID');
   const chatId2 = Deno.env.get('TELEGRAM_CHAT_ID_2');
   const chatId3 = Deno.env.get('TELEGRAM_CHAT_ID_3');
@@ -70,8 +78,7 @@ const getAllChatIds = (): string[] => {
   if (chatId2) chatIds.push(chatId2);
   if (chatId3) chatIds.push(chatId3);
   
-  // Можно добавить больше chat ID если они настроены
-  // Проверяем дополнительные chat ID с номерами от 4 до 10
+  // Check for additional chat IDs (4-10)
   for (let i = 4; i <= 10; i++) {
     const additionalChatId = Deno.env.get(`TELEGRAM_CHAT_ID_${i}`);
     if (additionalChatId) {
@@ -82,16 +89,21 @@ const getAllChatIds = (): string[] => {
   return chatIds;
 };
 
-const sendTelegramMessage = async (message: string, chatId: string): Promise<boolean> => {
+const sendTelegramMessage = async (message: string, chatId: string): Promise<ChatResult> => {
+  const result: ChatResult = { chatId, success: false };
+  
   try {
     const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
     
     if (!botToken) {
+      result.error = 'Bot token not configured';
       console.error('Telegram bot token not found');
-      return false;
+      return result;
     }
     
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    
+    console.log(`Attempting to send message to chat ${chatId}...`);
     
     const response = await fetch(url, {
       method: 'POST',
@@ -105,41 +117,69 @@ const sendTelegramMessage = async (message: string, chatId: string): Promise<boo
       }),
     });
     
+    result.statusCode = response.status;
+    
     if (!response.ok) {
       const errorData = await response.text();
-      console.error(`Telegram API error for chat ${chatId}:`, errorData);
-      return false;
+      result.error = `HTTP ${response.status}: ${errorData}`;
+      console.error(`Telegram API error for chat ${chatId}:`, result.error);
+      return result;
     }
     
-    console.log(`Telegram message sent successfully to chat ${chatId}`);
-    return true;
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      result.error = `API Error: ${responseData.description || 'Unknown error'}`;
+      console.error(`Telegram API returned error for chat ${chatId}:`, result.error);
+      return result;
+    }
+    
+    result.success = true;
+    console.log(`Message sent successfully to chat ${chatId}`);
+    return result;
+    
   } catch (error) {
-    console.error(`Error sending Telegram message to chat ${chatId}:`, error);
-    return false;
+    result.error = `Network error: ${error.message}`;
+    console.error(`Network error sending to chat ${chatId}:`, error);
+    return result;
   }
 };
 
-const sendToAllChats = async (message: string): Promise<{ success: boolean; results: { chatId: string; success: boolean }[] }> => {
+const sendToAllChats = async (message: string): Promise<{ success: boolean; results: ChatResult[] }> => {
   const chatIds = getAllChatIds();
   
   if (chatIds.length === 0) {
     console.error('No chat IDs configured');
-    return { success: false, results: [] };
+    return { 
+      success: false, 
+      results: [{ 
+        chatId: 'none', 
+        success: false, 
+        error: 'No chat IDs configured' 
+      }] 
+    };
   }
   
   console.log(`Sending message to ${chatIds.length} chat(s): ${chatIds.join(', ')}`);
   
+  // Send to all chats in parallel
   const results = await Promise.all(
-    chatIds.map(async (chatId) => {
-      const success = await sendTelegramMessage(message, chatId);
-      return { chatId, success };
-    })
+    chatIds.map(chatId => sendTelegramMessage(message, chatId))
   );
   
   const successCount = results.filter(r => r.success).length;
-  const overallSuccess = successCount > 0; // Считаем успешным если хотя бы одно сообщение отправлено
+  const overallSuccess = successCount > 0;
   
-  console.log(`Messages sent: ${successCount}/${chatIds.length} successful`);
+  console.log(`Message delivery results: ${successCount}/${chatIds.length} successful`);
+  
+  // Log detailed results
+  results.forEach(result => {
+    if (result.success) {
+      console.log(`✅ Chat ${result.chatId}: Success`);
+    } else {
+      console.log(`❌ Chat ${result.chatId}: Failed - ${result.error}`);
+    }
+  });
   
   return { success: overallSuccess, results };
 };
@@ -151,28 +191,48 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { type, data }: TelegramNotificationRequest = await req.json();
+    const { type, data, attempt = 1 }: TelegramNotificationRequest = await req.json();
     
-    console.log('Received notification request:', { type, data });
+    console.log(`[Attempt ${attempt}] Received notification request:`, { type, data });
+    
+    if (!type || !data) {
+      throw new Error('Missing required fields: type and data');
+    }
     
     let message: string;
     
     if (type === 'contact') {
+      if (!data.name || !data.email) {
+        throw new Error('Contact notification missing required fields: name, email');
+      }
       message = formatContactMessage(data);
     } else if (type === 'checkout') {
+      if (!data.name || !data.email || !data.phone) {
+        throw new Error('Checkout notification missing required fields: name, email, phone');
+      }
       message = formatCheckoutMessage(data);
     } else {
-      throw new Error('Invalid notification type');
+      throw new Error(`Invalid notification type: ${type}`);
     }
+    
+    console.log(`[Attempt ${attempt}] Formatted message for ${type} notification`);
     
     const { success, results } = await sendToAllChats(message);
     
+    const responseData = {
+      success,
+      message: success 
+        ? `Notifications sent successfully (${results.filter(r => r.success).length}/${results.length} chats)` 
+        : 'Failed to send notifications to any chat',
+      details: results,
+      attempt,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log(`[Attempt ${attempt}] Final result:`, responseData);
+    
     return new Response(
-      JSON.stringify({ 
-        success,
-        message: success ? 'Notifications sent successfully' : 'Failed to send notifications',
-        details: results
-      }),
+      JSON.stringify(responseData),
       {
         status: success ? 200 : 500,
         headers: {
@@ -182,11 +242,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error) {
-    console.error('Error in send-telegram-notification function:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in send-telegram-notification function:', errorMessage);
+    
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message 
+        error: errorMessage,
+        timestamp: new Date().toISOString()
       }),
       {
         status: 500,

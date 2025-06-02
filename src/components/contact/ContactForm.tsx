@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { usePhoneInputMask } from "@/hooks/usePhoneInputMask";
 import { sendContactNotification } from "@/services/telegramService";
 import { isPhoneComplete } from "@/utils/phoneMask";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const nameRegex = /^[A-Za-zА-Яа-яЁё\s\-]+$/;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,6 +28,11 @@ const ContactForm = () => {
     message?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<{
+    status: 'idle' | 'sending' | 'partial' | 'success' | 'failed';
+    message?: string;
+    details?: string;
+  }>({ status: 'idle' });
   
   const { handlePhoneChange, handlePhonePaste } = usePhoneInputMask(maskedValue => {
     setFormState(prev => ({
@@ -88,10 +93,11 @@ const ContactForm = () => {
     }
     
     setIsSubmitting(true);
+    setNotificationStatus({ status: 'sending', message: 'Отправляем уведомление...' });
     
     try {
-      // Send Telegram notification
-      const telegramSuccess = await sendContactNotification({
+      // Send Telegram notification with enhanced feedback
+      const result = await sendContactNotification({
         name: formState.name,
         email: formState.email,
         phone: formState.phone,
@@ -99,43 +105,108 @@ const ContactForm = () => {
         message: formState.message
       });
 
-      if (telegramSuccess) {
-        console.log('Telegram notification sent successfully');
+      if (result.success) {
+        setNotificationStatus({ 
+          status: 'success', 
+          message: `Уведомление отправлено успешно (${result.successfulChats}/${result.attemptedChats} получателей)` 
+        });
+        
+        toast({
+          title: "Сообщение отправлено!",
+          description: "Мы свяжемся с вами в ближайшее время."
+        });
+        
+        // Clear form after successful submission
+        setFormState({
+          name: "",
+          email: "",
+          phone: "",
+          subject: "",
+          message: ""
+        });
+        setErrors({});
       } else {
-        console.warn('Failed to send Telegram notification, but continuing with form submission');
+        const isPartialSuccess = result.successfulChats > 0;
+        setNotificationStatus({ 
+          status: isPartialSuccess ? 'partial' : 'failed',
+          message: result.message,
+          details: `Успешно: ${result.successfulChats}/${result.attemptedChats} получателей`
+        });
+        
+        if (isPartialSuccess) {
+          toast({
+            title: "Сообщение частично отправлено",
+            description: "Некоторые уведомления не были доставлены, но ваше сообщение получено.",
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: "Ошибка отправки уведомлений",
+            description: "Ваше сообщение сохранено, но уведомления не были доставлены.",
+            variant: "destructive"
+          });
+        }
       }
 
       // Simulate form submission (replace with actual form handling if needed)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      toast({
-        title: "Message sent!",
-        description: "We'll get back to you as soon as possible."
-      });
-      
-      setFormState({
-        name: "",
-        email: "",
-        phone: "",
-        subject: "",
-        message: ""
-      });
-      setErrors({});
     } catch (error) {
       console.error('Error submitting form:', error);
+      setNotificationStatus({ 
+        status: 'failed', 
+        message: 'Ошибка при отправке',
+        details: error instanceof Error ? error.message : 'Неизвестная ошибка'
+      });
+      
       toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
+        title: "Ошибка",
+        description: "Не удалось отправить сообщение. Попробуйте еще раз.",
         variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
+      // Clear status after 5 seconds
+      setTimeout(() => {
+        setNotificationStatus({ status: 'idle' });
+      }, 5000);
+    }
+  };
+
+  const getStatusIcon = () => {
+    switch (notificationStatus.status) {
+      case 'sending': return <Clock className="h-4 w-4 animate-spin" />;
+      case 'success': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'partial': return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+      case 'failed': return <AlertCircle className="h-4 w-4 text-red-600" />;
+      default: return null;
+    }
+  };
+
+  const getStatusVariant = () => {
+    switch (notificationStatus.status) {
+      case 'success': return 'default';
+      case 'partial': return 'default';
+      case 'failed': return 'destructive';
+      default: return 'default';
     }
   };
 
   return (
     <div className="bg-white rounded-xl shadow-soft p-8 subtle-ring">
       <h2 className="heading-3 mb-6">Отправьте нам сообщение</h2>
+      
+      {notificationStatus.status !== 'idle' && (
+        <Alert variant={getStatusVariant()} className="mb-6">
+          {getStatusIcon()}
+          <AlertDescription>
+            <div className="font-medium">{notificationStatus.message}</div>
+            {notificationStatus.details && (
+              <div className="text-sm mt-1 opacity-90">{notificationStatus.details}</div>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
