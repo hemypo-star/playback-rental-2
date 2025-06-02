@@ -37,6 +37,10 @@ export const BookingDetailsTable = ({
     e.stopPropagation();
   };
 
+  // Safely get the first product or create a fallback
+  const firstItem = groupedBooking.items[0];
+  const firstProduct = firstItem?.product;
+
   return (
     <div className="mt-4 p-4 bg-muted/30 rounded-lg border">
       <div className="flex items-center justify-between mb-4">
@@ -48,7 +52,7 @@ export const BookingDetailsTable = ({
               <BookingStatusSelect
                 booking={{
                   id: groupedBooking.id,
-                  productId: groupedBooking.items[0]?.productId || '',
+                  productId: firstItem?.productId || '',
                   customerName: groupedBooking.customerName,
                   customerEmail: groupedBooking.customerEmail,
                   customerPhone: groupedBooking.customerPhone,
@@ -59,7 +63,7 @@ export const BookingDetailsTable = ({
                   quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
                   notes: groupedBooking.notes || '',
                   createdAt: groupedBooking.createdAt,
-                  product: groupedBooking.items[0]?.product
+                  product: firstProduct || undefined
                 }}
                 onStatusUpdate={onStatusUpdate}
               />
