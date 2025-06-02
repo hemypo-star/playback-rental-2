@@ -32,7 +32,8 @@ export const BookingsTable = ({
   console.log('BookingsTable render:', {
     bookingsCount: bookings.length,
     groupedBookingsCount: groupedBookings?.length || 0,
-    hasGroupedBookings: !!groupedBookings
+    hasGroupedBookings: !!groupedBookings,
+    showingGrouped: groupedBookings && groupedBookings.length > 0
   });
   
   // Helper function to safely format dates
@@ -61,10 +62,14 @@ export const BookingsTable = ({
     e.stopPropagation();
   };
 
-  const handleViewDetails = (groupedBooking: GroupedBooking) => {
-    console.log('Opening details for grouped booking:', groupedBooking.id);
+  const handleViewGroupedDetails = (groupedBooking: GroupedBooking) => {
+    console.log('Opening details for grouped booking:', {
+      id: groupedBooking.id,
+      itemsCount: groupedBooking.items.length,
+      totalQuantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0)
+    });
     
-    // Преобразуем обратно в формат BookingWithProduct для детального просмотра
+    // Convert grouped booking to BookingWithProduct format for details view
     const bookingForDetails: BookingWithProduct = {
       id: groupedBooking.id,
       productId: groupedBooking.items[0]?.productId || '',
@@ -83,21 +88,45 @@ export const BookingsTable = ({
     onViewDetails(bookingForDetails);
   };
 
-  const handleViewDetailsOriginal = (booking: BookingWithProduct) => {
+  const handleViewOriginalDetails = (booking: BookingWithProduct) => {
     console.log('Opening details for original booking:', booking.id);
     onViewDetails(booking);
   };
 
-  // Определяем какие данные показывать - сгруппированные или оригинальные
-  const shouldUseGrouped = groupedBookings && groupedBookings.length > 0;
-  const displayBookings = shouldUseGrouped ? groupedBookings : [];
-  const displayOriginalBookings = shouldUseGrouped ? [] : bookings;
+  // Determine what to display
+  const showGrouped = groupedBookings && groupedBookings.length > 0;
+  const displayData = showGrouped ? groupedBookings : bookings;
   
   console.log('Display decision:', {
-    shouldUseGrouped,
-    displayBookingsCount: displayBookings.length,
-    displayOriginalBookingsCount: displayOriginalBookings.length
+    showGrouped,
+    displayDataCount: displayData.length,
+    usingGroupedData: showGrouped
   });
+
+  // Render products column for grouped bookings
+  const renderProductsColumn = (items: GroupedBooking['items']) => {
+    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+    
+    return (
+      <div className="space-y-1">
+        {items.map((item, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <span className="text-sm">{item.product?.title || 'Неизвестный продукт'}</span>
+            {item.quantity > 1 && (
+              <Badge variant="secondary" className="text-xs px-1 py-0">
+                {item.quantity} шт.
+              </Badge>
+            )}
+          </div>
+        ))}
+        {items.length > 1 && (
+          <div className="text-xs text-muted-foreground border-t pt-1">
+            Всего товаров: {items.length}, количество: {totalQuantity}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <Table>
@@ -130,162 +159,149 @@ export const BookingsTable = ({
               Ошибка загрузки бронирований. Пожалуйста, попробуйте снова.
             </TableCell>
           </TableRow>
-        ) : shouldUseGrouped ? (
-          // Отображаем сгруппированные бронирования
-          displayBookings.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={9} className="text-center py-4">
-                Бронирования не найдены.
+        ) : displayData.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={9} className="text-center py-4">
+              Бронирования не найдены.
+            </TableCell>
+          </TableRow>
+        ) : showGrouped ? (
+          // Render grouped bookings
+          (displayData as GroupedBooking[]).map(groupedBooking => (
+            <TableRow 
+              key={groupedBooking.id} 
+              className="cursor-pointer hover:bg-muted/50" 
+              onClick={() => handleViewGroupedDetails(groupedBooking)}
+            >
+              <TableCell>{groupedBooking.customerName}</TableCell>
+              <TableCell>
+                {renderProductsColumn(groupedBooking.items)}
+              </TableCell>
+              <TableCell>{groupedBooking.customerEmail}</TableCell>
+              <TableCell>{groupedBooking.customerPhone}</TableCell>
+              <TableCell>
+                {groupedBooking.startDate && isValid(new Date(groupedBooking.startDate)) ? (
+                  <>
+                    {formatSafeDate(groupedBooking.startDate, 'PPP')} {formatSafeDate(groupedBooking.startDate, 'HH:00')}
+                  </>
+                ) : (
+                  'Недействительная дата'
+                )}
+              </TableCell>
+              <TableCell>
+                {groupedBooking.endDate && isValid(new Date(groupedBooking.endDate)) ? (
+                  <>
+                    {formatSafeDate(groupedBooking.endDate, 'PPP')} {formatSafeDate(groupedBooking.endDate, 'HH:00')}
+                  </>
+                ) : (
+                  'Недействительная дата'
+                )}
+              </TableCell>
+              <TableCell className="font-medium">
+                {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
+              </TableCell>
+              <TableCell onClick={handleStatusSelectClick}>
+                <BookingStatusSelect
+                  booking={{
+                    id: groupedBooking.id,
+                    productId: groupedBooking.items[0]?.productId || '',
+                    customerName: groupedBooking.customerName,
+                    customerEmail: groupedBooking.customerEmail,
+                    customerPhone: groupedBooking.customerPhone,
+                    startDate: groupedBooking.startDate,
+                    endDate: groupedBooking.endDate,
+                    status: groupedBooking.status,
+                    totalPrice: groupedBooking.totalPrice,
+                    quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
+                    notes: groupedBooking.notes || '',
+                    createdAt: groupedBooking.createdAt,
+                    product: groupedBooking.items[0]?.product
+                  }}
+                  onStatusUpdate={onStatusUpdate}
+                />
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => handleDeleteClick(e, groupedBooking.id)}
+                  disabled={isDeleting === groupedBooking.id}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  {isDeleting === groupedBooking.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
               </TableCell>
             </TableRow>
-          ) : (
-            displayBookings.map(groupedBooking => (
-              <TableRow key={groupedBooking.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleViewDetails(groupedBooking)}>
-                <TableCell>{groupedBooking.customerName}</TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    {groupedBooking.items.map((item, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <span className="text-sm">{item.product?.title || 'Неизвестный продукт'}</span>
-                        {item.quantity > 1 && (
-                          <Badge variant="secondary" className="text-xs px-1 py-0">
-                            {item.quantity} шт.
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>{groupedBooking.customerEmail}</TableCell>
-                <TableCell>{groupedBooking.customerPhone}</TableCell>
-                <TableCell>
-                  {groupedBooking.startDate && isValid(new Date(groupedBooking.startDate)) ? (
-                    <>
-                      {formatSafeDate(groupedBooking.startDate, 'PPP')} {formatSafeDate(groupedBooking.startDate, 'HH:00')}
-                    </>
-                  ) : (
-                    'Недействительная дата'
-                  )}
-                </TableCell>
-                <TableCell>
-                  {groupedBooking.endDate && isValid(new Date(groupedBooking.endDate)) ? (
-                    <>
-                      {formatSafeDate(groupedBooking.endDate, 'PPP')} {formatSafeDate(groupedBooking.endDate, 'HH:00')}
-                    </>
-                  ) : (
-                    'Недействительная дата'
-                  )}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
-                </TableCell>
-                <TableCell onClick={handleStatusSelectClick}>
-                  <BookingStatusSelect
-                    booking={{
-                      id: groupedBooking.id,
-                      productId: groupedBooking.items[0]?.productId || '',
-                      customerName: groupedBooking.customerName,
-                      customerEmail: groupedBooking.customerEmail,
-                      customerPhone: groupedBooking.customerPhone,
-                      startDate: groupedBooking.startDate,
-                      endDate: groupedBooking.endDate,
-                      status: groupedBooking.status,
-                      totalPrice: groupedBooking.totalPrice,
-                      quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
-                      notes: groupedBooking.notes || '',
-                      createdAt: groupedBooking.createdAt,
-                      product: groupedBooking.items[0]?.product
-                    }}
-                    onStatusUpdate={onStatusUpdate}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => handleDeleteClick(e, groupedBooking.id)}
-                    disabled={isDeleting === groupedBooking.id}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {isDeleting === groupedBooking.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))
-          )
+          ))
         ) : (
-          // Отображаем оригинальные бронирования как fallback
-          displayOriginalBookings.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={9} className="text-center py-4">
-                Бронирования не найдены.
+          // Render original bookings
+          (displayData as BookingWithProduct[]).map(booking => (
+            <TableRow 
+              key={booking.id} 
+              className="cursor-pointer hover:bg-muted/50" 
+              onClick={() => handleViewOriginalDetails(booking)}
+            >
+              <TableCell>{booking.customerName}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{booking.product?.title || 'Неизвестный продукт'}</span>
+                  {(booking.quantity || 1) > 1 && (
+                    <Badge variant="secondary" className="text-xs px-1 py-0">
+                      {booking.quantity || 1} шт.
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>{booking.customerEmail}</TableCell>
+              <TableCell>{booking.customerPhone}</TableCell>
+              <TableCell>
+                {booking.startDate && isValid(new Date(booking.startDate)) ? (
+                  <>
+                    {formatSafeDate(booking.startDate, 'PPP')} {formatSafeDate(booking.startDate, 'HH:00')}
+                  </>
+                ) : (
+                  'Недействительная дата'
+                )}
+              </TableCell>
+              <TableCell>
+                {booking.endDate && isValid(new Date(booking.endDate)) ? (
+                  <>
+                    {formatSafeDate(booking.endDate, 'PPP')} {formatSafeDate(booking.endDate, 'HH:00')}
+                  </>
+                ) : (
+                  'Недействительная дата'
+                )}
+              </TableCell>
+              <TableCell className="font-medium">
+                {booking.totalPrice?.toLocaleString() || '0'} ₽
+              </TableCell>
+              <TableCell onClick={handleStatusSelectClick}>
+                <BookingStatusSelect
+                  booking={booking}
+                  onStatusUpdate={onStatusUpdate}
+                />
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => handleDeleteClick(e, booking.id)}
+                  disabled={isDeleting === booking.id}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  {isDeleting === booking.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
               </TableCell>
             </TableRow>
-          ) : (
-            displayOriginalBookings.map(booking => (
-              <TableRow key={booking.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleViewDetailsOriginal(booking)}>
-                <TableCell>{booking.customerName}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{booking.product?.title || 'Неизвестный продукт'}</span>
-                    {(booking.quantity || 1) > 1 && (
-                      <Badge variant="secondary" className="text-xs px-1 py-0">
-                        {booking.quantity || 1} шт.
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>{booking.customerEmail}</TableCell>
-                <TableCell>{booking.customerPhone}</TableCell>
-                <TableCell>
-                  {booking.startDate && isValid(new Date(booking.startDate)) ? (
-                    <>
-                      {formatSafeDate(booking.startDate, 'PPP')} {formatSafeDate(booking.startDate, 'HH:00')}
-                    </>
-                  ) : (
-                    'Недействительная дата'
-                  )}
-                </TableCell>
-                <TableCell>
-                  {booking.endDate && isValid(new Date(booking.endDate)) ? (
-                    <>
-                      {formatSafeDate(booking.endDate, 'PPP')} {formatSafeDate(booking.endDate, 'HH:00')}
-                    </>
-                  ) : (
-                    'Недействительная дата'
-                  )}
-                </TableCell>
-                <TableCell className="font-medium">
-                  {booking.totalPrice?.toLocaleString() || '0'} ₽
-                </TableCell>
-                <TableCell onClick={handleStatusSelectClick}>
-                  <BookingStatusSelect
-                    booking={booking}
-                    onStatusUpdate={onStatusUpdate}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => handleDeleteClick(e, booking.id)}
-                    disabled={isDeleting === booking.id}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {isDeleting === booking.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))
-          )
+          ))
         )}
       </TableBody>
     </Table>

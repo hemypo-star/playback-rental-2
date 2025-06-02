@@ -4,15 +4,16 @@ import { BookingWithProduct, GroupedBooking } from '@/components/admin/bookings/
 export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBooking[] => {
   console.log('Starting grouping process with bookings:', bookings.length);
   
-  // Группируем бронирования по одинаковым параметрам заказа
+  // Group bookings by customer and date range (ignoring exact timestamps)
   const groupedMap = new Map<string, GroupedBooking>();
 
   bookings.forEach(booking => {
-    // Создаем ключ для группировки на основе клиента и дат (без точного времени создания)
-    // Убираем миллисекунды из дат для более надежной группировки
-    const startDateKey = new Date(booking.startDate).setMilliseconds(0);
-    const endDateKey = new Date(booking.endDate).setMilliseconds(0);
+    // Create a more lenient grouping key based on customer info and date range only
+    // Convert dates to date strings (YYYY-MM-DD) to ignore time differences
+    const startDateKey = new Date(booking.startDate).toISOString().split('T')[0];
+    const endDateKey = new Date(booking.endDate).toISOString().split('T')[0];
     
+    // Use customer email and phone as primary identifiers, plus the date range
     const groupKey = `${booking.customerEmail}_${booking.customerPhone}_${startDateKey}_${endDateKey}`;
     
     console.log('Processing booking:', {
@@ -20,21 +21,41 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       customer: booking.customerEmail,
       groupKey,
       startDate: booking.startDate,
-      endDate: booking.endDate
+      endDate: booking.endDate,
+      createdAt: booking.createdAt
     });
     
     if (groupedMap.has(groupKey)) {
-      // Добавляем товар к существующей группе
+      // Add product to existing group
       const existingGroup = groupedMap.get(groupKey)!;
-      existingGroup.items.push({
-        product: booking.product,
-        quantity: booking.quantity || 1,
-        productId: booking.productId
-      });
+      
+      // Check if this product is already in the group
+      const existingItemIndex = existingGroup.items.findIndex(
+        item => item.productId === booking.productId
+      );
+      
+      if (existingItemIndex >= 0) {
+        // If product already exists, increase quantity
+        existingGroup.items[existingItemIndex].quantity += (booking.quantity || 1);
+      } else {
+        // Add new product to the group
+        existingGroup.items.push({
+          product: booking.product,
+          quantity: booking.quantity || 1,
+          productId: booking.productId
+        });
+      }
+      
       existingGroup.totalPrice += booking.totalPrice || 0;
+      
+      // Use the earliest created date for the group
+      if (booking.createdAt && new Date(booking.createdAt) < new Date(existingGroup.createdAt)) {
+        existingGroup.createdAt = booking.createdAt;
+      }
+      
       console.log('Added to existing group:', existingGroup.id, 'Total items:', existingGroup.items.length);
     } else {
-      // Создаем новую группу
+      // Create new group
       const newGroup: GroupedBooking = {
         id: booking.id,
         customerName: booking.customerName,
@@ -63,7 +84,13 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
   );
   
   console.log('Grouping completed. Original bookings:', bookings.length, 'Grouped bookings:', result.length);
-  console.log('Grouped result:', result.map(g => ({ id: g.id, itemCount: g.items.length, totalPrice: g.totalPrice })));
+  console.log('Grouped result:', result.map(g => ({ 
+    id: g.id, 
+    customer: g.customerEmail,
+    itemCount: g.items.length, 
+    totalPrice: g.totalPrice,
+    totalQuantity: g.items.reduce((sum, item) => sum + item.quantity, 0)
+  })));
   
   return result;
 };
