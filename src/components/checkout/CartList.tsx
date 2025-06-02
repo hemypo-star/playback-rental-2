@@ -5,10 +5,37 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { useCartContext } from "@/hooks/useCart";
 import { calculateRentalDetails, formatCurrency } from "@/utils/pricingUtils";
 import { formatDateRange } from "@/utils/dateUtils";
+import { getAvailableQuantity } from "@/utils/availabilityUtils";
+import { useQuery } from "@tanstack/react-query";
+import { getProductById, getProductBookings } from "@/services/apiService";
 import QuantitySelector from "@/components/QuantitySelector";
 
 const CartList = () => {
   const { cartItems, removeFromCart, updateItemQuantity } = useCartContext();
+
+  // Get bookings for all products in cart to calculate available quantities
+  const cartProductIds = [...new Set(cartItems.map(item => item.productId))];
+  
+  const { data: productData = {} } = useQuery({
+    queryKey: ['cart-products', cartProductIds],
+    queryFn: async () => {
+      const products = await Promise.all(
+        cartProductIds.map(async (productId) => {
+          const [product, bookings] = await Promise.all([
+            getProductById(productId),
+            getProductBookings(productId)
+          ]);
+          return { productId, product, bookings };
+        })
+      );
+      
+      return products.reduce((acc, { productId, product, bookings }) => {
+        acc[productId] = { product, bookings };
+        return acc;
+      }, {} as Record<string, any>);
+    },
+    enabled: cartProductIds.length > 0
+  });
 
   if (cartItems.length === 0) {
     return (
@@ -46,6 +73,12 @@ const CartList = () => {
             const pricingDetails = calculateRentalDetails(item.price, hours);
             const itemTotal = pricingDetails.total * item.quantity;
 
+            // Calculate available quantity for this item
+            const productInfo = productData[item.productId];
+            const availableQuantity = productInfo ? 
+              getAvailableQuantity(productInfo.product, productInfo.bookings, item.startDate, item.endDate) : 
+              item.quantity; // Fallback to current quantity if data not loaded
+
             return (
               <div key={item.id} className="flex gap-4">
                 <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 subtle-ring">
@@ -61,12 +94,19 @@ const CartList = () => {
                     <p className="text-xs text-green-600 mb-1">Скидка: {pricingDetails.dayDiscount}%</p>
                   )}
                   
+                  {/* Availability warning if quantity exceeds available */}
+                  {item.quantity > availableQuantity && (
+                    <p className="text-xs text-red-600 mb-1">
+                      ⚠️ Доступно только {availableQuantity} шт. на выбранные даты
+                    </p>
+                  )}
+                  
                   {/* Quantity Selector */}
                   <div className="mb-3">
                     <QuantitySelector
                       quantity={item.quantity}
                       onQuantityChange={(newQuantity) => updateItemQuantity(item.id, newQuantity)}
-                      maxQuantity={10} // We'll set a reasonable max since we don't have product data here
+                      maxQuantity={Math.max(1, availableQuantity)}
                       size="sm"
                     />
                   </div>

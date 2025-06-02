@@ -1,7 +1,11 @@
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product } from '@/types/product';
 import { useToast } from '@/hooks/use-toast';
 import { calculateRentalPrice } from '@/utils/pricingUtils';
+import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityUtils';
+import { getProductById } from '@/services/apiService';
+import { getProductBookings } from '@/services/bookingService';
 
 export interface CartItem {
   id: string;
@@ -42,12 +46,46 @@ export const useCart = () => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = useCallback((product: Product, startDate?: Date, endDate?: Date, quantity: number = 1) => {
+  // Helper function to check availability for a product
+  const checkProductAvailability = useCallback(async (productId: string, startDate: Date, endDate: Date, requestedQuantity: number) => {
+    try {
+      const [product, bookings] = await Promise.all([
+        getProductById(productId),
+        getProductBookings(productId)
+      ]);
+
+      if (!product) {
+        return { available: false, maxQuantity: 0 };
+      }
+
+      const availableQuantity = getAvailableQuantity(product, bookings, startDate, endDate);
+      const isAvailable = isQuantityAvailable(product, bookings, requestedQuantity, startDate, endDate);
+
+      return { available: isAvailable, maxQuantity: availableQuantity };
+    } catch (error) {
+      console.error('Error checking product availability:', error);
+      return { available: false, maxQuantity: 0 };
+    }
+  }, []);
+
+  const addToCart = useCallback(async (product: Product, startDate?: Date, endDate?: Date, quantity: number = 1) => {
     // Check if required dates are provided
     if (!startDate || !endDate) {
       toast({
         title: "Сначала выберите даты",
         description: "Пожалуйста, выберите даты аренды перед добавлением в корзину",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Check availability before adding
+    const availability = await checkProductAvailability(product.id, startDate, endDate, quantity);
+    
+    if (!availability.available) {
+      toast({
+        title: "Недостаточно товара",
+        description: `Доступно только ${availability.maxQuantity} шт. на выбранные даты`,
         variant: "destructive",
       });
       return false;
@@ -77,7 +115,7 @@ export const useCart = () => {
     });
 
     return true;
-  }, [toast]);
+  }, [toast, checkProductAvailability]);
 
   const removeFromCart = useCallback((itemId: string) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
@@ -88,17 +126,43 @@ export const useCart = () => {
     });
   }, [toast]);
 
-  const updateItemQuantity = useCallback((itemId: string, newQuantity: number) => {
+  const updateItemQuantity = useCallback(async (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       removeFromCart(itemId);
       return;
     }
 
+    // Find the item to get product details
+    const item = cartItems.find(cartItem => cartItem.id === itemId);
+    if (!item) return;
+
+    // Check availability for the new quantity
+    const availability = await checkProductAvailability(item.productId, item.startDate, item.endDate, newQuantity);
+    
+    if (!availability.available) {
+      toast({
+        title: "Недостаточно товара",
+        description: `Доступно только ${availability.maxQuantity} шт. на выбранные даты. Количество установлено на максимум.`,
+        variant: "destructive",
+      });
+      
+      // Set quantity to maximum available
+      const maxQuantity = Math.max(1, availability.maxQuantity);
+      setCartItems(prevItems => 
+        prevItems.map(cartItem => 
+          cartItem.id === itemId 
+            ? { ...cartItem, quantity: maxQuantity }
+            : cartItem
+        )
+      );
+      return;
+    }
+
     setCartItems(prevItems => 
-      prevItems.map(item => 
-        item.id === itemId 
-          ? { ...item, quantity: newQuantity }
-          : item
+      prevItems.map(cartItem => 
+        cartItem.id === itemId 
+          ? { ...cartItem, quantity: newQuantity }
+          : cartItem
       )
     );
 
@@ -106,7 +170,7 @@ export const useCart = () => {
       title: "Количество обновлено",
       description: "Количество товара в корзине обновлено.",
     });
-  }, [removeFromCart, toast]);
+  }, [cartItems, removeFromCart, toast, checkProductAvailability]);
 
   const clearCart = useCallback(() => {
     setCartItems([]);

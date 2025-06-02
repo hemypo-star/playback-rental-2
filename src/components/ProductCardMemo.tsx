@@ -36,13 +36,22 @@ const ProductCardMemo = memo(({
   const navigate = useNavigate();
   const { addToCart } = useCartContext();
 
-  const handleAddToCart = useCallback((e: React.MouseEvent) => {
+  const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (hasBookingDates && isAvailableForDates) {
-      addToCart(product, bookingDates!.startDate, bookingDates!.endDate, 1); // Default quantity 1
-      toast.success(`Товар "${product.title}" добавлен в корзину`);
+    if (hasBookingDates && isAvailableForDates && availableQuantity > 0) {
+      try {
+        const success = await addToCart(product, bookingDates!.startDate, bookingDates!.endDate, 1);
+        if (success) {
+          toast.success(`Товар "${product.title}" добавлен в корзину`);
+        }
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+        toast.error('Ошибка при добавлении в корзину');
+      }
+    } else if (hasBookingDates && !isAvailableForDates) {
+      toast.error('Товар недоступен на выбранные даты');
     } else {
       navigate(`/product/${product.id}`, {
         state: {
@@ -50,7 +59,7 @@ const ProductCardMemo = memo(({
         }
       });
     }
-  }, [hasBookingDates, isAvailableForDates, addToCart, product, bookingDates, navigate]);
+  }, [hasBookingDates, isAvailableForDates, availableQuantity, addToCart, product, bookingDates, navigate]);
 
   // Memoize truncate function to prevent re-computation
   const truncatedDescription = React.useMemo(() => {
@@ -170,7 +179,7 @@ const ProductCardMemo = memo(({
             variant={hasBookingDates && currentlyAvailable ? "default" : "outline"} 
             className="rounded-full smooth-transition" 
             onClick={handleAddToCart}
-            disabled={!currentlyAvailable}
+            disabled={!currentlyAvailable || (hasBookingDates && availableQuantity === 0)}
           >
             {hasBookingDates && currentlyAvailable ? <ShoppingCart className="h-4 w-4" /> : <CalendarIcon className="h-4 w-4" />}
           </Button>
