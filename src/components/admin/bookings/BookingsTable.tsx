@@ -109,61 +109,76 @@ export const BookingsTable = ({
               </TableCell>
             </TableRow>
           ) : showGrouped ? (
-            // Render grouped bookings
+            // Render grouped bookings with inline details
             (displayData as GroupedBooking[]).map(groupedBooking => {
               const totalQuantity = groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0);
               const isSelected = selectedBookingId === groupedBooking.id;
               
               return (
-                <TableRow 
-                  key={groupedBooking.id} 
-                  className={`cursor-pointer transition-colors ${
-                    isSelected ? 'bg-muted/50' : 'hover:bg-muted/30'
-                  }`} 
-                  onClick={() => handleGroupedBookingClick(groupedBooking)}
-                >
-                  <TableCell className="font-medium">{groupedBooking.customerName}</TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {groupedBooking.items.length} товар{groupedBooking.items.length === 1 ? '' : groupedBooking.items.length < 5 ? 'а' : 'ов'}
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {totalQuantity} шт.
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Нажмите для просмотра деталей
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">{groupedBooking.customerEmail}</TableCell>
-                  <TableCell className="text-sm">{groupedBooking.customerPhone}</TableCell>
-                  <TableCell className="text-sm">
-                    {groupedBooking.startDate && isValid(new Date(groupedBooking.startDate)) ? (
+                <>
+                  <TableRow 
+                    key={groupedBooking.id} 
+                    className={`cursor-pointer transition-colors ${
+                      isSelected ? 'bg-muted/50' : 'hover:bg-muted/30'
+                    }`} 
+                    onClick={() => handleGroupedBookingClick(groupedBooking)}
+                  >
+                    <TableCell className="font-medium">{groupedBooking.customerName}</TableCell>
+                    <TableCell>
                       <div className="space-y-1">
-                        <div>{formatSafeDate(groupedBooking.startDate, 'dd.MM.yyyy')}</div>
-                        <div className="text-xs text-muted-foreground">{formatSafeDate(groupedBooking.startDate, 'HH:00')}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">
+                            {groupedBooking.items.length} товар{groupedBooking.items.length === 1 ? '' : groupedBooking.items.length < 5 ? 'а' : 'ов'}
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {totalQuantity} шт.
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Нажмите для просмотра деталей
+                        </div>
                       </div>
-                    ) : (
-                      'Недействительная дата'
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {groupedBooking.endDate && isValid(new Date(groupedBooking.endDate)) ? (
-                      <div className="space-y-1">
-                        <div>{formatSafeDate(groupedBooking.endDate, 'dd.MM.yyyy')}</div>
-                        <div className="text-xs text-muted-foreground">{formatSafeDate(groupedBooking.endDate, 'HH:00')}</div>
-                      </div>
-                    ) : (
-                      'Недействительная дата'
-                    )}
-                  </TableCell>
-                  <TableCell className="font-semibold text-sm">
-                    {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                    <TableCell className="text-sm">{groupedBooking.customerEmail}</TableCell>
+                    <TableCell className="text-sm">{groupedBooking.customerPhone}</TableCell>
+                    <TableCell className="text-sm">
+                      {groupedBooking.startDate && isValid(new Date(groupedBooking.startDate)) ? (
+                        <div className="space-y-1">
+                          <div>{formatSafeDate(groupedBooking.startDate, 'dd.MM.yyyy')}</div>
+                          <div className="text-xs text-muted-foreground">{formatSafeDate(groupedBooking.startDate, 'HH:00')}</div>
+                        </div>
+                      ) : (
+                        'Недействительная дата'
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {groupedBooking.endDate && isValid(new Date(groupedBooking.endDate)) ? (
+                        <div className="space-y-1">
+                          <div>{formatSafeDate(groupedBooking.endDate, 'dd.MM.yyyy')}</div>
+                          <div className="text-xs text-muted-foreground">{formatSafeDate(groupedBooking.endDate, 'HH:00')}</div>
+                        </div>
+                      ) : (
+                        'Недействительная дата'
+                      )}
+                    </TableCell>
+                    <TableCell className="font-semibold text-sm">
+                      {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
+                    </TableCell>
+                  </TableRow>
+                  {/* Render details row directly below if selected */}
+                  {isSelected && (
+                    <TableRow key={`${groupedBooking.id}-details`}>
+                      <TableCell colSpan={7} className="p-0">
+                        <BookingDetailsTable 
+                          groupedBooking={groupedBooking}
+                          onStatusUpdate={onStatusUpdate}
+                          onDelete={onDelete}
+                          isDeleting={isDeleting}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
               );
             })
           ) : (
@@ -213,16 +228,6 @@ export const BookingsTable = ({
           )}
         </TableBody>
       </Table>
-
-      {/* Detailed table for selected grouped booking */}
-      {showGrouped && selectedBookingId && (
-        <BookingDetailsTable 
-          groupedBooking={groupedBookings!.find(g => g.id === selectedBookingId)!}
-          onStatusUpdate={onStatusUpdate}
-          onDelete={onDelete}
-          isDeleting={isDeleting}
-        />
-      )}
     </div>
   );
 };
