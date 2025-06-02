@@ -12,6 +12,7 @@ interface OptimizedImageProps {
   priority?: boolean;
   sizes?: string;
   fallbackSrc?: string;
+  skipOptimization?: boolean;
   onLoad?: () => void;
   onError?: () => void;
 }
@@ -25,6 +26,7 @@ const OptimizedImage = ({
   priority = false,
   sizes = '100vw',
   fallbackSrc = '/placeholder.svg',
+  skipOptimization = false,
   onLoad,
   onError,
 }: OptimizedImageProps) => {
@@ -37,7 +39,28 @@ const OptimizedImage = ({
   const observerRef = useRef<IntersectionObserver>();
   const timeoutRef = useRef<NodeJS.Timeout>();
 
-  console.log('OptimizedImage render:', { src, isLoading, isError, isInView, imageLoaded, currentSrc });
+  console.log('OptimizedImage render:', { src, skipOptimization, isLoading, isError, isInView, imageLoaded, currentSrc });
+
+  // If skipOptimization is true, return a simple img tag without any processing
+  if (skipOptimization) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={cn("object-cover", className)}
+        width={width}
+        height={height}
+        sizes={sizes}
+        loading={priority ? 'eager' : 'lazy'}
+        onLoad={onLoad}
+        onError={onError}
+        style={{ 
+          width: width ? `${width}px` : undefined, 
+          height: height ? `${height}px` : undefined 
+        }}
+      />
+    );
+  }
 
   // Set up intersection observer for lazy loading
   useEffect(() => {
@@ -92,11 +115,9 @@ const OptimizedImage = ({
         optimizedSrc = src;
       }
     }
-    // Handle external URLs - validate and use as-is or proxy if needed
+    // Handle external URLs - use as-is without modification
     else if (src.startsWith('http')) {
-      console.log('External URL detected:', src);
-      // For external URLs that might be problematic, we could implement a proxy
-      // For now, we'll try to use them directly but with a shorter timeout
+      console.log('External URL detected, using as-is:', src);
       optimizedSrc = src;
     }
     // Handle relative paths
@@ -109,8 +130,8 @@ const OptimizedImage = ({
     setImageLoaded(false);
     setIsError(false);
     
-    // Set a shorter timeout for external URLs, longer for Supabase
-    const timeoutDuration = src.startsWith('http') && !src.includes('supabase.co') ? 5000 : 10000;
+    // Set timeout only for Supabase URLs, not for external URLs
+    const timeoutDuration = src.includes('supabase.co') ? 10000 : 15000;
     
     timeoutRef.current = setTimeout(() => {
       if (!imageLoaded) {
