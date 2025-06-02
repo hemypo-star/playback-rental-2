@@ -10,6 +10,7 @@ import { BookingFilters } from '@/components/admin/bookings/BookingFilters';
 import { BookingsTable } from '@/components/admin/bookings/BookingsTable';
 import { BookingDetailsDialog } from '@/components/admin/bookings/BookingDetailsDialog';
 import { BookingPeriod } from '@/types/product';
+import { groupBookingsByOrder } from '@/utils/bookingGroupingUtils';
 
 const AdminBookings = () => {
   const [search, setSearch] = useState('');
@@ -64,6 +65,11 @@ const AdminBookings = () => {
     
     return filtered;
   }, [bookingsWithProducts, search, statusFilter]);
+
+  // Группируем отфильтрованные бронирования
+  const groupedBookings = React.useMemo(() => {
+    return groupBookingsByOrder(filteredBookings);
+  }, [filteredBookings]);
 
   const handleStatusUpdate = async (id: string, status: BookingPeriod['status']) => {
     try {
@@ -165,6 +171,7 @@ const AdminBookings = () => {
             onStatusUpdate={handleStatusUpdate}
             onDelete={handleDeleteBooking}
             isDeleting={isDeleting}
+            groupedBookings={groupedBookings}
           />
         </CardContent>
       </Card>
