@@ -143,43 +143,45 @@ export const BookingsTable = ({
                   }`} 
                   onClick={() => handleGroupedBookingClick(groupedBooking)}
                 >
-                  <TableCell>{groupedBooking.customerName}</TableCell>
+                  <TableCell className="font-medium">{groupedBooking.customerName}</TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">
                           {groupedBooking.items.length} товар{groupedBooking.items.length === 1 ? '' : groupedBooking.items.length < 5 ? 'а' : 'ов'}
                         </span>
-                        <Badge variant="secondary" className="text-xs px-1 py-0">
+                        <Badge variant="secondary" className="text-xs">
                           {totalQuantity} шт.
                         </Badge>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        Нажмите для деталей
-                      </span>
+                      <div className="text-xs text-muted-foreground">
+                        Нажмите для просмотра деталей
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>{groupedBooking.customerEmail}</TableCell>
-                  <TableCell>{groupedBooking.customerPhone}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-sm">{groupedBooking.customerEmail}</TableCell>
+                  <TableCell className="text-sm">{groupedBooking.customerPhone}</TableCell>
+                  <TableCell className="text-sm">
                     {groupedBooking.startDate && isValid(new Date(groupedBooking.startDate)) ? (
-                      <>
-                        {formatSafeDate(groupedBooking.startDate, 'PPP')} {formatSafeDate(groupedBooking.startDate, 'HH:00')}
-                      </>
+                      <div className="space-y-1">
+                        <div>{formatSafeDate(groupedBooking.startDate, 'dd.MM.yyyy')}</div>
+                        <div className="text-xs text-muted-foreground">{formatSafeDate(groupedBooking.startDate, 'HH:00')}</div>
+                      </div>
                     ) : (
                       'Недействительная дата'
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-sm">
                     {groupedBooking.endDate && isValid(new Date(groupedBooking.endDate)) ? (
-                      <>
-                        {formatSafeDate(groupedBooking.endDate, 'PPP')} {formatSafeDate(groupedBooking.endDate, 'HH:00')}
-                      </>
+                      <div className="space-y-1">
+                        <div>{formatSafeDate(groupedBooking.endDate, 'dd.MM.yyyy')}</div>
+                        <div className="text-xs text-muted-foreground">{formatSafeDate(groupedBooking.endDate, 'HH:00')}</div>
+                      </div>
                     ) : (
                       'Недействительная дата'
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-semibold text-sm">
                     {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
                   </TableCell>
                   <TableCell onClick={handleStatusSelectClick}>
@@ -203,47 +205,19 @@ export const BookingsTable = ({
                     />
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const bookingForDetails = {
-                            id: groupedBooking.id,
-                            productId: groupedBooking.items[0]?.productId || '',
-                            customerName: groupedBooking.customerName,
-                            customerEmail: groupedBooking.customerEmail,
-                            customerPhone: groupedBooking.customerPhone,
-                            startDate: groupedBooking.startDate,
-                            endDate: groupedBooking.endDate,
-                            status: groupedBooking.status,
-                            totalPrice: groupedBooking.totalPrice,
-                            quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
-                            notes: groupedBooking.notes || '',
-                            createdAt: groupedBooking.createdAt,
-                            product: groupedBooking.items[0]?.product
-                          };
-                          onViewDetails(bookingForDetails);
-                        }}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        Подробно
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => handleDeleteClick(e, groupedBooking.id)}
-                        disabled={isDeleting === groupedBooking.id}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
-                      >
-                        {isDeleting === groupedBooking.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => handleDeleteClick(e, groupedBooking.id)}
+                      disabled={isDeleting === groupedBooking.id}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {isDeleting === groupedBooking.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
                   </TableCell>
                 </TableRow>
               );
