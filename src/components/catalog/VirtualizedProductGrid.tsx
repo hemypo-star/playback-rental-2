@@ -18,6 +18,13 @@ type VirtualizedProductGridProps = {
   onClearFilters: () => void;
 };
 
+type EnhancedProduct = Product & {
+  categoryName: string;
+  availableQuantity: number;
+  isAvailableForDates: boolean;
+  isLoadingBookings: boolean;
+};
+
 const VirtualizedProductGrid = ({ 
   products, 
   isLoading,
@@ -29,7 +36,7 @@ const VirtualizedProductGrid = ({
   
   const productsPerPage = isMobile ? 6 : 8;
   const itemsPerRow = isMobile ? 2 : 4;
-  const hasBookingDates = bookingDates?.startDate && bookingDates?.endDate;
+  const hasBookingDates = Boolean(bookingDates?.startDate && bookingDates?.endDate);
 
   // Load categories with memoization
   const { data: categories = [] } = useQuery({
@@ -73,7 +80,7 @@ const VirtualizedProductGrid = ({
   });
 
   // Prepare product data with availability info
-  const productsWithAvailability = useMemo(() => {
+  const productsWithAvailability = useMemo((): EnhancedProduct[] => {
     return products.map(product => {
       const categoryName = categoryMap[product.category_id] || 'Без категории';
       const productBookings = allBookings[product.id] || [];
