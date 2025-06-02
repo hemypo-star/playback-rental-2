@@ -1,10 +1,8 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { RefreshCw, Trash2, Loader2 } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { BookingWithProduct, GroupedBooking } from './types';
-import { BookingStatusSelect } from './BookingStatusSelect';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BookingDetailsTable } from './BookingDetailsTable';
 import { useState } from 'react';
@@ -48,23 +46,6 @@ export const BookingsTable = ({
     return isValid(date) ? format(date, formatStr) : 'Недействительная дата';
   };
 
-  const handleDeleteClick = async (e: React.MouseEvent, bookingId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Delete button clicked for booking:', bookingId);
-    
-    if (onDelete) {
-      console.log('Calling onDelete function');
-      await onDelete(bookingId);
-    } else {
-      console.log('onDelete function not provided');
-    }
-  };
-
-  const handleStatusSelectClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
   const handleViewOriginalDetails = (booking: BookingWithProduct) => {
     console.log('Opening details for original booking:', booking.id);
     onViewDetails(booking);
@@ -96,21 +77,19 @@ export const BookingsTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Клиент</TableHead>
-            <TableHead>Товары</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Телефон</TableHead>
-            <TableHead>Дата начала</TableHead>
-            <TableHead>Дата окончания</TableHead>
-            <TableHead>Общая сумма</TableHead>
-            <TableHead>Статус</TableHead>
-            <TableHead>Действия</TableHead>
+            <TableHead className="w-[200px]">Клиент</TableHead>
+            <TableHead className="w-[250px]">Товары</TableHead>
+            <TableHead className="w-[200px]">Email</TableHead>
+            <TableHead className="w-[150px]">Телефон</TableHead>
+            <TableHead className="w-[180px]">Дата начала</TableHead>
+            <TableHead className="w-[180px]">Дата окончания</TableHead>
+            <TableHead className="w-[120px]">Общая сумма</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center py-4">
+              <TableCell colSpan={7} className="text-center py-4">
                 <div className="flex items-center justify-center">
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   <span>Загрузка бронирований...</span>
@@ -119,13 +98,13 @@ export const BookingsTable = ({
             </TableRow>
           ) : isError ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center py-4 text-red-500">
+              <TableCell colSpan={7} className="text-center py-4 text-red-500">
                 Ошибка загрузки бронирований. Пожалуйста, попробуйте снова.
               </TableCell>
             </TableRow>
           ) : displayData.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center py-4">
+              <TableCell colSpan={7} className="text-center py-4">
                 Бронирования не найдены.
               </TableCell>
             </TableRow>
@@ -184,41 +163,6 @@ export const BookingsTable = ({
                   <TableCell className="font-semibold text-sm">
                     {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
                   </TableCell>
-                  <TableCell onClick={handleStatusSelectClick}>
-                    <BookingStatusSelect
-                      booking={{
-                        id: groupedBooking.id,
-                        productId: groupedBooking.items[0]?.productId || '',
-                        customerName: groupedBooking.customerName,
-                        customerEmail: groupedBooking.customerEmail,
-                        customerPhone: groupedBooking.customerPhone,
-                        startDate: groupedBooking.startDate,
-                        endDate: groupedBooking.endDate,
-                        status: groupedBooking.status,
-                        totalPrice: groupedBooking.totalPrice,
-                        quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
-                        notes: groupedBooking.notes || '',
-                        createdAt: groupedBooking.createdAt,
-                        product: groupedBooking.items[0]?.product
-                      }}
-                      onStatusUpdate={onStatusUpdate}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => handleDeleteClick(e, groupedBooking.id)}
-                      disabled={isDeleting === groupedBooking.id}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
-                    >
-                      {isDeleting === groupedBooking.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TableCell>
                 </TableRow>
               );
             })
@@ -264,27 +208,6 @@ export const BookingsTable = ({
                 <TableCell className="font-medium">
                   {booking.totalPrice?.toLocaleString() || '0'} ₽
                 </TableCell>
-                <TableCell onClick={handleStatusSelectClick}>
-                  <BookingStatusSelect
-                    booking={booking}
-                    onStatusUpdate={onStatusUpdate}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => handleDeleteClick(e, booking.id)}
-                    disabled={isDeleting === booking.id}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {isDeleting === booking.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TableCell>
               </TableRow>
             ))
           )}
@@ -295,6 +218,9 @@ export const BookingsTable = ({
       {showGrouped && selectedBookingId && (
         <BookingDetailsTable 
           groupedBooking={groupedBookings!.find(g => g.id === selectedBookingId)!}
+          onStatusUpdate={onStatusUpdate}
+          onDelete={onDelete}
+          isDeleting={isDeleting}
         />
       )}
     </div>
