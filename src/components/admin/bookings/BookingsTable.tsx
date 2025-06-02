@@ -6,6 +6,7 @@ import { BookingWithProduct, GroupedBooking } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { GroupedBookingRow } from './GroupedBookingRow';
 
 interface BookingsTableProps {
   bookings: BookingWithProduct[];
@@ -62,32 +63,6 @@ export const BookingsTable = ({
     e.stopPropagation();
   };
 
-  const handleViewGroupedDetails = (groupedBooking: GroupedBooking) => {
-    console.log('Opening details for grouped booking:', {
-      id: groupedBooking.id,
-      itemsCount: groupedBooking.items.length,
-      totalQuantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0)
-    });
-    
-    // Convert grouped booking to BookingWithProduct format for details view
-    const bookingForDetails: BookingWithProduct = {
-      id: groupedBooking.id,
-      productId: groupedBooking.items[0]?.productId || '',
-      customerName: groupedBooking.customerName,
-      customerEmail: groupedBooking.customerEmail,
-      customerPhone: groupedBooking.customerPhone,
-      startDate: groupedBooking.startDate,
-      endDate: groupedBooking.endDate,
-      status: groupedBooking.status,
-      totalPrice: groupedBooking.totalPrice,
-      quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
-      notes: groupedBooking.notes || '',
-      createdAt: groupedBooking.createdAt,
-      product: groupedBooking.items[0]?.product
-    };
-    onViewDetails(bookingForDetails);
-  };
-
   const handleViewOriginalDetails = (booking: BookingWithProduct) => {
     console.log('Opening details for original booking:', booking.id);
     onViewDetails(booking);
@@ -102,31 +77,6 @@ export const BookingsTable = ({
     displayDataCount: displayData.length,
     usingGroupedData: showGrouped
   });
-
-  // Render products column for grouped bookings
-  const renderProductsColumn = (items: GroupedBooking['items']) => {
-    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-    
-    return (
-      <div className="space-y-1">
-        {items.map((item, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <span className="text-sm">{item.product?.title || 'Неизвестный продукт'}</span>
-            {item.quantity > 1 && (
-              <Badge variant="secondary" className="text-xs px-1 py-0">
-                {item.quantity} шт.
-              </Badge>
-            )}
-          </div>
-        ))}
-        {items.length > 1 && (
-          <div className="text-xs text-muted-foreground border-t pt-1">
-            Всего товаров: {items.length}, количество: {totalQuantity}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <Table>
@@ -166,76 +116,16 @@ export const BookingsTable = ({
             </TableCell>
           </TableRow>
         ) : showGrouped ? (
-          // Render grouped bookings
+          // Render grouped bookings with expandable rows
           (displayData as GroupedBooking[]).map(groupedBooking => (
-            <TableRow 
-              key={groupedBooking.id} 
-              className="cursor-pointer hover:bg-muted/50" 
-              onClick={() => handleViewGroupedDetails(groupedBooking)}
-            >
-              <TableCell>{groupedBooking.customerName}</TableCell>
-              <TableCell>
-                {renderProductsColumn(groupedBooking.items)}
-              </TableCell>
-              <TableCell>{groupedBooking.customerEmail}</TableCell>
-              <TableCell>{groupedBooking.customerPhone}</TableCell>
-              <TableCell>
-                {groupedBooking.startDate && isValid(new Date(groupedBooking.startDate)) ? (
-                  <>
-                    {formatSafeDate(groupedBooking.startDate, 'PPP')} {formatSafeDate(groupedBooking.startDate, 'HH:00')}
-                  </>
-                ) : (
-                  'Недействительная дата'
-                )}
-              </TableCell>
-              <TableCell>
-                {groupedBooking.endDate && isValid(new Date(groupedBooking.endDate)) ? (
-                  <>
-                    {formatSafeDate(groupedBooking.endDate, 'PPP')} {formatSafeDate(groupedBooking.endDate, 'HH:00')}
-                  </>
-                ) : (
-                  'Недействительная дата'
-                )}
-              </TableCell>
-              <TableCell className="font-medium">
-                {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
-              </TableCell>
-              <TableCell onClick={handleStatusSelectClick}>
-                <BookingStatusSelect
-                  booking={{
-                    id: groupedBooking.id,
-                    productId: groupedBooking.items[0]?.productId || '',
-                    customerName: groupedBooking.customerName,
-                    customerEmail: groupedBooking.customerEmail,
-                    customerPhone: groupedBooking.customerPhone,
-                    startDate: groupedBooking.startDate,
-                    endDate: groupedBooking.endDate,
-                    status: groupedBooking.status,
-                    totalPrice: groupedBooking.totalPrice,
-                    quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
-                    notes: groupedBooking.notes || '',
-                    createdAt: groupedBooking.createdAt,
-                    product: groupedBooking.items[0]?.product
-                  }}
-                  onStatusUpdate={onStatusUpdate}
-                />
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => handleDeleteClick(e, groupedBooking.id)}
-                  disabled={isDeleting === groupedBooking.id}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
-                >
-                  {isDeleting === groupedBooking.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
-              </TableCell>
-            </TableRow>
+            <GroupedBookingRow
+              key={groupedBooking.id}
+              groupedBooking={groupedBooking}
+              onViewDetails={onViewDetails}
+              onStatusUpdate={onStatusUpdate}
+              onDelete={onDelete}
+              isDeleting={isDeleting}
+            />
           ))
         ) : (
           // Render original bookings
