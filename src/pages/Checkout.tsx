@@ -120,19 +120,67 @@ const Checkout = () => {
     setNotificationStatus({ status: 'sending', message: 'Обрабатываем заказ...' });
     
     try {
-      // Create bookings first
-      for (const item of cartItems) {
+      // Group cart items by product ID and combine quantities
+      const groupedItems = new Map<string, {
+        productId: string;
+        title: string;
+        price: number;
+        startDate: Date;
+        endDate: Date;
+        totalQuantity: number;
+      }>();
+
+      cartItems.forEach(item => {
+        const key = item.productId;
+        if (groupedItems.has(key)) {
+          const existing = groupedItems.get(key)!;
+          existing.totalQuantity += item.quantity;
+        } else {
+          groupedItems.set(key, {
+            productId: item.productId,
+            title: item.title,
+            price: item.price,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            totalQuantity: item.quantity
+          });
+        }
+      });
+
+      console.log('Creating bookings for grouped items:', {
+        originalItems: cartItems.length,
+        groupedItems: groupedItems.size,
+        groups: Array.from(groupedItems.values()).map(g => ({
+          productId: g.productId,
+          title: g.title,
+          quantity: g.totalQuantity
+        }))
+      });
+
+      // Create one booking per unique product with correct total quantity
+      for (const group of groupedItems.values()) {
+        const rentalPrice = calculateRentalPrice(group.price, group.startDate, group.endDate);
+        const totalPrice = rentalPrice * group.totalQuantity;
+        
+        console.log('Creating booking:', {
+          productId: group.productId,
+          title: group.title,
+          quantity: group.totalQuantity,
+          rentalPrice,
+          totalPrice
+        });
+
         await createBooking({
-          productId: item.productId,
+          productId: group.productId,
           customerName: formData.name,
           customerEmail: formData.email,
           customerPhone: formData.phone,
-          startDate: item.startDate.toISOString(),
-          endDate: item.endDate.toISOString(),
+          startDate: group.startDate.toISOString(),
+          endDate: group.endDate.toISOString(),
           status: 'pending',
-          totalPrice: calculateRentalPrice(item.price, item.startDate, item.endDate),
-          quantity: 1, // Added missing quantity field
-          notes: `Бронирование из корзины: ${item.title}`
+          totalPrice: totalPrice,
+          quantity: group.totalQuantity,
+          notes: `Заказ: ${group.title} (${group.totalQuantity} шт.)`
         });
       }
       
@@ -140,15 +188,15 @@ const Checkout = () => {
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       await queryClient.invalidateQueries({ queryKey: ['products'] });
       
-      // Invalidate specific product bookings for each cart item
-      for (const item of cartItems) {
+      // Invalidate specific product bookings for each unique product
+      for (const group of groupedItems.values()) {
         await queryClient.invalidateQueries({ 
-          queryKey: ['product-bookings', item.productId] 
-        });
-        await queryClient.invalidateQueries({ 
-          queryKey: ['cart-products'] 
+          queryKey: ['product-bookings', group.productId] 
         });
       }
+      await queryClient.invalidateQueries({ 
+        queryKey: ['cart-products'] 
+      });
       
       // Send Telegram notification with enhanced feedback
       setNotificationStatus({ status: 'sending', message: 'Отправляем уведомление...' });
@@ -159,11 +207,12 @@ const Checkout = () => {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          items: cartItems.map(item => ({
-            title: item.title,
-            price: item.price,
-            startDate: item.startDate.toISOString(),
-            endDate: item.endDate.toISOString()
+          items: Array.from(groupedItems.values()).map(group => ({
+            title: group.title,
+            price: group.price,
+            startDate: group.startDate.toISOString(),
+            endDate: group.endDate.toISOString(),
+            quantity: group.totalQuantity
           })),
           totalAmount: getCartTotal()
         });
@@ -205,7 +254,7 @@ const Checkout = () => {
       setOrderComplete(true);
       toast.success('Заказ оформлен успешно!');
       console.log('Booking completed successfully:', {
-        items: cartItems.length,
+        uniqueProducts: groupedItems.size,
         totalValue: getCartTotal()
       });
     } catch (error) {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product } from '@/types/product';
 import { useToast } from '@/hooks/use-toast';
@@ -80,8 +81,20 @@ export const useCart = () => {
       return false;
     }
 
-    // Check availability before adding
-    const availability = await checkProductAvailability(product.id, startDate, endDate, quantity);
+    // Check if this product with the same dates already exists in cart
+    const existingItemIndex = cartItems.findIndex(item => 
+      item.productId === product.id &&
+      item.startDate.getTime() === startDate.getTime() &&
+      item.endDate.getTime() === endDate.getTime()
+    );
+
+    let totalRequestedQuantity = quantity;
+    if (existingItemIndex >= 0) {
+      totalRequestedQuantity += cartItems[existingItemIndex].quantity;
+    }
+
+    // Check availability for the total requested quantity
+    const availability = await checkProductAvailability(product.id, startDate, endDate, totalRequestedQuantity);
     
     if (!availability.available) {
       toast({
@@ -92,23 +105,44 @@ export const useCart = () => {
       return false;
     }
 
-    // Generate a unique cart item ID
-    const cartItemId = `${product.id}_${Date.now()}`;
+    if (existingItemIndex >= 0) {
+      // Update existing item quantity
+      setCartItems(prevItems => 
+        prevItems.map((item, index) => 
+          index === existingItemIndex 
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        )
+      );
 
-    // Add the item to the cart
-    setCartItems(prevItems => [
-      ...prevItems,
-      {
-        id: cartItemId,
-        productId: product.id,
-        title: product.title,
-        price: product.price,
-        imageUrl: product.imageUrl,
-        startDate,
-        endDate,
-        quantity
-      }
-    ]);
+      toast({
+        title: "Количество обновлено",
+        description: `Количество ${product.title} увеличено на ${quantity} шт.`,
+      });
+    } else {
+      // Generate a unique cart item ID
+      const cartItemId = `${product.id}_${Date.now()}`;
+
+      // Add the item to the cart
+      setCartItems(prevItems => [
+        ...prevItems,
+        {
+          id: cartItemId,
+          productId: product.id,
+          title: product.title,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          startDate,
+          endDate,
+          quantity
+        }
+      ]);
+
+      toast({
+        title: "Добавлено в корзину",
+        description: `${product.title} ${quantity > 1 ? `(${quantity} шт.)` : ''} добавлен в корзину.`,
+      });
+    }
 
     // Invalidate product data to refresh availability
     await queryClient.invalidateQueries({ 
@@ -118,13 +152,8 @@ export const useCart = () => {
       queryKey: ['cart-products'] 
     });
 
-    toast({
-      title: "Добавлено в корзину",
-      description: `${product.title} ${quantity > 1 ? `(${quantity} шт.)` : ''} добавлен в корзину.`,
-    });
-
     return true;
-  }, [toast, checkProductAvailability, queryClient]);
+  }, [toast, checkProductAvailability, queryClient, cartItems]);
 
   const removeFromCart = useCallback(async (itemId: string) => {
     const item = cartItems.find(cartItem => cartItem.id === itemId);
