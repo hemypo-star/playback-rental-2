@@ -74,6 +74,15 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* Optimize for smooth scrolling */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Performance optimizations for mobile */
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Import Inter font from Google Fonts */
@@ -123,8 +132,19 @@
     @apply opacity-100;
   }
 
+  /* Optimized transition classes for performance */
   .smooth-transition {
-    @apply transition-all duration-300 ease-in-out;
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+    will-change: transform, opacity;
+  }
+
+  /* Reduce GPU usage on mobile by limiting will-change */
+  .card-hover {
+    transition: box-shadow 0.2s ease-out, transform 0.2s ease-out;
+  }
+
+  .card-hover:hover {
+    will-change: transform;
   }
 
   .page-container {
@@ -157,5 +177,21 @@
 
   .chip {
     @apply px-3 py-1 text-xs rounded-full inline-flex items-center bg-secondary text-secondary-foreground;
+  }
+
+  /* Performance optimization for images */
+  img {
+    content-visibility: auto;
+  }
+
+  /* Reduce layout thrashing on mobile */
+  @media (max-width: 768px) {
+    .grid {
+      contain: layout style;
+    }
+    
+    .card {
+      contain: layout style;
+    }
   }
 }

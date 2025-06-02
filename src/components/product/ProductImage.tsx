@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { Product } from '@/types/product';
 import { Image } from 'lucide-react';
@@ -14,7 +14,7 @@ type ProductImageProps = {
   className?: string;
 };
 
-const ProductImage = (props: ProductImageProps) => {
+const ProductImage = memo((props: ProductImageProps) => {
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -61,13 +61,17 @@ const ProductImage = (props: ProductImageProps) => {
     setIsLoading(false);
   };
 
+  const handleLoad = () => {
+    setIsLoading(false);
+  };
+
   return (
     <>
       {isLoading ? (
         <div className={cn("flex items-center justify-center bg-gray-100", className)}>
           <div className="text-gray-400 text-center p-4">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-            <div>Загрузка...</div>
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <div className="text-xs">Загрузка...</div>
           </div>
         </div>
       ) : imageUrl && !isError ? (
@@ -76,17 +80,22 @@ const ProductImage = (props: ProductImageProps) => {
           alt={title}
           className={cn("object-cover", className)}
           onError={handleError}
+          onLoad={handleLoad}
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className={cn("flex items-center justify-center bg-gray-100", className)}>
           <div className="text-gray-400 text-center p-4">
-            <Image className="h-12 w-12 mx-auto mb-2" />
-            <div>Изображение недоступно</div>
+            <Image className="h-8 w-8 mx-auto mb-2" />
+            <div className="text-xs">Изображение недоступно</div>
           </div>
         </div>
       )}
     </>
   );
-};
+});
+
+ProductImage.displayName = 'ProductImage';
 
 export default ProductImage;

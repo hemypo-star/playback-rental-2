@@ -6,7 +6,7 @@ import * as productService from '@/services/productService';
 import * as categoryService from '@/services/categoryService';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import CategorySidebar from '@/components/catalog/CategorySidebar';
-import ProductGrid from '@/components/catalog/ProductGrid';
+import VirtualizedProductGrid from '@/components/catalog/VirtualizedProductGrid';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const Catalog = () => {
@@ -30,14 +30,14 @@ const Catalog = () => {
     endDate: locationState?.endDate
   });
   
-  // Fetch categories directly without excessive dependencies
+  // Fetch categories with optimized caching
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: categoryService.getCategories,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes - longer cache for categories
   });
   
-  // Fetch products with proper error handling
+  // Fetch products with optimized query
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', bookingDates.startDate, bookingDates.endDate],
     queryFn: () => {
@@ -46,7 +46,7 @@ const Catalog = () => {
       }
       return productService.getProducts();
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   useEffect(() => {
@@ -59,7 +59,10 @@ const Catalog = () => {
     }
     
     if (locationState?.scrollTop) {
-      window.scrollTo(0, 0);
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     }
   }, [categoryFromUrl, locationState]);
 
@@ -75,14 +78,24 @@ const Catalog = () => {
     if (searchInput) searchInput.value = '';
   };
   
+  // Optimize filtering with early returns
   const filteredProducts = products?.filter(product => {
-    const matchesSearch = !search ? true : 
-      product.title.toLowerCase().includes(search.toLowerCase()) || 
-      product.description.toLowerCase().includes(search.toLowerCase());
-      
-    const matchesCategory = activeTab === 'all' || product.category_id.toString() === activeTab;
+    // Early return for category filter
+    if (activeTab !== 'all' && product.category_id.toString() !== activeTab) {
+      return false;
+    }
     
-    return matchesSearch && matchesCategory;
+    // Early return for search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const titleMatch = product.title.toLowerCase().includes(searchLower);
+      const descMatch = product.description.toLowerCase().includes(searchLower);
+      if (!titleMatch && !descMatch) {
+        return false;
+      }
+    }
+    
+    return true;
   }) || [];
 
   return (
@@ -116,7 +129,7 @@ const Catalog = () => {
             />
           )}
           
-          <ProductGrid
+          <VirtualizedProductGrid
             products={filteredProducts}
             isLoading={isLoading}
             bookingDates={bookingDates}
