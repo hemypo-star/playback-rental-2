@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product } from '@/types/product';
 import { useToast } from '@/hooks/use-toast';
@@ -43,7 +42,7 @@ export const useCart = () => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = useCallback((product: Product, startDate?: Date, endDate?: Date) => {
+  const addToCart = useCallback((product: Product, startDate?: Date, endDate?: Date, quantity: number = 1) => {
     // Check if required dates are provided
     if (!startDate || !endDate) {
       toast({
@@ -68,13 +67,13 @@ export const useCart = () => {
         imageUrl: product.imageUrl,
         startDate,
         endDate,
-        quantity: 1
+        quantity
       }
     ]);
 
     toast({
       title: "Добавлено в корзину",
-      description: `${product.title} добавлен в корзину.`,
+      description: `${product.title} ${quantity > 1 ? `(${quantity} шт.)` : ''} добавлен в корзину.`,
     });
 
     return true;
@@ -88,6 +87,26 @@ export const useCart = () => {
       description: "Товар удален из корзины.",
     });
   }, [toast]);
+
+  const updateItemQuantity = useCallback((itemId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeFromCart(itemId);
+      return;
+    }
+
+    setCartItems(prevItems => 
+      prevItems.map(item => 
+        item.id === itemId 
+          ? { ...item, quantity: newQuantity }
+          : item
+      )
+    );
+
+    toast({
+      title: "Количество обновлено",
+      description: "Количество товара в корзине обновлено.",
+    });
+  }, [removeFromCart, toast]);
 
   const clearCart = useCallback(() => {
     setCartItems([]);
@@ -136,18 +155,19 @@ export const useCart = () => {
     return Math.round(total);
   }, [cartItems]);
 
-  const cartCount = useMemo(() => cartItems.length, [cartItems]);
+  const cartCount = useMemo(() => cartItems.reduce((count, item) => count + item.quantity, 0), [cartItems]);
 
   // Memoize the return value to prevent unnecessary re-renders
   return useMemo(() => ({
     cartItems,
     addToCart,
     removeFromCart,
+    updateItemQuantity,
     clearCart,
     updateCartDates,
     getCartTotal,
     cartCount
-  }), [cartItems, addToCart, removeFromCart, clearCart, updateCartDates, getCartTotal, cartCount]);
+  }), [cartItems, addToCart, removeFromCart, updateItemQuantity, clearCart, updateCartDates, getCartTotal, cartCount]);
 };
 
 // Create a CartProvider for global state management

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -9,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BookingCalendar from '@/components/BookingCalendar';
 import PricingCalculator from '@/components/PricingCalculator';
+import QuantitySelector from '@/components/QuantitySelector';
 import { getProductById } from '@/services/apiService';
 import { getProductBookings } from '@/services/bookingService';
 import { getCategories } from '@/services/categoryService';
@@ -36,6 +36,7 @@ const ProductDetail = () => {
     endDate: locationState?.endDate
   });
   
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const { addToCart } = useCartContext();
   
@@ -64,6 +65,8 @@ const ProductDetail = () => {
       startDate: bookingPeriod.startDate,
       endDate: bookingPeriod.endDate
     });
+    // Reset quantity when dates change
+    setSelectedQuantity(1);
   };
 
   // Calculate available quantity considering bookings
@@ -77,7 +80,7 @@ const ProductDetail = () => {
   const isAvailableForDates = product ? isQuantityAvailable(
     product, 
     bookings || [], 
-    1, 
+    selectedQuantity, 
     bookingDates?.startDate, 
     bookingDates?.endDate
   ) : false;
@@ -88,7 +91,7 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!product || !bookingDates.startDate || !bookingDates.endDate || hasDateConflict) return;
     setAddingToCart(true);
-    const success = addToCart(product, bookingDates.startDate, bookingDates.endDate);
+    const success = addToCart(product, bookingDates.startDate, bookingDates.endDate, selectedQuantity);
     if (success) {
       setTimeout(() => {
         setAddingToCart(false);
@@ -221,9 +224,22 @@ const ProductDetail = () => {
                 isCompact={isMobile}
               />
 
+              {/* Quantity Selector - only show if dates are selected and quantity > 1 available */}
+              {bookingDates.startDate && bookingDates.endDate && availableQuantity > 1 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Количество:</label>
+                  <QuantitySelector
+                    quantity={selectedQuantity}
+                    onQuantityChange={setSelectedQuantity}
+                    maxQuantity={availableQuantity}
+                    disabled={isLoadingBookings || hasDateConflict}
+                  />
+                </div>
+              )}
+
               {bookingDates.startDate && bookingDates.endDate && 
                 <PricingCalculator 
-                  basePrice={product.price} 
+                  basePrice={product.price * selectedQuantity} 
                   startDate={bookingDates.startDate} 
                   endDate={bookingDates.endDate} 
                 />
@@ -243,12 +259,15 @@ const ProductDetail = () => {
                 ) : hasDateConflict ? (
                   <>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    Даты недоступны
+                    Количество недоступно
                   </>
                 ) : (
                   <>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {bookingDates.startDate && bookingDates.endDate ? 'Добавить в корзину' : 'Выберите даты'}
+                    {bookingDates.startDate && bookingDates.endDate ? 
+                      `Добавить в корзину${selectedQuantity > 1 ? ` (${selectedQuantity} шт.)` : ''}` : 
+                      'Выберите даты'
+                    }
                   </>
                 )}
               </Button>

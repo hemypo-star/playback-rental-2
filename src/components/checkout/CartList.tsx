@@ -5,9 +5,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { useCartContext } from "@/hooks/useCart";
 import { calculateRentalDetails, formatCurrency } from "@/utils/pricingUtils";
 import { formatDateRange } from "@/utils/dateUtils";
+import QuantitySelector from "@/components/QuantitySelector";
 
 const CartList = () => {
-  const { cartItems, removeFromCart } = useCartContext();
+  const { cartItems, removeFromCart, updateItemQuantity } = useCartContext();
 
   if (cartItems.length === 0) {
     return (
@@ -43,7 +44,7 @@ const CartList = () => {
           {cartItems.map((item) => {
             const hours = Math.ceil((item.endDate.getTime() - item.startDate.getTime()) / (1000 * 60 * 60));
             const pricingDetails = calculateRentalDetails(item.price, hours);
-            const itemTotal = pricingDetails.total;
+            const itemTotal = pricingDetails.total * item.quantity;
 
             return (
               <div key={item.id} className="flex gap-4">
@@ -59,15 +60,31 @@ const CartList = () => {
                   {pricingDetails.dayDiscount > 0 && (
                     <p className="text-xs text-green-600 mb-1">Скидка: {pricingDetails.dayDiscount}%</p>
                   )}
+                  
+                  {/* Quantity Selector */}
+                  <div className="mb-3">
+                    <QuantitySelector
+                      quantity={item.quantity}
+                      onQuantityChange={(newQuantity) => updateItemQuantity(item.id, newQuantity)}
+                      maxQuantity={10} // We'll set a reasonable max since we don't have product data here
+                      size="sm"
+                    />
+                  </div>
+                  
                   <div className="flex justify-between items-center">
                     <div>
                       {pricingDetails.discount > 0 ? (
                         <div className="flex items-center gap-2">
-                          <p className="text-sm line-through text-muted-foreground">{formatCurrency(pricingDetails.subtotal)}</p>
+                          <p className="text-sm line-through text-muted-foreground">{formatCurrency(pricingDetails.subtotal * item.quantity)}</p>
                           <p className="font-medium">{formatCurrency(itemTotal)}</p>
                         </div>
                       ) : (
                         <p className="font-medium">{formatCurrency(itemTotal)}</p>
+                      )}
+                      {item.quantity > 1 && (
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(pricingDetails.total)} × {item.quantity}
+                        </p>
                       )}
                     </div>
                     <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-destructive" onClick={() => removeFromCart(item.id)}>

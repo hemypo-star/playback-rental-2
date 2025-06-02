@@ -1,4 +1,3 @@
-
 import React, { memo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -42,7 +41,7 @@ const ProductCardMemo = memo(({
     e.stopPropagation();
     
     if (hasBookingDates && isAvailableForDates) {
-      addToCart(product, bookingDates!.startDate, bookingDates!.endDate);
+      addToCart(product, bookingDates!.startDate, bookingDates!.endDate, 1); // Default quantity 1
       toast.success(`Товар "${product.title}" добавлен в корзину`);
     } else {
       navigate(`/product/${product.id}`, {
