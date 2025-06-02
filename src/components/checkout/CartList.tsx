@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { useCartContext } from "@/hooks/useCart";
 import { calculateRentalDetails, formatCurrency } from "@/utils/pricingUtils";
 import { formatDateRange } from "@/utils/dateUtils";
-import OptimizedImage from '@/components/OptimizedImage';
 
 const CartList = () => {
   const { cartItems, removeFromCart } = useCartContext();
@@ -41,7 +40,7 @@ const CartList = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {cartItems.map((item, index) => {
+          {cartItems.map((item) => {
             const hours = Math.ceil((item.endDate.getTime() - item.startDate.getTime()) / (1000 * 60 * 60));
             const pricingDetails = calculateRentalDetails(item.price, hours);
             const itemTotal = pricingDetails.total;
@@ -49,14 +48,7 @@ const CartList = () => {
             return (
               <div key={item.id} className="flex gap-4">
                 <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 subtle-ring">
-                  <OptimizedImage 
-                    src={item.imageUrl} 
-                    alt={item.title} 
-                    className="w-full h-full object-cover"
-                    width={96}
-                    height={96}
-                    priority={index < 3}
-                  />
+                  <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-medium mb-1">{item.title}</h3>

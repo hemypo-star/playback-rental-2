@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { BookingPeriod, Product } from '@/types/product';
 import { useQuery } from '@tanstack/react-query';
 import { getCategories } from '@/services/categoryService';
-import OptimizedImage from '@/components/OptimizedImage';
 
 // Interface for bookings with display name
 interface ExtendedBooking extends BookingPeriod {
@@ -151,13 +150,9 @@ const CalendarTable = ({
                   <td className="sticky left-0 z-10 bg-card p-3 font-medium border-r">
                     <div className="flex items-center gap-2">
                       {product.imageUrl && (
-                        <OptimizedImage
-                          src={product.imageUrl}
-                          alt={product.title}
-                          className="w-8 h-8 rounded flex-shrink-0"
-                          width={32}
-                          height={32}
-                          priority={index < 5}
+                        <div 
+                          className="w-8 h-8 rounded bg-center bg-cover flex-shrink-0"
+                          style={{ backgroundImage: `url(${product.imageUrl})` }}
                         />
                       )}
                       <div>

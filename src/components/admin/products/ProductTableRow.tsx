@@ -5,9 +5,9 @@ import StatusDropdown from "@/components/admin/StatusDropdown";
 import { Badge } from "@/components/ui/badge";
 import { Image } from "lucide-react";
 import { Product, Category } from "@/types/product";
+import { getProductImageUrl } from "@/utils/imageUtils";
 import { useQuery } from '@tanstack/react-query';
 import { getCategories } from '@/services/categoryService';
-import OptimizedImage from '@/components/OptimizedImage';
 
 type Props = {
   product: Product;
@@ -28,6 +28,8 @@ export default function ProductTableRow({
   isSelected = false,
   onSelectChange = () => {}
 }: Props) {
+  const imageUrl = product.imageUrl ? getProductImageUrl(product.imageUrl) : null;
+  
   // Load categories to get category name by ID
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -47,13 +49,10 @@ export default function ProductTableRow({
         />
       </TableCell>
       <TableCell>
-        {product.imageUrl ? (
-          <OptimizedImage
-            src={product.imageUrl}
-            alt={product.title}
-            className="w-10 h-10 rounded"
-            width={40}
-            height={40}
+        {imageUrl ? (
+          <div 
+            className="w-10 h-10 rounded bg-center bg-cover"
+            style={{ backgroundImage: `url(${imageUrl})` }}
           />
         ) : (
           <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">

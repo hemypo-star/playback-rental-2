@@ -1,11 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { Product } from '@/types/product';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { prefetchImages, getOptimizedImageUrl } from '@/utils/optimizedImageUtils';
 
 type ProductGridProps = {
   products: Product[];
@@ -24,28 +24,6 @@ const ProductGrid = ({
   const isMobile = useIsMobile();
   
   const productsPerPage = isMobile ? 6 : 8;
-
-  // Prefetch visible product images
-  useEffect(() => {
-    if (products.length > 0) {
-      const visibleProductImages = products
-        .slice(0, visibleProducts)
-        .map(product => product.imageUrl)
-        .filter(Boolean)
-        .map(imageUrl => getOptimizedImageUrl(imageUrl, { width: 300, height: 225 }));
-
-      // Prefetch first 4 images with priority, rest without
-      const priorityImages = visibleProductImages.slice(0, 4);
-      const nonPriorityImages = visibleProductImages.slice(4);
-
-      if (priorityImages.length > 0) {
-        prefetchImages(priorityImages, true);
-      }
-      if (nonPriorityImages.length > 0) {
-        prefetchImages(nonPriorityImages, false);
-      }
-    }
-  }, [products, visibleProducts]);
 
   const handleLoadMore = () => {
     setVisibleProducts(prev => prev + (isMobile ? 6 : 16));
@@ -96,12 +74,11 @@ const ProductGrid = ({
         </h2>
       </div>
       <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 w-full">
-        {products.slice(0, visibleProducts).map((product, index) => (
+        {products.slice(0, visibleProducts).map(product => (
           <ProductCard 
             key={product.id}
             product={product}
             bookingDates={bookingDates}
-            priority={index < 4} // First 4 images get priority loading
           />
         ))}
       </div>

@@ -1,3 +1,4 @@
+
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,14 +21,12 @@ type ProductCardProps = {
     endDate?: Date;
   };
   featured?: boolean;
-  priority?: boolean;
 };
 
 const ProductCard = ({
   product,
   bookingDates,
-  featured = false,
-  priority = false
+  featured = false
 }: ProductCardProps) => {
   const navigate = useNavigate();
   const { addToCart } = useCartContext();
@@ -125,8 +124,7 @@ const ProductCard = ({
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <ProductImage 
             product={product}
-            className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-            priority={priority}
+            className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105" 
           />
           {featured && (
             <div className="absolute top-2 left-2 bg-primary text-white text-xs font-medium px-2 py-1 rounded">

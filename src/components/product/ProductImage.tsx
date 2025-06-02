@@ -1,80 +1,91 @@
 
-import OptimizedImage from '@/components/OptimizedImage';
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { Product } from '@/types/product';
-import { validateAndFixImageUrl } from '@/utils/optimizedImageUtils';
-import { useEffect, useState } from 'react';
+import { Image } from 'lucide-react';
+import { getProductImageUrl } from '@/utils/imageUtils';
 
 type ProductImageProps = {
   imageUrl: string;
   title: string;
   className?: string;
-  width?: number;
-  height?: number;
-  priority?: boolean;
 } | {
   product: Product;
   className?: string;
-  width?: number;
-  height?: number;
-  priority?: boolean;
 };
 
 const ProductImage = (props: ProductImageProps) => {
-  // Extract values from props
-  const imageUrl = 'product' in props ? props.product.imageUrl : props.imageUrl;
+  const [isError, setIsError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  // Extract imageUrl and title from props based on whether we receive a product or direct values
+  const rawImageUrl = 'product' in props ? props.product.imageUrl : props.imageUrl;
   const title = 'product' in props ? props.product.title : props.title;
-  const { className, width = 400, height = 300, priority = false } = props;
-  
-  const [validatedImageUrl, setValidatedImageUrl] = useState<string>(imageUrl);
+  const className = props.className;
 
-  console.log('ProductImage render:', { imageUrl, title, width, height, priority });
-
-  // Check if this is an external URL - OptimizedImage will handle this automatically now
-  const isExternalUrl = imageUrl && imageUrl.startsWith('http') && !imageUrl.includes('supabase.co');
-
-  // Validate and fix the image URL on component mount (only for non-external URLs)
+  // Get the public URL for the image
   useEffect(() => {
-    if (isExternalUrl) {
-      // For external URLs, use them directly without validation
-      setValidatedImageUrl(imageUrl);
+    if (!rawImageUrl) {
+      console.log('ProductImage: No raw image URL provided');
+      setIsLoading(false);
+      setIsError(true);
       return;
     }
 
-    const validateUrl = async () => {
-      const validUrl = await validateAndFixImageUrl(imageUrl);
-      setValidatedImageUrl(validUrl);
-    };
-    
-    validateUrl();
-  }, [imageUrl, isExternalUrl]);
+    setIsLoading(true);
+    setIsError(false);
 
-  if (!validatedImageUrl) {
-    console.log('No valid image URL, using placeholder');
-    return (
-      <OptimizedImage
-        src="/placeholder.svg"
-        alt={title}
-        className={className}
-        width={width}
-        height={height}
-        priority={priority}
-      />
-    );
-  }
+    try {
+      // Get public URL directly from Supabase storage or use the URL as is if it's external
+      const publicUrl = getProductImageUrl(rawImageUrl);
+      console.log(`ProductImage: Converting raw URL "${rawImageUrl}" to public URL "${publicUrl}"`);
+      setImageUrl(publicUrl);
+      
+      // If publicUrl is null, set error state
+      if (!publicUrl) {
+        setIsError(true);
+      }
+      
+      setIsLoading(false);
+    } catch (error) {
+      console.error(`Error getting product image URL for "${rawImageUrl}":`, error);
+      setIsLoading(false);
+      setIsError(true);
+    }
+  }, [rawImageUrl]);
 
-  // Pass the validated URL to OptimizedImage - it will auto-detect external URLs
+  const handleError = () => {
+    console.error(`Image failed to load: ${imageUrl} (raw: ${rawImageUrl})`);
+    setIsError(true);
+    setIsLoading(false);
+  };
+
   return (
-    <OptimizedImage
-      src={validatedImageUrl}
-      alt={title}
-      className={className}
-      width={width}
-      height={height}
-      priority={priority}
-      sizes={props.className?.includes('w-10') ? '40px' : 
-             props.className?.includes('w-8') ? '32px' :
-             `(max-width: 768px) ${Math.min(width, 300)}px, ${width}px`}
-    />
+    <>
+      {isLoading ? (
+        <div className={cn("flex items-center justify-center bg-gray-100", className)}>
+          <div className="text-gray-400 text-center p-4">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <div>Загрузка...</div>
+          </div>
+        </div>
+      ) : imageUrl && !isError ? (
+        <img
+          src={imageUrl}
+          alt={title}
+          className={cn("object-cover", className)}
+          onError={handleError}
+        />
+      ) : (
+        <div className={cn("flex items-center justify-center bg-gray-100", className)}>
+          <div className="text-gray-400 text-center p-4">
+            <Image className="h-12 w-12 mx-auto mb-2" />
+            <div>Изображение недоступно</div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
