@@ -78,9 +78,9 @@ export default function ProductTableRow({
             {product.title}
             {/* Visual indicator for availability */}
             {product.available ? (
-              <Eye className="h-4 w-4 text-green-600" title="Видимый в каталоге" />
+              <Eye className="h-4 w-4 text-green-600" />
             ) : (
-              <EyeOff className="h-4 w-4 text-red-600" title="Скрыт из каталога" />
+              <EyeOff className="h-4 w-4 text-red-600" />
             )}
           </div>
           {/* Edit/Delete inline actions for quick access */}
