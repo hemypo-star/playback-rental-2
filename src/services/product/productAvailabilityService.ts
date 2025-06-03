@@ -1,6 +1,6 @@
 
 import { Product } from '@/types/product';
-import { getProducts } from './productBasicService';
+import { getAvailableProductsOnly } from './productBasicService';
 
 /**
  * Gets products that are available for booking in the given date range
@@ -10,17 +10,13 @@ import { getProducts } from './productBasicService';
  */
 export const getAvailableProducts = async (startDate: Date, endDate: Date): Promise<Product[]> => {
   try {
-    const products = await getProducts();
+    // First get only products that are marked as available
+    const availableProducts = await getAvailableProductsOnly();
     const { getBookings } = await import('@/services/bookingService');
     const bookings = await getBookings();
     
     // Filter out products that have bookings in the requested period
-    return products.filter(product => {
-      // Only check availability for products that are marked as available
-      if (!product.available) {
-        return false;
-      }
-      
+    return availableProducts.filter(product => {
       const productBookings = bookings.filter(
         booking => booking.productId === product.id &&
         ['confirmed', 'pending'].includes(booking.status) &&

@@ -47,13 +47,14 @@ export default function ProductTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Фото</TableHead>
-            <TableHead>ID</TableHead>
+            <TableHead className="w-12">Выбор</TableHead>
+            <TableHead className="w-16">Фото</TableHead>
+            <TableHead className="w-24">ID</TableHead>
             <TableHead>Название</TableHead>
-            <TableHead>Категория</TableHead>
-            <TableHead className="text-right">Цена / сутки</TableHead>
-            <TableHead>Кол-во</TableHead>
-            <TableHead>Статус</TableHead>
+            <TableHead className="w-32">Категория</TableHead>
+            <TableHead className="text-right w-32">Цена / сутки</TableHead>
+            <TableHead className="w-20">Кол-во</TableHead>
+            <TableHead className="w-40">Доступность</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

@@ -3,8 +3,8 @@ import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Gets all products from the database
- * @returns Array of products
+ * Gets all products from the database (for admin use)
+ * @returns Array of all products
  */
 export const getProducts = async (): Promise<Product[]> => {
   try {
@@ -19,6 +19,31 @@ export const getProducts = async (): Promise<Product[]> => {
     })) || [];
   } catch (error) {
     console.error('Error getting products:', error);
+    return [];
+  }
+};
+
+/**
+ * Gets only available products from the database (for catalog use)
+ * @returns Array of available products
+ */
+export const getAvailableProductsOnly = async (): Promise<Product[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('available', true); // Only get available products
+    
+    if (error) throw error;
+    
+    // Map database fields to frontend format
+    return data?.map(product => ({
+      ...product,
+      imageUrl: product.imageurl,
+      category_id: parseInt(product.category) // Convert category string to category_id number
+    })) || [];
+  } catch (error) {
+    console.error('Error getting available products:', error);
     return [];
   }
 };

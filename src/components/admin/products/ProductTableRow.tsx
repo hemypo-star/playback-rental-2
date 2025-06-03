@@ -3,7 +3,7 @@ import { TableRow, TableCell } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import StatusDropdown from "@/components/admin/StatusDropdown";
 import { Badge } from "@/components/ui/badge";
-import { Image } from "lucide-react";
+import { Image, Eye, EyeOff } from "lucide-react";
 import { Product, Category } from "@/types/product";
 import { getProductImageUrl } from "@/utils/imageUtils";
 import { useQuery } from '@tanstack/react-query';
@@ -39,6 +39,17 @@ export default function ProductTableRow({
   // Find the category name for this product
   const categoryName = categories?.find(cat => cat.category_id === product.category_id)?.name || 'Без категории';
 
+  // Map product availability to status dropdown values
+  const currentStatus = product.available ? "confirmed" : "cancelled";
+
+  const handleStatusChange = (newStatus: string) => {
+    const newAvailability = newStatus === "confirmed";
+    updateMutation.mutate({ 
+      id: product.id, 
+      data: { available: newAvailability } 
+    });
+  };
+
   return (
     <TableRow key={product.id}>
       <TableCell>
@@ -63,7 +74,15 @@ export default function ProductTableRow({
       <TableCell className="font-mono text-sm">{product.id.substring(0, 8)}...</TableCell>
       <TableCell className="font-medium">
         <div className="flex justify-between items-center gap-2">
-          {product.title}
+          <div className="flex items-center gap-2">
+            {product.title}
+            {/* Visual indicator for availability */}
+            {product.available ? (
+              <Eye className="h-4 w-4 text-green-600" title="Видимый в каталоге" />
+            ) : (
+              <EyeOff className="h-4 w-4 text-red-600" title="Скрыт из каталога" />
+            )}
+          </div>
           {/* Edit/Delete inline actions for quick access */}
           <span>
             <button
@@ -89,14 +108,19 @@ export default function ProductTableRow({
       <TableCell className="text-right">{product.price.toLocaleString()} ₽</TableCell>
       <TableCell>{product.quantity}</TableCell>
       <TableCell>
-        <StatusDropdown
-          value={product.available ? "confirmed" : "cancelled"}
-          onChange={(newStatus) => {
-            updateMutation.mutate({ id: product.id, data: { available: newStatus === "confirmed" } });
-          }}
-          options={statusOptions}
-          disabled={updateMutation.isPending}
-        />
+        <div className="flex items-center gap-2">
+          <StatusDropdown
+            value={currentStatus}
+            onChange={handleStatusChange}
+            options={statusOptions}
+            disabled={updateMutation.isPending}
+          />
+          {!product.available && (
+            <Badge variant="secondary" className="text-xs">
+              Скрыт
+            </Badge>
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );

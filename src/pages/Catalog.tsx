@@ -37,14 +37,15 @@ const Catalog = () => {
     staleTime: 10 * 60 * 1000, // 10 minutes - longer cache for categories
   });
   
-  // Fetch products with optimized query
+  // Fetch products with optimized query - only available products for catalog
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products', bookingDates.startDate, bookingDates.endDate],
+    queryKey: ['catalog-products', bookingDates.startDate, bookingDates.endDate],
     queryFn: () => {
       if (bookingDates.startDate && bookingDates.endDate) {
         return productService.getAvailableProducts(bookingDates.startDate, bookingDates.endDate);
       }
-      return productService.getProducts();
+      // For catalog, only show available products
+      return productService.getAvailableProductsOnly();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
