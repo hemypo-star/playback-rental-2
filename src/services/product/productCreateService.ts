@@ -1,85 +1,68 @@
 
-import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
-import { getProductImageUrl, uploadProductImage } from '@/utils/imageUtils';
+import { ProductFormValues } from '@/hooks/useProductForm';
+import { uploadProductImage } from '@/utils/imageUtils';
 
 /**
  * Creates a new product
- * @param product Product data
- * @param imageFile Image file or URL
- * @returns Created product or null if creation failed
+ * @param productData Product data from form
+ * @param imageFile Image file to upload (can be File or URL string)
+ * @returns Created product or null if failed
  */
-export const createProduct = async (product: Partial<Product>, imageFile?: File | string): Promise<Product | null> => {
+export const createProduct = async (
+  productData: ProductFormValues,
+  imageFile?: File | string | null
+): Promise<any> => {
   try {
-    console.log("Creating product:", product, "with image:", typeof imageFile === 'string' ? 'URL' : (imageFile ? 'File' : 'None'));
+    console.log('Creating product with data:', productData);
+    console.log('Image file:', imageFile);
+
+    let imageUrl = '';
     
-    let imageFileName = product.imageUrl || '';
-    
-    // If we have an image (file or URL), upload or use it
+    // Handle image upload if provided
     if (imageFile) {
       try {
-        if (typeof imageFile === 'string') {
-          console.log("Using external URL for product image:", imageFile);
-          imageFileName = imageFile;
-        } else {
-          console.log("Uploading image file before creating product");
-          imageFileName = await uploadProductImage(imageFile);
-        }
-        console.log("Image ready, filename/URL:", imageFileName);
-      } catch (uploadError) {
-        console.error("Error with product image:", uploadError);
-        // Continue with product creation even if image handling fails
+        imageUrl = await uploadProductImage(imageFile);
+        console.log('Image uploaded successfully:', imageUrl);
+      } catch (imageError) {
+        console.error('Failed to upload image:', imageError);
+        // Continue with product creation even if image upload fails
+        imageUrl = '';
       }
     }
-    
-    // Prepare database product - use category_id
-    let categoryValue = '';
-    
-    if (product.category_id !== undefined) {
-      // Use the numeric category_id directly
-      categoryValue = product.category_id.toString();
-      console.log("Using provided category_id:", product.category_id);
-    } else {
-      throw new Error("Product must have category_id field");
-    }
-    
-    const dbProduct = {
-      title: product.title || '',
-      description: product.description || '',
-      price: product.price || 0,
-      category: categoryValue, // Store as string in the database
-      imageurl: imageFileName, // Use the uploaded image filename or URL
-      quantity: product.quantity || 1,
-      available: product.available !== undefined ? product.available : true
+
+    // Prepare data for database insertion - map frontend format to database format
+    const dbData = {
+      title: productData.title,
+      description: productData.description || '',
+      price: productData.price,
+      category: productData.category_id.toString(), // Convert number to string for legacy category column
+      category_id: productData.category_id, // Use new category_id column
+      imageurl: imageUrl,
+      quantity: productData.quantity || 1,
+      available: productData.available ?? true
     };
-    
-    // Validate that all required fields have values
-    if (!dbProduct.title || !dbProduct.category) {
-      throw new Error("Product title and category are required fields");
-    }
-    
-    console.log("Inserting product with category:", dbProduct.category, "and imageurl:", dbProduct.imageurl);
-    
-    // Insert the product
-    const { data, error } = await supabase.from('products').insert([dbProduct]).select().single();
-    
+
+    console.log('Inserting product into database:', dbData);
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert([dbData])
+      .select()
+      .single();
+
     if (error) {
-      console.error("Error inserting product:", error);
+      console.error('Database error creating product:', error);
       throw error;
     }
-    
-    if (!data) {
-      console.error("No data returned from product insertion");
-      return null;
-    }
-    
-    console.log("Product created:", data);
-    
-    // Map imageurl to imageUrl and category to category_id for consistency in the frontend
+
+    console.log('Product created successfully:', data);
+
+    // Map database response back to frontend format
     return {
       ...data,
       imageUrl: data.imageurl,
-      category_id: parseInt(data.category) // Convert category string to category_id number
+      category_id: data.category_id
     };
   } catch (error) {
     console.error('Error creating product:', error);

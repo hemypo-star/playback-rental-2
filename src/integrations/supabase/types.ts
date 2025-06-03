@@ -132,6 +132,7 @@ export type Database = {
         Row: {
           available: boolean
           category: string
+          category_id: number
           description: string
           id: string
           imageurl: string
@@ -142,6 +143,7 @@ export type Database = {
         Insert: {
           available?: boolean
           category: string
+          category_id: number
           description: string
           id?: string
           imageurl: string
@@ -152,6 +154,7 @@ export type Database = {
         Update: {
           available?: boolean
           category?: string
+          category_id?: number
           description?: string
           id?: string
           imageurl?: string

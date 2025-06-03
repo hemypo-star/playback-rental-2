@@ -1,7 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseServiceClient } from '@/services/supabaseClient';
-import { getPublicUrl, ensurePublicBucket } from '@/services/storageService';
 
 /**
  * Uploads a product image to Supabase storage
@@ -20,14 +18,13 @@ export const uploadProductImage = async (imageFile: File | string, productId?: s
     return imageFile;
   }
   
-  // Ensure the products bucket exists
-  await ensurePublicBucket('products');
-  
   const timestamp = new Date().getTime();
   const fileName = `${productId ? `${productId}_` : ''}${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
   const filePath = `${fileName}`;
   
   try {
+    console.log('Uploading product image to bucket "products":', filePath);
+    
     const { error: uploadError } = await supabase.storage
       .from('products')
       .upload(filePath, imageFile, {
@@ -40,6 +37,7 @@ export const uploadProductImage = async (imageFile: File | string, productId?: s
       throw new Error(`Error uploading product image: ${uploadError.message}`);
     }
     
+    console.log('Product image uploaded successfully:', filePath);
     // Return the path of the uploaded image
     return filePath;
   } catch (error) {
@@ -80,14 +78,13 @@ export const uploadCategoryImage = async (imageFile: File | string, categoryId?:
     return imageFile;
   }
   
-  // Ensure the categories bucket exists
-  await ensurePublicBucket('categories');
-  
   const timestamp = new Date().getTime();
   const fileName = `${categoryId ? `${categoryId}_` : ''}${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
   const filePath = `${fileName}`;
   
   try {
+    console.log('Uploading category image to bucket "categories":', filePath);
+    
     const { error: uploadError } = await supabase.storage
       .from('categories')
       .upload(filePath, imageFile, {
@@ -100,12 +97,28 @@ export const uploadCategoryImage = async (imageFile: File | string, categoryId?:
       throw new Error(`Error uploading category image: ${uploadError.message}`);
     }
     
+    console.log('Category image uploaded successfully:', filePath);
     // Return the path of the uploaded image
     return filePath;
   } catch (error) {
     console.error('Error in uploadCategoryImage:', error);
     throw error;
   }
+};
+
+/**
+ * Gets the URL of a category image
+ * @param imageUrl The image URL or path
+ * @returns The full URL of the image
+ */
+export const getCategoryImageUrl = (imageUrl: string): string => {
+  if (!imageUrl) return '/placeholder.svg';
+  
+  if (imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
+  
+  return `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/categories/${imageUrl}`;
 };
 
 /**

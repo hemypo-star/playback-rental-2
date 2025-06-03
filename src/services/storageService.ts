@@ -1,83 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseServiceClient } from '@/services/supabaseClient';
-
-// Ensure a storage bucket exists and is public
-export const ensurePublicBucket = async (bucketName: string): Promise<boolean> => {
-  try {
-    console.log(`Ensuring public bucket ${bucketName} exists...`);
-    
-    // Check if bucket exists first
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    
-    if (listError) {
-      console.error(`Error listing buckets:`, listError);
-      // Try the edge function as a fallback
-      return await createBucketViaFunction(bucketName);
-    }
-    
-    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-    
-    if (!bucketExists) {
-      console.log(`Bucket ${bucketName} doesn't exist, creating it...`);
-      return await createBucketViaFunction(bucketName);
-    }
-    
-    console.log(`Bucket ${bucketName} exists, ensuring it's public...`);
-    
-    // Ensure the bucket is public via the edge function
-    const { data, error } = await supabase.functions.invoke('ensure-storage-bucket', {
-      body: { bucketName }
-    });
-
-    if (error) {
-      console.error(`Error ensuring public bucket ${bucketName}:`, error);
-      return false;
-    }
-    
-    console.log(`Bucket ${bucketName} status:`, data);
-    return true;
-  } catch (error) {
-    console.error(`Error ensuring public bucket ${bucketName}:`, error);
-    return false;
-  }
-};
-
-// Create bucket using edge function
-async function createBucketViaFunction(bucketName: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabase.functions.invoke('ensure-storage-bucket', {
-      body: { bucketName, createIfNotExists: true }
-    });
-    
-    if (error) {
-      console.error(`Error creating bucket ${bucketName} via function:`, error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error(`Exception creating bucket ${bucketName}:`, error);
-    return false;
-  }
-}
-
-// Reset storage permissions for all buckets
-export const resetStoragePermissions = async (): Promise<boolean> => {
-  try {
-    console.log('Resetting storage permissions for all buckets...');
-    
-    // Ensure both products and categories buckets
-    const productsResult = await ensurePublicBucket('products');
-    const categoriesResult = await ensurePublicBucket('categories');
-    
-    console.log(`Reset results: products=${productsResult}, categories=${categoriesResult}`);
-    return productsResult && categoriesResult;
-  } catch (error) {
-    console.error('Error resetting storage permissions:', error);
-    return false;
-  }
-};
 
 // Get a public URL for a file in a bucket
 export const getPublicUrl = (bucketName: string, fileName: string): string | null => {
@@ -118,15 +40,6 @@ export const testStorageConnection = async (bucketName: string): Promise<{succes
   try {
     console.log(`Testing connection to ${bucketName} bucket...`);
     
-    // First ensure the bucket exists
-    const bucketExists = await ensurePublicBucket(bucketName);
-    if (!bucketExists) {
-      return {
-        success: false,
-        message: `Failed to ensure ${bucketName} bucket exists`
-      };
-    }
-    
     // Try to list files in the bucket to test access
     const { data, error } = await supabase.storage.from(bucketName).list('');
     
@@ -149,4 +62,43 @@ export const testStorageConnection = async (bucketName: string): Promise<{succes
       message: `Exception testing storage connection: ${error?.message || 'Unknown error'}`
     };
   }
+};
+
+// Check if storage buckets exist and are accessible
+export const checkStorageStatus = async (): Promise<{ 
+  products: boolean; 
+  categories: boolean;
+  message: string;
+}> => {
+  try {
+    console.log('Checking storage bucket status...');
+    
+    const productsTest = await testStorageConnection('products');
+    const categoriesTest = await testStorageConnection('categories');
+    
+    return {
+      products: productsTest.success,
+      categories: categoriesTest.success,
+      message: `Products: ${productsTest.success ? 'OK' : 'Failed'}, Categories: ${categoriesTest.success ? 'OK' : 'Failed'}`
+    };
+  } catch (error: any) {
+    console.error('Error checking storage status:', error);
+    return {
+      products: false,
+      categories: false,
+      message: `Error checking storage: ${error?.message || 'Unknown error'}`
+    };
+  }
+};
+
+// Reset storage permissions (legacy function for compatibility)
+export const resetStoragePermissions = async (): Promise<boolean> => {
+  const status = await checkStorageStatus();
+  return status.products && status.categories;
+};
+
+// Ensure bucket exists (legacy function for compatibility)
+export const ensurePublicBucket = async (bucketName: string): Promise<boolean> => {
+  const test = await testStorageConnection(bucketName);
+  return test.success;
 };
