@@ -11,6 +11,8 @@ import { BookingPeriod } from '@/types/product';
 import { StatisticsCard } from '@/components/admin/dashboard/StatisticsCard';
 import { RecentBookings } from '@/components/admin/dashboard/RecentBookings';
 import { BookingStatistics } from '@/components/admin/dashboard/BookingStatistics';
+import { groupBookingsByOrder } from '@/utils/bookingGroupingUtils';
+import { BookingWithProduct } from '@/components/admin/bookings/types';
 
 const AdminDashboard = () => {
   const { data: products } = useQuery({
@@ -31,12 +33,13 @@ const AdminDashboard = () => {
     (booking: BookingPeriod) => booking.status === 'confirmed' && new Date(booking.endDate) >= new Date()
   ).length || 0;
   
-  // Only count revenue from completed bookings
-  const totalRevenue = bookings?.reduce(
-    (sum: number, booking: BookingPeriod) => 
-      booking.status === 'completed' ? sum + (booking.totalPrice || 0) : sum, 
+  // Group bookings and calculate revenue from grouped bookings (only completed ones)
+  const groupedBookings = bookings ? groupBookingsByOrder(bookings as BookingWithProduct[]) : [];
+  const totalRevenue = groupedBookings.reduce(
+    (sum, groupedBooking) => 
+      groupedBooking.status === 'completed' ? sum + (groupedBooking.totalPrice || 0) : sum, 
     0
-  ) || 0;
+  );
 
   return (
     <div>
@@ -77,7 +80,7 @@ const AdminDashboard = () => {
       </div>
       
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 mt-6">
-        <RecentBookings bookings={bookings} isLoading={!bookings} />
+        <RecentBookings groupedBookings={groupedBookings} isLoading={!bookings} />
         <BookingStatistics bookings={bookings} totalBookings={totalBookings} />
       </div>
     </div>
