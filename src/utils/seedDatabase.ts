@@ -9,6 +9,7 @@ const sampleProducts = [
     description: 'Полнокадровая беззеркальная камера с разрешением 24.2 МП',
     price: 4500,
     category: '1', // Store as string in database
+    category_id: 1, // New category_id field
     imageurl: 'https://images.unsplash.com/photo-1516724562728-afc824a36e84',
     available: true,
     quantity: 3
@@ -18,6 +19,7 @@ const sampleProducts = [
     description: 'Телеобъектив с постоянной диафрагмой для профессиональных фотографов',
     price: 2800,
     category: '2', // Store as string in database
+    category_id: 2, // New category_id field
     imageurl: 'https://images.unsplash.com/photo-1499085650423-45149d8166a6',
     available: true,
     quantity: 2
@@ -27,6 +29,7 @@ const sampleProducts = [
     description: 'Постоянный LED свет мощностью 60Вт с управлением через пульт',
     price: 1200,
     category: '3', // Store as string in database
+    category_id: 3, // New category_id field
     imageurl: 'https://images.unsplash.com/photo-1534003276576-0cbfc449fb6f',
     available: true,
     quantity: 5
@@ -36,6 +39,7 @@ const sampleProducts = [
     description: 'Направленный микрофон для камер и DSLR с улучшенным качеством звука',
     price: 950,
     category: '4', // Store as string in database
+    category_id: 4, // New category_id field
     imageurl: 'https://images.unsplash.com/photo-1520170350707-b2da59970118',
     available: false,
     quantity: 4
@@ -45,6 +49,7 @@ const sampleProducts = [
     description: 'Трехосевой стабилизатор для DSLR и беззеркальных камер',
     price: 2100,
     category: '5', // Store as string in database
+    category_id: 5, // New category_id field
     imageurl: 'https://images.unsplash.com/photo-1542192143-6cb2c972e497',
     available: true,
     quantity: 2
@@ -54,6 +59,7 @@ const sampleProducts = [
     description: 'Кинокамера с разрешением 6K и записью в Blackmagic RAW',
     price: 5200,
     category: '6', // Store as string in database
+    category_id: 6, // New category_id field
     imageurl: 'https://images.unsplash.com/photo-1585939268110-1fa0f2a708b5',
     available: true,
     quantity: 1
@@ -63,6 +69,7 @@ const sampleProducts = [
     description: 'Профессиональный дрон с камерой Hasselblad и увеличенным временем полета',
     price: 6500,
     category: '7', // Store as string in database
+    category_id: 7, // New category_id field
     imageurl: 'https://images.unsplash.com/photo-1508444845599-5c89863b1c44',
     available: true,
     quantity: 2
@@ -72,6 +79,7 @@ const sampleProducts = [
     description: 'Портативный аудиорекордер с 6 входами и сменными микрофонными капсюлями',
     price: 1800,
     category: '4', // Store as string in database
+    category_id: 4, // New category_id field
     imageurl: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04',
     available: true,
     quantity: 3

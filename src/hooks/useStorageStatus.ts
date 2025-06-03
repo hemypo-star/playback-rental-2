@@ -33,6 +33,15 @@ export const useStorageStatus = () => {
     }
   };
 
+  const handleStorageInitialized = (success: boolean) => {
+    setStorageInitialized(success);
+    if (!success) {
+      setStorageError('Storage initialization failed');
+    } else {
+      setStorageError(null);
+    }
+  };
+
   useEffect(() => {
     checkStorageConnection();
   }, []);
@@ -41,6 +50,7 @@ export const useStorageStatus = () => {
     storageInitialized,
     storageError,
     isCheckingStorage,
-    checkStorageConnection
+    checkStorageConnection,
+    handleStorageInitialized
   };
 };
