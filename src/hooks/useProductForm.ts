@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -43,15 +43,44 @@ export const useProductForm = (
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
-      title: editProduct?.title || '',
-      description: editProduct?.description || '',
-      price: editProduct?.price || 0,
-      category_id: editProduct?.category_id || 0,
-      imageUrl: editProduct?.imageUrl || '',
-      quantity: editProduct?.quantity || 1,
-      available: editProduct?.available ?? true,
+      title: '',
+      description: '',
+      price: 0,
+      category_id: 0,
+      imageUrl: '',
+      quantity: 1,
+      available: true,
     },
   });
+
+  // Update form values when editProduct changes
+  useEffect(() => {
+    if (editProduct) {
+      console.log('Setting form values for edit product:', editProduct);
+      console.log('Edit product available status:', editProduct.available);
+      
+      form.reset({
+        title: editProduct.title || '',
+        description: editProduct.description || '',
+        price: editProduct.price || 0,
+        category_id: editProduct.category_id || 0,
+        imageUrl: editProduct.imageUrl || '',
+        quantity: editProduct.quantity || 1,
+        available: editProduct.available ?? true,
+      });
+    } else {
+      console.log('Resetting form for new product');
+      form.reset({
+        title: '',
+        description: '',
+        price: 0,
+        category_id: 0,
+        imageUrl: '',
+        quantity: 1,
+        available: true,
+      });
+    }
+  }, [editProduct, form]);
 
   // Handle new category addition
   const handleNewCategory = async () => {
@@ -92,6 +121,7 @@ export const useProductForm = (
   // Handle form submission
   const handleFormSubmit = (values: ProductFormValues) => {
     console.log("Form submitted with values:", values);
+    console.log("Available status being submitted:", values.available);
     
     onSubmit(values);
   };

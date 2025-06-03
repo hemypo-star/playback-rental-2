@@ -44,10 +44,17 @@ export default function ProductTableRow({
 
   const handleStatusChange = (newStatus: string) => {
     const newAvailability = newStatus === "confirmed";
+    console.log('Status changed from', product.available, 'to', newAvailability);
     updateMutation.mutate({ 
       id: product.id, 
       data: { available: newAvailability } 
     });
+  };
+
+  const handleEdit = () => {
+    console.log('Editing product:', product);
+    console.log('Product availability:', product.available);
+    onEdit(product);
   };
 
   return (
@@ -87,7 +94,7 @@ export default function ProductTableRow({
           <span>
             <button
               className="text-xs text-blue-600 hover:underline mr-2"
-              onClick={() => onEdit(product)}
+              onClick={handleEdit}
               type="button"
             >
               Редактировать

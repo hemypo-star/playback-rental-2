@@ -37,7 +37,15 @@ export default function ProductFormField({
                 <FormLabel className="text-base">{label}</FormLabel>
                 {description && <div className="text-sm text-muted-foreground">{description}</div>}
               </div>
-              <FormControl>{React.cloneElement(children as React.ReactElement, { ...field })}</FormControl>
+              <FormControl>
+                {React.cloneElement(children as React.ReactElement, { 
+                  checked: field.value,
+                  onCheckedChange: (checked: boolean) => {
+                    console.log('Switch toggled:', checked);
+                    field.onChange(checked);
+                  }
+                })}
+              </FormControl>
             </>
           ) : (
             <>

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Form } from "@/components/ui/form";
 import { Product, Category } from "@/types/product";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,7 @@ export default function ProductForm({
 
   const handleSubmitWithImage = (values: ProductFormValues) => {
     console.log("Form submitted with values:", values);
+    console.log("Available field value:", values.available);
     console.log("Image for product:", imageForProduct);
     
     // For external URLs, check if storage is needed
@@ -67,6 +68,24 @@ export default function ProductForm({
     handleNewCategory,
     handleFormSubmit
   } = useProductForm(editProduct, handleSubmitWithImage, setImageForProduct);
+
+  // Debug log when editProduct changes
+  useEffect(() => {
+    if (editProduct) {
+      console.log('ProductForm received editProduct:', editProduct);
+      console.log('editProduct.available:', editProduct.available);
+    }
+  }, [editProduct]);
+
+  // Debug log when form values change
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'available') {
+        console.log('Available field changed to:', value.available);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   return (
     <Form {...form}>
