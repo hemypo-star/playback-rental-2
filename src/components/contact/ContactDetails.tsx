@@ -1,4 +1,3 @@
-
 import { MapPinIcon, Phone, Send, Facebook, MailIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -40,8 +39,8 @@ const ContactDetails = () => {
           <div>
             <h3 className="font-medium mb-1">Телефон</h3>
             <p className="text-muted-foreground">
-              <a href="tel:+79854424040" className="hover:text-primary transition-colors">
-                +7 (985) 442-40-40
+              <a href="tel:+79235303020" className="hover:text-primary transition-colors">
+                +7 (923) 530-30-20
               </a>
             </p>
           </div>
