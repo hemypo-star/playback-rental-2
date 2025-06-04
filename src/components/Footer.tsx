@@ -1,3 +1,4 @@
+
 import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, MessageSquare, Send, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -13,13 +14,13 @@ export const Footer = () => {
           <div>
             <h3 className="font-semibold mb-4">Контакты</h3>
             <div className="space-y-3">
-              <a href="mailto:info@playbackrental.ru" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <a href="mailto:PlaybackRental@yandex.ru" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                 <Mail className="h-4 w-4" />
-                info@playbackrental.ru
+                PlaybackRental@yandex.ru
               </a>
-              <a href="tel:+79001234567" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <a href="tel:+79854424040" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                 <Phone className="h-4 w-4" />
-                +7 (900) 123-45-67
+                +7 (985) 442-40-40
               </a>
               <div className="flex items-center gap-3 pt-2 py-0">
                 <a href="https://vk.com/playbackrental" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">

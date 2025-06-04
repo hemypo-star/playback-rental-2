@@ -56,8 +56,8 @@ const PrivacyPolicy = () => {
               Если у вас есть вопросы о нашей политике конфиденциальности, пожалуйста, свяжитесь с нами:
             </p>
             <ul className="list-none pl-6 mb-4">
-              <li>Email: info@playbackrental.ru</li>
-              <li>Телефон: +7 (900) 123-45-67</li>
+              <li>Email: PlaybackRental@yandex.ru</li>
+              <li>Телефон: +7 (985) 442-40-40</li>
               <li>Адрес: Москва, ул. Ленина, д. 1, офис 123</li>
             </ul>
           </section>
