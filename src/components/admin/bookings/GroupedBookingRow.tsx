@@ -1,10 +1,10 @@
+
 import React, { useState } from 'react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { BookingWithProduct, GroupedBooking } from './types';
-import { BookingStatusSelect } from './BookingStatusSelect';
 import { BookingDetailsTable } from './BookingDetailsTable';
 import { BookingPeriod } from '@/types/product';
 
@@ -15,7 +15,7 @@ interface GroupedBookingRowProps {
   onStatusUpdate: (id: string, status: BookingPeriod['status']) => void;
   onDelete: (id: string) => void;
   isDeleting: string | null;
-  onItemsChanged?: () => void; // New prop
+  onItemsChanged?: () => void;
 }
 
 export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
@@ -82,7 +82,7 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
             </div>
           </div>
         </TableCell>
-        <TableCell>
+        <TableCell className="w-1/4">
           <div className="text-sm">
             <div>{new Date(groupedBooking.startDate).toLocaleDateString()}</div>
             <div className="text-muted-foreground">
@@ -90,31 +90,7 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
             </div>
           </div>
         </TableCell>
-        <TableCell>
-          <div onClick={(e) => e.stopPropagation()}>
-            <BookingStatusSelect
-              booking={{
-                id: groupedBooking.id,
-                productId: firstItem?.productId || '',
-                customerName: groupedBooking.customerName,
-                customerEmail: groupedBooking.customerEmail,
-                customerPhone: groupedBooking.customerPhone,
-                startDate: groupedBooking.startDate,
-                endDate: groupedBooking.endDate,
-                status: groupedBooking.status,
-                totalPrice: groupedBooking.totalPrice,
-                quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
-                notes: groupedBooking.notes || '',
-                createdAt: groupedBooking.createdAt,
-                product: firstItem?.product,
-                order_id: groupedBooking.order_id
-              }}
-              onStatusUpdate={onStatusUpdate}
-              showAllOptions={true}
-            />
-          </div>
-        </TableCell>
-        <TableCell>
+        <TableCell className="w-1/6">
           <div className="font-medium">
             {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
           </div>
@@ -140,7 +116,7 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
       
       {isExpanded && (
         <TableRow>
-          <TableCell colSpan={6} className="p-0">
+          <TableCell colSpan={5} className="p-0">
             <BookingDetailsTable
               groupedBooking={groupedBooking}
               onStatusUpdate={onStatusUpdate}

@@ -16,7 +16,7 @@ interface BookingsTableProps {
   onDelete: (id: string) => void;
   isDeleting: string | null;
   groupedBookings: GroupedBooking[];
-  onItemsChanged?: () => void; // New prop
+  onItemsChanged?: () => void;
 }
 
 export const BookingsTable: React.FC<BookingsTableProps> = ({
@@ -64,9 +64,8 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
           <TableRow>
             <TableHead>Клиент</TableHead>
             <TableHead>Товары</TableHead>
-            <TableHead>Даты</TableHead>
-            <TableHead>Статус</TableHead>
-            <TableHead>Сумма</TableHead>
+            <TableHead className="w-1/4">Даты</TableHead>
+            <TableHead className="w-1/6">Сумма</TableHead>
             <TableHead className="text-right">Действия</TableHead>
           </TableRow>
         </TableHeader>
