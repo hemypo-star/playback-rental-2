@@ -7,7 +7,6 @@ import { Eye, Trash2, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { BookingWithProduct, GroupedBooking } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
 import { BookingDetailsTable } from './BookingDetailsTable';
-import { OrderStatusIndicator } from './OrderStatusIndicator';
 import { BookingPeriod } from '@/types/product';
 
 interface GroupedBookingRowProps {
@@ -86,17 +85,6 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
             <div className="font-medium">{groupedBooking.customerName}</div>
             <div className="text-sm text-muted-foreground">{groupedBooking.customerEmail}</div>
             <div className="text-sm text-muted-foreground">{groupedBooking.customerPhone}</div>
-            {groupedBooking.order_id && (
-              <OrderStatusIndicator 
-                booking={{
-                  ...groupedBooking,
-                  productId: firstItem?.productId || '',
-                  quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
-                  product: firstItem?.product
-                } as BookingWithProduct} 
-                allBookings={allBookings} 
-              />
-            )}
           </div>
         </TableCell>
         <TableCell>
