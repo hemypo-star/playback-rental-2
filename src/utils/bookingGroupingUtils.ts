@@ -49,11 +49,11 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       
       existingGroup.totalPrice += booking.totalPrice || 0;
       
-      // IMPROVED: Better status handling - prioritize the most advanced status
+      // IMPROVED: Унифицированный статус для заказа - используем наиболее прогрессивный статус
       const currentStatus = existingGroup.status;
       const newStatus = booking.status;
       
-      // Status priority: completed > confirmed > pending > cancelled
+      // Приоритет статусов: completed > confirmed > pending > cancelled
       const statusPriority = {
         'completed': 4,
         'confirmed': 3,
@@ -87,7 +87,7 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       // Create new group
       const newGroup: GroupedBooking = {
         id: booking.id,
-        order_id: groupKey, // Store the order_id in the grouped booking
+        order_id: groupKey,
         customerName: booking.customerName,
         customerEmail: booking.customerEmail,
         customerPhone: booking.customerPhone,
@@ -141,4 +141,39 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
   });
   
   return result;
+};
+
+// НОВАЯ ФУНКЦИЯ: Получает все бронирования для заказа
+export const getBookingsForOrder = (bookings: BookingWithProduct[], orderId: string): BookingWithProduct[] => {
+  return bookings.filter(booking => booking.order_id === orderId);
+};
+
+// НОВАЯ ФУНКЦИЯ: Проверяет консистентность статусов в заказе
+export const validateOrderStatusConsistency = (bookings: BookingWithProduct[], orderId: string): {
+  isConsistent: boolean;
+  statuses: string[];
+  recommendedStatus: string;
+} => {
+  const orderBookings = getBookingsForOrder(bookings, orderId);
+  const statuses = [...new Set(orderBookings.map(b => b.status))];
+  
+  const statusPriority = {
+    'completed': 4,
+    'confirmed': 3,
+    'pending': 2,
+    'cancelled': 1
+  };
+  
+  // Рекомендуемый статус - наивысший приоритет среди всех статусов
+  const recommendedStatus = statuses.reduce((highest, current) => {
+    const currentPriority = statusPriority[current as keyof typeof statusPriority] || 0;
+    const highestPriority = statusPriority[highest as keyof typeof statusPriority] || 0;
+    return currentPriority > highestPriority ? current : highest;
+  }, statuses[0]);
+  
+  return {
+    isConsistent: statuses.length === 1,
+    statuses,
+    recommendedStatus
+  };
 };

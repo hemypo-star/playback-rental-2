@@ -2,15 +2,18 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getProducts } from '@/services/productService';
 import { getBookings, updateBookingStatus, deleteBooking } from '@/services/bookingService';
+import { analyzeAndFixOrderStatuses, updateOrderStatus } from '@/services/orderStatusService';
 import { BookingWithProduct } from '@/components/admin/bookings/types';
 import { BookingFilters } from '@/components/admin/bookings/BookingFilters';
 import { BookingsTable } from '@/components/admin/bookings/BookingsTable';
 import { BookingDetailsDialog } from '@/components/admin/bookings/BookingDetailsDialog';
 import { BookingPeriod } from '@/types/product';
 import { groupBookingsByOrder } from '@/utils/bookingGroupingUtils';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 
 const AdminBookings = () => {
   const [search, setSearch] = useState('');
@@ -18,6 +21,7 @@ const AdminBookings = () => {
   const [selectedBooking, setSelectedBooking] = useState<BookingWithProduct | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -75,14 +79,66 @@ const AdminBookings = () => {
     return grouped;
   }, [filteredBookings]);
 
+  // НОВАЯ ФУНКЦИЯ: Анализ и исправление статусов
+  const handleAnalyzeAndFixStatuses = async () => {
+    setIsAnalyzing(true);
+    try {
+      console.log('Starting status analysis and cleanup...');
+      const result = await analyzeAndFixOrderStatuses();
+      
+      toast({
+        title: 'Анализ завершен',
+        description: `Проанализировано заказов: ${result.analyzed}, исправлено: ${result.fixed}`,
+      });
+      
+      if (result.issues.length > 0) {
+        console.log('Issues found and fixed:', result.issues);
+        toast({
+          title: 'Найдены и исправлены проблемы',
+          description: `Исправлено ${result.issues.length} заказов с несогласованными статусами`,
+        });
+      }
+      
+      // Обновляем данные
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    } catch (error: any) {
+      console.error('Error during status analysis:', error);
+      toast({
+        title: 'Ошибка анализа',
+        description: error.message || 'Не удалось выполнить анализ статусов',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleStatusUpdate = async (id: string, status: BookingPeriod['status']) => {
     try {
       console.log('Updating booking status:', id, status);
-      await updateBookingStatus(id, status);
-      toast({
-        title: 'Успех',
-        description: 'Статус бронирования успешно обновлен.'
-      });
+      
+      // Находим бронирование для получения order_id
+      const booking = bookingsWithProducts.find(b => b.id === id);
+      if (!booking) {
+        throw new Error('Бронирование не найдено');
+      }
+      
+      // УЛУЧШЕНИЕ: Если есть order_id, обновляем весь заказ
+      if (booking.order_id) {
+        console.log('Updating entire order status:', booking.order_id, status);
+        await updateOrderStatus(booking.order_id, status);
+        toast({
+          title: 'Успех',
+          description: 'Статус заказа обновлен для всех связанных бронирований.'
+        });
+      } else {
+        // Иначе обновляем только одно бронирование
+        await updateBookingStatus(id, status);
+        toast({
+          title: 'Успех',
+          description: 'Статус бронирования успешно обновлен.'
+        });
+      }
       
       // Invalidate unified cache keys for both Dashboard and Bookings
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -157,7 +213,24 @@ const AdminBookings = () => {
     <div className="container mx-auto py-10">
       <Card className="shadow-md">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Управление бронированиями</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-2xl font-bold">Управление бронированиями</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleAnalyzeAndFixStatuses}
+                disabled={isAnalyzing}
+                className="flex items-center gap-2"
+              >
+                {isAnalyzing ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4" />
+                )}
+                {isAnalyzing ? 'Анализируем...' : 'Исправить статусы'}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <BookingFilters
