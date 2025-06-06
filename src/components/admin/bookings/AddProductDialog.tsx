@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { getAvailableProductsForBooking, addBookingItem } from '@/services/bookingItemService';
 import { GroupedBooking } from './types';
 import QuantitySelector from '@/components/QuantitySelector';
+import { ProductCombobox } from './ProductCombobox';
 import { Loader2 } from 'lucide-react';
 
 interface AddProductDialogProps {
@@ -39,12 +39,40 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
   });
 
   const selectedProduct = availableProducts?.find(p => p.id === selectedProductId);
+  const totalPrice = selectedProduct ? selectedProduct.price * quantity : 0;
+  const maxQuantity = selectedProduct?.quantity || 1;
+
+  // Reset form when dialog closes
+  React.useEffect(() => {
+    if (!open) {
+      setSelectedProductId('');
+      setQuantity(1);
+    }
+  }, [open]);
 
   const handleAdd = async () => {
     if (!selectedProduct) {
       toast({
         title: 'Ошибка',
         description: 'Пожалуйста, выберите продукт',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (quantity <= 0) {
+      toast({
+        title: 'Ошибка',
+        description: 'Количество должно быть больше 0',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (quantity > maxQuantity) {
+      toast({
+        title: 'Ошибка',
+        description: `Максимальное количество: ${maxQuantity}`,
         variant: 'destructive'
       });
       return;
@@ -66,10 +94,6 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
 
       onSuccess();
       onOpenChange(false);
-      
-      // Reset form
-      setSelectedProductId('');
-      setQuantity(1);
     } catch (error: any) {
       console.error('Error adding product to booking:', error);
       toast({
@@ -82,7 +106,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
     }
   };
 
-  const totalPrice = selectedProduct ? selectedProduct.price * quantity : 0;
+  const isFormValid = selectedProduct && quantity > 0 && quantity <= maxQuantity;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,69 +119,71 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
           <div>
             <label className="text-sm font-medium mb-2 block">Продукт</label>
             {isLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin" />
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <span>Загрузка продуктов...</span>
+              </div>
+            ) : availableProducts?.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">
+                  Нет доступных продуктов для добавления
+                </p>
               </div>
             ) : (
-              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите продукт" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableProducts?.map(product => (
-                    <SelectItem key={product.id} value={product.id}>
-                      <div className="flex justify-between items-center w-full">
-                        <span>{product.title}</span>
-                        <span className="text-muted-foreground ml-2">
-                          {product.price.toLocaleString()} ₽
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ProductCombobox
+                products={availableProducts || []}
+                value={selectedProductId}
+                onValueChange={setSelectedProductId}
+                placeholder="Поиск и выбор продукта..."
+                disabled={isLoading}
+              />
             )}
-            {availableProducts?.length === 0 && !isLoading && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Нет доступных продуктов для добавления
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">Количество</label>
+            <QuantitySelector
+              quantity={quantity}
+              onQuantityChange={setQuantity}
+              maxQuantity={maxQuantity}
+              minQuantity={1}
+              disabled={!selectedProduct}
+            />
+            {selectedProduct && quantity > maxQuantity && (
+              <p className="text-sm text-destructive mt-1">
+                Максимальное доступное количество: {maxQuantity}
               </p>
             )}
           </div>
 
-          {selectedProduct && (
-            <>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Количество</label>
-                <QuantitySelector
-                  quantity={quantity}
-                  onQuantityChange={setQuantity}
-                  maxQuantity={selectedProduct.quantity}
-                  minQuantity={1}
-                />
+          <div className="bg-muted/30 p-3 rounded-lg">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Стоимость:</span>
+              <span className="font-medium">
+                {totalPrice.toLocaleString()} ₽
+              </span>
+            </div>
+            {selectedProduct && (
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-xs text-muted-foreground">
+                  {selectedProduct.price.toLocaleString()} ₽ × {quantity}
+                </span>
               </div>
-
-              <div className="bg-muted/30 p-3 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Стоимость:</span>
-                  <span className="font-medium">
-                    {totalPrice.toLocaleString()} ₽
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
+            )}
+          </div>
 
           <div className="flex gap-2 pt-4">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
               className="flex-1"
+              disabled={isAdding}
             >
               Отмена
             </Button>
             <Button
               onClick={handleAdd}
-              disabled={!selectedProduct || isAdding}
+              disabled={!isFormValid || isAdding}
               className="flex-1"
             >
               {isAdding ? (
