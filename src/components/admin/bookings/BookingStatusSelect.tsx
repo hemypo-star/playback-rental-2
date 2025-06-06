@@ -10,6 +10,7 @@ import React from "react";
 type Props = {
   booking: BookingWithProduct;
   onStatusUpdate?: (id: string, status: BookingPeriod["status"]) => void;
+  showAllOptions?: boolean; // NEW: Option to show all status options
 };
 
 const statusOptions: { value: BookingPeriod["status"]; label: string }[] = [
@@ -19,7 +20,7 @@ const statusOptions: { value: BookingPeriod["status"]; label: string }[] = [
   { value: "completed", label: "Завершено" },
 ];
 
-export const BookingStatusSelect: React.FC<Props> = ({ booking, onStatusUpdate }) => {
+export const BookingStatusSelect: React.FC<Props> = ({ booking, onStatusUpdate, showAllOptions = false }) => {
   const [value, setValue] = React.useState<BookingPeriod["status"]>(booking.status);
   const { toast } = useToast();
 
@@ -28,16 +29,18 @@ export const BookingStatusSelect: React.FC<Props> = ({ booking, onStatusUpdate }
   }, [booking.status]);
 
   const handleChange = (next: BookingPeriod["status"]) => {
-    // НОВАЯ ФУНКЦИЯ: Валидация перехода статуса
-    const validation = validateStatusUpdate(booking.status, next);
-    
-    if (!validation.isValid) {
-      toast({
-        title: 'Недопустимый переход статуса',
-        description: validation.reason,
-        variant: 'destructive'
-      });
-      return;
+    // НОВАЯ ФУНКЦИЯ: Валидация перехода статуса (только если не показываем все опции)
+    if (!showAllOptions) {
+      const validation = validateStatusUpdate(booking.status, next);
+      
+      if (!validation.isValid) {
+        toast({
+          title: 'Недопустимый переход статуса',
+          description: validation.reason,
+          variant: 'destructive'
+        });
+        return;
+      }
     }
     
     setValue(next);
@@ -58,8 +61,12 @@ export const BookingStatusSelect: React.FC<Props> = ({ booking, onStatusUpdate }
     }
   };
 
-  // УЛУЧШЕНИЕ: Фильтруем доступные опции на основе текущего статуса
+  // УЛУЧШЕНИЕ: Фильтруем доступные опции на основе текущего статуса (только если не показываем все опции)
   const getAvailableOptions = (currentStatus: BookingPeriod["status"]) => {
+    if (showAllOptions) {
+      return statusOptions; // Показываем все опции
+    }
+
     const allowedTransitions: Record<BookingPeriod["status"], BookingPeriod["status"][]> = {
       'pending': ['pending', 'confirmed', 'cancelled'],
       'confirmed': ['confirmed', 'completed', 'cancelled'],

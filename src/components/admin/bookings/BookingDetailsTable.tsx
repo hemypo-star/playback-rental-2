@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -66,6 +65,7 @@ export const BookingDetailsTable = ({
                   product: firstProduct || undefined
                 }}
                 onStatusUpdate={onStatusUpdate}
+                showAllOptions={true}
               />
             </div>
           </div>
