@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -203,6 +202,13 @@ const AdminBookings = () => {
     }
   };
 
+  // NEW: Handle booking items changes
+  const handleBookingItemsChanged = async () => {
+    console.log('Booking items changed, refreshing data');
+    await queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+  };
+
   const handleOpenDetails = (booking: BookingWithProduct) => {
     console.log('Opening details for booking:', booking.id);
     setSelectedBooking(booking);
@@ -249,6 +255,7 @@ const AdminBookings = () => {
             onDelete={handleDeleteBooking}
             isDeleting={isDeleting}
             groupedBookings={groupedBookings}
+            onItemsChanged={handleBookingItemsChanged}
           />
         </CardContent>
       </Card>
@@ -258,6 +265,7 @@ const AdminBookings = () => {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onStatusUpdate={handleStatusUpdate}
+        onItemsChanged={handleBookingItemsChanged}
       />
     </div>
   );

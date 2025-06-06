@@ -1,9 +1,10 @@
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Check, CheckCircle, X } from 'lucide-react';
-import { format } from 'date-fns';
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, User, Phone, Mail, FileText } from 'lucide-react';
 import { BookingWithProduct } from './types';
+import { BookingStatusSelect } from './BookingStatusSelect';
 import { BookingPeriod } from '@/types/product';
 
 interface BookingDetailsDialogProps {
@@ -11,111 +12,93 @@ interface BookingDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStatusUpdate: (id: string, status: BookingPeriod['status']) => void;
+  onItemsChanged?: () => void; // New prop (though not used directly in this dialog)
 }
 
-export const BookingDetailsDialog = ({
+export const BookingDetailsDialog: React.FC<BookingDetailsDialogProps> = ({
   booking,
   open,
   onOpenChange,
   onStatusUpdate,
-}: BookingDetailsDialogProps) => {
-  const handleStatusUpdate = (status: BookingPeriod['status']) => {
-    if (booking) onStatusUpdate(booking.id, status);
-  };
+  onItemsChanged // Added but not used in this component
+}) => {
+  if (!booking) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        {!booking ? null : (
-          <>
-            <DialogHeader>
-              <DialogTitle>Детали бронирования</DialogTitle>
-              <DialogDescription>Информация о бронировании и возможность изменить статус</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Информация о продукте</h3>
-                <p>
-                  <strong>Продукт:</strong> {booking.product?.title || 'Неизвестный продукт'}
-                </p>
-                <p>
-                  <strong>Цена:</strong> {booking.product?.price || 0} ₽ / день
-                </p>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Детали бронирования</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <div className="font-medium">{booking.customerName}</div>
+              <div className="text-sm text-muted-foreground">Клиент</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <div className="font-medium">{booking.customerEmail}</div>
+              <div className="text-sm text-muted-foreground">Email</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <div className="font-medium">{booking.customerPhone}</div>
+              <div className="text-sm text-muted-foreground">Телефон</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <div className="font-medium">
+                {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
               </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Информация о клиенте</h3>
-                <p>
-                  <strong>Имя:</strong> {booking.customerName}
-                </p>
-                <p>
-                  <strong>Email:</strong> {booking.customerEmail}
-                </p>
-                <p>
-                  <strong>Телефон:</strong> {booking.customerPhone}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Информация о бронировании</h3>
-                <p>
-                  <strong>Дата начала:</strong>{' '}
-                  {format(new Date(booking.startDate), 'PPP')} в {format(new Date(booking.startDate), 'HH:00')}
-                </p>
-                <p>
-                  <strong>Дата окончания:</strong>{' '}
-                  {format(new Date(booking.endDate), 'PPP')} в {format(new Date(booking.endDate), 'HH:00')}
-                </p>
-                <p>
-                  <strong>Общая стоимость:</strong> {booking.totalPrice.toFixed(2)} ₽
-                </p>
-                {booking.notes && (
-                  <p>
-                    <strong>Примечания:</strong> {booking.notes}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Обновить статус</h3>
-                <div className="flex flex-wrap gap-2">
-                  {booking.status !== 'confirmed' && (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handleStatusUpdate('confirmed')}
-                      type="button"
-                    >
-                      Подтвердить
-                      <Check className="ml-2 h-4 w-4" />
-                    </Button>
-                  )}
-                  {booking.status !== 'cancelled' && (
-                    <Button 
-                      variant="destructive" 
-                      onClick={() => handleStatusUpdate('cancelled')}
-                      type="button"
-                    >
-                      Отменить
-                      <X className="ml-2 h-4 w-4" />
-                    </Button>
-                  )}
-                  {booking.status !== 'completed' && (
-                    <Button 
-                      variant="secondary" 
-                      onClick={() => handleStatusUpdate('completed')}
-                      type="button"
-                    >
-                      Завершить
-                      <CheckCircle className="ml-2 h-4 w-4" />
-                    </Button>
-                  )}
+              <div className="text-sm text-muted-foreground">Период аренды</div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Продукт:</div>
+            <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+              <div>
+                <div className="font-medium">{booking.product?.title || 'Неизвестный продукт'}</div>
+                <div className="text-sm text-muted-foreground">
+                  Количество: {booking.quantity} шт.
                 </div>
               </div>
+              <div className="text-right">
+                <div className="font-medium">{booking.totalPrice?.toLocaleString()} ₽</div>
+              </div>
             </div>
-            <DialogFooter>
-              <Button type="button" onClick={() => onOpenChange(false)}>
-                Закрыть
-              </Button>
-            </DialogFooter>
-          </>
-        )}
+          </div>
+
+          {booking.notes && (
+            <div className="flex items-start gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground mt-1" />
+              <div>
+                <div className="font-medium">Примечания:</div>
+                <div className="text-sm text-muted-foreground">{booking.notes}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-4 border-t">
+            <span className="text-sm font-medium">Статус:</span>
+            <BookingStatusSelect
+              booking={booking}
+              onStatusUpdate={onStatusUpdate}
+            />
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

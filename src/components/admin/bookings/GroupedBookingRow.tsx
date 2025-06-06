@@ -3,63 +3,37 @@ import React, { useState } from 'react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronUp, Trash2, Loader2 } from 'lucide-react';
-import { format, isValid } from 'date-fns';
-import { GroupedBooking, BookingWithProduct } from './types';
+import { Eye, Trash2, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { BookingWithProduct, GroupedBooking } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
+import { BookingDetailsTable } from './BookingDetailsTable';
+import { OrderStatusIndicator } from './OrderStatusIndicator';
+import { BookingPeriod } from '@/types/product';
 
 interface GroupedBookingRowProps {
   groupedBooking: GroupedBooking;
+  allBookings: BookingWithProduct[];
   onViewDetails: (booking: BookingWithProduct) => void;
-  onStatusUpdate?: (id: string, status: string) => void;
-  onDelete?: (id: string) => void;
-  isDeleting?: string | null;
+  onStatusUpdate: (id: string, status: BookingPeriod['status']) => void;
+  onDelete: (id: string) => void;
+  isDeleting: string | null;
+  onItemsChanged?: () => void; // New prop
 }
 
-export const GroupedBookingRow = ({
+export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
   groupedBooking,
+  allBookings,
   onViewDetails,
   onStatusUpdate,
   onDelete,
-  isDeleting
-}: GroupedBookingRowProps) => {
+  isDeleting,
+  onItemsChanged
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Helper function to safely format dates
-  const formatSafeDate = (dateValue: string | Date | undefined | null, formatStr: string): string => {
-    if (!dateValue) return 'Недействительная дата';
-    
-    const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
-    
-    return isValid(date) ? format(date, formatStr) : 'Недействительная дата';
-  };
-
-  const handleDeleteClick = async (e: React.MouseEvent, bookingId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Delete button clicked for booking:', bookingId);
-    
-    if (onDelete) {
-      console.log('Calling onDelete function');
-      await onDelete(bookingId);
-    } else {
-      console.log('onDelete function not provided');
-    }
-  };
-
-  const handleStatusSelectClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
   const handleViewDetails = () => {
-    console.log('Opening details for grouped booking:', {
-      id: groupedBooking.id,
-      itemsCount: groupedBooking.items.length,
-      totalQuantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0)
-    });
-    
-    // Convert grouped booking to BookingWithProduct format for details view
-    const bookingForDetails: BookingWithProduct = {
+    // Create a BookingWithProduct object for the dialog
+    const bookingForDialog: BookingWithProduct = {
       id: groupedBooking.id,
       productId: groupedBooking.items[0]?.productId || '',
       customerName: groupedBooking.customerName,
@@ -72,141 +46,152 @@ export const GroupedBookingRow = ({
       quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
       notes: groupedBooking.notes || '',
       createdAt: groupedBooking.createdAt,
-      product: groupedBooking.items[0]?.product
+      product: groupedBooking.items[0]?.product,
+      order_id: groupedBooking.order_id
     };
-    onViewDetails(bookingForDetails);
+    
+    onViewDetails(bookingForDialog);
   };
 
-  const toggleExpanded = (e: React.MouseEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
+    
+    const hasMultipleItems = groupedBooking.items.length > 1;
+    const confirmMessage = hasMultipleItems 
+      ? `Вы уверены, что хотите удалить весь заказ? Это удалит ${groupedBooking.items.length} товаров.`
+      : 'Вы уверены, что хотите удалить это бронирование?';
+    
+    if (confirm(confirmMessage)) {
+      await onDelete(groupedBooking.id);
+    }
+  };
+
+  const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
 
-  const totalQuantity = groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0);
+  // Get first item for display
+  const firstItem = groupedBooking.items[0];
+  const hasMultipleItems = groupedBooking.items.length > 1;
 
   return (
     <>
-      {/* Main grouped booking row */}
       <TableRow 
-        className="cursor-pointer hover:bg-muted/50" 
-        onClick={handleViewDetails}
+        className="cursor-pointer hover:bg-muted/50"
+        onClick={toggleExpanded}
       >
-        <TableCell>{groupedBooking.customerName}</TableCell>
+        <TableCell>
+          <div className="space-y-1">
+            <div className="font-medium">{groupedBooking.customerName}</div>
+            <div className="text-sm text-muted-foreground">{groupedBooking.customerEmail}</div>
+            <div className="text-sm text-muted-foreground">{groupedBooking.customerPhone}</div>
+            {groupedBooking.order_id && (
+              <OrderStatusIndicator 
+                booking={{
+                  ...groupedBooking,
+                  productId: firstItem?.productId || '',
+                  quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
+                  product: firstItem?.product
+                } as BookingWithProduct} 
+                allBookings={allBookings} 
+              />
+            )}
+          </div>
+        </TableCell>
         <TableCell>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleExpanded}
-              className="h-6 w-6 p-0"
-            >
-              {isExpanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">
-                  {groupedBooking.items.length} товар{groupedBooking.items.length === 1 ? '' : groupedBooking.items.length < 5 ? 'а' : 'ов'}
-                </span>
-                <Badge variant="secondary" className="text-xs px-1 py-0">
-                  {totalQuantity} шт.
-                </Badge>
+            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            <div>
+              <div className="font-medium">
+                {firstItem?.product?.title || 'Неизвестный продукт'}
+                {hasMultipleItems && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    +{groupedBooking.items.length - 1} товар(ов)
+                  </Badge>
+                )}
               </div>
-              <span className="text-xs text-muted-foreground">
-                Нажмите для просмотра
-              </span>
+              <div className="text-sm text-muted-foreground">
+                Общее кол-во: {groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0)} шт.
+              </div>
             </div>
           </div>
         </TableCell>
-        <TableCell>{groupedBooking.customerEmail}</TableCell>
-        <TableCell>{groupedBooking.customerPhone}</TableCell>
         <TableCell>
-          {groupedBooking.startDate && isValid(new Date(groupedBooking.startDate)) ? (
-            <>
-              {formatSafeDate(groupedBooking.startDate, 'PPP')} {formatSafeDate(groupedBooking.startDate, 'HH:00')}
-            </>
-          ) : (
-            'Недействительная дата'
-          )}
+          <div className="text-sm">
+            <div>{new Date(groupedBooking.startDate).toLocaleDateString()}</div>
+            <div className="text-muted-foreground">
+              до {new Date(groupedBooking.endDate).toLocaleDateString()}
+            </div>
+          </div>
         </TableCell>
         <TableCell>
-          {groupedBooking.endDate && isValid(new Date(groupedBooking.endDate)) ? (
-            <>
-              {formatSafeDate(groupedBooking.endDate, 'PPP')} {formatSafeDate(groupedBooking.endDate, 'HH:00')}
-            </>
-          ) : (
-            'Недействительная дата'
-          )}
-        </TableCell>
-        <TableCell className="font-medium">
-          {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
-        </TableCell>
-        <TableCell onClick={handleStatusSelectClick}>
-          <BookingStatusSelect
-            booking={{
-              id: groupedBooking.id,
-              productId: groupedBooking.items[0]?.productId || '',
-              customerName: groupedBooking.customerName,
-              customerEmail: groupedBooking.customerEmail,
-              customerPhone: groupedBooking.customerPhone,
-              startDate: groupedBooking.startDate,
-              endDate: groupedBooking.endDate,
-              status: groupedBooking.status,
-              totalPrice: groupedBooking.totalPrice,
-              quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
-              notes: groupedBooking.notes || '',
-              createdAt: groupedBooking.createdAt,
-              product: groupedBooking.items[0]?.product
-            }}
-            onStatusUpdate={onStatusUpdate}
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <BookingStatusSelect
+              booking={{
+                id: groupedBooking.id,
+                productId: firstItem?.productId || '',
+                customerName: groupedBooking.customerName,
+                customerEmail: groupedBooking.customerEmail,
+                customerPhone: groupedBooking.customerPhone,
+                startDate: groupedBooking.startDate,
+                endDate: groupedBooking.endDate,
+                status: groupedBooking.status,
+                totalPrice: groupedBooking.totalPrice,
+                quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
+                notes: groupedBooking.notes || '',
+                createdAt: groupedBooking.createdAt,
+                product: firstItem?.product,
+                order_id: groupedBooking.order_id
+              }}
+              onStatusUpdate={onStatusUpdate}
+            />
+          </div>
         </TableCell>
         <TableCell>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => handleDeleteClick(e, groupedBooking.id)}
-            disabled={isDeleting === groupedBooking.id}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
-          >
-            {isDeleting === groupedBooking.id ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </Button>
+          <div className="font-medium">
+            {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
+          </div>
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleViewDetails}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              disabled={isDeleting === groupedBooking.id}
+              className="text-red-600 hover:text-red-700"
+            >
+              {isDeleting === groupedBooking.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </TableCell>
       </TableRow>
-
-      {/* Expanded product rows */}
-      {isExpanded && groupedBooking.items.map((item, index) => (
-        <TableRow key={`${groupedBooking.id}-item-${index}`} className="bg-muted/20">
-          <TableCell className="pl-12 text-muted-foreground">
-            ↳ Товар {index + 1}
+      
+      {isExpanded && (
+        <TableRow>
+          <TableCell colSpan={6} className="p-0">
+            <BookingDetailsTable
+              groupedBooking={groupedBooking}
+              onStatusUpdate={onStatusUpdate}
+              onDelete={onDelete}
+              isDeleting={isDeleting}
+              onItemsChanged={onItemsChanged}
+            />
           </TableCell>
-          <TableCell>
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{item.product?.title || 'Неизвестный продукт'}</span>
-              <Badge variant="outline" className="text-xs px-1 py-0">
-                {item.quantity} шт.
-              </Badge>
-            </div>
-          </TableCell>
-          <TableCell className="text-muted-foreground">—</TableCell>
-          <TableCell className="text-muted-foreground">—</TableCell>
-          <TableCell className="text-muted-foreground">—</TableCell>
-          <TableCell className="text-muted-foreground">—</TableCell>
-          <TableCell className="text-muted-foreground">
-            {item.product?.price && item.quantity ? 
-              (item.product.price * item.quantity).toLocaleString() : '—'} ₽
-          </TableCell>
-          <TableCell className="text-muted-foreground">—</TableCell>
-          <TableCell className="text-muted-foreground">—</TableCell>
         </TableRow>
-      ))}
+      )}
     </>
   );
 };

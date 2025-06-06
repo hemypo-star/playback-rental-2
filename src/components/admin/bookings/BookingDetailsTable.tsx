@@ -1,24 +1,31 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2, Plus } from 'lucide-react';
 import { GroupedBooking } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
+import { AddProductDialog } from './AddProductDialog';
+import { InlineQuantityEditor } from './InlineQuantityEditor';
 
 interface BookingDetailsTableProps {
   groupedBooking: GroupedBooking;
   onStatusUpdate?: (id: string, status: string) => void;
   onDelete?: (id: string) => void;
   isDeleting?: string | null;
+  onItemsChanged?: () => void; // New prop to notify parent of changes
 }
 
 export const BookingDetailsTable = ({ 
   groupedBooking, 
   onStatusUpdate,
   onDelete,
-  isDeleting 
+  isDeleting,
+  onItemsChanged
 }: BookingDetailsTableProps) => {
+  const [addProductDialogOpen, setAddProductDialogOpen] = useState(false);
+
   const handleDeleteClick = async (e: React.MouseEvent, bookingId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -34,6 +41,12 @@ export const BookingDetailsTable = ({
 
   const handleStatusSelectClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+  };
+
+  const handleItemsChanged = () => {
+    if (onItemsChanged) {
+      onItemsChanged();
+    }
   };
 
   // Safely get the first product or create a fallback
@@ -73,6 +86,15 @@ export const BookingDetailsTable = ({
           <Button
             variant="outline"
             size="sm"
+            onClick={() => setAddProductDialogOpen(true)}
+            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Добавить товар
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={(e) => handleDeleteClick(e, groupedBooking.id)}
             disabled={isDeleting === groupedBooking.id}
             className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
@@ -97,16 +119,19 @@ export const BookingDetailsTable = ({
         </TableHeader>
         <TableBody>
           {groupedBooking.items.map((item, index) => (
-            <TableRow key={`${groupedBooking.id}-detail-${index}`}>
+            <TableRow key={`${groupedBooking.id}-detail-${index}`} className="group">
               <TableCell>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{item.product?.title || 'Неизвестный продукт'}</span>
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant="outline" className="text-xs">
-                  {item.quantity} шт.
-                </Badge>
+                <InlineQuantityEditor
+                  bookingId={groupedBooking.id}
+                  productId={item.productId}
+                  currentQuantity={item.quantity}
+                  onSuccess={handleItemsChanged}
+                />
               </TableCell>
               <TableCell>
                 {item.product?.price ? `${item.product.price.toLocaleString()} ₽` : '—'}
@@ -125,6 +150,13 @@ export const BookingDetailsTable = ({
           </TableRow>
         </TableBody>
       </Table>
+
+      <AddProductDialog
+        open={addProductDialogOpen}
+        onOpenChange={setAddProductDialogOpen}
+        groupedBooking={groupedBooking}
+        onSuccess={handleItemsChanged}
+      />
     </div>
   );
 };
