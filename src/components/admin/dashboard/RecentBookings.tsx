@@ -3,16 +3,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { BookingPeriod } from '@/types/product';
 import { GroupedBooking } from '@/components/admin/bookings/types';
+import { BookingWithProduct } from '@/components/admin/bookings/types';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 interface RecentBookingsProps {
-  bookings?: BookingPeriod[];
+  bookings?: BookingWithProduct[];
   groupedBookings?: GroupedBooking[];
   isLoading: boolean;
 }
 
 export const RecentBookings = ({ bookings, groupedBookings, isLoading }: RecentBookingsProps) => {
+  console.log('RecentBookings render:', {
+    bookingsCount: bookings?.length || 0,
+    groupedBookingsCount: groupedBookings?.length || 0,
+    hasBookings: !!bookings,
+    hasGroupedBookings: !!groupedBookings
+  });
+
   const formatStatus = (status: string): string => {
     switch (status) {
       case 'confirmed': return 'bg-green-500 text-white';
@@ -38,16 +46,22 @@ export const RecentBookings = ({ bookings, groupedBookings, isLoading }: RecentB
     return format(dateObj, 'dd MMM yyyy', { locale: ru });
   };
 
-  // Use grouped bookings if available, otherwise fall back to individual bookings
-  const displayBookings = groupedBookings?.slice(0, 5) || bookings?.slice(0, 5) || [];
-  const isGroupedData = !!groupedBookings;
+  // IMPROVED: Show both individual and grouped views with better labeling
+  const showGroupedView = groupedBookings && groupedBookings.length > 0;
+  const displayBookings = showGroupedView ? groupedBookings.slice(0, 5) : bookings?.slice(0, 5) || [];
+
+  console.log('RecentBookings display decision:', {
+    showGroupedView,
+    displayBookingsCount: displayBookings.length,
+    displayBookingStatuses: displayBookings.map(b => ({ id: b.id, status: b.status }))
+  });
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Последние заявки</CardTitle>
         <CardDescription>
-          {isGroupedData ? 'Последние 5 групповых заказов' : 'Последние 5 заявок на бронирование'}
+          {showGroupedView ? 'Последние 5 групповых заказов' : 'Последние 5 индивидуальных заявок'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -62,8 +76,15 @@ export const RecentBookings = ({ bookings, groupedBookings, isLoading }: RecentB
               const isGrouped = 'items' in booking;
               const totalQuantity = isGrouped 
                 ? booking.items.reduce((sum, item) => sum + item.quantity, 0)
-                : (booking as BookingPeriod).quantity || 1;
+                : (booking as BookingWithProduct).quantity || 1;
               const itemCount = isGrouped ? booking.items.length : 1;
+              
+              console.log('Rendering booking:', {
+                id: booking.id,
+                status: booking.status,
+                isGrouped,
+                totalPrice: booking.totalPrice
+              });
               
               return (
                 <div key={booking.id} className="flex items-center justify-between border-b pb-3">
@@ -76,6 +97,11 @@ export const RecentBookings = ({ bookings, groupedBookings, isLoading }: RecentB
                         {isGrouped && (
                           <Badge variant="outline" className="text-xs px-1 py-0">
                             {itemCount} товар{itemCount === 1 ? '' : itemCount < 5 ? 'а' : 'ов'}, {totalQuantity} шт.
+                          </Badge>
+                        )}
+                        {!isGrouped && (booking as BookingWithProduct).product && (
+                          <Badge variant="outline" className="text-xs px-1 py-0">
+                            {(booking as BookingWithProduct).product?.title}
                           </Badge>
                         )}
                       </div>

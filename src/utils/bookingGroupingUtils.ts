@@ -23,7 +23,8 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       startDate: booking.startDate,
       endDate: booking.endDate,
       createdAt: booking.createdAt,
-      quantity: booking.quantity || 1
+      quantity: booking.quantity || 1,
+      status: booking.status
     });
     
     if (groupedMap.has(groupKey)) {
@@ -51,6 +52,26 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       
       existingGroup.totalPrice += booking.totalPrice || 0;
       
+      // IMPROVED: Better status handling - prioritize the most advanced status
+      const currentStatus = existingGroup.status;
+      const newStatus = booking.status;
+      
+      // Status priority: completed > confirmed > pending > cancelled
+      const statusPriority = {
+        'completed': 4,
+        'confirmed': 3,
+        'pending': 2,
+        'cancelled': 1
+      };
+      
+      const currentPriority = statusPriority[currentStatus as keyof typeof statusPriority] || 0;
+      const newPriority = statusPriority[newStatus as keyof typeof statusPriority] || 0;
+      
+      if (newPriority > currentPriority) {
+        existingGroup.status = newStatus;
+        console.log(`Updated group status from ${currentStatus} to ${newStatus} for better priority`);
+      }
+      
       // Use the earliest created date for the group
       if (booking.createdAt && new Date(booking.createdAt) < new Date(existingGroup.createdAt)) {
         existingGroup.createdAt = booking.createdAt;
@@ -59,6 +80,7 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       
       console.log('Updated existing group:', {
         id: existingGroup.id,
+        status: existingGroup.status,
         totalItems: existingGroup.items.length,
         totalQuantity: existingGroup.items.reduce((sum, item) => sum + item.quantity, 0),
         totalPrice: existingGroup.totalPrice
@@ -88,7 +110,8 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
         id: newGroup.id,
         customer: newGroup.customerEmail,
         productId: booking.productId,
-        quantity: booking.quantity || 1
+        quantity: booking.quantity || 1,
+        status: newGroup.status
       });
     }
   });
@@ -103,6 +126,7 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
     groups: result.map(g => ({ 
       id: g.id, 
       customer: g.customerEmail,
+      status: g.status,
       itemCount: g.items.length, 
       totalPrice: g.totalPrice,
       totalQuantity: g.items.reduce((sum, item) => sum + item.quantity, 0),

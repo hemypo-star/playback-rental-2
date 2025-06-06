@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   ReceiptRussianRuble, 
@@ -15,15 +16,19 @@ import { groupBookingsByOrder } from '@/utils/bookingGroupingUtils';
 import { BookingWithProduct } from '@/components/admin/bookings/types';
 
 const AdminDashboard = () => {
+  // Use unified cache keys to match AdminBookings
   const { data: products } = useQuery({
     queryKey: ['admin-products'],
     queryFn: () => getProducts()
   });
 
   const { data: bookings } = useQuery({
-    queryKey: ['admin-bookings'],
+    queryKey: ['bookings'], // Changed from 'admin-bookings' to match AdminBookings
     queryFn: () => getBookings()
   });
+
+  console.log('AdminDashboard - Raw bookings data:', bookings?.length || 0);
+  console.log('AdminDashboard - Sample booking statuses:', bookings?.slice(0, 3).map(b => ({ id: b.id, status: b.status, price: b.totalPrice })));
 
   // Calculate statistics
   const totalProducts = products?.length || 0;
@@ -33,13 +38,40 @@ const AdminDashboard = () => {
     (booking: BookingPeriod) => booking.status === 'confirmed' && new Date(booking.endDate) >= new Date()
   ).length || 0;
   
-  // Group bookings and calculate revenue from grouped bookings (only completed ones)
-  const groupedBookings = bookings ? groupBookingsByOrder(bookings as BookingWithProduct[]) : [];
-  const totalRevenue = groupedBookings.reduce(
-    (sum, groupedBooking) => 
-      groupedBooking.status === 'completed' ? sum + (groupedBooking.totalPrice || 0) : sum, 
+  // FIXED: Calculate revenue directly from individual bookings, not just grouped ones
+  const completedBookings = bookings?.filter(
+    (booking: BookingPeriod) => booking.status === 'completed'
+  ) || [];
+  
+  console.log('AdminDashboard - Completed bookings:', completedBookings.length);
+  console.log('AdminDashboard - Completed booking details:', completedBookings.map(b => ({ 
+    id: b.id, 
+    status: b.status, 
+    price: b.totalPrice,
+    customer: b.customerName 
+  })));
+  
+  const totalRevenue = completedBookings.reduce(
+    (sum, booking) => sum + (booking.totalPrice || 0), 
     0
   );
+  
+  console.log('AdminDashboard - Total revenue calculation:', {
+    completedBookingsCount: completedBookings.length,
+    totalRevenue: totalRevenue
+  });
+
+  // Create bookings with products for grouping (for display purposes only)
+  const bookingsWithProducts: BookingWithProduct[] = React.useMemo(() => {
+    if (!bookings || !products) return [];
+    return bookings.map(booking => {
+      const product = products.find(p => p.id === booking.productId);
+      return { ...booking, product };
+    });
+  }, [bookings, products]);
+
+  // Group bookings for display
+  const groupedBookings = bookingsWithProducts ? groupBookingsByOrder(bookingsWithProducts) : [];
 
   return (
     <div>
@@ -80,7 +112,11 @@ const AdminDashboard = () => {
       </div>
       
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 mt-6">
-        <RecentBookings groupedBookings={groupedBookings} isLoading={!bookings} />
+        <RecentBookings 
+          bookings={bookingsWithProducts} 
+          groupedBookings={groupedBookings} 
+          isLoading={!bookings} 
+        />
         <BookingStatistics bookings={bookings} totalBookings={totalBookings} />
       </div>
     </div>
