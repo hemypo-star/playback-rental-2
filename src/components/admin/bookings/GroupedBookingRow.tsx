@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -111,6 +110,7 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
                 order_id: groupedBooking.order_id
               }}
               onStatusUpdate={onStatusUpdate}
+              showAllOptions={true}
             />
           </div>
         </TableCell>
