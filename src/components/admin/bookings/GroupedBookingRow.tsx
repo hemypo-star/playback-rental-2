@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Trash2, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Trash2, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { BookingWithProduct, GroupedBooking } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
 import { BookingDetailsTable } from './BookingDetailsTable';
@@ -29,28 +29,6 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
   onItemsChanged
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-
-  const handleViewDetails = () => {
-    // Create a BookingWithProduct object for the dialog
-    const bookingForDialog: BookingWithProduct = {
-      id: groupedBooking.id,
-      productId: groupedBooking.items[0]?.productId || '',
-      customerName: groupedBooking.customerName,
-      customerEmail: groupedBooking.customerEmail,
-      customerPhone: groupedBooking.customerPhone,
-      startDate: groupedBooking.startDate,
-      endDate: groupedBooking.endDate,
-      status: groupedBooking.status,
-      totalPrice: groupedBooking.totalPrice,
-      quantity: groupedBooking.items.reduce((sum, item) => sum + item.quantity, 0),
-      notes: groupedBooking.notes || '',
-      createdAt: groupedBooking.createdAt,
-      product: groupedBooking.items[0]?.product,
-      order_id: groupedBooking.order_id
-    };
-    
-    onViewDetails(bookingForDialog);
-  };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -143,13 +121,6 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
         </TableCell>
         <TableCell className="text-right">
           <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleViewDetails}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
             <Button
               variant="outline"
               size="sm"
