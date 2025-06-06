@@ -28,7 +28,7 @@ const AdminDashboard = () => {
   });
 
   console.log('AdminDashboard - Raw bookings data:', bookings?.length || 0);
-  console.log('AdminDashboard - Sample booking statuses:', bookings?.slice(0, 3).map(b => ({ id: b.id, status: b.status, price: b.totalPrice })));
+  console.log('AdminDashboard - Sample booking statuses:', bookings?.slice(0, 3).map(b => ({ id: b.id, status: b.status, price: b.totalPrice, order_id: b.order_id })));
 
   // Calculate statistics
   const totalProducts = products?.length || 0;
@@ -38,30 +38,7 @@ const AdminDashboard = () => {
     (booking: BookingPeriod) => booking.status === 'confirmed' && new Date(booking.endDate) >= new Date()
   ).length || 0;
   
-  // FIXED: Calculate revenue directly from individual bookings, not just grouped ones
-  const completedBookings = bookings?.filter(
-    (booking: BookingPeriod) => booking.status === 'completed'
-  ) || [];
-  
-  console.log('AdminDashboard - Completed bookings:', completedBookings.length);
-  console.log('AdminDashboard - Completed booking details:', completedBookings.map(b => ({ 
-    id: b.id, 
-    status: b.status, 
-    price: b.totalPrice,
-    customer: b.customerName 
-  })));
-  
-  const totalRevenue = completedBookings.reduce(
-    (sum, booking) => sum + (booking.totalPrice || 0), 
-    0
-  );
-  
-  console.log('AdminDashboard - Total revenue calculation:', {
-    completedBookingsCount: completedBookings.length,
-    totalRevenue: totalRevenue
-  });
-
-  // Create bookings with products for grouping (for display purposes only)
+  // IMPROVED: Calculate revenue using order-based grouping for accuracy
   const bookingsWithProducts: BookingWithProduct[] = React.useMemo(() => {
     if (!bookings || !products) return [];
     return bookings.map(booking => {
@@ -70,8 +47,34 @@ const AdminDashboard = () => {
     });
   }, [bookings, products]);
 
-  // Group bookings for display
+  // Group bookings by order to get accurate revenue per order
   const groupedBookings = bookingsWithProducts ? groupBookingsByOrder(bookingsWithProducts) : [];
+  
+  // Calculate revenue from completed orders (not individual bookings)
+  const completedOrders = groupedBookings.filter(
+    order => order.status === 'completed'
+  );
+  
+  console.log('AdminDashboard - Completed orders:', completedOrders.length);
+  console.log('AdminDashboard - Completed order details:', completedOrders.map(o => ({ 
+    id: o.id, 
+    order_id: o.order_id,
+    status: o.status, 
+    totalPrice: o.totalPrice,
+    customer: o.customerName,
+    itemCount: o.items.length
+  })));
+  
+  const totalRevenue = completedOrders.reduce(
+    (sum, order) => sum + (order.totalPrice || 0), 
+    0
+  );
+  
+  console.log('AdminDashboard - Order-based revenue calculation:', {
+    completedOrdersCount: completedOrders.length,
+    totalRevenue: totalRevenue,
+    groupedOrdersCount: groupedBookings.length
+  });
 
   return (
     <div>

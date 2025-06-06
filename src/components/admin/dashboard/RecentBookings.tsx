@@ -46,14 +46,14 @@ export const RecentBookings = ({ bookings, groupedBookings, isLoading }: RecentB
     return format(dateObj, 'dd MMM yyyy', { locale: ru });
   };
 
-  // IMPROVED: Show both individual and grouped views with better labeling
+  // IMPROVED: Prioritize showing grouped orders with better information
   const showGroupedView = groupedBookings && groupedBookings.length > 0;
   const displayBookings = showGroupedView ? groupedBookings.slice(0, 5) : bookings?.slice(0, 5) || [];
 
   console.log('RecentBookings display decision:', {
     showGroupedView,
     displayBookingsCount: displayBookings.length,
-    displayBookingStatuses: displayBookings.map(b => ({ id: b.id, status: b.status }))
+    displayBookingStatuses: displayBookings.map(b => ({ id: b.id, status: b.status, order_id: 'order_id' in b ? b.order_id : 'N/A' }))
   });
 
   return (
@@ -61,7 +61,7 @@ export const RecentBookings = ({ bookings, groupedBookings, isLoading }: RecentB
       <CardHeader>
         <CardTitle>Последние заявки</CardTitle>
         <CardDescription>
-          {showGroupedView ? 'Последние 5 групповых заказов' : 'Последние 5 индивидуальных заявок'}
+          {showGroupedView ? 'Последние 5 заказов (сгруппированные)' : 'Последние 5 индивидуальных заявок'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -78,9 +78,11 @@ export const RecentBookings = ({ bookings, groupedBookings, isLoading }: RecentB
                 ? booking.items.reduce((sum, item) => sum + item.quantity, 0)
                 : (booking as BookingWithProduct).quantity || 1;
               const itemCount = isGrouped ? booking.items.length : 1;
+              const orderId = isGrouped ? booking.order_id : (booking as BookingWithProduct).order_id;
               
               console.log('Rendering booking:', {
                 id: booking.id,
+                order_id: orderId,
                 status: booking.status,
                 isGrouped,
                 totalPrice: booking.totalPrice
@@ -94,6 +96,11 @@ export const RecentBookings = ({ bookings, groupedBookings, isLoading }: RecentB
                       <span>{booking.customerPhone}</span>
                       <div className="flex items-center gap-2 text-xs">
                         <span>{formatDate(booking.startDate)}</span>
+                        {orderId && (
+                          <Badge variant="outline" className="text-xs px-1 py-0">
+                            ID: {orderId.slice(0, 8)}
+                          </Badge>
+                        )}
                         {isGrouped && (
                           <Badge variant="outline" className="text-xs px-1 py-0">
                             {itemCount} товар{itemCount === 1 ? '' : itemCount < 5 ? 'а' : 'ов'}, {totalQuantity} шт.

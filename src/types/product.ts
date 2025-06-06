@@ -23,6 +23,7 @@ export interface BookingPeriod {
   quantity: number; // Added quantity field to track how many items are booked
   notes?: string;
   createdAt: Date;
+  order_id?: string; // Add order_id to track grouped bookings
 }
 
 export interface Category {

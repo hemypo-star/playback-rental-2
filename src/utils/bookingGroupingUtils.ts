@@ -4,20 +4,16 @@ import { BookingWithProduct, GroupedBooking } from '@/components/admin/bookings/
 export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBooking[] => {
   console.log('Starting grouping process with bookings:', bookings.length);
   
-  // Group bookings by customer and date range (more lenient grouping)
+  // Group bookings by order_id
   const groupedMap = new Map<string, GroupedBooking>();
 
   bookings.forEach(booking => {
-    // Create a grouping key based on customer info and date range
-    // Convert dates to date strings (YYYY-MM-DD) to ignore time differences
-    const startDateKey = new Date(booking.startDate).toISOString().split('T')[0];
-    const endDateKey = new Date(booking.endDate).toISOString().split('T')[0];
-    
-    // Use customer email and phone as primary identifiers, plus the date range
-    const groupKey = `${booking.customerEmail}_${booking.customerPhone}_${startDateKey}_${endDateKey}`;
+    // Use order_id if available, fallback to booking.id for legacy data
+    const groupKey = booking.order_id || booking.id;
     
     console.log('Processing booking:', {
       id: booking.id,
+      order_id: booking.order_id,
       customer: booking.customerEmail,
       groupKey,
       startDate: booking.startDate,
@@ -38,7 +34,7 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       );
       
       if (existingItemIndex >= 0) {
-        // If product already exists, increase quantity (this handles legacy duplicate bookings)
+        // If product already exists, increase quantity
         existingGroup.items[existingItemIndex].quantity += (booking.quantity || 1);
         console.log(`Merged duplicate product ${booking.productId} - new quantity: ${existingGroup.items[existingItemIndex].quantity}`);
       } else {
@@ -81,6 +77,7 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       
       console.log('Updated existing group:', {
         id: existingGroup.id,
+        order_id: groupKey,
         status: existingGroup.status,
         totalItems: existingGroup.items.length,
         totalQuantity: existingGroup.items.reduce((sum, item) => sum + item.quantity, 0),
@@ -90,6 +87,7 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       // Create new group
       const newGroup: GroupedBooking = {
         id: booking.id,
+        order_id: groupKey, // Store the order_id in the grouped booking
         customerName: booking.customerName,
         customerEmail: booking.customerEmail,
         customerPhone: booking.customerPhone,
@@ -109,6 +107,7 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       groupedMap.set(groupKey, newGroup);
       console.log('Created new group:', {
         id: newGroup.id,
+        order_id: groupKey,
         customer: newGroup.customerEmail,
         productId: booking.productId,
         quantity: booking.quantity || 1,
@@ -127,6 +126,7 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
     groupedBookings: result.length,
     groups: result.map(g => ({ 
       id: g.id, 
+      order_id: g.order_id,
       customer: g.customerEmail,
       status: g.status,
       itemCount: g.items.length, 

@@ -18,6 +18,7 @@ export type Database = {
           end_date: string
           id: string
           notes: string | null
+          order_id: string | null
           product_id: string | null
           quantity: number
           start_date: string
@@ -32,6 +33,7 @@ export type Database = {
           end_date: string
           id?: string
           notes?: string | null
+          order_id?: string | null
           product_id?: string | null
           quantity?: number
           start_date: string
@@ -46,6 +48,7 @@ export type Database = {
           end_date?: string
           id?: string
           notes?: string | null
+          order_id?: string | null
           product_id?: string | null
           quantity?: number
           start_date?: string

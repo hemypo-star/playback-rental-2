@@ -1,3 +1,4 @@
+
 import { BookingPeriod, BookingFormData } from '@/types/product';
 import { supabaseServiceClient } from './supabaseClient';
 import { getProducts } from './productService';
@@ -28,9 +29,10 @@ export const getBookings = async (): Promise<BookingPeriod[]> => {
       endDate: new Date(b.end_date),
       status: b.status as BookingPeriod['status'],
       totalPrice: b.total_price,
-      quantity: b.quantity || 1, // Use the new quantity field with fallback
+      quantity: b.quantity || 1,
       notes: b.notes || '',
-      createdAt: new Date(b.created_at || Date.now())
+      createdAt: new Date(b.created_at || Date.now()),
+      order_id: b.order_id // Include order_id in the response
     }));
   } catch (error) {
     console.error('Error getting bookings:', error);
@@ -58,9 +60,10 @@ export const getProductBookings = async (productId: string): Promise<BookingPeri
       customerPhone: booking.customer_phone,
       status: booking.status as BookingPeriod['status'],
       totalPrice: booking.total_price,
-      quantity: booking.quantity || 1, // Use the new quantity field with fallback
+      quantity: booking.quantity || 1,
       notes: booking.notes || '',
-      createdAt: new Date(booking.created_at || Date.now())
+      createdAt: new Date(booking.created_at || Date.now()),
+      order_id: booking.order_id // Include order_id in the response
     }));
   } catch (error) {
     console.error('Error getting product bookings:', error);
@@ -77,8 +80,9 @@ export const createBooking = async (booking: {
   endDate: string;
   status: BookingPeriod['status'];
   totalPrice: number;
-  quantity: number; // Added quantity parameter
+  quantity: number;
   notes?: string;
+  order_id?: string; // Add order_id parameter for grouped bookings
 }): Promise<BookingPeriod> => {
   try {
     const { data, error } = await supabase
@@ -92,8 +96,9 @@ export const createBooking = async (booking: {
         end_date: booking.endDate,
         status: booking.status,
         total_price: booking.totalPrice,
-        quantity: booking.quantity, // Include quantity in the insert
-        notes: booking.notes || ''
+        quantity: booking.quantity,
+        notes: booking.notes || '',
+        order_id: booking.order_id // Include order_id in the insert
       })
       .select()
       .single();
@@ -110,9 +115,10 @@ export const createBooking = async (booking: {
       endDate: new Date(data.end_date),
       status: data.status as BookingPeriod['status'],
       totalPrice: data.total_price,
-      quantity: data.quantity || 1, // Include quantity in the response
+      quantity: data.quantity || 1,
       notes: data.notes || '',
-      createdAt: new Date(data.created_at || Date.now())
+      createdAt: new Date(data.created_at || Date.now()),
+      order_id: data.order_id // Include order_id in the response
     };
   } catch (error) {
     console.error('Error creating booking:', error);
