@@ -91,9 +91,6 @@ export const BookingStatusSelect: React.FC<Props> = ({ booking, onStatusUpdate, 
         {availableOptions.map(opt => (
           <SelectItem key={opt.value} value={opt.value}>
             {opt.label}
-            {opt.value !== booking.status && booking.order_id && (
-              <span className="text-xs text-muted-foreground ml-1">(весь заказ)</span>
-            )}
           </SelectItem>
         ))}
       </SelectContent>
