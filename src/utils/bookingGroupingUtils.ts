@@ -24,7 +24,8 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
       endDate: booking.endDate,
       createdAt: booking.createdAt,
       quantity: booking.quantity || 1,
-      status: booking.status
+      status: booking.status,
+      totalPrice: booking.totalPrice
     });
     
     if (groupedMap.has(groupKey)) {
@@ -111,7 +112,8 @@ export const groupBookingsByOrder = (bookings: BookingWithProduct[]): GroupedBoo
         customer: newGroup.customerEmail,
         productId: booking.productId,
         quantity: booking.quantity || 1,
-        status: newGroup.status
+        status: newGroup.status,
+        totalPrice: newGroup.totalPrice
       });
     }
   });

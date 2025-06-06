@@ -21,6 +21,7 @@ const AdminBookings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // UNIFIED: Use same cache keys as AdminDashboard
   const { data: products } = useQuery({
     queryKey: ['admin-products'],
     queryFn: getProducts
@@ -32,7 +33,7 @@ const AdminBookings = () => {
     isLoading,
     isError
   } = useQuery({
-    queryKey: ['bookings'],
+    queryKey: ['bookings'], // UNIFIED: Now matches AdminDashboard cache key
     queryFn: getBookings
   });
 
@@ -66,9 +67,12 @@ const AdminBookings = () => {
     return filtered;
   }, [bookingsWithProducts, search, statusFilter]);
 
-  // Группируем отфильтрованные бронирования
+  // Group filtered bookings with enhanced debugging
   const groupedBookings = React.useMemo(() => {
-    return groupBookingsByOrder(filteredBookings);
+    console.log('AdminBookings - Grouping filtered bookings:', filteredBookings.length);
+    const grouped = groupBookingsByOrder(filteredBookings);
+    console.log('AdminBookings - Grouped result:', grouped.length);
+    return grouped;
   }, [filteredBookings]);
 
   const handleStatusUpdate = async (id: string, status: BookingPeriod['status']) => {
@@ -80,7 +84,7 @@ const AdminBookings = () => {
         description: 'Статус бронирования успешно обновлен.'
       });
       
-      // Инвалидируем кеш для принудительного обновления
+      // Invalidate unified cache keys for both Dashboard and Bookings
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       setDialogOpen(false);
     } catch (error: any) {
@@ -122,10 +126,10 @@ const AdminBookings = () => {
       });
       
       console.log('Invalidating queries to refresh data');
-      // Принудительно инвалидируем кеш и перезагружаем данные
+      // Invalidate unified cache keys for both Dashboard and Bookings
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       
-      // Если удаляемое бронирование открыто в диалоге, закрываем его
+      // If the deleted booking was open in dialog, close it
       if (selectedBooking?.id === id) {
         console.log('Closing dialog for deleted booking');
         setDialogOpen(false);

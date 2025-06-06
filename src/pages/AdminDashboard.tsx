@@ -16,14 +16,14 @@ import { groupBookingsByOrder } from '@/utils/bookingGroupingUtils';
 import { BookingWithProduct } from '@/components/admin/bookings/types';
 
 const AdminDashboard = () => {
-  // Use unified cache keys to match AdminBookings
+  // UNIFIED: Use same cache keys as AdminBookings
   const { data: products } = useQuery({
     queryKey: ['admin-products'],
     queryFn: () => getProducts()
   });
 
   const { data: bookings } = useQuery({
-    queryKey: ['bookings'], // Changed from 'admin-bookings' to match AdminBookings
+    queryKey: ['bookings'], // UNIFIED: Now matches AdminBookings cache key
     queryFn: () => getBookings()
   });
 
