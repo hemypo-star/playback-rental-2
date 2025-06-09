@@ -1,103 +1,155 @@
-
-import { useState, useCallback } from 'react';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useState, useEffect, useCallback } from 'react';
+import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { format, addDays, isBefore, isAfter, isSameDay } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { BookingPeriod } from '@/types/product';
-import DateRangePickerRu from './booking/DateRangePickerRu';
+import DateRangePickerRu from '@/components/booking/DateRangePickerRu';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
-interface BookingCalendarProps {
+type BookingCalendarProps = {
   onBookingChange: (booking: BookingPeriod) => void;
+  bookedPeriods?: BookingPeriod[];
   initialStartDate?: Date;
   initialEndDate?: Date;
-  bookedPeriods?: BookingPeriod[];
   isCompact?: boolean;
-  className?: string;
-  onClose?: () => void;
-}
+  onDateConfirmed?: () => void; // New prop
+};
 
-const BookingCalendar = ({
-  onBookingChange,
+const BookingCalendar = ({ 
+  onBookingChange, 
+  bookedPeriods = [], 
   initialStartDate,
   initialEndDate,
-  bookedPeriods,
   isCompact = false,
-  className,
-  onClose
+  onDateConfirmed
 }: BookingCalendarProps) => {
+  const [startDate, setStartDate] = useState<Date | undefined>(initialStartDate);
+  const [endDate, setEndDate] = useState<Date | undefined>(initialEndDate);
+  const [isOpen, setIsOpen] = useState(false);
   const isMobile = useIsMobile();
-  const [dateRange, setDateRange] = useState<{
-    start: Date | null;
-    end: Date | null;
-  }>({
-    start: initialStartDate || null,
-    end: initialEndDate || null
-  });
 
-  // Use useCallback to avoid unnecessary re-renders
-  const handleDateRangeChange = useCallback((newRange: {
-    start: Date | null;
-    end: Date | null;
-  }) => {
-    setDateRange(newRange);
-    if (newRange.start && newRange.end) {
+  // Update local state when props change
+  useEffect(() => {
+    setStartDate(initialStartDate);
+    setEndDate(initialEndDate);
+  }, [initialStartDate, initialEndDate]);
+
+  // Format date for display
+  const formatDate = (date?: Date) => {
+    if (!date) return '';
+    return format(date, 'dd MMM yyyy', { locale: ru });
+  };
+
+  // Check if a date is booked
+  const isDateBooked = (date: Date) => {
+    return bookedPeriods.some(period => {
+      const periodStart = new Date(period.startDate);
+      const periodEnd = new Date(period.endDate);
+      return (
+        (isAfter(date, periodStart) || isSameDay(date, periodStart)) && 
+        (isBefore(date, periodEnd) || isSameDay(date, periodEnd))
+      );
+    });
+  };
+
+  const handleDateRangeChange = useCallback((range: { start: Date | null; end: Date | null }) => {
+    if (range.start && range.end) {
+      setStartDate(range.start);
+      setEndDate(range.end);
+      
       onBookingChange({
-        id: 'temp-id',
+        id: '',
         productId: '',
+        startDate: range.start,
+        endDate: range.end,
         customerName: '',
         customerEmail: '',
         customerPhone: '',
-        startDate: newRange.start,
-        endDate: newRange.end,
         status: 'pending',
         totalPrice: 0,
-        quantity: 1, // Added missing quantity field
-        createdAt: new Date(),
-        notes: ''
+        quantity: 1,
+        createdAt: new Date()
       });
-
-      // Scroll to top and close popover
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-
-      // Call onClose with a slight delay to ensure calendar selection completes
-      if (onClose) {
-        setTimeout(() => {
-          onClose();
-        }, 100);
-      }
+      
+      setIsOpen(false);
     }
-  }, [onBookingChange, onClose]);
+  }, [onBookingChange]);
 
-  const handleClose = useCallback(() => {
-    if (onClose) {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-      onClose();
-    }
-  }, [onClose]);
+  // Clear selected dates
+  const handleClearDates = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+    onBookingChange({
+      id: '',
+      productId: '',
+      startDate: new Date(0),
+      endDate: new Date(0),
+      customerName: '',
+      customerEmail: '',
+      customerPhone: '',
+      status: 'pending',
+      totalPrice: 0,
+      quantity: 1,
+      createdAt: new Date()
+    });
+  };
 
-  return <div className={cn("border rounded-lg shadow-sm bg-card flex flex-col h-full w-full", className)}>
-      <div className="p-4 border-b flex items-center justify-between">
+  return (
+    <div className="space-y-4">
+      <div className={cn(
+        "flex items-center gap-2", 
+        isCompact ? "flex-col items-start" : "flex-row items-center"
+      )}>
+        <div className="flex-1 w-full">
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4 text-[#ea384c]" />
+            <span className="text-sm text-[#222]">
+              {startDate && endDate 
+                ? `${formatDate(startDate)} — ${formatDate(endDate)}`
+                : "Выберите даты аренды"}
+            </span>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-primary" />
-          <h3 className="font-medium">Выберите даты аренды</h3>
+          {startDate && endDate && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleClearDates}
+              className="h-8 px-2 text-xs"
+            >
+              Очистить
+            </Button>
+          )}
+          <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 border-[#ea384c] text-[#ea384c] hover:bg-[#ea384c] hover:text-white"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {startDate && endDate ? "Изменить даты" : "Выбрать даты"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <DateRangePickerRu
+                onChange={handleDateRangeChange}
+                initialStartDate={startDate}
+                initialEndDate={endDate}
+                onClose={() => setIsOpen(false)}
+                onDateConfirmed={onDateConfirmed}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
-      <div className={cn("p-4 flex-1 overflow-auto w-full py-[6px]", isMobile ? "max-h-[550px]" : "")}>
-        <DateRangePickerRu 
-          onChange={handleDateRangeChange} 
-          initialStartDate={initialStartDate} 
-          initialEndDate={initialEndDate} 
-          className={cn(isCompact && "scale-[0.95] origin-top")} 
-          onClose={handleClose} 
-        />
-      </div>
-    </div>;
+    </div>
+  );
 };
 
 export default BookingCalendar;

@@ -1,4 +1,3 @@
-
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,9 +28,10 @@ const ProductCard = ({
   featured = false
 }: ProductCardProps) => {
   const navigate = useNavigate();
-  const { addToCart } = useCartContext();
+  const { addToCart, isProductInCart } = useCartContext();
   
   const hasBookingDates = bookingDates?.startDate && bookingDates?.endDate;
+  const productInCart = isProductInCart(product.id);
   
   // Load categories to get category name by ID
   const { data: categories } = useQuery({
@@ -122,6 +122,12 @@ const ProductCard = ({
               Популярное
             </div>
           )}
+          {productInCart && (
+            <div className="absolute top-2 right-2 bg-[#ea384c] text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
+              <ShoppingCart className="h-3 w-3" />
+              В корзине
+            </div>
+          )}
           {!currentlyAvailable && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <div className="bg-white/90 text-black font-medium px-3 py-1 rounded">
@@ -176,7 +182,7 @@ const ProductCard = ({
           <Button 
             size="sm" 
             variant={hasBookingDates && currentlyAvailable ? "default" : "outline"} 
-            className="rounded-full" 
+            className={`rounded-full ${productInCart ? 'bg-[#ea384c] hover:bg-[#ea384c]/90 text-white' : ''}`}
             onClick={handleAddToCart}
             disabled={!currentlyAvailable}
           >

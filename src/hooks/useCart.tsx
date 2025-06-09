@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product } from '@/types/product';
 import { useToast } from '@/hooks/use-toast';
@@ -69,6 +68,11 @@ export const useCart = () => {
       return { available: false, maxQuantity: 0 };
     }
   }, []);
+
+  // Check if a product is in the cart
+  const isProductInCart = useCallback((productId: string) => {
+    return cartItems.some(item => item.productId === productId);
+  }, [cartItems]);
 
   const addToCart = useCallback(async (product: Product, startDate?: Date, endDate?: Date, quantity: number = 1) => {
     // Check if required dates are provided
@@ -308,8 +312,9 @@ export const useCart = () => {
     clearCart,
     updateCartDates,
     getCartTotal,
-    cartCount
-  }), [cartItems, addToCart, removeFromCart, updateItemQuantity, clearCart, updateCartDates, getCartTotal, cartCount]);
+    cartCount,
+    isProductInCart
+  }), [cartItems, addToCart, removeFromCart, updateItemQuantity, clearCart, updateCartDates, getCartTotal, cartCount, isProductInCart]);
 };
 
 // Create a CartProvider for global state management

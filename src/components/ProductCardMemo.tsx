@@ -1,3 +1,4 @@
+
 import React, { memo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -34,7 +35,8 @@ const ProductCardMemo = memo(({
   featured = false
 }: ProductCardMemoProps) => {
   const navigate = useNavigate();
-  const { addToCart } = useCartContext();
+  const { addToCart, isProductInCart } = useCartContext();
+  const productInCart = isProductInCart(product.id);
 
   const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -135,6 +137,12 @@ const ProductCardMemo = memo(({
               Популярное
             </div>
           )}
+          {productInCart && (
+            <div className="absolute top-2 right-2 bg-[#ea384c] text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
+              <ShoppingCart className="h-3 w-3" />
+              В корзине
+            </div>
+          )}
           {!currentlyAvailable && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <div className="bg-white/90 text-black font-medium px-3 py-1 rounded">
@@ -177,7 +185,7 @@ const ProductCardMemo = memo(({
           <Button 
             size="sm" 
             variant={hasBookingDates && currentlyAvailable ? "default" : "outline"} 
-            className="rounded-full smooth-transition" 
+            className={`rounded-full smooth-transition ${productInCart ? 'bg-[#ea384c] hover:bg-[#ea384c]/90 text-white' : ''}`}
             onClick={handleAddToCart}
             disabled={!currentlyAvailable || (hasBookingDates && availableQuantity === 0)}
           >

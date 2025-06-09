@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeftIcon, CalendarIcon } from 'lucide-react';
@@ -25,6 +25,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const addToCartButtonRef = useRef<HTMLButtonElement>(null);
   
   const locationState = location.state as { startDate?: Date; endDate?: Date } | null;
   
@@ -67,6 +68,16 @@ const ProductDetail = () => {
     });
     // Reset quantity when dates change
     setSelectedQuantity(1);
+  };
+
+  const handleDateConfirmed = () => {
+    // Scroll to the Add to Cart button with smooth animation
+    if (addToCartButtonRef.current) {
+      addToCartButtonRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
   };
 
   // Calculate available quantity considering bookings
@@ -222,6 +233,7 @@ const ProductDetail = () => {
                 initialStartDate={bookingDates.startDate} 
                 initialEndDate={bookingDates.endDate} 
                 isCompact={isMobile}
+                onDateConfirmed={handleDateConfirmed}
               />
 
               {/* Quantity Selector - only show if dates are selected and quantity > 1 available */}
@@ -246,6 +258,7 @@ const ProductDetail = () => {
               }
 
               <Button 
+                ref={addToCartButtonRef}
                 size="lg" 
                 className={`w-full ${hasDateConflict ? 'bg-[#ea384c] hover:bg-[#ea384c]/90' : ''}`}
                 disabled={!product.available || !bookingDates.startDate || !bookingDates.endDate || addingToCart || hasDateConflict}

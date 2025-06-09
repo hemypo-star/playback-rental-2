@@ -1,3 +1,4 @@
+
 import React from "react";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -9,12 +10,14 @@ import CalendarHeader from "./DateRangePickerRu/CalendarHeader";
 import SelectedInfo from "./DateRangePickerRu/SelectedInfo";
 import { useDateRangeCalendar } from "@/hooks/useDateRangeCalendar";
 import { useIsMobile } from "@/hooks/use-mobile";
+
 const HOURS = Array.from({
   length: 10
 }, (_, i) => i + 10).map(hour => ({
   value: hour.toString(),
   label: (hour < 10 ? `0${hour}` : hour) + ":00"
 }));
+
 interface DateRangePickerRuProps {
   onChange: (range: {
     start: Date | null;
@@ -24,13 +27,16 @@ interface DateRangePickerRuProps {
   initialEndDate?: Date;
   className?: string;
   onClose?: () => void;
+  onDateConfirmed?: () => void; // New callback prop
 }
+
 const DateRangePickerRu = ({
   onChange,
   initialStartDate,
   initialEndDate,
   className,
-  onClose
+  onClose,
+  onDateConfirmed
 }: DateRangePickerRuProps) => {
   const isMobile = useIsMobile();
   const {
@@ -50,12 +56,19 @@ const DateRangePickerRu = ({
     setEndTime,
     getFormattedDateRange
   } = useDateRangeCalendar(initialStartDate, initialEndDate);
+  
   const daysOfWeek = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"].map(d => d.toUpperCase());
+  
   const handleConfirmTime = () => {
     if (!selection.from) return;
     const dateRange = getFormattedDateRange();
     if (dateRange) {
       onChange(dateRange);
+
+      // Call the new callback if provided
+      if (onDateConfirmed) {
+        onDateConfirmed();
+      }
 
       // Force close popup with higher priority
       if (onClose) {
@@ -67,6 +80,7 @@ const DateRangePickerRu = ({
       }
     }
   };
+
   return <div className={cn("w-full", className)}>
       <CalendarHeader onPrev={handlePrevMonth} onNext={handleNextMonth} />
 
@@ -106,4 +120,5 @@ const DateRangePickerRu = ({
       <SelectedInfo from={selection.from} to={selection.to} startTime={startTime} endTime={endTime} />
     </div>;
 };
+
 export default DateRangePickerRu;
