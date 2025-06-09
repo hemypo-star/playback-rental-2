@@ -137,12 +137,6 @@ const ProductCardMemo = memo(({
               Популярное
             </div>
           )}
-          {productInCart && (
-            <div className="absolute top-2 right-2 bg-[#ea384c] text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
-              <ShoppingCart className="h-3 w-3" />
-              В корзине
-            </div>
-          )}
           {!currentlyAvailable && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <div className="bg-white/90 text-black font-medium px-3 py-1 rounded">

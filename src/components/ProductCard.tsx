@@ -1,3 +1,4 @@
+
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -120,12 +121,6 @@ const ProductCard = ({
           {featured && (
             <div className="absolute top-2 left-2 bg-primary text-white text-xs font-medium px-2 py-1 rounded">
               Популярное
-            </div>
-          )}
-          {productInCart && (
-            <div className="absolute top-2 right-2 bg-[#ea384c] text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
-              <ShoppingCart className="h-3 w-3" />
-              В корзине
             </div>
           )}
           {!currentlyAvailable && (
