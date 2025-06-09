@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,9 @@ type BookingCalendarProps = {
   initialStartDate?: Date;
   initialEndDate?: Date;
   isCompact?: boolean;
-  onDateConfirmed?: () => void; // New prop
+  onDateConfirmed?: () => void;
+  className?: string; // Add missing className prop
+  onClose?: () => void; // Add missing onClose prop
 };
 
 const BookingCalendar = ({ 
@@ -25,7 +28,9 @@ const BookingCalendar = ({
   initialStartDate,
   initialEndDate,
   isCompact = false,
-  onDateConfirmed
+  onDateConfirmed,
+  className,
+  onClose
 }: BookingCalendarProps) => {
   const [startDate, setStartDate] = useState<Date | undefined>(initialStartDate);
   const [endDate, setEndDate] = useState<Date | undefined>(initialEndDate);
@@ -98,8 +103,16 @@ const BookingCalendar = ({
     });
   };
 
+  // Handle close functionality
+  const handleClose = () => {
+    setIsOpen(false);
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", className)}>
       <div className={cn(
         "flex items-center gap-2", 
         isCompact ? "flex-col items-start" : "flex-row items-center"
@@ -141,7 +154,7 @@ const BookingCalendar = ({
                 onChange={handleDateRangeChange}
                 initialStartDate={startDate}
                 initialEndDate={endDate}
-                onClose={() => setIsOpen(false)}
+                onClose={handleClose}
                 onDateConfirmed={onDateConfirmed}
               />
             </PopoverContent>
