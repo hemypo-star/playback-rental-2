@@ -1,6 +1,5 @@
 
-import { Package, Camera } from 'lucide-react';
-import { CalendarIconComponent } from './CalendarIconComponent';
+import { Package, Calendar, Clock, User, MapPin, Camera, CheckSquare } from 'lucide-react';
 
 export const HowItWorksSection = () => {
   return (
@@ -17,14 +16,14 @@ export const HowItWorksSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
             {
-              title: "Выберите оборудование",
-              description: "Просмотрите наш обширный каталог и выберите оборудование, необходимое для вашего проекта.",
+              title: "Просмотрите наш каталог",
+              description: "Ознакомьтесь с нашей обширной коллекцией профессионального оборудования. Отфильтруйте по категориям или выполните поиск по конкретным позициям.",
               icon: <Package className="h-8 w-8 text-primary" />,
             },
             {
-              title: "Забронируйте даты",
-              description: "Выберите предпочтительные даты получения и возврата в нашем календаре доступности.",
-              icon: <CalendarIconComponent />,
+              title: "Проверьте наличие свободной техники",
+              description: "Просмотрите календарь доступности выбранного вами оборудования, чтобы убедиться, что оно доступно в течение желаемого периода аренды.",
+              icon: <Calendar className="h-8 w-8 text-primary" />,
             },
             {
               title: "Получите и создавайте",
