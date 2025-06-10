@@ -1,5 +1,5 @@
 
-import { Package, Calendar, Clock, User, MapPin, Camera, CheckSquare } from 'lucide-react';
+import { Search, Calendar, Truck } from 'lucide-react';
 
 export const HowItWorksSection = () => {
   return (
@@ -17,18 +17,18 @@ export const HowItWorksSection = () => {
           {[
             {
               title: "Просмотрите наш каталог",
-              description: "Ознакомьтесь с нашей обширной коллекцией профессионального оборудования. Отфильтруйте по категориям или выполните поиск по конкретным позициям.",
-              icon: <Package className="h-8 w-8 text-primary" />,
+              description: "Выберите товары из нашего обширного каталога профессионального оборудования. Найдите именно то, что вам нужно для вашего проекта.",
+              icon: <Search className="h-8 w-8 text-primary" />,
             },
             {
               title: "Проверьте наличие свободной техники",
-              description: "Просмотрите календарь доступности выбранного вами оборудования, чтобы убедиться, что оно доступно в течение желаемого периода аренды.",
+              description: "Выберите дату аренды, когда вам нужно оборудование. Проверьте доступность на интересующие вас даты через наш календарь.",
               icon: <Calendar className="h-8 w-8 text-primary" />,
             },
             {
               title: "Получите и создавайте",
-              description: "Заберите оборудование в нашем пункте выдачи и приступайте к реализации своего проекта.",
-              icon: <Camera className="h-8 w-8 text-primary" />,
+              description: "Заберите товары в нашем офисе в удобное для вас время и приступайте к реализации своего проекта с профессиональным оборудованием.",
+              icon: <Truck className="h-8 w-8 text-primary" />,
             },
           ].map((step, index) => (
             <div key={index} className="flex flex-col items-center text-center p-8 rounded-xl glass-card">
