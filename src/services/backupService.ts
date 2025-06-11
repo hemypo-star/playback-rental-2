@@ -25,7 +25,8 @@ export const backupService = {
       throw new Error(`Failed to fetch backup logs: ${error.message}`);
     }
     
-    return data || [];
+    // Type assertion to ensure compatibility with our interface
+    return (data || []) as BackupLog[];
   },
 
   // Create a new backup
@@ -102,6 +103,7 @@ export const backupService = {
       throw new Error(`Failed to get backup status: ${error.message}`);
     }
     
-    return data;
+    // Type assertion to ensure compatibility with our interface
+    return data as BackupLog;
   }
 };
