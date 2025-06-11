@@ -98,7 +98,7 @@ async function performBackup(supabaseClient: any, backupId: string, type: string
 
     if (type === 'database' || type === 'full') {
       const dbBackup = await createDatabaseBackup(supabaseClient)
-      filePath = `${userId}/${type}-${Date.now()}.sql`
+      filePath = `${userId}/database-${Date.now()}.sql`
       
       // Upload database backup to storage
       const { error: uploadError } = await supabaseClient.storage
@@ -111,27 +111,59 @@ async function performBackup(supabaseClient: any, backupId: string, type: string
       fileSize = new Blob([dbBackup]).size
     }
 
-    if (type === 'storage' || type === 'full') {
+    if (type === 'storage') {
       const storageBackup = await createStorageBackup(supabaseClient)
-      const storageFilePath = `${userId}/${type === 'full' ? 'full' : 'storage'}-${Date.now()}.zip`
+      filePath = `${userId}/storage-${Date.now()}.json`
       
       // Upload storage backup
       const { error: uploadError } = await supabaseClient.storage
         .from('backups')
-        .upload(storageFilePath, storageBackup, {
-          contentType: 'application/zip'
+        .upload(filePath, storageBackup, {
+          contentType: 'application/json'
+        })
+
+      if (uploadError) throw uploadError
+      fileSize = storageBackup.size
+    }
+
+    if (type === 'full') {
+      // For full backup, create both database and storage backups
+      const dbBackup = await createDatabaseBackup(supabaseClient)
+      const storageBackup = await createStorageBackup(supabaseClient)
+      
+      // Create a combined backup manifest
+      const fullBackupManifest = {
+        timestamp: new Date().toISOString(),
+        type: 'full',
+        database: {
+          filename: `database-${Date.now()}.sql`,
+          size: new Blob([dbBackup]).size
+        },
+        storage: {
+          filename: `storage-${Date.now()}.json`,
+          size: storageBackup.size
+        }
+      }
+      
+      filePath = `${userId}/full-${Date.now()}.json`
+      
+      // Upload the manifest
+      const { error: uploadError } = await supabaseClient.storage
+        .from('backups')
+        .upload(filePath, JSON.stringify(fullBackupManifest, null, 2), {
+          contentType: 'application/json'
         })
 
       if (uploadError) throw uploadError
       
-      if (type === 'storage') {
-        filePath = storageFilePath
-        fileSize = storageBackup.size
-      } else {
-        // For full backup, create a combined archive
-        filePath = `${userId}/full-${Date.now()}.zip`
-        fileSize = storageBackup.size + new Blob([await createDatabaseBackup(supabaseClient)]).size
-      }
+      // Also upload the individual files
+      const dbFilePath = `${userId}/database-${Date.now()}.sql`
+      const storageFilePath = `${userId}/storage-${Date.now()}.json`
+      
+      await supabaseClient.storage.from('backups').upload(dbFilePath, dbBackup, { contentType: 'application/sql' })
+      await supabaseClient.storage.from('backups').upload(storageFilePath, storageBackup, { contentType: 'application/json' })
+      
+      fileSize = JSON.stringify(fullBackupManifest).length + new Blob([dbBackup]).size + storageBackup.size
     }
 
     // Update backup log with success
@@ -202,14 +234,11 @@ async function createDatabaseBackup(supabaseClient: any): Promise<string> {
 }
 
 async function createStorageBackup(supabaseClient: any): Promise<Blob> {
-  // This is a simplified version - in a real implementation, you'd want to
-  // download all files from storage buckets and create a zip archive
-  
   const buckets = ['products', 'categories', 'promotions']
   const backupData = {
     timestamp: new Date().toISOString(),
-    buckets: {},
-    note: 'This is a placeholder for storage backup. In production, implement proper file archiving.'
+    type: 'storage_backup',
+    buckets: {}
   }
   
   for (const bucket of buckets) {
@@ -222,11 +251,13 @@ async function createStorageBackup(supabaseClient: any): Promise<Blob> {
         backupData.buckets[bucket] = files.map(file => ({
           name: file.name,
           size: file.metadata?.size,
-          lastModified: file.updated_at
+          lastModified: file.updated_at,
+          id: file.id
         }))
       }
     } catch (error) {
       console.warn(`Could not list files in bucket ${bucket}:`, error)
+      backupData.buckets[bucket] = { error: error.message }
     }
   }
   

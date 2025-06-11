@@ -35,7 +35,7 @@ VALUES (
   'backups', 
   false,
   1073741824, -- 1GB limit
-  ARRAY['application/gzip', 'application/zip', 'application/sql', 'text/plain']
+  ARRAY['application/gzip', 'application/zip', 'application/sql', 'text/plain', 'application/json']
 );
 
 -- Create storage policies for backups bucket
