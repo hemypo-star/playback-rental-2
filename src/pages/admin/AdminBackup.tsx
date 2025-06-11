@@ -15,7 +15,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Loader2
+  Loader2,
+  FileArchive,
+  Eye
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -33,6 +35,7 @@ interface BackupLog {
 
 const AdminBackup = () => {
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [previewingBackup, setPreviewingBackup] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -91,7 +94,7 @@ const AdminBackup = () => {
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filePath.split('/').pop() || 'backup.zip';
+      a.download = filePath.split('/').pop() || 'backup';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -195,6 +198,29 @@ const AdminBackup = () => {
     return `${size.toFixed(1)} ${units[unitIndex]}`;
   };
 
+  const getBackupTypeIcon = (type: string) => {
+    switch (type) {
+      case 'storage':
+      case 'full':
+        return <FileArchive className="h-4 w-4" />;
+      default:
+        return <Database className="h-4 w-4" />;
+    }
+  };
+
+  const getBackupDescription = (backup: BackupLog) => {
+    const baseDesc = formatDistanceToNow(new Date(backup.created_at), { 
+      addSuffix: true, 
+      locale: ru 
+    });
+    
+    if (backup.file_size) {
+      return `${baseDesc} • ${formatFileSize(backup.file_size)}`;
+    }
+    
+    return baseDesc;
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -235,11 +261,11 @@ const AdminBackup = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <HardDrive className="h-5 w-5" />
+              <FileArchive className="h-5 w-5" />
               Файлы
             </CardTitle>
             <CardDescription>
-              Создать резервную копию всех загруженных файлов
+              Создать ZIP-архив всех загруженных файлов
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -252,9 +278,9 @@ const AdminBackup = () => {
               {createBackupMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <HardDrive className="mr-2 h-4 w-4" />
+                <FileArchive className="mr-2 h-4 w-4" />
               )}
-              Создать копию файлов
+              Создать архив файлов
             </Button>
           </CardContent>
         </Card>
@@ -263,11 +289,11 @@ const AdminBackup = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              <HardDrive className="h-4 w-4" />
+              <FileArchive className="h-4 w-4" />
               Полная копия
             </CardTitle>
             <CardDescription>
-              Создать полную резервную копию системы
+              Создать полную резервную копию в ZIP-архиве
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -282,7 +308,7 @@ const AdminBackup = () => {
               ) : (
                 <>
                   <Database className="mr-2 h-4 w-4" />
-                  <HardDrive className="mr-1 h-3 w-3" />
+                  <FileArchive className="mr-1 h-3 w-3" />
                 </>
               )}
               Полная копия
@@ -296,7 +322,7 @@ const AdminBackup = () => {
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
           Создание резервных копий может занять продолжительное время в зависимости от объема данных. 
-          Рекомендуется выполнять резервное копирование в периоды низкой активности.
+          Архивы файлов теперь включают все загруженные изображения и документы.
         </AlertDescription>
       </Alert>
 
@@ -325,9 +351,10 @@ const AdminBackup = () => {
                     {getStatusIcon(backup.status)}
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">
+                        <span className="font-medium flex items-center gap-2">
+                          {getBackupTypeIcon(backup.backup_type)}
                           {backup.backup_type === 'database' && 'База данных'}
-                          {backup.backup_type === 'storage' && 'Файлы'}
+                          {backup.backup_type === 'storage' && 'Архив файлов'}
                           {backup.backup_type === 'full' && 'Полная копия'}
                         </span>
                         <Badge variant={getStatusBadgeVariant(backup.status)}>
@@ -338,11 +365,7 @@ const AdminBackup = () => {
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(backup.created_at), { 
-                          addSuffix: true, 
-                          locale: ru 
-                        })}
-                        {backup.file_size && ` • ${formatFileSize(backup.file_size)}`}
+                        {getBackupDescription(backup)}
                       </div>
                       {backup.error_message && (
                         <div className="text-sm text-red-600 mt-1">

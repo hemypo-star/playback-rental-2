@@ -113,13 +113,13 @@ async function performBackup(supabaseClient: any, backupId: string, type: string
 
     if (type === 'storage') {
       const storageBackup = await createStorageBackup(supabaseClient)
-      filePath = `${userId}/storage-${Date.now()}.json`
+      filePath = `${userId}/storage-${Date.now()}.zip`
       
       // Upload storage backup
       const { error: uploadError } = await supabaseClient.storage
         .from('backups')
         .upload(filePath, storageBackup, {
-          contentType: 'application/json'
+          contentType: 'application/zip'
         })
 
       if (uploadError) throw uploadError
@@ -131,39 +131,20 @@ async function performBackup(supabaseClient: any, backupId: string, type: string
       const dbBackup = await createDatabaseBackup(supabaseClient)
       const storageBackup = await createStorageBackup(supabaseClient)
       
-      // Create a combined backup manifest
-      const fullBackupManifest = {
-        timestamp: new Date().toISOString(),
-        type: 'full',
-        database: {
-          filename: `database-${Date.now()}.sql`,
-          size: new Blob([dbBackup]).size
-        },
-        storage: {
-          filename: `storage-${Date.now()}.json`,
-          size: storageBackup.size
-        }
-      }
+      // Create a combined ZIP file
+      const fullBackup = await createFullBackup(dbBackup, storageBackup)
       
-      filePath = `${userId}/full-${Date.now()}.json`
+      filePath = `${userId}/full-${Date.now()}.zip`
       
-      // Upload the manifest
+      // Upload the combined backup
       const { error: uploadError } = await supabaseClient.storage
         .from('backups')
-        .upload(filePath, JSON.stringify(fullBackupManifest, null, 2), {
-          contentType: 'application/json'
+        .upload(filePath, fullBackup, {
+          contentType: 'application/zip'
         })
 
       if (uploadError) throw uploadError
-      
-      // Also upload the individual files
-      const dbFilePath = `${userId}/database-${Date.now()}.sql`
-      const storageFilePath = `${userId}/storage-${Date.now()}.json`
-      
-      await supabaseClient.storage.from('backups').upload(dbFilePath, dbBackup, { contentType: 'application/sql' })
-      await supabaseClient.storage.from('backups').upload(storageFilePath, storageBackup, { contentType: 'application/json' })
-      
-      fileSize = JSON.stringify(fullBackupManifest).length + new Blob([dbBackup]).size + storageBackup.size
+      fileSize = fullBackup.size
     }
 
     // Update backup log with success
@@ -235,31 +216,113 @@ async function createDatabaseBackup(supabaseClient: any): Promise<string> {
 
 async function createStorageBackup(supabaseClient: any): Promise<Blob> {
   const buckets = ['products', 'categories', 'promotions']
-  const backupData = {
+  
+  // Import JSZip from CDN
+  const JSZip = (await import('https://esm.sh/jszip@3.10.1')).default
+  const zip = new JSZip()
+  
+  const backupMetadata = {
     timestamp: new Date().toISOString(),
-    type: 'storage_backup',
+    type: 'storage_backup_with_files',
     buckets: {}
   }
   
   for (const bucket of buckets) {
     try {
+      console.log(`Backing up bucket: ${bucket}`)
       const { data: files, error } = await supabaseClient.storage
         .from(bucket)
         .list()
       
-      if (!error && files) {
-        backupData.buckets[bucket] = files.map(file => ({
-          name: file.name,
-          size: file.metadata?.size,
-          lastModified: file.updated_at,
-          id: file.id
-        }))
+      if (!error && files && files.length > 0) {
+        backupMetadata.buckets[bucket] = []
+        const bucketFolder = zip.folder(bucket)
+        
+        for (const file of files) {
+          try {
+            // Download the actual file
+            const { data: fileData, error: downloadError } = await supabaseClient.storage
+              .from(bucket)
+              .download(file.name)
+            
+            if (!downloadError && fileData) {
+              // Add file to ZIP
+              const arrayBuffer = await fileData.arrayBuffer()
+              bucketFolder.file(file.name, arrayBuffer)
+              
+              // Add metadata
+              backupMetadata.buckets[bucket].push({
+                name: file.name,
+                size: file.metadata?.size || fileData.size,
+                lastModified: file.updated_at,
+                id: file.id,
+                contentType: fileData.type
+              })
+              
+              console.log(`Added file to backup: ${bucket}/${file.name}`)
+            } else {
+              console.warn(`Could not download file ${file.name} from ${bucket}:`, downloadError)
+            }
+          } catch (fileError) {
+            console.warn(`Error processing file ${file.name} in bucket ${bucket}:`, fileError)
+          }
+        }
+      } else {
+        console.log(`No files found in bucket ${bucket} or error:`, error)
+        backupMetadata.buckets[bucket] = { error: error?.message || 'No files found' }
       }
     } catch (error) {
-      console.warn(`Could not list files in bucket ${bucket}:`, error)
-      backupData.buckets[bucket] = { error: error.message }
+      console.warn(`Could not process bucket ${bucket}:`, error)
+      backupMetadata.buckets[bucket] = { error: error.message }
     }
   }
   
-  return new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' })
+  // Add metadata file to ZIP
+  zip.file('backup_metadata.json', JSON.stringify(backupMetadata, null, 2))
+  
+  // Generate ZIP file
+  const zipBlob = await zip.generateAsync({ type: 'blob' })
+  console.log(`Storage backup created: ${zipBlob.size} bytes`)
+  
+  return zipBlob
+}
+
+async function createFullBackup(dbBackup: string, storageBackup: Blob): Promise<Blob> {
+  // Import JSZip from CDN
+  const JSZip = (await import('https://esm.sh/jszip@3.10.1')).default
+  const zip = new JSZip()
+  
+  // Add database backup
+  zip.file('database_backup.sql', dbBackup)
+  
+  // Add storage backup (which is already a ZIP)
+  const storageArrayBuffer = await storageBackup.arrayBuffer()
+  zip.file('storage_backup.zip', storageArrayBuffer)
+  
+  // Add full backup manifest
+  const manifest = {
+    timestamp: new Date().toISOString(),
+    type: 'full_backup',
+    contents: {
+      database: {
+        filename: 'database_backup.sql',
+        size: new Blob([dbBackup]).size,
+        description: 'Complete database backup in SQL format'
+      },
+      storage: {
+        filename: 'storage_backup.zip',
+        size: storageBackup.size,
+        description: 'Complete storage backup including all files and metadata'
+      }
+    },
+    instructions: 'This is a complete backup. Extract database_backup.sql for database restoration and storage_backup.zip for file restoration.'
+  }
+  
+  zip.file('backup_manifest.json', JSON.stringify(manifest, null, 2))
+  
+  // Generate final ZIP
+  const fullBackupBlob = await zip.generateAsync({ type: 'blob' })
+  console.log(`Full backup created: ${fullBackupBlob.size} bytes`)
+  
+  return fullBackupBlob
 }

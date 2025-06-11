@@ -25,7 +25,6 @@ export const backupService = {
       throw new Error(`Failed to fetch backup logs: ${error.message}`);
     }
     
-    // Type assertion to ensure compatibility with our interface
     return (data || []) as BackupLog[];
   },
 
@@ -43,7 +42,7 @@ export const backupService = {
   },
 
   // Download a backup file
-  async downloadBackup(filePath: string): Promise<Blob> {
+  async downloadBackup(filePath: string): Promise<{ blob: Blob; filename: string }> {
     const { data, error } = await supabase.storage
       .from('backups')
       .download(filePath);
@@ -52,7 +51,10 @@ export const backupService = {
       throw new Error(`Failed to download backup: ${error.message}`);
     }
     
-    return data;
+    // Extract filename from path
+    const filename = filePath.split('/').pop() || 'backup';
+    
+    return { blob: data, filename };
   },
 
   // Delete a backup
@@ -103,7 +105,34 @@ export const backupService = {
       throw new Error(`Failed to get backup status: ${error.message}`);
     }
     
-    // Type assertion to ensure compatibility with our interface
     return data as BackupLog;
+  },
+
+  // Extract and preview ZIP contents (for storage and full backups)
+  async previewBackupContents(filePath: string): Promise<{ files: string[]; metadata?: any }> {
+    try {
+      // Import JSZip
+      const JSZip = (await import('jszip')).default;
+      
+      const { blob } = await this.downloadBackup(filePath);
+      const zip = await JSZip.loadAsync(blob);
+      
+      const files = Object.keys(zip.files);
+      let metadata = null;
+      
+      // Try to read metadata if available
+      if (zip.files['backup_metadata.json']) {
+        const metadataContent = await zip.files['backup_metadata.json'].async('text');
+        metadata = JSON.parse(metadataContent);
+      } else if (zip.files['backup_manifest.json']) {
+        const manifestContent = await zip.files['backup_manifest.json'].async('text');
+        metadata = JSON.parse(manifestContent);
+      }
+      
+      return { files, metadata };
+    } catch (error) {
+      console.error('Error previewing backup contents:', error);
+      throw new Error('Failed to preview backup contents');
+    }
   }
 };
