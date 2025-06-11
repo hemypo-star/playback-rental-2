@@ -47,7 +47,7 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         backup_type: type,
-        status: 'pending'
+        status: 'in_progress'
       })
       .select()
       .single()
@@ -56,20 +56,59 @@ serve(async (req) => {
       throw logError
     }
 
-    // Start background backup process
-    EdgeRuntime.waitUntil(performBackup(supabaseClient, logEntry.id, type, user.id))
+    let backupBlob: Blob
+    let filename: string
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        backup_id: logEntry.id,
-        message: 'Backup process started' 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
+    try {
+      if (type === 'database') {
+        const dbBackup = await createDatabaseBackup(supabaseClient)
+        backupBlob = new Blob([dbBackup], { type: 'application/sql' })
+        filename = `database-backup-${Date.now()}.sql`
+      } else if (type === 'storage') {
+        backupBlob = await createStorageBackup(supabaseClient)
+        filename = `storage-backup-${Date.now()}.zip`
+      } else if (type === 'full') {
+        const dbBackup = await createDatabaseBackup(supabaseClient)
+        const storageBackup = await createStorageBackup(supabaseClient)
+        backupBlob = await createFullBackup(dbBackup, storageBackup)
+        filename = `full-backup-${Date.now()}.zip`
       }
-    )
+
+      // Update backup log with success
+      await supabaseClient
+        .from('backup_logs')
+        .update({
+          status: 'completed',
+          file_size: backupBlob!.size,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', logEntry.id)
+
+      // Return file as direct download
+      return new Response(backupBlob, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/octet-stream',
+          'Content-Disposition': `attachment; filename="${filename}"`,
+          'Content-Length': backupBlob!.size.toString(),
+        }
+      })
+
+    } catch (error) {
+      console.error('Error creating backup:', error)
+      
+      // Update backup log with error
+      await supabaseClient
+        .from('backup_logs')
+        .update({
+          status: 'failed',
+          error_message: error.message,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', logEntry.id)
+
+      throw error
+    }
 
   } catch (error) {
     console.error('Error in create-backup function:', error)
@@ -84,94 +123,6 @@ serve(async (req) => {
     )
   }
 })
-
-async function performBackup(supabaseClient: any, backupId: string, type: string, userId: string) {
-  try {
-    // Update status to in_progress
-    await supabaseClient
-      .from('backup_logs')
-      .update({ status: 'in_progress' })
-      .eq('id', backupId)
-
-    let filePath: string
-    let fileSize: number
-
-    if (type === 'database' || type === 'full') {
-      const dbBackup = await createDatabaseBackup(supabaseClient)
-      filePath = `${userId}/database-${Date.now()}.sql`
-      
-      // Upload database backup to storage
-      const { error: uploadError } = await supabaseClient.storage
-        .from('backups')
-        .upload(filePath, dbBackup, {
-          contentType: 'application/sql'
-        })
-
-      if (uploadError) throw uploadError
-      fileSize = new Blob([dbBackup]).size
-    }
-
-    if (type === 'storage') {
-      const storageBackup = await createStorageBackup(supabaseClient)
-      filePath = `${userId}/storage-${Date.now()}.zip`
-      
-      // Upload storage backup
-      const { error: uploadError } = await supabaseClient.storage
-        .from('backups')
-        .upload(filePath, storageBackup, {
-          contentType: 'application/zip'
-        })
-
-      if (uploadError) throw uploadError
-      fileSize = storageBackup.size
-    }
-
-    if (type === 'full') {
-      // For full backup, create both database and storage backups
-      const dbBackup = await createDatabaseBackup(supabaseClient)
-      const storageBackup = await createStorageBackup(supabaseClient)
-      
-      // Create a combined ZIP file
-      const fullBackup = await createFullBackup(dbBackup, storageBackup)
-      
-      filePath = `${userId}/full-${Date.now()}.zip`
-      
-      // Upload the combined backup
-      const { error: uploadError } = await supabaseClient.storage
-        .from('backups')
-        .upload(filePath, fullBackup, {
-          contentType: 'application/zip'
-        })
-
-      if (uploadError) throw uploadError
-      fileSize = fullBackup.size
-    }
-
-    // Update backup log with success
-    await supabaseClient
-      .from('backup_logs')
-      .update({
-        status: 'completed',
-        file_path: filePath!,
-        file_size: fileSize!,
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', backupId)
-
-  } catch (error) {
-    console.error('Error performing backup:', error)
-    
-    // Update backup log with error
-    await supabaseClient
-      .from('backup_logs')
-      .update({
-        status: 'failed',
-        error_message: error.message,
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', backupId)
-  }
-}
 
 async function createDatabaseBackup(supabaseClient: any): Promise<string> {
   const tables = ['products', 'categories', 'bookings', 'promotions', 'settings', 'backup_logs']

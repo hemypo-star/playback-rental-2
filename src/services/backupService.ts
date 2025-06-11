@@ -28,49 +28,59 @@ export const backupService = {
     return (data || []) as BackupLog[];
   },
 
-  // Create a new backup
-  async createBackup(type: 'database' | 'storage' | 'full'): Promise<{ backup_id: string }> {
-    const { data, error } = await supabase.functions.invoke('create-backup', {
-      body: { type }
-    });
-    
-    if (error) {
-      throw new Error(`Failed to create backup: ${error.message}`);
-    }
-    
-    return data;
-  },
-
-  // Download a backup file
-  async downloadBackup(filePath: string): Promise<{ blob: Blob; filename: string }> {
-    const { data, error } = await supabase.storage
-      .from('backups')
-      .download(filePath);
-    
-    if (error) {
-      throw new Error(`Failed to download backup: ${error.message}`);
-    }
-    
-    // Extract filename from path
-    const filename = filePath.split('/').pop() || 'backup';
-    
-    return { blob: data, filename };
-  },
-
-  // Delete a backup
-  async deleteBackup(backupId: string, filePath?: string): Promise<void> {
-    // Delete file from storage if it exists
-    if (filePath) {
-      const { error: storageError } = await supabase.storage
-        .from('backups')
-        .remove([filePath]);
-      
-      if (storageError) {
-        console.warn('Failed to delete backup file from storage:', storageError);
+  // Create and download a backup directly
+  async createAndDownloadBackup(type: 'database' | 'storage' | 'full'): Promise<void> {
+    try {
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Authentication required');
       }
+
+      // Call the edge function which will return the file directly
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/create-backup`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `backup-${Date.now()}`;
+      if (contentDisposition) {
+        const matches = contentDisposition.match(/filename="(.+)"/);
+        if (matches) {
+          filename = matches[1];
+        }
+      }
+
+      // Get the blob and create download
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      throw error;
     }
-    
-    // Delete backup log entry
+  },
+
+  // Delete a backup log entry
+  async deleteBackupLog(backupId: string): Promise<void> {
     const { error } = await supabase
       .from('backup_logs')
       .delete()
@@ -79,15 +89,6 @@ export const backupService = {
     if (error) {
       throw new Error(`Failed to delete backup log: ${error.message}`);
     }
-  },
-
-  // Get backup file URL for direct download
-  getBackupDownloadUrl(filePath: string): string {
-    const { data } = supabase.storage
-      .from('backups')
-      .getPublicUrl(filePath);
-    
-    return data.publicUrl;
   },
 
   // Check backup status
@@ -106,33 +107,5 @@ export const backupService = {
     }
     
     return data as BackupLog;
-  },
-
-  // Extract and preview ZIP contents (for storage and full backups)
-  async previewBackupContents(filePath: string): Promise<{ files: string[]; metadata?: any }> {
-    try {
-      // Import JSZip
-      const JSZip = (await import('jszip')).default;
-      
-      const { blob } = await this.downloadBackup(filePath);
-      const zip = await JSZip.loadAsync(blob);
-      
-      const files = Object.keys(zip.files);
-      let metadata = null;
-      
-      // Try to read metadata if available
-      if (zip.files['backup_metadata.json']) {
-        const metadataContent = await zip.files['backup_metadata.json'].async('text');
-        metadata = JSON.parse(metadataContent);
-      } else if (zip.files['backup_manifest.json']) {
-        const manifestContent = await zip.files['backup_manifest.json'].async('text');
-        metadata = JSON.parse(manifestContent);
-      }
-      
-      return { files, metadata };
-    } catch (error) {
-      console.error('Error previewing backup contents:', error);
-      throw new Error('Failed to preview backup contents');
-    }
   }
 };

@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { backupService } from '@/services/backupService';
 import { 
   Database, 
   HardDrive, 
@@ -16,8 +16,7 @@ import {
   CheckCircle,
   Clock,
   Loader2,
-  FileArchive,
-  Eye
+  FileArchive
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -35,80 +34,31 @@ interface BackupLog {
 
 const AdminBackup = () => {
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
-  const [previewingBackup, setPreviewingBackup] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch backup logs
   const { data: backupLogs, isLoading } = useQuery({
     queryKey: ['backup-logs'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('backup_logs')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as BackupLog[];
-    }
+    queryFn: backupService.getBackupLogs
   });
 
-  // Create backup mutation
+  // Create and download backup mutation
   const createBackupMutation = useMutation({
     mutationFn: async (backupType: 'database' | 'storage' | 'full') => {
-      const { data, error } = await supabase.functions.invoke('create-backup', {
-        body: { type: backupType }
-      });
-      
-      if (error) throw error;
-      return data;
+      await backupService.createAndDownloadBackup(backupType);
     },
     onSuccess: () => {
       toast({
-        title: 'Резервное копирование запущено',
-        description: 'Процесс создания резервной копии начат. Это может занять несколько минут.'
+        title: 'Резервная копия создана',
+        description: 'Файл резервной копии загружается на ваш компьютер'
       });
       queryClient.invalidateQueries({ queryKey: ['backup-logs'] });
     },
     onError: (error: any) => {
       toast({
         title: 'Ошибка создания резервной копии',
-        description: error.message || 'Произошла ошибка при запуске резервного копирования',
-        variant: 'destructive'
-      });
-    }
-  });
-
-  // Download backup mutation
-  const downloadBackupMutation = useMutation({
-    mutationFn: async (filePath: string) => {
-      const { data, error } = await supabase.storage
-        .from('backups')
-        .download(filePath);
-      
-      if (error) throw error;
-      return { data, filePath };
-    },
-    onSuccess: ({ data, filePath }) => {
-      // Create download link
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filePath.split('/').pop() || 'backup';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast({
-        title: 'Загрузка начата',
-        description: 'Файл резервной копии загружается'
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Ошибка загрузки',
-        description: error.message || 'Не удалось загрузить файл',
+        description: error.message || 'Произошла ошибка при создании резервной копии',
         variant: 'destructive'
       });
     }
@@ -116,33 +66,20 @@ const AdminBackup = () => {
 
   // Delete backup mutation
   const deleteBackupMutation = useMutation({
-    mutationFn: async (backup: BackupLog) => {
-      // Delete file from storage if exists
-      if (backup.file_path) {
-        await supabase.storage
-          .from('backups')
-          .remove([backup.file_path]);
-      }
-      
-      // Delete log entry
-      const { error } = await supabase
-        .from('backup_logs')
-        .delete()
-        .eq('id', backup.id);
-      
-      if (error) throw error;
+    mutationFn: async (backupId: string) => {
+      await backupService.deleteBackupLog(backupId);
     },
     onSuccess: () => {
       toast({
-        title: 'Резервная копия удалена',
-        description: 'Файл и запись о резервной копии удалены'
+        title: 'Запись удалена',
+        description: 'Запись о резервной копии удалена из истории'
       });
       queryClient.invalidateQueries({ queryKey: ['backup-logs'] });
     },
     onError: (error: any) => {
       toast({
         title: 'Ошибка удаления',
-        description: error.message || 'Не удалось удалить резервную копию',
+        description: error.message || 'Не удалось удалить запись',
         variant: 'destructive'
       });
     }
@@ -226,7 +163,7 @@ const AdminBackup = () => {
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Резервные копии</h1>
         <p className="text-muted-foreground">
-          Создавайте и управляйте резервными копиями базы данных и файлов
+          Создавайте и скачивайте резервные копии базы данных и файлов напрямую
         </p>
       </div>
 
@@ -239,7 +176,7 @@ const AdminBackup = () => {
               База данных
             </CardTitle>
             <CardDescription>
-              Создать резервную копию всех таблиц и данных
+              Скачать резервную копию всех таблиц и данных
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -251,9 +188,9 @@ const AdminBackup = () => {
               {createBackupMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Database className="mr-2 h-4 w-4" />
+                <Download className="mr-2 h-4 w-4" />
               )}
-              Создать копию БД
+              Скачать БД
             </Button>
           </CardContent>
         </Card>
@@ -265,7 +202,7 @@ const AdminBackup = () => {
               Файлы
             </CardTitle>
             <CardDescription>
-              Создать ZIP-архив всех загруженных файлов
+              Скачать ZIP-архив всех загруженных файлов
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -278,9 +215,9 @@ const AdminBackup = () => {
               {createBackupMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <FileArchive className="mr-2 h-4 w-4" />
+                <Download className="mr-2 h-4 w-4" />
               )}
-              Создать архив файлов
+              Скачать файлы
             </Button>
           </CardContent>
         </Card>
@@ -293,7 +230,7 @@ const AdminBackup = () => {
               Полная копия
             </CardTitle>
             <CardDescription>
-              Создать полную резервную копию в ZIP-архиве
+              Скачать полную резервную копию в ZIP-архиве
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -306,23 +243,20 @@ const AdminBackup = () => {
               {createBackupMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <>
-                  <Database className="mr-2 h-4 w-4" />
-                  <FileArchive className="mr-1 h-3 w-3" />
-                </>
+                <Download className="mr-2 h-4 w-4" />
               )}
-              Полная копия
+              Скачать всё
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Warning Alert */}
+      {/* Info Alert */}
       <Alert>
-        <AlertTriangle className="h-4 w-4" />
+        <Download className="h-4 w-4" />
         <AlertDescription>
-          Создание резервных копий может занять продолжительное время в зависимости от объема данных. 
-          Архивы файлов теперь включают все загруженные изображения и документы.
+          Резервные копии теперь создаются и скачиваются напрямую на ваш компьютер без сохранения на сервере. 
+          Это позволяет работать с файлами любого размера и обеспечивает полную конфиденциальность.
         </AlertDescription>
       </Alert>
 
@@ -331,7 +265,7 @@ const AdminBackup = () => {
         <CardHeader>
           <CardTitle>История резервных копий</CardTitle>
           <CardDescription>
-            Список созданных резервных копий и их статус
+            Журнал созданных резервных копий (файлы скачиваются напрямую)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -375,20 +309,10 @@ const AdminBackup = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {backup.status === 'completed' && backup.file_path && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => downloadBackupMutation.mutate(backup.file_path!)}
-                        disabled={downloadBackupMutation.isPending}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    )}
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => deleteBackupMutation.mutate(backup)}
+                      onClick={() => deleteBackupMutation.mutate(backup.id)}
                       disabled={deleteBackupMutation.isPending}
                     >
                       <Trash2 className="h-4 w-4" />
