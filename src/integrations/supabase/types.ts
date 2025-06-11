@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      backup_logs: {
+        Row: {
+          backup_type: string
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          backup_type: string
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          backup_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           created_at: string | null

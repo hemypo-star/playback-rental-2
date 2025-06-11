@@ -7,6 +7,7 @@ import AdminBookings from './admin/AdminBookings';
 import AdminCalendar from './admin/AdminCalendar';
 import AdminCategories from './admin/AdminCategories';
 import AdminPromotions from './admin/AdminPromotions';
+import AdminBackup from './admin/AdminBackup';
 import AdminSettings from './AdminSettings';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -109,7 +110,7 @@ export default function Admin() {
           <TabsTrigger value="promotions">Акции</TabsTrigger>
           <TabsTrigger value="bookings">Бронирования</TabsTrigger>
           <TabsTrigger value="calendar">Календарь</TabsTrigger>
-          
+          <TabsTrigger value="backup">Резервные копии</TabsTrigger>
           <TabsTrigger value="settings">Настройки</TabsTrigger>
         </TabsList>
         
@@ -135,6 +136,10 @@ export default function Admin() {
         
         <TabsContent value="calendar">
           <AdminCalendar />
+        </TabsContent>
+        
+        <TabsContent value="backup">
+          <AdminBackup />
         </TabsContent>
         
         <TabsContent value="storage">
