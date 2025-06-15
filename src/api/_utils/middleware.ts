@@ -1,7 +1,7 @@
 
-import type { NextApiRequest, NextApiResponse } from 'next';
-
-// Middleware: CORS для любых доменов (или донастройте под себя)
+/**
+ * Universal CORS middleware for your API routes
+ */
 export function withCors(handler: Function) {
   return async (req: any, res: any) => {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -16,12 +16,13 @@ export function withCors(handler: Function) {
   }
 }
 
-// Middleware: простая авторизация через Bearer-токен
+/**
+ * Simple Bearer auth middleware
+ */
 export function withAuth(handler: Function) {
   return async (req: any, res: any) => {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : null;
-    // Проверка секрета из переменных окружения, аккуратно задайте в Vercel
     if (!token || token !== process.env.API_SECRET_TOKEN) {
       res.status(401).json({ error: 'Unauthorized' });
       return;

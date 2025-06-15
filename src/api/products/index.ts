@@ -1,10 +1,9 @@
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { pgQuery } from '../_utils/db';
 import { withCors } from '../_utils/middleware';
 import { sendSuccess, sendError } from '../_utils/response';
 
-async function handler(req: VercelRequest, res: VercelResponse) {
+async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -16,5 +15,4 @@ async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// Обязательно оборачиваем в middleware (CORS)
 export default withCors(handler);

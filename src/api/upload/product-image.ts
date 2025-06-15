@@ -1,8 +1,7 @@
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import s3 from '@/integrations/s3/client';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -10,7 +9,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'No file provided' });
   }
 
-  // Parse multipart form (Vercel auto-parses if file sent as FormData)
   let file: any;
   let fileName: string = '';
   let productId = '';
@@ -25,12 +23,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'File not found in request' });
   }
 
-  // Compose S3 upload params
   const timestamp = Date.now();
   fileName = `${productId ? `${productId}_` : ''}${timestamp}_${file.name.replace(/\s+/g, '_')}`;
 
   try {
-    // Vercel parses file as Buffer in file.data
     await s3
       .upload({
         Bucket: 'products',
@@ -41,7 +37,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
       .promise();
 
-    // Return fileUrl
     const endpoint = s3.config.endpoint.toString().replace(/\/$/, "");
     const fileUrl = `${endpoint}/products/${fileName}`;
     return res.status(200).json({ fileUrl });
