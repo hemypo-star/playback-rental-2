@@ -2,26 +2,20 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useQuery } from '@tanstack/react-query';
-import Head from 'next/head';
-import { GetServerSideProps } from 'next';
-import * as productService from '@/services/productService';
-import * as categoryService from '@/services/categoryService';
-import CatalogHeader from '@/components/catalog/CatalogHeader';
-import CategorySidebar from '@/components/catalog/CategorySidebar';
-import VirtualizedProductGrid from '@/components/catalog/VirtualizedProductGrid';
-import { useIsMobile } from '@/hooks/use-mobile';
+import Layout from '../components/Layout';
+import * as productService from '../src/services/productService';
+import * as categoryService from '../src/services/categoryService';
+import CatalogHeader from '../src/components/catalog/CatalogHeader';
+import CategorySidebar from '../src/components/catalog/CategorySidebar';
+import VirtualizedProductGrid from '../src/components/catalog/VirtualizedProductGrid';
+import { useIsMobile } from '../src/hooks/use-mobile';
 
-interface CatalogProps {
-  initialCategory?: string;
-}
-
-const Catalog = ({ initialCategory }: CatalogProps) => {
+const Catalog = () => {
   const router = useRouter();
-  const { query } = router;
-
-  const categoryFromUrl = (query.category as string) || initialCategory || 'all';
+  const { activeCategory } = router.query;
+  
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState(categoryFromUrl);
+  const [activeTab, setActiveTab] = useState((activeCategory as string) || 'all');
   const [bookingDates, setBookingDates] = useState<{startDate?: Date, endDate?: Date}>({});
 
   const isMobile = useIsMobile();
@@ -46,8 +40,10 @@ const Catalog = ({ initialCategory }: CatalogProps) => {
   });
 
   useEffect(() => {
-    if (categoryFromUrl) setActiveTab(categoryFromUrl);
-  }, [categoryFromUrl]);
+    if (activeCategory) {
+      setActiveTab(activeCategory as string);
+    }
+  }, [activeCategory]);
 
   const handleBookingChange = (startDate: Date | undefined, endDate: Date | undefined) => {
     setBookingDates({ startDate, endDate });
@@ -61,7 +57,6 @@ const Catalog = ({ initialCategory }: CatalogProps) => {
       const searchInput = document.getElementById('search-input') as HTMLInputElement;
       if (searchInput) searchInput.value = '';
     }
-    router.replace('/catalog', undefined, { shallow: true });
   };
 
   const filteredProducts = products?.filter(product => {
@@ -79,28 +74,10 @@ const Catalog = ({ initialCategory }: CatalogProps) => {
 
   const handleCategoryChange = (tab: string) => {
     setActiveTab(tab);
-    if (tab === 'all') {
-      router.replace('/catalog', undefined, { shallow: true });
-    } else {
-      router.replace(`/catalog?category=${tab}`, undefined, { shallow: true });
-    }
   };
 
-  const activeCategory = categories.find(cat => cat.category_id.toString() === activeTab);
-  const pageTitle = activeCategory ? `${activeCategory.name} - Equipment Catalog` : 'Equipment Catalog';
-  const pageDescription = activeCategory 
-    ? `Browse ${activeCategory.name.toLowerCase()} equipment for rent`
-    : 'Browse our complete catalog of professional equipment for rent';
-
   return (
-    <>
-      <Head>
-        <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDescription} />
-      </Head>
-
+    <Layout title="Каталог оборудования" description="Аренда профессионального оборудования">
       <div className="min-h-screen">
         <CatalogHeader
           onSearch={setSearch}
@@ -138,18 +115,8 @@ const Catalog = ({ initialCategory }: CatalogProps) => {
           </div>
         </div>
       </div>
-    </>
+    </Layout>
   );
-};
-
-export const getServerSideProps: GetServerSideProps = async ({ query }) => {
-  const category = query.category as string;
-
-  return {
-    props: {
-      initialCategory: category || null,
-    },
-  };
 };
 
 export default Catalog;

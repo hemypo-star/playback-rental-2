@@ -1,23 +1,17 @@
 
-import Head from 'next/head';
-import dynamic from 'next/dynamic';
+import Layout from '../components/Layout';
+import { HowItWorksSection } from '../src/components/home/HowItWorksSection';
 
-const HowItWorksSection = dynamic(() => import('../src/components/home/HowItWorksSection'), { ssr: true });
-
-export default function HowItWorks() {
+const HowItWorks = () => {
   return (
-    <>
-      <Head>
-        <title>How It Works - Equipment Rental</title>
-        <meta name="description" content="Learn how our equipment rental process works. Simple steps to rent professional equipment." />
-      </Head>
-      
+    <Layout title="Как это работает" description="Узнайте, как арендовать оборудование">
       <div className="min-h-screen">
-        <div className="container mx-auto px-4 py-16">
-          <h1 className="text-4xl font-bold text-center mb-8">How It Works</h1>
+        <div className="pt-16">
           <HowItWorksSection />
         </div>
       </div>
-    </>
+    </Layout>
   );
-}
+};
+
+export default HowItWorks;

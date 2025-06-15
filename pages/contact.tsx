@@ -1,19 +1,12 @@
 
-import Head from 'next/head';
-import dynamic from 'next/dynamic';
+import Layout from '../components/Layout';
+import ContactHero from '../src/components/contact/ContactHero';
+import CompanyDescription from '../src/components/contact/CompanyDescription';
+import ContactSection from '../src/components/contact/ContactSection';
 
-const ContactHero = dynamic(() => import('../src/components/contact/ContactHero'), { ssr: true });
-const CompanyDescription = dynamic(() => import('../src/components/contact/CompanyDescription'), { ssr: true });
-const ContactSection = dynamic(() => import('../src/components/contact/ContactSection'), { ssr: true });
-
-export default function Contact() {
+const Contact = () => {
   return (
-    <>
-      <Head>
-        <title>Contact Us - Equipment Rental</title>
-        <meta name="description" content="Get in touch with our equipment rental team. Contact information and inquiry form." />
-      </Head>
-      
+    <Layout title="Контакты" description="Свяжитесь с нами для аренды оборудования">
       <div className="min-h-screen">
         <ContactHero />
         <div className="container mx-auto px-4">
@@ -21,6 +14,8 @@ export default function Contact() {
           <ContactSection />
         </div>
       </div>
-    </>
+    </Layout>
   );
-}
+};
+
+export default Contact;

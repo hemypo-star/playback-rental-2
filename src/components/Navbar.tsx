@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { Menu, X, ShoppingCart, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCartContext } from '@/hooks/useCart';
@@ -10,27 +11,27 @@ export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { cartItems } = useCartContext();
   const { user } = useAuth();
-  const location = useLocation();
+  const router = useRouter();
   const cartItemsCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   // Close mobile menu when route changes
   useEffect(() => {
     setIsOpen(false);
-  }, [location]);
+  }, [router.pathname]);
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
   const NavLink = ({
-    to,
+    href,
     children,
     className = ""
   }: {
-    to: string;
+    href: string;
     children: React.ReactNode;
     className?: string;
   }) => (
     <Link
-      to={to}
+      href={href}
       className={`text-foreground hover:text-primary transition-colors ${className}`}
       onClick={() => setIsOpen(false)}
     >
@@ -43,7 +44,7 @@ export const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo and Name */}
-          <Link to="/" className="flex items-center space-x-3">
+          <Link href="/" className="flex items-center space-x-3">
             <img src="/logo.svg" alt="PlayBack Rental" className="h-8 w-auto" />
             <span className="font-semibold text-lg">Playback Rental</span>
           </Link>
@@ -52,13 +53,13 @@ export const Navbar = () => {
           <div className="flex items-center space-x-6">
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-6">
-              <NavLink to="/catalog">Каталог</NavLink>
-              <NavLink to="/how-it-works">Как это работает</NavLink>
-              <NavLink to="/contact">Контакты</NavLink>
+              <NavLink href="/catalog">Каталог</NavLink>
+              <NavLink href="/how-it-works">Как это работает</NavLink>
+              <NavLink href="/contact">Контакты</NavLink>
             </div>
 
             {/* Cart Icon */}
-            <Link to="/checkout" className="relative">
+            <Link href="/checkout" className="relative">
               <Button variant="ghost" size="sm" className="relative">
                 <ShoppingCart className="h-5 w-5" />
                 {cartItemsCount > 0 && (
@@ -86,7 +87,7 @@ export const Navbar = () => {
             {/* Admin Panel Button - Only for logged in users */}
             {user && (
               <Button variant="outline" size="sm" asChild>
-                <Link to="/admin">Панель управления</Link>
+                <Link href="/admin">Панель управления</Link>
               </Button>
             )}
 
@@ -101,13 +102,13 @@ export const Navbar = () => {
         {isOpen && (
           <div className="md:hidden border-t bg-background">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              <NavLink to="/catalog" className="block px-3 py-2 rounded-md">
+              <NavLink href="/catalog" className="block px-3 py-2 rounded-md">
                 Каталог
               </NavLink>
-              <NavLink to="/how-it-works" className="block px-3 py-2 rounded-md">
+              <NavLink href="/how-it-works" className="block px-3 py-2 rounded-md">
                 Как это работает
               </NavLink>
-              <NavLink to="/contact" className="block px-3 py-2 rounded-md">
+              <NavLink href="/contact" className="block px-3 py-2 rounded-md">
                 Контакты
               </NavLink>
               
