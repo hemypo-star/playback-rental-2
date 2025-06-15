@@ -1,6 +1,4 @@
 
-import { supabase } from '@/integrations/supabase/client';
-
 /**
  * Deletes a product by ID
  * @param id Product ID
@@ -8,9 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) throw error;
-    return true;
+    const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    return res.ok;
   } catch (error) {
     console.error('Error deleting product:', error);
     return false;

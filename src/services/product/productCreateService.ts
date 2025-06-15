@@ -1,5 +1,4 @@
 
-import { supabase } from '@/integrations/supabase/client';
 import { ProductFormValues } from '@/hooks/useProductForm';
 import { uploadProductImage } from '@/utils/imageUtils';
 
@@ -14,51 +13,25 @@ export const createProduct = async (
   imageFile?: File | string | null
 ): Promise<any> => {
   try {
-    console.log('Creating product with data:', productData);
-    console.log('Image file:', imageFile);
-
     let imageUrl = '';
-    
-    // Handle image upload if provided
     if (imageFile) {
       try {
         imageUrl = await uploadProductImage(imageFile);
-        console.log('Image uploaded successfully:', imageUrl);
       } catch (imageError) {
-        console.error('Failed to upload image:', imageError);
-        // Continue with product creation even if image upload fails
         imageUrl = '';
       }
     }
-
-    // Prepare data for database insertion - map frontend format to database format
     const dbData = {
-      title: productData.title,
-      description: productData.description || '',
-      price: productData.price,
-      category: productData.category_id.toString(), // Convert number to string for legacy category column
-      category_id: productData.category_id, // Use new category_id column
-      imageurl: imageUrl,
-      quantity: productData.quantity || 1,
-      available: productData.available ?? true
+      ...productData,
+      imageUrl
     };
-
-    console.log('Inserting product into database:', dbData);
-
-    const { data, error } = await supabase
-      .from('products')
-      .insert([dbData])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Database error creating product:', error);
-      throw error;
-    }
-
-    console.log('Product created successfully:', data);
-
-    // Map database response back to frontend format
+    const res = await fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbData)
+    });
+    if (!res.ok) throw new Error('Не удалось создать продукт');
+    const data = await res.json();
     return {
       ...data,
       imageUrl: data.imageurl,
