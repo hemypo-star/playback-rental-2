@@ -1,11 +1,9 @@
 
-// Export services from individual modules
-export * from './productService'; // This now re-exports from the specialized modules
+export * from './productService'; // только для совместимости
 export * from './categoryService';
 export * from './bookingService';
 export * from './authService';
 export * from './settingsService';
-export * from './supabaseClient';
 export * from './storageService';
 export * from './promotionService';
 export * from './product/productBasicService';
@@ -15,7 +13,6 @@ export * from './product/productDeleteService';
 export * from './product/productAvailabilityService';
 
 // Deprecated: Use individual service imports instead
-// This re-export is maintained for backward compatibility
 export { 
   getProducts,
   getProductById,
@@ -58,11 +55,6 @@ export {
   getSettings,
   updateSettings
 } from './settingsService';
-
-export {
-  uploadProductImage,
-  getProductImageUrl
-} from '@/utils/imageUtils';
 
 export {
   getPromotions,

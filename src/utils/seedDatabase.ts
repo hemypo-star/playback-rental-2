@@ -1,8 +1,10 @@
+import { addDays } from "date-fns";
 
-import { supabase } from "@/integrations/supabase/client";
-import { addDays } from 'date-fns';
+/**
+ * Direct POST/GET/INSERT via your backend REST API. 
+ * Отредактируйте URLs на соответствующие вашей серверной стороне!
+ */
 
-// Sample data for initial DB population
 const sampleProducts = [
   {
     title: 'Sony Alpha A7 III',
@@ -86,18 +88,19 @@ const sampleProducts = [
   }
 ];
 
-// Function to seed the database with initial data
+// Function to seed the database only if it's empty.
 export const seedDatabase = async () => {
   try {
-    const { data: existingCategories } = await supabase.from('categories').select('*');
-    const { data: existingProducts } = await supabase.from('products').select('*');
-    
-    // Only seed if there's no data
-    if ((!existingCategories || existingCategories.length === 0) && (!existingProducts || existingProducts.length === 0)) {
+    // Проверьте наличие категорий через ваш API
+    const categoriesRes = await fetch("/api/categories");
+    const categories = await categoriesRes.json();
+    const productsRes = await fetch("/api/products");
+    const products = await productsRes.json();
+
+    if ((!categories || categories.length === 0) && (!products || products.length === 0)) {
       console.log('Seeding database with initial data...');
-      
-      // Add categories with category_id
-      const categories = [
+
+      const categoriesArr = [
         {
           name: 'Фотокамеры',
           category_id: 1,
@@ -148,40 +151,41 @@ export const seedDatabase = async () => {
           imageurl: 'https://images.unsplash.com/photo-1508444845599-5c89863b1c44?auto=format&fit=crop&w=800&q=80'
         }
       ];
-      
-      for (const category of categories) {
-        await supabase.from('categories').insert([category]);
-      }
-      
-      // Insert products
-      const { error: productsError } = await supabase
-        .from('products')
-        .insert(sampleProducts);
-      
-      if (productsError) {
-        console.error('Error seeding products:', productsError);
-        return;
-      }
-      
-      // Get product IDs
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, title');
-      
-      if (!products || products.length === 0) {
-        console.error('No products found after seeding');
-        return;
+
+      // Создаём категории
+      for (const category of categoriesArr) {
+        await fetch("/api/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(category),
+        });
       }
 
-      // Create sample bookings with proper dates
+      // Создаём продукты (bulk insert через ваш API может быть недоступен, поэтому по одному)
+      for (const prod of sampleProducts) {
+        await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(prod),
+        });
+      }
+
+      // Ещё раз получаем реальные id продуктов для бронирований
+      const updatedProductsRes = await fetch("/api/products");
+      const updatedProducts = await updatedProductsRes.json();
+
+      // Найти id по title
+      const getProdId = (title: string) => updatedProducts.find((p: any) => p.title === title)?.id;
+
+      // Создаём бронирования на основе полученных id:
       const currentDate = new Date();
       const nextWeek = addDays(currentDate, 7);
       const twoWeeksLater = addDays(currentDate, 14);
       const threeWeeksLater = addDays(currentDate, 21);
-      
+
       const sampleBookings = [
         {
-          product_id: products.find(p => p.title === 'Sony Alpha A7 III')?.id,
+          product_id: getProdId('Sony Alpha A7 III'),
           start_date: currentDate.toISOString(),
           end_date: nextWeek.toISOString(),
           customer_name: 'Иван Петров',
@@ -192,7 +196,7 @@ export const seedDatabase = async () => {
           notes: null
         },
         {
-          product_id: products.find(p => p.title === 'Godox SL-60W LED')?.id,
+          product_id: getProdId('Godox SL-60W LED'),
           start_date: nextWeek.toISOString(),
           end_date: twoWeeksLater.toISOString(),
           customer_name: 'Анна Сидорова',
@@ -203,7 +207,7 @@ export const seedDatabase = async () => {
           notes: 'Нужен дополнительный аккумулятор'
         },
         {
-          product_id: products.find(p => p.title === 'DJI Mavic 3')?.id,
+          product_id: getProdId('DJI Mavic 3'),
           start_date: twoWeeksLater.toISOString(),
           end_date: threeWeeksLater.toISOString(),
           customer_name: 'Алексей Иванов',
@@ -214,17 +218,14 @@ export const seedDatabase = async () => {
           notes: null
         }
       ];
-      
-      // Insert bookings
-      const { error: bookingsError } = await supabase
-        .from('bookings')
-        .insert(sampleBookings);
-      
-      if (bookingsError) {
-        console.error('Error seeding bookings:', bookingsError);
-        return;
+
+      for (const booking of sampleBookings) {
+        await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(booking),
+        });
       }
-      
       console.log('Database seeded successfully!');
     }
   } catch (error) {

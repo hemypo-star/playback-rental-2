@@ -1,14 +1,13 @@
 
 import AWS from 'aws-sdk';
 
-// TODO: Fill in these placeholders with your actual S3 endpoint and credentials
+// ===== ЗАМЕНИТЕ ниже на ваши реальные параметры S3! =====
 const s3 = new AWS.S3({
-  accessKeyId: "YOUR_S3_ACCESS_KEY_ID",
-  secretAccessKey: "YOUR_S3_SECRET_ACCESS_KEY",
-  endpoint: "YOUR_S3_ENDPOINT", // e.g. "https://s3.your-provider.com"
-  region: "us-east-1", // set your S3 region
-  s3ForcePathStyle: true, // needed for S3-compatible providers
+  accessKeyId: "ВАШ_S3_ACCESS_KEY_ID", // замените на свой ключ
+  secretAccessKey: "ВАШ_S3_SECRET_ACCESS_KEY", // замените на свой секрет
+  endpoint: "ВАШ_S3_ENDPOINT", // например, "https://s3.eu-central-1.amazonaws.com"
+  region: "ВАШ_S3_REGION", // например, "eu-central-1"
+  s3ForcePathStyle: true,
   signatureVersion: "v4"
 });
-
 export default s3;

@@ -1,104 +1,85 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import s3 from '@/integrations/s3/client';
 
-// Get a public URL for a file in a bucket
+/**
+ * Get a public URL for a file in your S3 bucket. 
+ * S3 buckets should be "public-read" for static content delivery.
+ */
 export const getPublicUrl = (bucketName: string, fileName: string): string | null => {
   if (!fileName) return null;
-  
-  try {
-    const { data } = supabase.storage.from(bucketName).getPublicUrl(fileName);
-    return data.publicUrl;
-  } catch (error) {
-    console.error(`Error getting public URL for ${fileName} in ${bucketName}:`, error);
-    return null;
+
+  // Your S3 endpoint and bucket (configured in s3/client.ts)
+  let endpoint = '';
+  if (typeof s3.config.endpoint === "string") {
+    endpoint = s3.config.endpoint.replace(/\/$/, "");
+    return `${endpoint}/${bucketName}/${fileName}`;
+  } else if (s3.config.endpoint && typeof s3.config.endpoint === "object" && "href" in s3.config.endpoint) {
+    endpoint = s3.config.endpoint.href.replace(/\/$/, "");
+    return `${endpoint}/${bucketName}/${fileName}`;
   }
+  return null;
 };
 
-// List all files in a bucket
-export const listBucketFiles = async (bucketName: string): Promise<any[]> => {
+/**
+ * List all files in a bucket.
+ */
+export const listBucketFiles = async (bucketName: string): Promise<string[]> => {
   try {
-    console.log(`Listing files in ${bucketName} bucket...`);
-    const { data, error } = await supabase.storage.from(bucketName).list('', {
-      sortBy: { column: 'name', order: 'asc' }
-    });
-    
-    if (error) {
-      console.error(`Error listing files in ${bucketName}:`, error);
-      throw error;
-    }
-    
-    console.log(`Found ${data?.length || 0} files in ${bucketName} bucket`);
-    return data || [];
+    const { Contents = [] } = await s3.listObjectsV2({ Bucket: bucketName }).promise();
+    return Contents.map((obj: any) => obj.Key);
   } catch (error) {
-    console.error(`Error in listBucketFiles for ${bucketName}:`, error);
+    console.error(`Error listing files in ${bucketName}:`, error);
     return [];
   }
 };
 
-// Test storage connection
-export const testStorageConnection = async (bucketName: string): Promise<{success: boolean; message: string}> => {
+/**
+ * Test connection to a bucket by listing contents.
+ */
+export const testStorageConnection = async (bucketName: string): Promise<{ success: boolean; message: string }> => {
   try {
-    console.log(`Testing connection to ${bucketName} bucket...`);
-    
-    // Try to list files in the bucket to test access
-    const { data, error } = await supabase.storage.from(bucketName).list('');
-    
-    if (error) {
-      console.error(`Error connecting to ${bucketName} bucket:`, error);
-      return {
-        success: false,
-        message: `Error connecting to ${bucketName} bucket: ${error.message}`
-      };
-    }
-    
+    const files = await listBucketFiles(bucketName);
     return {
       success: true,
-      message: `Successfully connected to ${bucketName} bucket. ${data.length} files found.`
+      message: `${files.length} file(s) found in ${bucketName}.`,
     };
   } catch (error: any) {
-    console.error(`Exception testing storage connection:`, error);
     return {
       success: false,
-      message: `Exception testing storage connection: ${error?.message || 'Unknown error'}`
+      message: `Error: ${error.message}`,
     };
   }
 };
 
-// Check if storage buckets exist and are accessible
-export const checkStorageStatus = async (): Promise<{ 
-  products: boolean; 
+/**
+ * Check if both products/categories buckets exist and accessible.
+ */
+export const checkStorageStatus = async (): Promise<{
+  products: boolean;
   categories: boolean;
   message: string;
 }> => {
-  try {
-    console.log('Checking storage bucket status...');
-    
-    const productsTest = await testStorageConnection('products');
-    const categoriesTest = await testStorageConnection('categories');
-    
-    return {
-      products: productsTest.success,
-      categories: categoriesTest.success,
-      message: `Products: ${productsTest.success ? 'OK' : 'Failed'}, Categories: ${categoriesTest.success ? 'OK' : 'Failed'}`
-    };
-  } catch (error: any) {
-    console.error('Error checking storage status:', error);
-    return {
-      products: false,
-      categories: false,
-      message: `Error checking storage: ${error?.message || 'Unknown error'}`
-    };
-  }
+  const productsTest = await testStorageConnection('products');
+  const categoriesTest = await testStorageConnection('categories');
+  return {
+    products: productsTest.success,
+    categories: categoriesTest.success,
+    message: `Products: ${productsTest.message}, Categories: ${categoriesTest.message}`,
+  };
 };
 
-// Reset storage permissions (legacy function for compatibility)
+/**
+ * Reset (check) storage permissions — no-op legacy.
+ */
 export const resetStoragePermissions = async (): Promise<boolean> => {
   const status = await checkStorageStatus();
   return status.products && status.categories;
 };
 
-// Ensure bucket exists (legacy function for compatibility)
+/**
+ * Ensure bucket exists — for S3 we assume buckets are pre-created.
+ */
 export const ensurePublicBucket = async (bucketName: string): Promise<boolean> => {
-  const test = await testStorageConnection(bucketName);
-  return test.success;
+  const status = await testStorageConnection(bucketName);
+  return status.success;
 };
