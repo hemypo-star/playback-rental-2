@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -107,7 +106,14 @@ const FileExplorer = () => {
     try {
       const filesList = await listBucketFiles(bucketName);
       console.log(`Files from ${bucketName}:`, filesList);
-      setFiles(filesList);
+      // Convert string[] to FileItem[] with minimal metadata
+      setFiles(
+        filesList.map((fileName) => ({
+          id: fileName,
+          name: fileName,
+          metadata: {},
+        }))
+      );
     } catch (error) {
       console.error(`Error fetching files from ${bucketName}:`, error);
       toast({
