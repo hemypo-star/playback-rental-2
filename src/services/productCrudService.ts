@@ -1,8 +1,8 @@
-
 import { Product } from '@/types/product';
 import { ProductFormValues } from '@/hooks/useProductForm';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadProductImage } from '@/utils/imageUtils';
+import { pgQuery } from '@/integrations/postgres/client';
 
 /**
  * Gets all products from the database (for admin use)
@@ -10,17 +10,14 @@ import { uploadProductImage } from '@/utils/imageUtils';
  */
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    const { data, error } = await supabase.from('products').select('*');
-    if (error) throw error;
-    
-    // Map database fields to frontend format
-    return data?.map(product => ({
-      ...product,
-      imageUrl: product.imageurl,
-      category_id: product.category_id || parseInt(product.category) || 1 // Use category_id, fallback to parsed category, default to 1
-    })) || [];
-  } catch (error) {
-    console.error('Error getting products:', error);
+    const rows = await pgQuery("SELECT * FROM products ORDER BY title ASC");
+    return rows.map((row) => ({
+      ...row,
+      imageUrl: row.imageurl,
+      category_id: row.category_id,
+    }));
+  } catch (err) {
+    console.error('[PG] Error getting products:', err);
     return [];
   }
 };

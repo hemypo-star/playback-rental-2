@@ -1,69 +1,44 @@
-
-import { supabase } from '@/integrations/supabase/client';
+import s3 from "@/integrations/s3/client";
 
 /**
- * Uploads a product image to Supabase storage
- * @param imageFile The image file to upload
- * @param productId Optional product ID for updates
- * @returns The URL of the uploaded image
+ * Uploads an image to S3
  */
 export const uploadProductImage = async (imageFile: File | string, productId?: string): Promise<string> => {
-  // If imageFile is already a URL (string), just return it
   if (typeof imageFile === 'string') {
-    // Check if it's a full URL or just a path
-    if (imageFile.startsWith('http')) {
-      console.log('Already an absolute URL, skipping upload:', imageFile);
-      return imageFile;
-    }
+    if (imageFile.startsWith('http')) return imageFile;
     return imageFile;
   }
-  
-  const timestamp = new Date().getTime();
+  // Convert the browser File to Blob, then to Buffer (for Node), then upload to S3
+  const arrayBuffer = await imageFile.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  const timestamp = Date.now();
   const fileName = `${productId ? `${productId}_` : ''}${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
-  const filePath = `${fileName}`;
-  
-  try {
-    console.log('Uploading product image to bucket "products":', filePath);
-    
-    const { error: uploadError } = await supabase.storage
-      .from('products')
-      .upload(filePath, imageFile, {
-        cacheControl: '3600',
-        upsert: false
-      });
-      
-    if (uploadError) {
-      console.error('Error uploading product image:', uploadError);
-      throw new Error(`Error uploading product image: ${uploadError.message}`);
-    }
-    
-    console.log('Product image uploaded successfully:', filePath);
-    // Return the path of the uploaded image
-    return filePath;
-  } catch (error) {
-    console.error('Error in uploadProductImage:', error);
-    throw error;
-  }
+  const bucket = "YOUR_S3_BUCKET_NAME"; // Set your bucket name
+
+  const uploadParams = {
+    Bucket: bucket,
+    Key: fileName,
+    Body: buffer,
+    ContentType: imageFile.type,
+    ACL: "public-read"
+  };
+
+  await s3.upload(uploadParams).promise();
+  // Construct the URL
+  const s3Url = `https://${bucket}.${s3.config.endpoint.host}/${fileName}`;
+  return s3Url;
 };
 
 /**
- * Gets the URL of a product image
- * @param imageUrl The image URL or path
- * @returns The full URL of the image
+ * Gets the URL of a product image (assume already public in S3)
  */
 export const getProductImageUrl = (imageUrl: string): string => {
   if (!imageUrl) return '/placeholder.svg';
-  
-  console.log("getProductImageUrl processing:", imageUrl);
-  
-  if (imageUrl.startsWith('http')) {
-    console.log("Using direct URL (external):", imageUrl);
-    return imageUrl;
-  }
-  
-  const fullUrl = `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${imageUrl}`;
-  console.log("Generated Supabase URL:", fullUrl);
-  return fullUrl;
+  if (imageUrl.startsWith('http')) return imageUrl;
+  // Otherwise, assume S3 style path
+  const bucket = "YOUR_S3_BUCKET_NAME";
+  return `https://${bucket}.${s3.config.endpoint.host}/${imageUrl}`;
 };
 
 /**
