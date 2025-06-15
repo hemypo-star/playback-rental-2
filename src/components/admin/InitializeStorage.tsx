@@ -8,6 +8,7 @@ type InitializeStorageProps = {
   onComplete: (success: boolean) => void;
 };
 
+// --- REPLACEMENT: Utilities for API calls (client-side) ---
 async function apiResetStoragePermissions() {
   const resp = await fetch('/api/storage/reset-permissions', {
     method: 'POST'
@@ -55,6 +56,7 @@ export default function InitializeStorage({ onComplete }: InitializeStorageProps
     // eslint-disable-next-line
   }, []);
 
+  // --- REPLACEMENT: initializeStorage uses API calls, not direct service import ---
   const initializeStorage = async () => {
     try {
       setStatus(prev => ({ ...prev, initializing: true, error: null }));
