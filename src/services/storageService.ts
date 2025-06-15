@@ -1,3 +1,14 @@
+// !!! ВАЖНО !!! //
+// Этот файл не должен импортироваться ни в каком frontend-коде (React-компоненты, хуки, утилиты)! Используйте только в backend, API-роутах, serverless-функциях.
+// Для работы с хранилищем на фронте используйте только API-запросы к backend (например, через /api/storage/*).
+
+if (typeof window !== "undefined") {
+  // Защита: если этот файл каким-то образом импортируется на фронте, выбрасываем ошибку сразу!
+  throw new Error(
+    "src/services/storageService.ts был импортирован во frontend-бандле! Это приведёт к ошибкам. Не импортируйте storageService или aws-sdk в React-коде."
+  );
+}
+
 import s3 from '@/integrations/s3/client';
 
 /**
