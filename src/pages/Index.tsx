@@ -1,11 +1,11 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import HeroSection from '@/components/home/HeroSection';
-import CategoriesSection from '@/components/home/CategoriesSection';
-import FeaturedProductsSection from '@/components/home/FeaturedProductsSection';
-import HowItWorksSection from '@/components/home/HowItWorksSection';
-import CallToActionSection from '@/components/home/CallToActionSection';
+import { HeroSection } from '@/components/home/HeroSection';
+import { CategoriesSection } from '@/components/home/CategoriesSection';
+import { FeaturedProductsSection } from '@/components/home/FeaturedProductsSection';
+import { HowItWorksSection } from '@/components/home/HowItWorksSection';
+import { CallToActionSection } from '@/components/home/CallToActionSection';
 
 const Index = () => {
   const navigate = useNavigate();
