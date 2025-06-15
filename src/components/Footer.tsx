@@ -1,6 +1,6 @@
 
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 export const Footer = () => {
@@ -59,7 +59,7 @@ export const Footer = () => {
           <div>
             <h3 className="font-semibold mb-4">Документы</h3>
             <div className="space-y-2">
-              <Link href="/privacy-policy" className="block text-muted-foreground hover:text-foreground transition-colors">
+              <Link to="/privacy-policy" className="block text-muted-foreground hover:text-foreground transition-colors">
                 Политика конфиденциальности
               </Link>
             </div>
