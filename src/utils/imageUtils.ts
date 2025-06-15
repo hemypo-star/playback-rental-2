@@ -1,58 +1,46 @@
 
+/**
+ * Utilities for working with product/category images in S3.
+ * All upload logic is now handled via backend API (not using aws-sdk in frontend).
+ */
 
-import s3 from "@/integrations/s3/client";
+const BASE_PRODUCTS_BUCKET = "products";
+const BASE_CATEGORIES_BUCKET = "categories";
 
 /**
- * Получить базовый URL S3 из endpoint.
+ * Получить базовый URL для S3 public static files.
  */
 function getS3BaseUrl(bucket: string): string {
-  let endpointUrl: string | undefined;
-
-  if (typeof s3.config.endpoint === "string") {
-    endpointUrl = s3.config.endpoint.replace(/\/$/, "");
-  } else if (s3.config.endpoint && typeof s3.config.endpoint === "object" && "href" in s3.config.endpoint) {
-    endpointUrl = (s3.config.endpoint as { href?: string }).href;
-    if (endpointUrl) endpointUrl = endpointUrl.replace(/\/$/, "");
-  } else {
-    endpointUrl = "https://s3.amazonaws.com";
-  }
-  if (endpointUrl) {
-    if (endpointUrl.startsWith("https://")) {
-      return `${endpointUrl}/${bucket}`;
-    } else {
-      return `https://${bucket}.${endpointUrl}`;
-    }
-  }
-  return "";
+  // Prefer Vercel env for endpoint if available, else fallback to Yandex/AWS standard
+  const endpoint = import.meta.env.VITE_S3_PUBLIC_ENDPOINT || "https://s3.amazonaws.com";
+  return `${endpoint.replace(/\/$/, "")}/${bucket}`;
 }
 
 /**
- * Загрузка картинки товара в S3.
+ * Загрузка картинки товара в S3 через API (возвращает публичный URL).
  */
-export const uploadProductImage = async (imageFile: File | string, productId?: string): Promise<string> => {
+export async function uploadProductImage(
+  imageFile: File | string,
+  productId?: string
+): Promise<string> {
   if (typeof imageFile === 'string') {
     if (imageFile.startsWith('http')) return imageFile;
     return imageFile;
   }
-  const arrayBuffer = await imageFile.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
 
-  const timestamp = Date.now();
-  const fileName = `${productId ? `${productId}_` : ''}${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
-  const bucket = "products";  // ВАЖНО: настройте здесь имя бакета для товаров
+  // 1. Запрашиваем presigned url у API
+  const resp = await fetch('/api/upload/product-image', {
+    method: 'POST',
+    headers: {},
+    body: await createUploadFormData(imageFile, productId),
+  });
 
-  const uploadParams = {
-    Bucket: bucket,
-    Key: fileName,
-    Body: buffer,
-    ContentType: imageFile.type,
-    ACL: "public-read"
-  };
-
-  await s3.upload(uploadParams).promise();
-
-  return `${getS3BaseUrl(bucket)}/${fileName}`;
-};
+  if (!resp.ok) {
+    throw new Error('Не удалось получить presigned URL для S3');
+  }
+  const { fileUrl } = await resp.json();
+  return fileUrl;
+}
 
 /**
  * URL картинки продукта из S3.
@@ -60,36 +48,33 @@ export const uploadProductImage = async (imageFile: File | string, productId?: s
 export const getProductImageUrl = (imageUrl: string): string => {
   if (!imageUrl) return '/placeholder.svg';
   if (imageUrl.startsWith('http')) return imageUrl;
-  const bucket = "products";
-  return `${getS3BaseUrl(bucket)}/${imageUrl}`;
+  return `${getS3BaseUrl(BASE_PRODUCTS_BUCKET)}/${imageUrl}`;
 };
 
 /**
- * Загрузка картинки категории в S3 (папка categories внутри бакета)
+ * Загрузка картинки категории в S3 через API (возвращает публичный URL).
  */
-export const uploadCategoryImage = async (imageFile: File | string, categoryId?: string): Promise<string> => {
+export async function uploadCategoryImage(
+  imageFile: File | string,
+  categoryId?: string
+): Promise<string> {
   if (typeof imageFile === 'string') {
     if (imageFile.startsWith('http')) return imageFile;
     return imageFile;
   }
-  const timestamp = Date.now();
-  const fileName = `category_${categoryId ? `${categoryId}_` : ''}${timestamp}_${imageFile.name.replace(/\s+/g, '_')}`;
-  const bucket = "categories"; // ВАЖНО: настройте имя бакета для категорий
 
-  const arrayBuffer = await imageFile.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const resp = await fetch('/api/upload/category-image', {
+    method: 'POST',
+    headers: {},
+    body: await createUploadFormData(imageFile, categoryId),
+  });
 
-  const uploadParams = {
-    Bucket: bucket,
-    Key: fileName,
-    Body: buffer,
-    ContentType: imageFile.type,
-    ACL: "public-read"
-  };
-
-  await s3.upload(uploadParams).promise();
-  return `${getS3BaseUrl(bucket)}/${fileName}`;
-};
+  if (!resp.ok) {
+    throw new Error('Не удалось получить presigned URL для S3');
+  }
+  const { fileUrl } = await resp.json();
+  return fileUrl;
+}
 
 /**
  * URL картинки категории.
@@ -97,6 +82,14 @@ export const uploadCategoryImage = async (imageFile: File | string, categoryId?:
 export const getCategoryImageUrl = (imageUrl: string): string => {
   if (!imageUrl) return '/placeholder.svg';
   if (imageUrl.startsWith('http')) return imageUrl;
-  const bucket = "categories";
-  return `${getS3BaseUrl(bucket)}/${imageUrl}`;
+  return `${getS3BaseUrl(BASE_CATEGORIES_BUCKET)}/${imageUrl}`;
 };
+
+// Helper: create a FormData for upload API
+async function createUploadFormData(file: File, id?: string) {
+  const form = new FormData();
+  form.append('file', file);
+  if (id) form.append('id', id);
+  return form;
+}
+
