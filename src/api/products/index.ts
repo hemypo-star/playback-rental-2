@@ -1,5 +1,5 @@
 
-import { pgQuery } from '@/integrations/postgres/client'; // Исправлено
+import { pgQuery } from '../_utils/db';
 import { withCors } from '../_utils/middleware';
 import { sendSuccess, sendError } from '../_utils/response';
 
@@ -17,4 +17,3 @@ async function handler(req: any, res: any) {
 }
 
 export default withCors(handler);
-
