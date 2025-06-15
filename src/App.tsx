@@ -1,4 +1,3 @@
-
 import { ToasterProvider } from "@/hooks/Toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,7 +8,6 @@ import { seedDatabase } from "./utils/seedDatabase";
 import { CartProvider } from "./hooks/useCart";
 import { Navbar } from "./components/Navbar";
 import RequireAuth from "./components/RequireAuth";
-import { resetStoragePermissions } from "./services/storageService";
 import { AuthProvider } from "./contexts/AuthContext";
 
 // Pages
@@ -49,10 +47,19 @@ const App = () => {
     // Initialize the database with seed data
     seedDatabase().catch(console.error);
     
-    // Initialize storage buckets
-    resetStoragePermissions().catch(error => {
-      console.error("Error initializing storage buckets:", error);
-    });
+    // Initialize storage buckets by calling the API endpoint instead of service directly
+    fetch("/api/storage/reset-permissions", {
+      method: "POST"
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) {
+          console.error("Error initializing storage buckets (API returned error):", data);
+        }
+      })
+      .catch(error => {
+        console.error("Error initializing storage buckets:", error);
+      });
   }, []);
 
   // Memoize the main app structure to prevent unnecessary re-renders

@@ -1,10 +1,8 @@
-
 export * from './productService'; // только для совместимости
 export * from './categoryService';
 export * from './bookingService';
 export * from './authService';
 export * from './settingsService';
-export * from './storageService';
 export * from './promotionService';
 export * from './product/productBasicService';
 export * from './product/productCreateService';
