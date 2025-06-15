@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useQuery } from '@tanstack/react-query';
+import Head from 'next/head';
+import { GetServerSideProps } from 'next';
 import * as productService from '@/services/productService';
 import * as categoryService from '@/services/categoryService';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
@@ -9,15 +11,17 @@ import CategorySidebar from '@/components/catalog/CategorySidebar';
 import VirtualizedProductGrid from '@/components/catalog/VirtualizedProductGrid';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const Catalog = () => {
+interface CatalogProps {
+  initialCategory?: string;
+}
+
+const Catalog = ({ initialCategory }: CatalogProps) => {
   const router = useRouter();
   const { query } = router;
 
-  // Category from query param (Next.js style)
-  const categoryFromUrl = typeof query.category === 'string' ? query.category : undefined;
-
+  const categoryFromUrl = (query.category as string) || initialCategory || 'all';
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState(categoryFromUrl || 'all');
+  const [activeTab, setActiveTab] = useState(categoryFromUrl);
   const [bookingDates, setBookingDates] = useState<{startDate?: Date, endDate?: Date}>({});
 
   const isMobile = useIsMobile();
@@ -26,10 +30,10 @@ const Catalog = () => {
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: categoryService.getCategories,
-    staleTime: 10 * 60 * 1000, // 10 min
+    staleTime: 10 * 60 * 1000,
   });
 
-  // Products (only available in catalog)
+  // Products
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['catalog-products', bookingDates.startDate, bookingDates.endDate],
     queryFn: () => {
@@ -41,7 +45,6 @@ const Catalog = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Sync state with URL category
   useEffect(() => {
     if (categoryFromUrl) setActiveTab(categoryFromUrl);
   }, [categoryFromUrl]);
@@ -58,8 +61,7 @@ const Catalog = () => {
       const searchInput = document.getElementById('search-input') as HTMLInputElement;
       if (searchInput) searchInput.value = '';
     }
-    // Remove query param from URL for Next.js
-    router.replace({ pathname: router.pathname, query: {} }, undefined, { shallow: true });
+    router.replace('/catalog', undefined, { shallow: true });
   };
 
   const filteredProducts = products?.filter(product => {
@@ -75,56 +77,79 @@ const Catalog = () => {
     return true;
   }) || [];
 
-  // Handle changing categories in sidebar
   const handleCategoryChange = (tab: string) => {
     setActiveTab(tab);
-    // Update the URL (Next.js way) but don't reload the page
     if (tab === 'all') {
-      router.replace({ pathname: router.pathname, query: {} }, undefined, { shallow: true });
+      router.replace('/catalog', undefined, { shallow: true });
     } else {
-      router.replace({ pathname: router.pathname, query: { category: tab } }, undefined, { shallow: true });
+      router.replace(`/catalog?category=${tab}`, undefined, { shallow: true });
     }
   };
 
+  const activeCategory = categories.find(cat => cat.category_id.toString() === activeTab);
+  const pageTitle = activeCategory ? `${activeCategory.name} - Equipment Catalog` : 'Equipment Catalog';
+  const pageDescription = activeCategory 
+    ? `Browse ${activeCategory.name.toLowerCase()} equipment for rent`
+    : 'Browse our complete catalog of professional equipment for rent';
+
   return (
-    <div className="min-h-screen">
-      <CatalogHeader
-        onSearch={setSearch}
-        onBookingChange={handleBookingChange}
-        bookingDates={bookingDates}
-        searchValue={search}
-      />
+    <>
+      <Head>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+      </Head>
 
-      {isMobile && (
-        <div className="w-full px-4 mt-4 max-w-full overflow-hidden">
-          <CategorySidebar
-            categories={categories}
-            activeTab={activeTab}
-            onCategoryChange={handleCategoryChange}
-          />
-        </div>
-      )}
+      <div className="min-h-screen">
+        <CatalogHeader
+          onSearch={setSearch}
+          onBookingChange={handleBookingChange}
+          bookingDates={bookingDates}
+          searchValue={search}
+        />
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col lg:flex-row gap-8 min-h-[500px] w-full">
-          {!isMobile && (
+        {isMobile && (
+          <div className="w-full px-4 mt-4 max-w-full overflow-hidden">
             <CategorySidebar
               categories={categories}
               activeTab={activeTab}
               onCategoryChange={handleCategoryChange}
             />
-          )}
+          </div>
+        )}
 
-          <VirtualizedProductGrid
-            products={filteredProducts}
-            isLoading={isLoading}
-            bookingDates={bookingDates}
-            onClearFilters={handleClearFilters}
-          />
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex flex-col lg:flex-row gap-8 min-h-[500px] w-full">
+            {!isMobile && (
+              <CategorySidebar
+                categories={categories}
+                activeTab={activeTab}
+                onCategoryChange={handleCategoryChange}
+              />
+            )}
+
+            <VirtualizedProductGrid
+              products={filteredProducts}
+              isLoading={isLoading}
+              bookingDates={bookingDates}
+              onClearFilters={handleClearFilters}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
+};
+
+export const getServerSideProps: GetServerSideProps = async ({ query }) => {
+  const category = query.category as string;
+
+  return {
+    props: {
+      initialCategory: category || null,
+    },
+  };
 };
 
 export default Catalog;

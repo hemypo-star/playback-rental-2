@@ -1,8 +1,15 @@
 
-import dynamic from 'next/dynamic';
-
-const Catalog = dynamic(() => import('./catalog'), { ssr: false });
+import { GetServerSideProps } from 'next';
 
 export default function Home() {
-  return <Catalog />;
+  return null;
 }
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    redirect: {
+      destination: '/catalog',
+      permanent: false,
+    },
+  };
+};
