@@ -2,10 +2,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-// REMOVE: import { listBucketFiles, getPublicUrl, testStorageConnection, resetStoragePermissions } from '@/services/storageService';
+// No import from storageService anywhere in this file!
 import { Button } from '@/components/ui/button';
 import { Loader2, FolderOpen, Image, File, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+console.log("FileExplorer.tsx loaded without importing storageService!");
 
 // --- API Helper Calls to Backend Routes (not services/storageService directly) ---
 async function apiListBucketFiles(bucket: string): Promise<string[]> {
@@ -308,4 +310,3 @@ const FileExplorer = () => {
 };
 
 export default FileExplorer;
-
