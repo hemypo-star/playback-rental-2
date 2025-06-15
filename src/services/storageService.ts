@@ -1,14 +1,12 @@
-
 import s3 from '@/integrations/s3/client';
 
 /**
- * Get a public URL for a file in your S3 bucket. 
- * S3 buckets should be "public-read" for static content delivery.
+ * Генерирует публичный URL для файла из S3.
+ * S3 бакеты должны быть с политикой "public-read" для отдачи статики.
  */
 export const getPublicUrl = (bucketName: string, fileName: string): string | null => {
   if (!fileName) return null;
 
-  // Your S3 endpoint and bucket (configured in s3/client.ts)
   let endpoint = '';
   if (typeof s3.config.endpoint === "string") {
     endpoint = s3.config.endpoint.replace(/\/$/, "");
@@ -21,7 +19,7 @@ export const getPublicUrl = (bucketName: string, fileName: string): string | nul
 };
 
 /**
- * List all files in a bucket.
+ * Получить список файлов в бакете.
  */
 export const listBucketFiles = async (bucketName: string): Promise<string[]> => {
   try {
@@ -34,7 +32,7 @@ export const listBucketFiles = async (bucketName: string): Promise<string[]> => 
 };
 
 /**
- * Test connection to a bucket by listing contents.
+ * Проверить подключение к бакету — выводит список файлов.
  */
 export const testStorageConnection = async (bucketName: string): Promise<{ success: boolean; message: string }> => {
   try {
@@ -52,7 +50,7 @@ export const testStorageConnection = async (bucketName: string): Promise<{ succe
 };
 
 /**
- * Check if both products/categories buckets exist and accessible.
+ * Проверить доступность двух бакетов.
  */
 export const checkStorageStatus = async (): Promise<{
   products: boolean;
@@ -69,7 +67,7 @@ export const checkStorageStatus = async (): Promise<{
 };
 
 /**
- * Reset (check) storage permissions — no-op legacy.
+ * Сбросить разрешения хранилища — noop.
  */
 export const resetStoragePermissions = async (): Promise<boolean> => {
   const status = await checkStorageStatus();
@@ -77,7 +75,7 @@ export const resetStoragePermissions = async (): Promise<boolean> => {
 };
 
 /**
- * Ensure bucket exists — for S3 we assume buckets are pre-created.
+ * Проверка наличия бакета (для S3 — бакеты должны быть созданы вручную)
  */
 export const ensurePublicBucket = async (bucketName: string): Promise<boolean> => {
   const status = await testStorageConnection(bucketName);
