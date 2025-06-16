@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from '@/hooks/Toaster'
 import { CartProvider } from '@/hooks/useCart'
 import { AuthProvider } from '@/contexts/AuthContext'
 import RequireAuth from '@/components/RequireAuth'
