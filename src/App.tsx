@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { Toaster } from '@/hooks/Toaster'
+import { ToasterProvider } from '@/hooks/Toaster'
 import { CartProvider } from '@/hooks/useCart'
 import { AuthProvider } from '@/contexts/AuthContext'
 import RequireAuth from '@/components/RequireAuth'
@@ -20,35 +20,36 @@ import NotFound from '@/pages/NotFound'
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <div className="min-h-screen bg-background">
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Catalog />} />
-            <Route path="/catalog" element={<Catalog />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/login" element={<Login />} />
-            
-            {/* Protected admin routes */}
-            <Route 
-              path="/admin/*" 
-              element={
-                <RequireAuth>
-                  <Admin />
-                </RequireAuth>
-              } 
-            />
-            
-            {/* 404 fallback */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </div>
-      </CartProvider>
+      <ToasterProvider>
+        <CartProvider>
+          <div className="min-h-screen bg-background">
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Catalog />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/login" element={<Login />} />
+              
+              {/* Protected admin routes */}
+              <Route 
+                path="/admin/*" 
+                element={
+                  <RequireAuth>
+                    <Admin />
+                  </RequireAuth>
+                } 
+              />
+              
+              {/* 404 fallback */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
+        </CartProvider>
+      </ToasterProvider>
     </AuthProvider>
   )
 }
