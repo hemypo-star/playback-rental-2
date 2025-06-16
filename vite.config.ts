@@ -9,6 +9,25 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => {
+          // Route API calls to our src/api handlers
+          if (path.startsWith('/api/categories')) {
+            return '/src/api/categories/index.ts';
+          }
+          if (path.startsWith('/api/products')) {
+            return '/src/api/products/index.ts';
+          }
+          if (path.startsWith('/api/bookings')) {
+            return '/src/api/bookings/index.ts';
+          }
+          return path;
+        }
+      }
+    }
   },
   plugins: [
     react(),

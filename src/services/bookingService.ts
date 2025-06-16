@@ -1,40 +1,26 @@
 import { BookingPeriod, BookingFormData } from '@/types/product';
-import { formatDateRu, isDateRangeAvailable } from '@/utils/dateUtils';
-
-const API_URL = '/api/bookings';
 
 export const getBookings = async (): Promise<BookingPeriod[]> => {
   try {
-    const res = await fetch(API_URL);
-    if (!res.ok) throw new Error('Ошибка загрузки бронирований');
-    const data = await res.json();
-    return data.map((b: any) => ({
-      id: b.id,
-      productId: b.product_id,
-      customerName: b.customer_name,
-      customerEmail: b.customer_email,
-      customerPhone: b.customer_phone,
-      startDate: new Date(b.start_date),
-      endDate: new Date(b.end_date),
-      status: b.status,
-      totalPrice: b.total_price,
-      quantity: b.quantity || 1,
-      notes: b.notes || '',
-      createdAt: b.created_at ? new Date(b.created_at) : new Date(),
-      order_id: b.order_id
-    }));
-  } catch (error) {
-    console.error('Error getting bookings:', error);
-    throw error;
-  }
-};
-
-export const getProductBookings = async (productId: string): Promise<BookingPeriod[]> => {
-  try {
-    const res = await fetch(`${API_URL}?productId=${encodeURIComponent(productId)}`);
-    if (!res.ok) throw new Error('Ошибка загрузки бронирований продукта');
-    const data = await res.json();
-    return data.map((booking: any) => ({
+    console.log('Fetching all bookings from API...');
+    const response = await fetch('/api/bookings', {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Bookings API response:', result);
+    
+    // Handle both direct data and wrapped response
+    const bookings = result.data || result;
+    
+    return bookings.map((booking: any) => ({
       id: booking.id,
       productId: booking.product_id,
       startDate: new Date(booking.start_date),
@@ -45,8 +31,49 @@ export const getProductBookings = async (productId: string): Promise<BookingPeri
       status: booking.status,
       totalPrice: booking.total_price,
       quantity: booking.quantity || 1,
-      notes: booking.notes || '',
-      createdAt: booking.created_at ? new Date(booking.created_at) : new Date(),
+      notes: booking.notes,
+      createdAt: new Date(booking.created_at),
+      order_id: booking.order_id
+    }));
+  } catch (error) {
+    console.error('Error getting bookings:', error);
+    return [];
+  }
+};
+
+export const getProductBookings = async (productId: string): Promise<BookingPeriod[]> => {
+  try {
+    console.log('Fetching product bookings for:', productId);
+    const response = await fetch(`/api/bookings?productId=${encodeURIComponent(productId)}`, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Product bookings API response:', result);
+    
+    // Handle both direct data and wrapped response
+    const bookings = result.data || result;
+    
+    return bookings.map((booking: any) => ({
+      id: booking.id,
+      productId: booking.product_id,
+      startDate: new Date(booking.start_date),
+      endDate: new Date(booking.end_date),
+      customerName: booking.customer_name,
+      customerEmail: booking.customer_email,
+      customerPhone: booking.customer_phone,
+      status: booking.status,
+      totalPrice: booking.total_price,
+      quantity: booking.quantity || 1,
+      notes: booking.notes,
+      createdAt: new Date(booking.created_at),
       order_id: booking.order_id
     }));
   } catch (error) {
