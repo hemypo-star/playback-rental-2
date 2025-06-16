@@ -45,3 +45,12 @@ export const getCategoryById = async (id: string): Promise<Category | null> => {
     return null;
   }
 };
+
+// Re-export CRUD operations
+export {
+  addCategory,
+  updateCategory,
+  deleteCategory,
+  updateCategoriesOrder,
+  uploadCategoryImage
+} from './categoryCrudService';

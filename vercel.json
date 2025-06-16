@@ -1,0 +1,22 @@
+
+{
+  "functions": {
+    "api/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/categories/:path*",
+      "destination": "/api/categories"
+    },
+    {
+      "source": "/api/products/:path*", 
+      "destination": "/api/products"
+    },
+    {
+      "source": "/api/bookings/:path*",
+      "destination": "/api/bookings"
+    }
+  ]
+}

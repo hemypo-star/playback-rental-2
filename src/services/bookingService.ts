@@ -1,9 +1,12 @@
+
 import { BookingPeriod, BookingFormData } from '@/types/product';
+
+const API_BASE = '/api/bookings';
 
 export const getBookings = async (): Promise<BookingPeriod[]> => {
   try {
     console.log('Fetching all bookings from API...');
-    const response = await fetch('/api/bookings', {
+    const response = await fetch(API_BASE, {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
@@ -44,7 +47,7 @@ export const getBookings = async (): Promise<BookingPeriod[]> => {
 export const getProductBookings = async (productId: string): Promise<BookingPeriod[]> => {
   try {
     console.log('Fetching product bookings for:', productId);
-    const response = await fetch(`/api/bookings?productId=${encodeURIComponent(productId)}`, {
+    const response = await fetch(`${API_BASE}?productId=${encodeURIComponent(productId)}`, {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
@@ -96,7 +99,7 @@ export const createBooking = async (booking: {
   order_id?: string;
 }): Promise<BookingPeriod> => {
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(booking)
@@ -126,7 +129,7 @@ export const createBooking = async (booking: {
 
 export const updateBookingStatus = async (bookingId: string, status: BookingPeriod['status']) => {
   try {
-    const res = await fetch(`${API_URL}/${bookingId}/status`, {
+    const res = await fetch(`${API_BASE}/${bookingId}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
@@ -141,7 +144,7 @@ export const updateBookingStatus = async (bookingId: string, status: BookingPeri
 
 export const deleteBooking = async (bookingId: string): Promise<boolean> => {
   try {
-    const res = await fetch(`${API_URL}/${bookingId}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/${bookingId}`, { method: 'DELETE' });
     return res.ok;
   } catch (error) {
     console.error('Error deleting booking:', error);
