@@ -1,5 +1,5 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 
 const pool = new Pool({
@@ -7,65 +7,55 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-export default async function handler(req: NextRequest) {
-  const headers = {
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT,DELETE',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-  };
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 
   if (req.method === 'OPTIONS') {
-    return new NextResponse(null, { status: 200, headers });
+    return res.status(200).end();
   }
 
   try {
     if (req.method === 'GET') {
-      const url = new URL(req.url);
-      const available = url.searchParams.get('available');
-      
       const client = await pool.connect();
       try {
-        let query = 'SELECT * FROM products';
-        if (available === 'true') {
-          query += ' WHERE available = true';
-        }
-        
-        const result = await client.query(query);
-        return NextResponse.json({ success: true, data: result.rows }, { headers });
+        const result = await client.query('SELECT * FROM products ORDER BY product_id');
+        return res.status(200).json({ success: true, data: result.rows });
       } finally {
         client.release();
       }
     }
 
     if (req.method === 'POST') {
-      const body = await req.json();
-      const { 
-        name, 
-        description, 
-        price, 
-        imageUrl, 
-        available = true, 
-        categoryId, 
-        features = [],
-        specifications = {} 
-      } = body;
-      
+      const {
+        name,
+        description,
+        category_id,
+        daily_price,
+        weekly_price,
+        monthly_price,
+        image_url,
+        availability_status = 'available'
+      } = req.body;
+
       const client = await pool.connect();
       try {
         const result = await client.query(
-          'INSERT INTO products (name, description, price, imageurl, available, category_id, features, specifications) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-          [name, description, price, imageUrl, available, categoryId, JSON.stringify(features), JSON.stringify(specifications)]
+          'INSERT INTO products (name, description, category_id, daily_price, weekly_price, monthly_price, image_url, availability_status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+          [name, description, category_id, daily_price, weekly_price, monthly_price, image_url, availability_status]
         );
-        return NextResponse.json({ success: true, data: result.rows[0] }, { headers });
+        return res.status(200).json({ success: true, data: result.rows[0] });
       } finally {
         client.release();
       }
     }
 
-    return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers });
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (error: any) {
     console.error('Products API error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500, headers });
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
