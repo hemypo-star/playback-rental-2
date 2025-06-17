@@ -5,19 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Package, Calendar, TrendingUp, DollarSign } from 'lucide-react';
 import { getProducts } from '@/services/product/productBasicService';
 import { getCategories } from '@/services/categoryService';
-import BookingStatistics from '@/components/admin/dashboard/BookingStatistics';
-import RecentBookings from '@/components/admin/dashboard/RecentBookings';
-import StatisticsCard from '@/components/admin/dashboard/StatisticsCard';
+import { BookingStatistics } from '@/components/admin/dashboard/BookingStatistics';
+import { RecentBookings } from '@/components/admin/dashboard/RecentBookings';
+import { StatisticsCard } from '@/components/admin/dashboard/StatisticsCard';
 
 const AdminDashboard = () => {
   // Fetch products
-  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ['products'],
     queryFn: getProducts,
   });
 
   // Fetch categories
-  const { data: categoriesResponse, isLoading: isLoadingCategories } = useQuery({
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: getCategories,
   });
@@ -35,8 +35,6 @@ const AdminDashboard = () => {
   });
 
   // Extract the actual data arrays from API responses
-  const products = productsResponse?.data || [];
-  const categories = categoriesResponse?.data || [];
   const bookings = bookingsResponse?.data || [];
 
   // Calculate statistics
