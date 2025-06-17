@@ -11,8 +11,16 @@
       "destination": "/api/categories"
     },
     {
+      "source": "/api/categories/(.*)",
+      "destination": "/api/categories/$1"
+    },
+    {
       "source": "/api/products", 
       "destination": "/api/products"
+    },
+    {
+      "source": "/api/products/(.*)",
+      "destination": "/api/products/$1"
     },
     {
       "source": "/api/bookings",
@@ -21,6 +29,11 @@
     {
       "source": "/api/upload",
       "destination": "/api/upload"
+    },
+    {
+      "source": "/api/upload/(.*)",
+      "destination": "/api/upload/$1"
     }
-  ]
+  ],
+  "buildCommand": "npm run build"
 }

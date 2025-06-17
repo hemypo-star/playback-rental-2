@@ -1,5 +1,5 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 
 const pool = new Pool({
@@ -7,54 +7,52 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-export default async function handler(req: NextRequest, { params }: { params: { id: string } }) {
-  const headers = {
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT,DELETE',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-  };
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 
   if (req.method === 'OPTIONS') {
-    return new NextResponse(null, { status: 200, headers });
+    return res.status(200).end();
   }
 
-  const { id } = params;
+  const { id } = req.query;
 
   try {
     if (req.method === 'GET') {
       const client = await pool.connect();
       try {
-        const result = await client.query('SELECT * FROM products WHERE id = $1', [id]);
+        const result = await client.query('SELECT * FROM products WHERE product_id = $1', [id]);
         if (result.rows.length === 0) {
-          return NextResponse.json({ error: 'Product not found' }, { status: 404, headers });
+          return res.status(404).json({ error: 'Product not found' });
         }
-        return NextResponse.json({ success: true, data: result.rows[0] }, { headers });
+        return res.status(200).json({ success: true, data: result.rows[0] });
       } finally {
         client.release();
       }
     }
 
     if (req.method === 'PUT') {
-      const body = await req.json();
       const { 
         name, 
         description, 
-        price, 
-        imageUrl, 
-        available, 
-        categoryId, 
-        features,
-        specifications 
-      } = body;
+        category_id,
+        daily_price,
+        weekly_price,
+        monthly_price,
+        image_url,
+        availability_status
+      } = req.body;
       
       const client = await pool.connect();
       try {
         const result = await client.query(
-          'UPDATE products SET name = $1, description = $2, price = $3, imageurl = $4, available = $5, category_id = $6, features = $7, specifications = $8 WHERE id = $9 RETURNING *',
-          [name, description, price, imageUrl, available, categoryId, JSON.stringify(features), JSON.stringify(specifications), id]
+          'UPDATE products SET name = $1, description = $2, category_id = $3, daily_price = $4, weekly_price = $5, monthly_price = $6, image_url = $7, availability_status = $8 WHERE product_id = $9 RETURNING *',
+          [name, description, category_id, daily_price, weekly_price, monthly_price, image_url, availability_status, id]
         );
-        return NextResponse.json({ success: true, data: result.rows[0] }, { headers });
+        return res.status(200).json({ success: true, data: result.rows[0] });
       } finally {
         client.release();
       }
@@ -63,16 +61,16 @@ export default async function handler(req: NextRequest, { params }: { params: { 
     if (req.method === 'DELETE') {
       const client = await pool.connect();
       try {
-        const result = await client.query('DELETE FROM products WHERE id = $1', [id]);
-        return NextResponse.json({ success: true, data: { deleted: result.rowCount > 0 } }, { headers });
+        const result = await client.query('DELETE FROM products WHERE product_id = $1', [id]);
+        return res.status(200).json({ success: true, data: { deleted: result.rowCount > 0 } });
       } finally {
         client.release();
       }
     }
 
-    return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers });
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (error: any) {
     console.error('Product API error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500, headers });
+    return res.status(500).json({ success: false, error: error.message });
   }
 }

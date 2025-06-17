@@ -1,5 +1,5 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 
 const pool = new Pool({
@@ -7,24 +7,22 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-export default async function handler(req: NextRequest, { params }: { params: { id: string } }) {
-  const headers = {
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT,DELETE',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-  };
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 
   if (req.method === 'OPTIONS') {
-    return new NextResponse(null, { status: 200, headers });
+    return res.status(200).end();
   }
 
-  const { id } = params;
+  const { id } = req.query;
 
   try {
     if (req.method === 'PUT') {
-      const body = await req.json();
-      const { name, slug, description, imageUrl, order } = body;
+      const { name, slug, description, imageUrl, order } = req.body;
       
       const client = await pool.connect();
       try {
@@ -32,7 +30,7 @@ export default async function handler(req: NextRequest, { params }: { params: { 
           'UPDATE categories SET name = $1, slug = $2, description = $3, imageurl = $4, "order" = $5 WHERE category_id = $6 RETURNING *',
           [name, slug, description, imageUrl, order, id]
         );
-        return NextResponse.json({ success: true, data: result.rows[0] }, { headers });
+        return res.status(200).json({ success: true, data: result.rows[0] });
       } finally {
         client.release();
       }
@@ -42,15 +40,15 @@ export default async function handler(req: NextRequest, { params }: { params: { 
       const client = await pool.connect();
       try {
         const result = await client.query('DELETE FROM categories WHERE category_id = $1', [id]);
-        return NextResponse.json({ success: true, data: { deleted: result.rowCount > 0 } }, { headers });
+        return res.status(200).json({ success: true, data: { deleted: result.rowCount > 0 } });
       } finally {
         client.release();
       }
     }
 
-    return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers });
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (error: any) {
     console.error('Category API error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500, headers });
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
