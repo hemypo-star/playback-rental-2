@@ -1,5 +1,5 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 
 const pool = new Pool({
@@ -7,71 +7,56 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-export default async function handler(req: NextRequest) {
-  const headers = {
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT,DELETE',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-  };
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 
   if (req.method === 'OPTIONS') {
-    return new NextResponse(null, { status: 200, headers });
+    return res.status(200).end();
   }
 
   try {
     if (req.method === 'GET') {
-      const url = new URL(req.url);
-      const productId = url.searchParams.get('productId');
-      
       const client = await pool.connect();
       try {
-        let query = 'SELECT * FROM bookings ORDER BY start_date';
-        let params: any[] = [];
-        
-        if (productId && productId !== ':id') {
-          query = 'SELECT * FROM bookings WHERE product_id = $1 ORDER BY start_date';
-          params = [productId];
-        }
-        
-        const result = await client.query(query, params);
-        return NextResponse.json({ success: true, data: result.rows }, { headers });
+        const result = await client.query('SELECT * FROM bookings ORDER BY created_at DESC');
+        return res.status(200).json({ success: true, data: result.rows });
       } finally {
         client.release();
       }
     }
 
     if (req.method === 'POST') {
-      const body = await req.json();
       const {
-        productId,
         customerName,
-        customerEmail,
         customerPhone,
+        customerEmail,
         startDate,
         endDate,
-        status = 'pending',
-        totalPrice,
-        quantity = 1,
-        notes,
-        order_id
-      } = body;
-      
+        items,
+        totalAmount,
+        notes = '',
+        status = 'pending'
+      } = req.body;
+
       const client = await pool.connect();
       try {
         const result = await client.query(
-          'INSERT INTO bookings (product_id, customer_name, customer_email, customer_phone, start_date, end_date, status, total_price, quantity, notes, order_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
-          [productId, customerName, customerEmail, customerPhone, startDate, endDate, status, totalPrice, quantity, notes, order_id]
+          'INSERT INTO bookings (customer_name, customer_phone, customer_email, start_date, end_date, items, total_amount, notes, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+          [customerName, customerPhone, customerEmail, startDate, endDate, JSON.stringify(items), totalAmount, notes, status]
         );
-        return NextResponse.json({ success: true, data: result.rows[0] }, { headers });
+        return res.status(200).json({ success: true, data: result.rows[0] });
       } finally {
         client.release();
       }
     }
 
-    return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers });
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (error: any) {
     console.error('Bookings API error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500, headers });
+    return res.status(500).json({ success: false, error: error.message });
   }
 }

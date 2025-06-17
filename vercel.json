@@ -7,16 +7,20 @@
   },
   "rewrites": [
     {
-      "source": "/api/categories/(.*)",
+      "source": "/api/categories",
       "destination": "/api/categories"
     },
     {
-      "source": "/api/products/(.*)", 
+      "source": "/api/products", 
       "destination": "/api/products"
     },
     {
-      "source": "/api/bookings/(.*)",
+      "source": "/api/bookings",
       "destination": "/api/bookings"
+    },
+    {
+      "source": "/api/upload",
+      "destination": "/api/upload"
     }
   ]
 }
