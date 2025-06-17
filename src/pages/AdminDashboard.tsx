@@ -64,31 +64,27 @@ const AdminDashboard = () => {
           title="Всего товаров"
           value={totalProducts.toString()}
           icon={Package}
-          description="Активные товары в каталоге"
         />
         <StatisticsCard
           title="Категории"
           value={totalCategories.toString()}
           icon={TrendingUp}
-          description="Доступные категории"
         />
         <StatisticsCard
           title="Бронирования"
           value={totalBookings.toString()}
           icon={Calendar}
-          description="Всего бронирований"
         />
         <StatisticsCard
           title="Выручка"
           value={`₽${totalRevenue.toLocaleString()}`}
           icon={DollarSign}
-          description="Общая сумма бронирований"
         />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <BookingStatistics bookings={bookings} />
-        <RecentBookings bookings={bookings} />
+        <BookingStatistics bookings={bookings} totalBookings={totalBookings} />
+        <RecentBookings bookings={bookings} isLoading={isLoadingBookings} />
       </div>
     </div>
   );
