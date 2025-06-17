@@ -1,126 +1,96 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  ReceiptRussianRuble, 
-  Package,
-  Users,
-  CalendarRange
-} from 'lucide-react';
-import { getProducts, getBookings } from '@/services/apiService';
-import { BookingPeriod } from '@/types/product';
-import { StatisticsCard } from '@/components/admin/dashboard/StatisticsCard';
-import { RecentBookings } from '@/components/admin/dashboard/RecentBookings';
-import { BookingStatistics } from '@/components/admin/dashboard/BookingStatistics';
-import { groupBookingsByOrder } from '@/utils/bookingGroupingUtils';
-import { BookingWithProduct } from '@/components/admin/bookings/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Package, Calendar, TrendingUp, DollarSign } from 'lucide-react';
+import { getProducts } from '@/services/product/productBasicService';
+import { getCategories } from '@/services/categoryService';
+import BookingStatistics from '@/components/admin/dashboard/BookingStatistics';
+import RecentBookings from '@/components/admin/dashboard/RecentBookings';
+import StatisticsCard from '@/components/admin/dashboard/StatisticsCard';
 
 const AdminDashboard = () => {
-  // UNIFIED: Use same cache keys as AdminBookings
-  const { data: products } = useQuery({
-    queryKey: ['admin-products'],
-    queryFn: () => getProducts()
+  // Fetch products
+  const { data: productsResponse, isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['products'],
+    queryFn: getProducts,
   });
 
-  const { data: bookings } = useQuery({
-    queryKey: ['bookings'], // UNIFIED: Now matches AdminBookings cache key
-    queryFn: () => getBookings()
+  // Fetch categories
+  const { data: categoriesResponse, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: getCategories,
   });
 
-  console.log('AdminDashboard - Raw bookings data:', bookings?.length || 0);
-  console.log('AdminDashboard - Sample booking statuses:', bookings?.slice(0, 3).map(b => ({ id: b.id, status: b.status, price: b.totalPrice, order_id: b.order_id })));
+  // Fetch bookings
+  const { data: bookingsResponse, isLoading: isLoadingBookings } = useQuery({
+    queryKey: ['bookings'],
+    queryFn: async () => {
+      const response = await fetch('/api/bookings');
+      if (!response.ok) {
+        throw new Error('Failed to fetch bookings');
+      }
+      return response.json();
+    },
+  });
+
+  // Extract the actual data arrays from API responses
+  const products = productsResponse?.data || [];
+  const categories = categoriesResponse?.data || [];
+  const bookings = bookingsResponse?.data || [];
 
   // Calculate statistics
-  const totalProducts = products?.length || 0;
-  const totalBookings = bookings?.length || 0;
+  const totalProducts = products.length;
+  const totalCategories = categories.length;
+  const totalBookings = bookings.length;
   
-  const activeBookings = bookings?.filter(
-    (booking: BookingPeriod) => booking.status === 'confirmed' && new Date(booking.endDate) >= new Date()
-  ).length || 0;
-  
-  // IMPROVED: Calculate revenue using order-based grouping for accuracy
-  const bookingsWithProducts: BookingWithProduct[] = React.useMemo(() => {
-    if (!bookings || !products) return [];
-    return bookings.map(booking => {
-      const product = products.find(p => p.id === booking.productId);
-      return { ...booking, product };
-    });
-  }, [bookings, products]);
+  // Calculate revenue (assuming bookings have a total_amount field)
+  const totalRevenue = bookings.reduce((sum: number, booking: any) => {
+    return sum + (booking.total_amount || 0);
+  }, 0);
 
-  // Group bookings by order to get accurate revenue per order
-  const groupedBookings = bookingsWithProducts ? groupBookingsByOrder(bookingsWithProducts) : [];
-  
-  // Calculate revenue from completed orders (not individual bookings)
-  const completedOrders = groupedBookings.filter(
-    order => order.status === 'completed'
-  );
-  
-  console.log('AdminDashboard - Completed orders:', completedOrders.length);
-  console.log('AdminDashboard - Completed order details:', completedOrders.map(o => ({ 
-    id: o.id, 
-    order_id: o.order_id,
-    status: o.status, 
-    totalPrice: o.totalPrice,
-    customer: o.customerName,
-    itemCount: o.items.length
-  })));
-  
-  const totalRevenue = completedOrders.reduce(
-    (sum, order) => sum + (order.totalPrice || 0), 
-    0
-  );
-  
-  console.log('AdminDashboard - Order-based revenue calculation:', {
-    completedOrdersCount: completedOrders.length,
-    totalRevenue: totalRevenue,
-    groupedOrdersCount: groupedBookings.length
-  });
+  const isLoading = isLoadingProducts || isLoadingCategories || isLoadingBookings;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Дашборд</h1>
-          <p className="text-muted-foreground">
-            Обзор статистики проката и последних заявок
-          </p>
-        </div>
-      </div>
-      
+    <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatisticsCard
-          title="Выручка"
-          value={`${totalRevenue.toLocaleString()} ₽`}
-          icon={ReceiptRussianRuble}
-          trend={{ value: "+12.5%", isPositive: true, text: "с прошлого месяца" }}
-        />
-        <StatisticsCard
-          title="Единиц техники"
-          value={totalProducts}
+          title="Всего товаров"
+          value={totalProducts.toString()}
           icon={Package}
-          trend={{ value: "+3", isPositive: true, text: "новых единиц" }}
+          description="Активные товары в каталоге"
         />
         <StatisticsCard
-          title="Всего заявок"
-          value={totalBookings}
-          icon={Users}
-          trend={{ value: "-2%", isPositive: false, text: "с прошлой недели" }}
+          title="Категории"
+          value={totalCategories.toString()}
+          icon={TrendingUp}
+          description="Доступные категории"
         />
         <StatisticsCard
-          title="Активные брони"
-          value={activeBookings}
-          icon={CalendarRange}
-          trend={{ value: "+2", isPositive: true, text: "текущие аренды" }}
+          title="Бронирования"
+          value={totalBookings.toString()}
+          icon={Calendar}
+          description="Всего бронирований"
+        />
+        <StatisticsCard
+          title="Выручка"
+          value={`₽${totalRevenue.toLocaleString()}`}
+          icon={DollarSign}
+          description="Общая сумма бронирований"
         />
       </div>
-      
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 mt-6">
-        <RecentBookings 
-          bookings={bookingsWithProducts} 
-          groupedBookings={groupedBookings} 
-          isLoading={!bookings} 
-        />
-        <BookingStatistics bookings={bookings} totalBookings={totalBookings} />
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <BookingStatistics bookings={bookings} />
+        <RecentBookings bookings={bookings} />
       </div>
     </div>
   );
