@@ -7,6 +7,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import RequireAuth from '@/components/RequireAuth'
 
 // Page imports
+import Home from '@/pages/Home'
 import Catalog from '@/pages/Catalog'
 import ProductDetail from '@/pages/ProductDetail'
 import Checkout from '@/pages/Checkout'
@@ -25,7 +26,7 @@ function App() {
           <div className="min-h-screen bg-background">
             <Routes>
               {/* Public routes */}
-              <Route path="/" element={<Catalog />} />
+              <Route path="/" element={<Home />} />
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/checkout" element={<Checkout />} />
