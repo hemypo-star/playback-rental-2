@@ -133,9 +133,8 @@ const ProductDetail = () => {
     );
   }
 
-  // Find the category name for this product - with safe fallback
+  // Find the category name for this product
   const categoryName = categories?.find(cat => cat.category_id === product.category_id)?.name || 'Без категории';
-  const categoryIdString = product.category_id?.toString() || 'all';
 
   // Function to display stock status with available quantity
   const renderStockStatus = () => {
@@ -187,7 +186,7 @@ const ProductDetail = () => {
               <BreadcrumbLink asChild>
                 <ScrollToTopLink 
                   to="/catalog" 
-                  state={{ activeCategory: categoryIdString, scrollTop: true }}
+                  state={{ activeCategory: product.category_id.toString(), scrollTop: true }}
                 >
                   {categoryName}
                 </ScrollToTopLink>

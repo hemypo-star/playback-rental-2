@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { checkStorageStatus } from '@/services/storageService';
 
 export const useStorageStatus = () => {
   const [storageInitialized, setStorageInitialized] = useState(false);
@@ -12,12 +13,7 @@ export const useStorageStatus = () => {
       setStorageError(null);
       
       console.log('Checking storage connection...');
-      // Call API route instead of direct service
-      const resp = await fetch('/api/storage/status');
-      if (!resp.ok) {
-        throw new Error('Storage API is not reachable');
-      }
-      const status = await resp.json();
+      const status = await checkStorageStatus();
       
       if (status.products && status.categories) {
         console.log('Storage buckets are ready');
@@ -48,7 +44,6 @@ export const useStorageStatus = () => {
 
   useEffect(() => {
     checkStorageConnection();
-    // eslint-disable-next-line
   }, []);
 
   return {

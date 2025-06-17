@@ -2,52 +2,10 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-// No import from storageService anywhere in this file!
+import { listBucketFiles, getPublicUrl, testStorageConnection, resetStoragePermissions } from '@/services/storageService';
 import { Button } from '@/components/ui/button';
 import { Loader2, FolderOpen, Image, File, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-console.log("FileExplorer.tsx loaded without importing storageService!");
-
-// --- API Helper Calls to Backend Routes (not services/storageService directly) ---
-async function apiListBucketFiles(bucket: string): Promise<string[]> {
-  const resp = await fetch('/api/storage/list-files', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bucket })
-  });
-  if (!resp.ok) throw new Error('Не удалось получить список файлов');
-  return await resp.json();
-}
-
-async function apiTestStorageConnection(bucket: string) {
-  const resp = await fetch('/api/storage/test-connection', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bucket })
-  });
-  if (!resp.ok) {
-    throw new Error(`Failed to test storage connection for bucket "${bucket}"`);
-  }
-  return resp.json();
-}
-
-async function apiResetStoragePermissions() {
-  const resp = await fetch('/api/storage/reset-permissions', {
-    method: 'POST'
-  });
-  if (!resp.ok) throw new Error('Не удалось сбросить разрешения');
-  const data = await resp.json();
-  return data.success;
-}
-
-// Local getPublicUrl (matches logic from storageService, but only uses string formatting)
-function getPublicUrl(bucketName: string, fileName: string): string | null {
-  if (!fileName) return null;
-  // You can update endpoint logic as needed; this matches the backend policy
-  const endpoint = import.meta.env.VITE_S3_PUBLIC_ENDPOINT || "https://s3.amazonaws.com";
-  return `${endpoint.replace(/\/$/, "")}/${bucketName}/${fileName}`;
-}
 
 type FileItem = {
   id: string;
@@ -73,25 +31,25 @@ const FileExplorer = () => {
     categories: false,
     loading: true
   });
-
+  
   // Check initial storage connection status
   useEffect(() => {
     checkStorageConnections();
   }, []);
-
+  
   const checkStorageConnections = async () => {
     setConnectionStatus(prev => ({ ...prev, loading: true }));
-
+    
     try {
-      const productsResult = await apiTestStorageConnection('products');
-      const categoriesResult = await apiTestStorageConnection('categories');
-
+      const productsResult = await testStorageConnection('products');
+      const categoriesResult = await testStorageConnection('categories');
+      
       setConnectionStatus({
         products: productsResult.success,
         categories: categoriesResult.success,
         loading: false
       });
-
+      
       if (!productsResult.success || !categoriesResult.success) {
         toast({
           title: "Проблема с хранилищем",
@@ -108,21 +66,21 @@ const FileExplorer = () => {
       });
     }
   };
-
+  
   const resetPermissions = async () => {
     setIsResetting(true);
     try {
-      const result = await apiResetStoragePermissions();
-
+      const result = await resetStoragePermissions();
+      
       if (result) {
         toast({
           title: "Успешно",
           description: "Разрешения хранилища успешно сброшены",
         });
-
+        
         // Verify connections again
         await checkStorageConnections();
-
+        
         // Reload files for current tab
         await fetchFiles(activeTab);
       } else {
@@ -143,19 +101,13 @@ const FileExplorer = () => {
       setIsResetting(false);
     }
   };
-
+  
   const fetchFiles = async (bucketName: string) => {
     setIsLoading(true);
     try {
-      const filesList = await apiListBucketFiles(bucketName);
-      // console.log(`Files from ${bucketName}:`, filesList);
-      setFiles(
-        filesList.map((fileName) => ({
-          id: fileName,
-          name: fileName,
-          metadata: {},
-        }))
-      );
+      const filesList = await listBucketFiles(bucketName);
+      console.log(`Files from ${bucketName}:`, filesList);
+      setFiles(filesList);
     } catch (error) {
       console.error(`Error fetching files from ${bucketName}:`, error);
       toast({
@@ -168,29 +120,29 @@ const FileExplorer = () => {
       setIsLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchFiles(activeTab);
   }, [activeTab]);
-
+  
   const handleRefresh = () => {
     fetchFiles(activeTab);
   };
-
+  
   const isImageFile = (fileName: string) => {
     const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
     return imageExtensions.includes(ext);
   };
-
+  
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'Unknown size';
-
+    
     if (bytes < 1024) return `${bytes} B`;
     else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
     else return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
-
+  
   return (
     <Card>
       <CardHeader>
@@ -200,8 +152,8 @@ const FileExplorer = () => {
             <CardDescription>Просмотр и управление файлами в хранилище</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
+            <Button 
+              variant="outline" 
               onClick={resetPermissions}
               disabled={isResetting || connectionStatus.loading}
             >
@@ -212,9 +164,9 @@ const FileExplorer = () => {
               )}
               Сбросить разрешения
             </Button>
-            <Button
-              variant="outline"
-              onClick={handleRefresh}
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh} 
               disabled={isLoading}
             >
               {isLoading ? (
@@ -225,7 +177,7 @@ const FileExplorer = () => {
             </Button>
           </div>
         </div>
-
+        
         {/* Connection status indicators */}
         <div className="flex gap-4 mt-2">
           <div className="flex items-center gap-2">
@@ -244,11 +196,11 @@ const FileExplorer = () => {
             <TabsTrigger value="products">Товары</TabsTrigger>
             <TabsTrigger value="categories">Категории</TabsTrigger>
           </TabsList>
-
+          
           <TabsContent value="products" className="space-y-4">
             {renderFileList('products')}
           </TabsContent>
-
+          
           <TabsContent value="categories" className="space-y-4">
             {renderFileList('categories')}
           </TabsContent>
@@ -256,7 +208,7 @@ const FileExplorer = () => {
       </CardContent>
     </Card>
   );
-
+  
   function renderFileList(bucketName: string) {
     if (isLoading) {
       return (
@@ -265,7 +217,7 @@ const FileExplorer = () => {
         </div>
       );
     }
-
+    
     if (files.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -275,18 +227,18 @@ const FileExplorer = () => {
         </div>
       );
     }
-
+    
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {files.map((file) => {
           const isImage = isImageFile(file.name);
           const publicUrl = isImage ? getPublicUrl(bucketName, file.name) : null;
-
+          
           return (
             <div key={file.id} className="border rounded-md p-2 flex flex-col">
               <div className="h-32 flex items-center justify-center bg-muted rounded-md mb-2">
                 {isImage && publicUrl ? (
-                  <div
+                  <div 
                     className="w-full h-full bg-center bg-cover bg-no-repeat"
                     style={{ backgroundImage: `url(${publicUrl})` }}
                   />
@@ -294,7 +246,7 @@ const FileExplorer = () => {
                   <File className="h-16 w-16 text-muted-foreground" />
                 )}
               </div>
-
+              
               <div className="mt-auto">
                 <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
                 <p className="text-xs text-muted-foreground">

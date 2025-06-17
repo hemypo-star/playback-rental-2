@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from 'react';
+import { resetStoragePermissions, testStorageConnection } from '@/services/storageService'; 
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
@@ -7,30 +8,6 @@ import { Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 type InitializeStorageProps = {
   onComplete: (success: boolean) => void;
 };
-
-// --- REPLACEMENT: Utilities for API calls (client-side) ---
-async function apiResetStoragePermissions() {
-  const resp = await fetch('/api/storage/reset-permissions', {
-    method: 'POST'
-  });
-  if (!resp.ok) {
-    throw new Error('Failed to reset storage permissions');
-  }
-  const data = await resp.json();
-  return data.success;
-}
-
-async function apiTestStorageConnection(bucket: string) {
-  const resp = await fetch('/api/storage/test-connection', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bucket })
-  });
-  if (!resp.ok) {
-    throw new Error(`Failed to test storage connection for bucket "${bucket}"`);
-  }
-  return resp.json();
-}
 
 export default function InitializeStorage({ onComplete }: InitializeStorageProps) {
   const [status, setStatus] = useState<{
@@ -53,34 +30,32 @@ export default function InitializeStorage({ onComplete }: InitializeStorageProps
 
   useEffect(() => {
     initializeStorage();
-    // eslint-disable-next-line
   }, []);
 
-  // --- REPLACEMENT: initializeStorage uses API calls, not direct service import ---
   const initializeStorage = async () => {
     try {
       setStatus(prev => ({ ...prev, initializing: true, error: null }));
 
-      console.log("Initializing storage (frontend calls backend API now)...");
-
-      // Step 1: Reset storage permissions using API route
-      const resetResult = await apiResetStoragePermissions();
-
+      console.log("Initializing storage...");
+      
+      // Reset storage permissions to ensure buckets exist and are public
+      const resetResult = await resetStoragePermissions();
+      
       if (!resetResult) {
         throw new Error("Failed to initialize storage. Please try again.");
       }
-
-      // Step 2: Test connection with API route
-      const productsTest = await apiTestStorageConnection('products');
-      const categoriesTest = await apiTestStorageConnection('categories');
-
+      
+      // Test connection to confirm everything is working
+      const productsTest = await testStorageConnection('products');
+      const categoriesTest = await testStorageConnection('categories');
+      
       console.log("Storage initialization results:", {
         products: productsTest,
         categories: categoriesTest
       });
-
+      
       const allSuccess = productsTest.success && categoriesTest.success;
-
+      
       setStatus({
         initializing: false,
         success: allSuccess,
@@ -90,11 +65,11 @@ export default function InitializeStorage({ onComplete }: InitializeStorageProps
           categories: categoriesTest.success
         }
       });
-
+      
       onComplete(allSuccess);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error initializing storage:", error);
-
+      
       setStatus({
         initializing: false,
         success: false,
@@ -104,11 +79,12 @@ export default function InitializeStorage({ onComplete }: InitializeStorageProps
           categories: false
         }
       });
-
+      
       onComplete(false);
     }
   };
 
+  // If initialization is still in progress, show loading indicator
   if (status.initializing) {
     return (
       <Alert variant="default" className="bg-muted/50">
@@ -123,6 +99,7 @@ export default function InitializeStorage({ onComplete }: InitializeStorageProps
     );
   }
 
+  // If initialization failed, show error with retry button
   if (status.success === false) {
     return (
       <Alert variant="destructive">
@@ -150,6 +127,7 @@ export default function InitializeStorage({ onComplete }: InitializeStorageProps
     );
   }
 
+  // If initialization succeeded, show success message briefly, then nothing
   if (status.success === true) {
     return (
       <Alert variant="default" className="bg-green-50 border-green-200">
@@ -164,5 +142,5 @@ export default function InitializeStorage({ onComplete }: InitializeStorageProps
     );
   }
 
-  return null;
+  return null; // Default return nothing
 }

@@ -1,5 +1,6 @@
 
 import { Product } from '@/types/product';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Gets all products from the database (for admin use)
@@ -7,13 +8,14 @@ import { Product } from '@/types/product';
  */
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    const res = await fetch('/api/products');
-    if (!res.ok) throw new Error('Ошибка загрузки продуктов');
-    const data = await res.json();
-    return data.map((product: any) => ({
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) throw error;
+    
+    // Map database fields to frontend format
+    return data?.map(product => ({
       ...product,
       imageUrl: product.imageurl,
-      category_id: product.category_id
+      category_id: parseInt(product.category) // Convert category string to category_id number
     })) || [];
   } catch (error) {
     console.error('Error getting products:', error);
@@ -27,13 +29,18 @@ export const getProducts = async (): Promise<Product[]> => {
  */
 export const getAvailableProductsOnly = async (): Promise<Product[]> => {
   try {
-    const res = await fetch('/api/products?available=true');
-    if (!res.ok) throw new Error('Ошибка загрузки доступных продуктов');
-    const data = await res.json();
-    return data.map((product: any) => ({
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('available', true); // Only get available products
+    
+    if (error) throw error;
+    
+    // Map database fields to frontend format
+    return data?.map(product => ({
       ...product,
       imageUrl: product.imageurl,
-      category_id: product.category_id
+      category_id: parseInt(product.category) // Convert category string to category_id number
     })) || [];
   } catch (error) {
     console.error('Error getting available products:', error);
@@ -48,14 +55,15 @@ export const getAvailableProductsOnly = async (): Promise<Product[]> => {
  */
 export const getProductById = async (id: string): Promise<Product | null> => {
   try {
-    const res = await fetch(`/api/products/${id}`);
-    if (!res.ok) throw new Error('Ошибка загрузки продукта');
-    const data = await res.json();
-    return {
+    const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
+    if (error) throw error;
+    
+    // Map database fields to frontend format
+    return data ? {
       ...data,
       imageUrl: data.imageurl,
-      category_id: data.category_id
-    };
+      category_id: parseInt(data.category) // Convert category string to category_id number
+    } : null;
   } catch (error) {
     console.error('Error getting product by ID:', error);
     return null;

@@ -1,5 +1,4 @@
-
-import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, MessageSquare, Send, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
@@ -8,8 +7,7 @@ export const Footer = () => {
   const yandexMapsUrl = `https://yandex.ru/maps/-/CHvDmII7`;
   const twoGisUrl = `https://go.2gis.com/2y9MJ`;
 
-  return (
-    <footer className="bg-secondary mt-auto">
+  return <footer className="bg-secondary mt-auto">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
@@ -70,6 +68,5 @@ export const Footer = () => {
           <p>© {new Date().getFullYear()} PlayBack Rental. Все права защищены.</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };

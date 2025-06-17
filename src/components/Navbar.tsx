@@ -8,18 +8,20 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { cartItems } = useCartContext();
-  const { user } = useAuth();
+  const {
+    cartItems
+  } = useCartContext();
+  const {
+    user
+  } = useAuth();
   const location = useLocation();
   const cartItemsCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   // Close mobile menu when route changes
   useEffect(() => {
     setIsOpen(false);
-  }, [location.pathname]);
-
+  }, [location]);
   const toggleMenu = () => setIsOpen(!isOpen);
-
   const NavLink = ({
     to,
     children,
@@ -28,18 +30,10 @@ export const Navbar = () => {
     to: string;
     children: React.ReactNode;
     className?: string;
-  }) => (
-    <Link
-      to={to}
-      className={`text-foreground hover:text-primary transition-colors ${className}`}
-      onClick={() => setIsOpen(false)}
-    >
+  }) => <Link to={to} className={`text-foreground hover:text-primary transition-colors ${className}`} onClick={() => setIsOpen(false)}>
       {children}
-    </Link>
-  );
-
-  return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    </Link>;
+  return <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo and Name */}
@@ -61,11 +55,9 @@ export const Navbar = () => {
             <Link to="/checkout" className="relative">
               <Button variant="ghost" size="sm" className="relative">
                 <ShoppingCart className="h-5 w-5" />
-                {cartItemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                {cartItemsCount > 0 && <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full text-xs w-5 h-5 flex items-center justify-center">
                     {cartItemsCount}
-                  </span>
-                )}
+                  </span>}
               </Button>
             </Link>
 
@@ -84,11 +76,9 @@ export const Navbar = () => {
             </div>
 
             {/* Admin Panel Button - Only for logged in users */}
-            {user && (
-              <Button variant="outline" size="sm" asChild>
+            {user && <Button variant="outline" size="sm" asChild>
                 <Link to="/admin">Панель управления</Link>
-              </Button>
-            )}
+              </Button>}
 
             {/* Mobile menu button */}
             <Button variant="ghost" size="sm" className="md:hidden" onClick={toggleMenu}>
@@ -98,8 +88,7 @@ export const Navbar = () => {
         </div>
 
         {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="md:hidden border-t bg-background">
+        {isOpen && <div className="md:hidden border-t bg-background">
             <div className="px-2 pt-2 pb-3 space-y-1">
               <NavLink to="/catalog" className="block px-3 py-2 rounded-md">
                 Каталог
@@ -125,9 +114,7 @@ export const Navbar = () => {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          </div>}
       </div>
-    </nav>
-  );
+    </nav>;
 };

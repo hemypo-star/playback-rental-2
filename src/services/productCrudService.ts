@@ -1,80 +1,125 @@
 
-/**
- * Новый сервис: все операции теперь идут через ваш backend API!
- * УДАЛЕНО: любые обращения к Supabase
- * Запросы идут через обычный fetch.
- */
-
 import { Product } from '@/types/product';
 import { ProductFormValues } from '@/hooks/useProductForm';
-
-const API_URL = '/api/products';
+import { supabase } from '@/integrations/supabase/client';
+import { uploadProductImage } from '@/utils/imageUtils';
 
 /**
- * Получить все продукты (для админа)
+ * Gets all products from the database (for admin use)
+ * @returns Array of all products
  */
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    const res = await fetch(API_URL);
-    if (!res.ok) throw new Error('Ошибка загрузки продуктов');
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    console.error('[API] Error getting products:', err);
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) throw error;
+    
+    // Map database fields to frontend format
+    return data?.map(product => ({
+      ...product,
+      imageUrl: product.imageurl,
+      category_id: product.category_id || parseInt(product.category) || 1 // Use category_id, fallback to parsed category, default to 1
+    })) || [];
+  } catch (error) {
+    console.error('Error getting products:', error);
     return [];
   }
 };
 
 /**
- * Получить продукт по id
+ * Gets a product by ID
+ * @param id Product ID
+ * @returns Product or null if not found
  */
 export const getProductById = async (id: string): Promise<Product | null> => {
   try {
-    const res = await fetch(`${API_URL}/${id}`);
-    if (!res.ok) throw new Error('Ошибка загрузки продукта');
-    const data = await res.json();
-    return data;
-  } catch (err) {
-    console.error('Error getting product by ID:', err);
+    const { data, error } = await supabase.from('products').select('*').eq('id', id).single();
+    if (error) throw error;
+    
+    // Map database fields to frontend format
+    return data ? {
+      ...data,
+      imageUrl: data.imageurl,
+      category_id: data.category_id || parseInt(data.category) || 1 // Use category_id, fallback to parsed category, default to 1
+    } : null;
+  } catch (error) {
+    console.error('Error getting product by ID:', error);
     return null;
   }
 };
 
 /**
- * Создать продукт
+ * Creates a new product
+ * @param productData Product data from form
+ * @param imageFile Image file to upload (can be File or URL string)
+ * @returns Created product or throws error
  */
 export const createProduct = async (
   productData: ProductFormValues,
   imageFile?: File | string | null
 ): Promise<Product> => {
   try {
+    console.log('Creating product with data:', productData);
+    console.log('Image file:', imageFile);
+
     let imageUrl = '';
-    // 1. Загрузка изображения через API
-    if (imageFile instanceof File) {
-      const uploadRes = await uploadImageToBackend(imageFile);
-      imageUrl = uploadRes.url;
-    } else if (typeof imageFile === 'string') {
-      imageUrl = imageFile;
+    
+    // Handle image upload if provided
+    if (imageFile) {
+      try {
+        imageUrl = await uploadProductImage(imageFile);
+        console.log('Image uploaded successfully:', imageUrl);
+      } catch (imageError) {
+        console.error('Failed to upload image:', imageError);
+        // Continue with product creation even if image upload fails
+        imageUrl = '';
+      }
     }
 
-    // 2. Сам продукт
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...productData, imageUrl }),
-    });
-    if (!res.ok) {
-      throw new Error('Не удалось создать продукт');
+    // Prepare data for database insertion - map frontend format to database format
+    const dbData = {
+      title: productData.title,
+      description: productData.description || '',
+      price: productData.price,
+      category: productData.category_id.toString(), // Convert number to string for legacy category column
+      category_id: productData.category_id, // Use new category_id column
+      imageurl: imageUrl,
+      quantity: productData.quantity || 1,
+      available: productData.available ?? true
+    };
+
+    console.log('Inserting product into database:', dbData);
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert([dbData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database error creating product:', error);
+      throw error;
     }
-    return await res.json();
-  } catch (err) {
-    console.error('Error creating product:', err);
-    throw err;
+
+    console.log('Product created successfully:', data);
+
+    // Map database response back to frontend format
+    return {
+      ...data,
+      imageUrl: data.imageurl,
+      category_id: data.category_id
+    };
+  } catch (error) {
+    console.error('Error creating product:', error);
+    throw error;
   }
 };
 
 /**
- * Обновить продукт
+ * Updates an existing product
+ * @param id Product ID
+ * @param productData Updated product data from form
+ * @param imageFile New image file to upload (can be File or URL string)
+ * @returns Updated product or throws error
  */
 export const updateProduct = async (
   id: string,
@@ -82,52 +127,79 @@ export const updateProduct = async (
   imageFile?: File | string | null
 ): Promise<Product> => {
   try {
+    console.log('Updating product with ID:', id);
+    console.log('Update data:', productData);
+    console.log('New image file:', imageFile);
+
     let imageUrl = productData.imageUrl || '';
-    if (imageFile instanceof File) {
-      const uploadRes = await uploadImageToBackend(imageFile);
-      imageUrl = uploadRes.url;
+    
+    // Handle image upload if a new file is provided
+    if (imageFile && imageFile instanceof File) {
+      try {
+        imageUrl = await uploadProductImage(imageFile, id);
+        console.log('New image uploaded successfully:', imageUrl);
+      } catch (imageError) {
+        console.error('Failed to upload new image:', imageError);
+        // Use existing image URL if new upload fails
+        imageUrl = productData.imageUrl || '';
+      }
     } else if (typeof imageFile === 'string') {
+      // Use provided URL string
       imageUrl = imageFile;
     }
 
-    const res = await fetch(`${API_URL}/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...productData, imageUrl }),
-    });
-    if (!res.ok) throw new Error('Ошибка обновления продукта');
-    return await res.json();
-  } catch (err) {
-    console.error('Error updating product:', err);
-    throw err;
+    // Prepare data for database update - map frontend format to database format
+    const dbUpdates = {
+      title: productData.title,
+      description: productData.description || '',
+      price: productData.price,
+      category: productData.category_id.toString(), // Convert number to string for legacy category column
+      category_id: productData.category_id, // Use new category_id column
+      imageurl: imageUrl,
+      quantity: productData.quantity || 1,
+      available: productData.available ?? true
+    };
+
+    console.log('Updating product in database:', dbUpdates);
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(dbUpdates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database error updating product:', error);
+      throw error;
+    }
+
+    console.log('Product updated successfully:', data);
+
+    // Map database response back to frontend format
+    return {
+      ...data,
+      imageUrl: data.imageurl,
+      category_id: data.category_id
+    };
+  } catch (error) {
+    console.error('Error updating product:', error);
+    throw error;
   }
 };
 
 /**
- * Удалить продукт
+ * Deletes a product by ID
+ * @param id Product ID
+ * @returns Success status
  */
 export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
-    const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Ошибка удаления продукта');
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) throw error;
     return true;
-  } catch (err) {
-    console.error('Error deleting product:', err);
+  } catch (error) {
+    console.error('Error deleting product:', error);
     return false;
   }
 };
-
-/**
- * Вспомогательная функция загрузки изображений на backend
- */
-const uploadImageToBackend = async (file: File): Promise<{ url: string }> => {
-  const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch('/api/upload', {
-    method: 'POST',
-    body: formData,
-  });
-  if (!res.ok) throw new Error('Не удалось загрузить изображение');
-  return await res.json();
-};
-

@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 interface LoginResponse {
   success: boolean;
   message?: string;
@@ -8,103 +10,96 @@ interface LoginResponse {
 
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
   try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+    console.log('Attempting login for:', email);
+    
+    // Use Supabase's built-in authentication
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
     });
-    if (!res.ok) {
-      const { error } = await res.json();
-      return { success: false, error: error || 'Ошибка входа' };
+
+    if (authError) {
+      console.error('Authentication error:', authError.message);
+      return { success: false, error: `Authentication failed: ${authError.message}` };
     }
-    const data = await res.json();
-    localStorage.setItem('auth_token', data.token);
-    localStorage.setItem('user_email', email);
-    return { success: true, message: data.message, token: data.token };
+
+    if (!authData || !authData.session) {
+      console.error('Authentication failed: No session data');
+      return { success: false, error: 'Authentication failed: No session data returned' };
+    }
+
+    console.log('Authentication successful');
+
+    // Store session info in localStorage
+    localStorage.setItem('auth_token', authData.session.access_token);
+    localStorage.setItem('user_email', authData.user?.email || '');
+
+    return { 
+      success: true,
+      message: `Login successful as: ${authData.user?.email}`
+    };
   } catch (error: any) {
     console.error('Error during login:', error);
-    return { success: false, error: error.message || String(error) };
+    return { 
+      success: false, 
+      error: `Login error: ${error.message}`
+    };
   }
 };
 
 export const signupuser = async (email: string, password: string) => {
-  try {
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!res.ok) {
-      const { error } = await res.json();
-      return { success: false, error: error || 'Ошибка регистрации' };
-    }
-    const data = await res.json();
-    return { success: true, message: data.message, token: data.token };
-  } catch (error: any) {
-    return { success: false, error: error.message || String(error) };
-  }
+  // This functionality is disabled as users are created via Supabase
+  return { success: false, error: 'Signup is disabled' };
 };
 
 export const forgotPassword = async (email: string) => {
   try {
-    const res = await fetch('/api/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    if (!res.ok) {
-      const { error } = await res.json();
-      return { success: false, error: error || 'Ошибка сброса пароля' };
-    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message || String(error) };
+    return { success: false, error: error.message };
   }
 };
 
 export const resetPassword = async (password: string) => {
   try {
-    const token = localStorage.getItem('auth_token');
-    const res = await fetch('/api/auth/reset-password', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ password })
-    });
-    if (!res.ok) {
-      const { error } = await res.json();
-      return { success: false, error: error || 'Ошибка обновления пароля' };
-    }
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message || String(error) };
+    return { success: false, error: error.message };
   }
 };
 
 export const logout = () => {
+  supabase.auth.signOut();
   localStorage.removeItem('auth_token');
   localStorage.removeItem('user_email');
 };
 
 export const checkAuth = async () => {
-  const token = localStorage.getItem('auth_token');
-  if (!token) return false;
-  // Optional: Validate token via backend
   try {
-    const res = await fetch('/api/auth/check', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!res.ok) {
+    // Check if token exists
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      console.log('No auth token found in localStorage');
+      return false;
+    }
+    
+    // Verify the session is still valid
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session) {
+      // Clear invalid tokens
+      console.log('Invalid session, clearing tokens');
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_email');
       return false;
     }
+    
     return true;
-  } catch {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_email');
+  } catch (error) {
+    console.error('Error checking authentication:', error);
     return false;
   }
 };

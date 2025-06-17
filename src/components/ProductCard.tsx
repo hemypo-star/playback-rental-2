@@ -1,6 +1,5 @@
 
-import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, CalendarIcon } from 'lucide-react';
@@ -29,7 +28,7 @@ const ProductCard = ({
   bookingDates,
   featured = false
 }: ProductCardProps) => {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { addToCart, isProductInCart } = useCartContext();
   
   const hasBookingDates = bookingDates?.startDate && bookingDates?.endDate;
@@ -62,7 +61,11 @@ const ProductCard = ({
       addToCart(product, bookingDates.startDate, bookingDates.endDate);
       toast.success(`Товар "${product.title}" добавлен в корзину`);
     } else {
-      router.push(`/product/${product.id}`);
+      navigate(`/product/${product.id}`, {
+        state: {
+          scrollTop: true
+        }
+      });
     }
   };
 
@@ -101,7 +104,12 @@ const ProductCard = ({
   
   return (
     <Link 
-      href={`/product/${product.id}`}
+      to={`/product/${product.id}`} 
+      state={{
+        prevPath: window.location.pathname,
+        bookingDates,
+        scrollTop: true
+      }} 
       className="group block h-full"
     >
       <Card className={`h-full flex flex-col overflow-hidden transition-all hover:shadow-md ${featured ? 'border-primary/20' : ''}`}>
