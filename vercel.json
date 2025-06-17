@@ -35,5 +35,5 @@
       "destination": "/api/upload/$1"
     }
   ],
-  "buildCommand": "npm run build"
+  "buildCommand": "npm install && npm run build"
 }
