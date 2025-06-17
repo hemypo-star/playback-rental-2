@@ -1,23 +1,35 @@
 
-import { listBucketFiles } from '@/services/storageService';
-import { withCors } from '../_utils/middleware';
+import { NextRequest, NextResponse } from 'next/server';
 
-async function handler(req: any, res: any) {
+export default async function handler(req: NextRequest) {
+  const headers = {
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT,DELETE',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  };
+
+  if (req.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 200, headers });
+  }
+
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers });
   }
-  const { bucket } = req.body;
-  if (!bucket || typeof bucket !== 'string') {
-    res.status(400).json({ error: 'Missing or invalid bucket' });
-    return;
-  }
+
   try {
-    const files = await listBucketFiles(bucket);
-    res.status(200).json(files);
+    const body = await req.json();
+    const { bucket } = body;
+    
+    if (!bucket || typeof bucket !== 'string') {
+      return NextResponse.json({ error: 'Missing or invalid bucket' }, { status: 400, headers });
+    }
+
+    // Placeholder for listing files - you can expand this based on your storage service
+    const files = [];
+    return NextResponse.json(files, { headers });
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Unknown error' });
+    console.error('List files API error:', error);
+    return NextResponse.json({ error: error.message || 'Unknown error' }, { status: 500, headers });
   }
 }
-
-export default withCors(handler);

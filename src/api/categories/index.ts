@@ -1,20 +1,38 @@
 
-import { pgQuery } from '../_utils/db';
-import { withCors } from '../_utils/middleware';
-import { sendSuccess, sendError } from '../_utils/response';
+import { NextRequest, NextResponse } from 'next/server';
+import { Pool } from 'pg';
 
-async function handler(req: any, res: any) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+export default async function handler(req: NextRequest) {
+  const headers = {
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,OPTIONS,POST,PUT,DELETE',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  };
+
+  if (req.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 200, headers });
   }
-  
+
   try {
-    const categories = await pgQuery('SELECT * FROM categories ORDER BY category_id');
-    sendSuccess(res, categories);
-  } catch (e: any) {
-    console.error('Categories API error:', e);
-    sendError(res, e);
+    if (req.method === 'GET') {
+      const client = await pool.connect();
+      try {
+        const result = await client.query('SELECT * FROM categories ORDER BY "order", category_id');
+        return NextResponse.json({ success: true, data: result.rows }, { headers });
+      } finally {
+        client.release();
+      }
+    }
+
+    return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers });
+  } catch (error: any) {
+    console.error('Categories API error:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500, headers });
   }
 }
-
-export default withCors(handler);
