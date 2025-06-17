@@ -7,7 +7,7 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-export default async function handler(req: NextRequest) {
+export default async function handler(req: NextRequest, { params }: { params: { id: string } }) {
   const headers = {
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Origin': '*',
@@ -19,43 +19,40 @@ export default async function handler(req: NextRequest) {
     return new NextResponse(null, { status: 200, headers });
   }
 
+  const { id } = params;
+
   try {
     if (req.method === 'GET') {
-      const url = new URL(req.url);
-      const available = url.searchParams.get('available');
-      
       const client = await pool.connect();
       try {
-        let query = 'SELECT * FROM products';
-        if (available === 'true') {
-          query += ' WHERE available = true';
+        const result = await client.query('SELECT * FROM products WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+          return NextResponse.json({ error: 'Product not found' }, { status: 404, headers });
         }
-        
-        const result = await client.query(query);
-        return NextResponse.json({ success: true, data: result.rows }, { headers });
+        return NextResponse.json({ success: true, data: result.rows[0] }, { headers });
       } finally {
         client.release();
       }
     }
 
-    if (req.method === 'POST') {
+    if (req.method === 'PUT') {
       const body = await req.json();
       const { 
         name, 
         description, 
         price, 
         imageUrl, 
-        available = true, 
+        available, 
         categoryId, 
-        features = [],
-        specifications = {} 
+        features,
+        specifications 
       } = body;
       
       const client = await pool.connect();
       try {
         const result = await client.query(
-          'INSERT INTO products (name, description, price, imageurl, available, category_id, features, specifications) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-          [name, description, price, imageUrl, available, categoryId, JSON.stringify(features), JSON.stringify(specifications)]
+          'UPDATE products SET name = $1, description = $2, price = $3, imageurl = $4, available = $5, category_id = $6, features = $7, specifications = $8 WHERE id = $9 RETURNING *',
+          [name, description, price, imageUrl, available, categoryId, JSON.stringify(features), JSON.stringify(specifications), id]
         );
         return NextResponse.json({ success: true, data: result.rows[0] }, { headers });
       } finally {
@@ -63,9 +60,19 @@ export default async function handler(req: NextRequest) {
       }
     }
 
+    if (req.method === 'DELETE') {
+      const client = await pool.connect();
+      try {
+        const result = await client.query('DELETE FROM products WHERE id = $1', [id]);
+        return NextResponse.json({ success: true, data: { deleted: result.rowCount > 0 } }, { headers });
+      } finally {
+        client.release();
+      }
+    }
+
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers });
   } catch (error: any) {
-    console.error('Products API error:', error);
+    console.error('Product API error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500, headers });
   }
 }

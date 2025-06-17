@@ -41,6 +41,34 @@ export default async function handler(req: NextRequest) {
       }
     }
 
+    if (req.method === 'POST') {
+      const body = await req.json();
+      const {
+        productId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        startDate,
+        endDate,
+        status = 'pending',
+        totalPrice,
+        quantity = 1,
+        notes,
+        order_id
+      } = body;
+      
+      const client = await pool.connect();
+      try {
+        const result = await client.query(
+          'INSERT INTO bookings (product_id, customer_name, customer_email, customer_phone, start_date, end_date, status, total_price, quantity, notes, order_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
+          [productId, customerName, customerEmail, customerPhone, startDate, endDate, status, totalPrice, quantity, notes, order_id]
+        );
+        return NextResponse.json({ success: true, data: result.rows[0] }, { headers });
+      } finally {
+        client.release();
+      }
+    }
+
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers });
   } catch (error: any) {
     console.error('Bookings API error:', error);

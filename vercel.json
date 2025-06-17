@@ -7,15 +7,15 @@
   },
   "rewrites": [
     {
-      "source": "/api/categories/:path*",
+      "source": "/api/categories/(.*)",
       "destination": "/api/categories"
     },
     {
-      "source": "/api/products/:path*", 
+      "source": "/api/products/(.*)", 
       "destination": "/api/products"
     },
     {
-      "source": "/api/bookings/:path*",
+      "source": "/api/bookings/(.*)",
       "destination": "/api/bookings"
     }
   ]
