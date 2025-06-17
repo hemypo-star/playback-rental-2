@@ -1,39 +1,16 @@
 
 {
   "functions": {
-    "api/*.ts": {
+    "api/**/*.ts": {
       "runtime": "nodejs18.x"
     }
   },
   "rewrites": [
     {
-      "source": "/api/categories",
-      "destination": "/api/categories"
-    },
-    {
-      "source": "/api/categories/(.*)",
-      "destination": "/api/categories/$1"
-    },
-    {
-      "source": "/api/products", 
-      "destination": "/api/products"
-    },
-    {
-      "source": "/api/products/(.*)",
-      "destination": "/api/products/$1"
-    },
-    {
-      "source": "/api/bookings",
-      "destination": "/api/bookings"
-    },
-    {
-      "source": "/api/upload",
-      "destination": "/api/upload"
-    },
-    {
-      "source": "/api/upload/(.*)",
-      "destination": "/api/upload/$1"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     }
   ],
-  "buildCommand": "npm install && npm run build"
+  "buildCommand": "npm install && npm run build",
+  "framework": "vite"
 }

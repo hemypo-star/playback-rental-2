@@ -1,13 +1,12 @@
 
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { Pool } from 'pg';
+const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async (req: any, res: any) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -73,4 +72,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('Product API error:', error);
     return res.status(500).json({ success: false, error: error.message });
   }
-}
+};
