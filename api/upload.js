@@ -1,5 +1,5 @@
 
-module.exports = async (req: any, res: any) => {
+module.exports = async (req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -20,7 +20,7 @@ module.exports = async (req: any, res: any) => {
     const url = `/placeholder-upload-${Date.now()}`;
     
     return res.status(200).json({ success: true, url });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Upload API error:', error);
     return res.status(500).json({ success: false, error: error.message });
   }

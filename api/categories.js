@@ -6,7 +6,7 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-module.exports = async (req: any, res: any) => {
+module.exports = async (req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -29,7 +29,7 @@ module.exports = async (req: any, res: any) => {
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Categories API error:', error);
     return res.status(500).json({ success: false, error: error.message });
   }
