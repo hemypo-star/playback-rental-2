@@ -1,14 +1,19 @@
-name: Deploy Vite frontend to server
+name: Deploy via SSH
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
-
+    environment: Production  # 👈 ВАЖНО: укажи точно имя environment, как на скриншоте
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
