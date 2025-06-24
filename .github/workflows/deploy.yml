@@ -9,9 +9,9 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: Production  # 👈 ВАЖНО: укажи точно имя environment, как на скриншоте
+    environment: Production  # 👈 ДОЛЖНО совпадать с названием окружения в GitHub (см. твой скриншот)
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Deploy via SSH
