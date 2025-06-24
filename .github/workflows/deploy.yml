@@ -9,7 +9,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: Production – playback-rental  # 👈 ДОЛЖНО совпадать с названием окружения в GitHub (см. твой скриншот)
+    environment: Production  # 👈 ДОЛЖНО совпадать с названием окружения в GitHub (см. твой скриншот)
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
