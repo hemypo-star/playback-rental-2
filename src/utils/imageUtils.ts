@@ -61,7 +61,7 @@ export const getProductImageUrl = (imageUrl: string): string => {
     return imageUrl;
   }
   
-  const fullUrl = `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${imageUrl}`;
+  const fullUrl = `https://supabase.playback-rental.tech/storage/v1/object/public/products/${imageUrl}`;
   console.log("Generated Supabase URL:", fullUrl);
   return fullUrl;
 };
@@ -118,7 +118,7 @@ export const getCategoryImageUrl = (imageUrl: string): string => {
     return imageUrl;
   }
   
-  return `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/categories/${imageUrl}`;
+  return `https://supabase.playback-rental.tech/storage/v1/object/public/categories/${imageUrl}`;
 };
 
 /**

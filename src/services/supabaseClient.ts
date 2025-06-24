@@ -2,9 +2,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = "https://xwylatyyhqyfwsxfwzmn.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MDAzMjAsImV4cCI6MjA1ODI3NjMyMH0.csLalsyRWr3iky23InlhaJwU2GIm5ckrW3umInkd9C4";
-const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3eWxhdHl5aHF5ZndzeGZ3em1uIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjcwMDMyMCwiZXhwIjoyMDU4Mjc2MzIwfQ.aq-6Z3p3W2jqAt-4Rwx-f_M_fxLpsZGRULKNpOnePm8";
+const SUPABASE_URL = "https://supabase.playback-rental.tech";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYXliYWNrLXJlbnRhbCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzM0OTE0MTk2LCJleHAiOjIwNTA0OTAxOTZ9.SuPUKEDEZUzYTJaW9vcgr1zfDLg-uF0KqEKGJmnmAQ4";
+const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYXliYWNrLXJlbnRhbCIsInJvbGUiOiJzZXJ2aWNlX3JvbGUiLCJpYXQiOjE3MzQ5MTQxOTYsImV4cCI6MjA1MDQ5MDE5Nn0.F7vJOWoD0AjdCQTGfX8-h8oPhHiH7WQKjFbCZdBv9T0";
 
 // For admin operations that require service role access, use this client
 export const supabaseServiceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {

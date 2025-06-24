@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getProductImageUrl } from "@/utils/imageUtils";
 
 export const PromotionsSlider = () => {
   const { data: promotions, isLoading, error } = useQuery({
@@ -52,7 +53,7 @@ export const PromotionsSlider = () => {
                     <Card className="relative overflow-hidden h-full">
                       <AspectRatio ratio={3/4} className="bg-muted">
                         <img 
-                          src={promotion.imageurl.startsWith('http') ? promotion.imageurl : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageurl}`}
+                          src={getProductImageUrl(promotion.imageurl)}
                           alt={promotion.title}
                           className="object-cover w-full h-full"
                           onError={(e) => {

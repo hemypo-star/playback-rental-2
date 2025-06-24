@@ -38,7 +38,7 @@ export const backupService = {
       }
 
       // Call the edge function which will return the file directly
-      const response = await fetch(`https://xwylatyyhqyfwsxfwzmn.supabase.co/functions/v1/create-backup`, {
+      const response = await fetch(`https://supabase.playback-rental.tech/functions/v1/create-backup`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
