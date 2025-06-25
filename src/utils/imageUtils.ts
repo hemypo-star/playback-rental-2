@@ -1,6 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "http://84.201.170.203:8000";
+
 /**
  * Uploads a product image to Supabase storage
  * @param imageFile The image file to upload
@@ -61,7 +63,7 @@ export const getProductImageUrl = (imageUrl: string): string => {
     return imageUrl;
   }
   
-  const fullUrl = `http://84.201.170.203:8000/storage/v1/object/public/products/${imageUrl}`;
+  const fullUrl = `${SUPABASE_URL}/storage/v1/object/public/products/${imageUrl}`;
   console.log("Generated Supabase URL:", fullUrl);
   return fullUrl;
 };
@@ -118,7 +120,7 @@ export const getCategoryImageUrl = (imageUrl: string): string => {
     return imageUrl;
   }
   
-  return `http://84.201.170.203:8000/storage/v1/object/public/categories/${imageUrl}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/categories/${imageUrl}`;
 };
 
 /**

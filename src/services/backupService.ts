@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { createBackup as serverCreateBackup } from './serverApi';
 
 export interface BackupLog {
   id: string;
@@ -28,51 +29,11 @@ export const backupService = {
     return (data || []) as BackupLog[];
   },
 
-  // Create and download a backup directly
+  // Create and download a backup using server API
   async createAndDownloadBackup(type: 'database' | 'storage' | 'full'): Promise<void> {
     try {
-      // Get current session for authorization
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Authentication required');
-      }
-
-      // Call the edge function which will return the file directly
-      const response = await fetch(`http://84.201.170.203:8000/functions/v1/create-backup`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ type })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      // Get filename from Content-Disposition header
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `backup-${Date.now()}`;
-      if (contentDisposition) {
-        const matches = contentDisposition.match(/filename="(.+)"/);
-        if (matches) {
-          filename = matches[1];
-        }
-      }
-
-      // Get the blob and create download
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
+      console.log(`Creating ${type} backup via server API...`);
+      await serverCreateBackup(type);
     } catch (error) {
       console.error('Error creating backup:', error);
       throw error;
