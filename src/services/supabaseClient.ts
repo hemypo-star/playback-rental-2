@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = "https://supabase.playback-rental.tech";
+const SUPABASE_URL = "http://84.201.170.203:8000";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYXliYWNrLXJlbnRhbCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzM0OTE0MTk2LCJleHAiOjIwNTA0OTAxOTZ9.SuPUKEDEZUzYTJaW9vcgr1zfDLg-uF0KqEKGJmnmAQ4";
 const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYXliYWNrLXJlbnRhbCIsInJvbGUiOiJzZXJ2aWNlX3JvbGUiLCJpYXQiOjE3MzQ5MTQxOTYsImV4cCI6MjA1MDQ5MDE5Nn0.F7vJOWoD0AjdCQTGfX8-h8oPhHiH7WQKjFbCZdBv9T0";
 

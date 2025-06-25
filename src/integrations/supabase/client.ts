@@ -3,7 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://supabase.playback-rental.tech";
+const SUPABASE_URL = "http://84.201.170.203:8000";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYXliYWNrLXJlbnRhbCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzM0OTE0MTk2LCJleHAiOjIwNTA0OTAxOTZ9.SuPUKEDEZUzYTJaW9vcgr1zfDLg-uF0KqEKGJmnmAQ4";
 
 // Import the supabase client like this:
