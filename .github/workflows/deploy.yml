@@ -1,4 +1,3 @@
-
 name: Deploy via SSH
 
 on:
@@ -25,21 +24,16 @@ jobs:
             cd ~/apps/playback-rental
             git pull origin main
             
-            # Install frontend dependencies
+            # Установка зависимостей
             npm install
-            
-            # Install server dependencies
-            cd server
-            npm install
-            cd ..
-            
-            # Build frontend
+
+            # Сборка проекта
             npm run build
-            
-            # Copy environment variables if they exist
+
+            # Копирование переменных окружения (если есть)
             if [ -f .env.production ]; then
               cp .env.production .env
             fi
-            
-            # Restart services with PM2
+
+            # Перезапуск с PM2
             pm2 reload ecosystem.config.cjs || pm2 start ecosystem.config.cjs
