@@ -1,5 +1,5 @@
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://84.201.170.203:3001/api';
 
 interface ContactNotificationData {
   name: string;
@@ -37,20 +37,23 @@ interface BackupResponse {
   error?: string;
 }
 
-// Generic API call helper
+// Generic API call helper with HTTP configuration
 const apiCall = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
   const url = `${API_BASE_URL}${endpoint}`;
   
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...options.headers,
     },
+    mode: 'cors',
+    credentials: 'same-origin',
     ...options,
   };
 
   try {
-    console.log(`Making API call to: ${url}`);
+    console.log(`Making HTTP API call to: ${url}`);
     const response = await fetch(url, defaultOptions);
     
     if (!response.ok) {

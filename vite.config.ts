@@ -21,10 +21,10 @@ export default defineConfig(({ mode }) => ({
     },
   },
   define: {
-    // Expose environment variables to the client
+    // Expose environment variables to the client - using HTTP URLs
     'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL || 'http://84.201.170.203:8000'),
     'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.SUPABASE_ANON_KEY),
     'import.meta.env.VITE_SUPABASE_SERVICE_KEY': JSON.stringify(process.env.SUPABASE_SERVICE_KEY),
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.API_URL || 'http://localhost:3001/api'),
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.API_URL || 'http://84.201.170.203:3001/api'),
   },
 }));

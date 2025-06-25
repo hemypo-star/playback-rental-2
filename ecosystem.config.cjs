@@ -8,7 +8,9 @@ module.exports = {
       cwd: './',
       env: {
         NODE_ENV: 'production',
-        PORT: '8080'
+        PORT: '8080',
+        SUPABASE_URL: 'http://84.201.170.203:8000',
+        API_URL: 'http://84.201.170.203:3001/api'
       }
     },
     {
@@ -17,7 +19,9 @@ module.exports = {
       cwd: './',
       env: {
         NODE_ENV: 'production',
-        PORT: '3001'
+        PORT: '3001',
+        SUPABASE_URL: 'http://84.201.170.203:8000',
+        API_URL: 'http://84.201.170.203:3001/api'
       }
     }
   ]

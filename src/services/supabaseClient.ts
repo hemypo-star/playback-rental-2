@@ -12,6 +12,14 @@ export const supabaseServiceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE
   auth: {
     autoRefreshToken: true,
     persistSession: false
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'Content-Type': 'application/json'
+    }
   }
 });
 

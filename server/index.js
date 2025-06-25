@@ -7,8 +7,18 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// Enhanced CORS configuration for HTTP
+app.use(cors({
+  origin: [
+    'http://localhost:8080',
+    'http://84.201.170.203:8080',
+    'http://127.0.0.1:8080'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../dist')));
 
@@ -22,12 +32,15 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/backup', backupRoutes);
 
-// Health check endpoint
+// Health check endpoint with detailed information
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    port: PORT,
+    supabase_url: process.env.SUPABASE_URL,
+    api_url: process.env.API_URL
   });
 });
 
@@ -45,8 +58,9 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Supabase URL: ${process.env.SUPABASE_URL}`);
+  console.log(`API URL: ${process.env.API_URL}`);
 });
