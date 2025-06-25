@@ -22,18 +22,31 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd ~/apps/playback-rental
+
+            # Очищаем все локальные изменения (предупреждение: удаляет неотслеживаемые файлы!)
+            git reset --hard
+            git clean -fd
+
+            # Получаем последние изменения из GitHub
             git pull origin main
-            
-            # Установка зависимостей
+
+            # Установка зависимостей фронтенда
             npm install
 
-            # Сборка проекта
+            # Если есть папка server — ставим и её зависимости
+            if [ -d server ]; then
+              cd server
+              npm install
+              cd ..
+            fi
+
+            # Сборка фронтенда
             npm run build
 
-            # Копирование переменных окружения (если есть)
+            # Копируем .env при наличии
             if [ -f .env.production ]; then
               cp .env.production .env
             fi
 
-            # Перезапуск с PM2
+            # Рестарт через PM2
             pm2 reload ecosystem.config.cjs || pm2 start ecosystem.config.cjs
