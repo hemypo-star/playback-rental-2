@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "http://84.201.170.203:8000";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 /**
  * Uploads a product image to Supabase storage
