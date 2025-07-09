@@ -58,7 +58,7 @@ const PrivacyPolicy = () => {
             <ul className="list-none pl-6 mb-4">
               <li>Email: PlaybackRental@yandex.ru</li>
               <li>Телефон: +7 (923) 530-30-20</li>
-              <li>Адрес: Москва, ул. Ленина, д. 1, офис 123</li>
+              <li>Адрес: г. Кемерово, ул. Демьяна Бедного, 6</li>
             </ul>
           </section>
         </div>

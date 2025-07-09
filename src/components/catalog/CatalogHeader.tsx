@@ -2,10 +2,11 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
-import BookingCalendar from '@/components/BookingCalendar';
+import DateRangePickerRu from '@/components/booking/DateRangePickerRu';
 import { format } from 'date-fns';
 import SearchBar from './SearchBar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useState } from 'react';
 
 interface CatalogHeaderProps {
   onSearch: (query: string) => void;
@@ -19,10 +20,13 @@ interface CatalogHeaderProps {
 
 const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }: CatalogHeaderProps) => {
   const isMobile = useIsMobile();
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   
-  const handleBookingChange = (booking: any) => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    onBookingChange(booking.startDate, booking.endDate);
+  const handleDateRangeChange = (range: { start: Date | null; end: Date | null }) => {
+    if (range.start && range.end) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      onBookingChange(range.start, range.end);
+    }
   };
   
   const handleSearch = (query: string) => {
@@ -37,7 +41,7 @@ const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }:
         <div className="flex flex-col sm:flex-row items-center gap-4 max-w-4xl">
           <SearchBar onSubmit={handleSearch} defaultValue={searchValue} />
           
-          <Popover>
+          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
               <Button 
                 variant="outline" 
@@ -45,18 +49,20 @@ const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }:
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {bookingDates.startDate && bookingDates.endDate 
-                  ? `${format(bookingDates.startDate, 'dd.MM.yyyy')} — ${format(bookingDates.endDate, 'dd.MM.yyyy')}`
+                  ? `${format(bookingDates.startDate, 'dd.MM.yyyy HH:00')} — ${format(bookingDates.endDate, 'dd.MM.yyyy HH:00')}`
                   : "Выберите даты"
                 }
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <BookingCalendar
-                onBookingChange={handleBookingChange}
-                initialStartDate={bookingDates.startDate}
-                initialEndDate={bookingDates.endDate}
-                isCompact={true}
-              />
+            <PopoverContent className="w-auto p-2" align="end">
+              <div className="w-full md:w-[700px] max-w-full">
+                <DateRangePickerRu
+                  onChange={handleDateRangeChange}
+                  initialStartDate={bookingDates.startDate}
+                  initialEndDate={bookingDates.endDate}
+                  onDateConfirmed={() => setIsPopoverOpen(false)}
+                />
+              </div>
             </PopoverContent>
           </Popover>
         </div>

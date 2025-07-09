@@ -44,6 +44,11 @@ export default function ProductImageField({
   const handleImageChange = (file: File | string) => {
     console.log("New image selected:", typeof file === 'string' ? 'URL: ' + file : 'File: ' + file.name);
     setImageForProduct(file);
+    
+    // Update the form's imageUrl field when a URL is selected
+    if (typeof file === 'string') {
+      form.setValue('imageUrl', file);
+    }
   };
 
   return (

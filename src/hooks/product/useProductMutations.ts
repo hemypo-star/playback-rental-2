@@ -30,10 +30,10 @@ export const useProductMutations = () => {
         // Handle image upload if it's a File object
         if (productData.imageFile && productData.imageFile instanceof File) {
           imageUrl = await uploadProductImage(productData.imageFile);
-        } else if (productData.imageUrl?.startsWith('http')) {
-          // For external URLs, use them directly
+        } else if (productData.imageUrl) {
+          // For external URLs or any other imageUrl, use them directly
           imageUrl = productData.imageUrl;
-          console.log('Using external image URL directly:', imageUrl);
+          console.log('Using image URL directly:', imageUrl);
         }
 
         // Create product with the image URL (either uploaded or external URL)

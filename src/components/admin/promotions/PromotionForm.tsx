@@ -29,7 +29,7 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(
     promotion?.imageurl ? promotion.imageurl.startsWith('http') 
       ? promotion.imageurl 
-      : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageurl}` 
+      : `https://api.playbackrental.ru/storage/v1/object/public/products/${promotion.imageurl}` 
       : null
   );
   

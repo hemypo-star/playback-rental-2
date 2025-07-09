@@ -8,11 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRightIcon, ChevronRight } from 'lucide-react';
 
 const categoryImages: Record<string, string> = {
-  'Компьютеры': 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80',
-  'Ноутбуки': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
-  'Планшеты': 'https://images.unsplash.com/photo-1585790050230-5dd28404ccb9?auto=format&fit=crop&w=800&q=80',
-  'Мониторы': 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80',
-  'default': 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80'
+  'Компьютеры': '',
+  'Ноутбуки': '',
+  'Планшеты': '',
+  'Мониторы': '',
+  'default': ''
 };
 
 export const CategoriesSection = () => {

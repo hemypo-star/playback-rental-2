@@ -25,6 +25,7 @@ const HowItWorks = lazy(() => import("./pages/HowItWorks"));
 const Contact = lazy(() => import("./pages/Contact"));
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import UserAgreement from "./pages/UserAgreement";
 import { Footer } from "./components/Footer";
 
 const Loading = () => (
@@ -70,7 +71,8 @@ const App = () => {
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            
+            <Route path="/user-agreement" element={<UserAgreement />} />
+
             <Route path="/admin" element={
               <RequireAuth>
                 <Admin />

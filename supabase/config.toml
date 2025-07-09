@@ -1,6 +1,20 @@
-
 # This is the configuration for the Supabase project.
+# It controls the behavior of the self-hosted Supabase stack.
 project_id = "xwylatyyhqyfwsxfwzmn"
 
+# This section configures the API gateway (Kong).
+[api]
+# This is the crucial setting to fix the CORS errors.
+# It tells Supabase to allow requests from your frontend's domain.
+cors_allowed_origins = ["https://playbackrental.ru"]
+
+# The default port for the API gateway. Do not change this unless you have a specific reason.
+port = 8000
+
+# Specifies the database schemas to expose in the API.
+# The default 'public,storage,graphql_public' is usually correct.
+schemas = ["public", "storage", "graphql_public"]
+
+# Example function configuration from your file.
 [functions.ensure-storage-bucket]
 verify_jwt = true

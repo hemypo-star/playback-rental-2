@@ -60,6 +60,9 @@ export const Footer = () => {
               <Link to="/privacy-policy" className="block text-muted-foreground hover:text-foreground transition-colors">
                 Политика конфиденциальности
               </Link>
+              <Link to="/user-agreement" className="block text-muted-foreground hover:text-foreground transition-colors">
+                Пользовательское соглашение
+              </Link>
             </div>
           </div>
         </div>

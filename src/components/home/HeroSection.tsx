@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRightIcon, SearchIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import BookingCalendar from '@/components/BookingCalendar';
+import DateRangePickerRu  from '@/components/booking/DateRangePickerRu';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -13,7 +13,9 @@ export const HeroSection = () => {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [searchQuery, setSearchQuery] = useState('');
-  const [bannerImage, setBannerImage] = useState('public/BG.svg');
+  const [bannerImage, setBannerImage] = useState('');
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
   useEffect(() => {
     const fetchBannerImage = async () => {
       try {
@@ -30,9 +32,11 @@ export const HeroSection = () => {
     };
     fetchBannerImage();
   }, []);
-  const handleBookingChange = (bookingData: BookingPeriod) => {
-    setStartDate(bookingData.startDate);
-    setEndDate(bookingData.endDate);
+  const handleDateRangeChange = (range: { start: Date | null; end: Date | null }) => {
+    if (range.start && range.end) {
+      setStartDate(range.start);
+      setEndDate(range.end);
+    }
   };
   const handleSearchClick = () => {
     if (startDate && endDate) {
@@ -70,7 +74,7 @@ export const HeroSection = () => {
             <h2 className="text-lg font-medium mb-3">Найдите доступное оборудование</h2>
             
             <div className="flex flex-wrap items-center gap-3 mb-3">
-              <Popover>
+              <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="flex-grow md:flex-grow-0 bg-white/90 text-foreground min-w-[240px] justify-between h-10">
                     {startDate && endDate ? `${format(startDate, 'dd.MM.yyyy HH:00')} - ${format(endDate, 'dd.MM.yyyy HH:00')}` : "Выберите дату и время"}
@@ -79,7 +83,12 @@ export const HeroSection = () => {
                 </PopoverTrigger>
                 <PopoverContent align="start" sideOffset={5} className="w-auto p-2 mx-[-18px]">
                   <div className="w-full md:w-[700px] max-w-full">
-                    <BookingCalendar onBookingChange={handleBookingChange} initialStartDate={startDate} initialEndDate={endDate} isCompact={true} />
+                  <DateRangePickerRu 
+                      onChange={handleDateRangeChange} 
+                      initialStartDate={startDate} 
+                      initialEndDate={endDate}
+                      onDateConfirmed={() => setIsPopoverOpen(false)}
+                    />
                   </div>
                 </PopoverContent>
               </Popover>

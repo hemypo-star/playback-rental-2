@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ProductFormValues } from '@/hooks/useProductForm';
 import { uploadProductImage } from '@/utils/imageUtils';
@@ -17,17 +16,17 @@ export const createProduct = async (
     console.log('Creating product with data:', productData);
     console.log('Image file:', imageFile);
 
-    let imageUrl = '';
+    let imageUrl = productData.imageUrl || '';
     
     // Handle image upload if provided
-    if (imageFile) {
+    if (imageFile && imageFile instanceof File) {
       try {
         imageUrl = await uploadProductImage(imageFile);
         console.log('Image uploaded successfully:', imageUrl);
       } catch (imageError) {
         console.error('Failed to upload image:', imageError);
         // Continue with product creation even if image upload fails
-        imageUrl = '';
+        imageUrl = productData.imageUrl || '';
       }
     }
 

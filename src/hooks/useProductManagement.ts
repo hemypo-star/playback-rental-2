@@ -51,6 +51,7 @@ export const useProductManagement = () => {
       };
 
       await createProductMutation.mutateAsync(productData);
+      console.log("Product data being sent:", productData);
       console.log("Product created successfully");
     } catch (error) {
       console.error("Failed to create product:", error);

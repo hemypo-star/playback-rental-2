@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BookingCalendar from '@/components/BookingCalendar';
 import PricingCalculator from '@/components/PricingCalculator';
 import QuantitySelector from '@/components/QuantitySelector';
-import { getProductById } from '@/services/apiService';
+import { getProductById } from '@/services/productService';
 import { getProductBookings } from '@/services/bookingService';
 import { getCategories } from '@/services/categoryService';
 import { BookingPeriod } from '@/types/product';

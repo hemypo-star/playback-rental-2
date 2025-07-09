@@ -15,7 +15,7 @@ export const getProducts = async (): Promise<Product[]> => {
     return data?.map(product => ({
       ...product,
       imageUrl: product.imageurl,
-      category_id: parseInt(product.category) // Convert category string to category_id number
+      category_id: product.category_id // Use the existing category_id field directly
     })) || [];
   } catch (error) {
     console.error('Error getting products:', error);
@@ -40,7 +40,7 @@ export const getAvailableProductsOnly = async (): Promise<Product[]> => {
     return data?.map(product => ({
       ...product,
       imageUrl: product.imageurl,
-      category_id: parseInt(product.category) // Convert category string to category_id number
+      category_id: product.category_id // Use the existing category_id field directly
     })) || [];
   } catch (error) {
     console.error('Error getting available products:', error);
@@ -62,7 +62,7 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     return data ? {
       ...data,
       imageUrl: data.imageurl,
-      category_id: parseInt(data.category) // Convert category string to category_id number
+      category_id: data.category_id // Use the existing category_id field directly
     } : null;
   } catch (error) {
     console.error('Error getting product by ID:', error);

@@ -85,7 +85,7 @@ const PromotionsList = ({ promotions, onEdit, onDelete, onReorder }: PromotionsL
                 <div className="w-20 flex-shrink-0">
                   <AspectRatio ratio={9/16} className="bg-muted rounded overflow-hidden">
                     <img
-                      src={promotion.imageurl.startsWith('http') ? promotion.imageurl : `https://xwylatyyhqyfwsxfwzmn.supabase.co/storage/v1/object/public/products/${promotion.imageurl}`}
+                      src={promotion.imageurl.startsWith('http') ? promotion.imageurl : `https://api.playbackrental.ru/storage/v1/object/public/products/${promotion.imageurl}`}
                       alt={promotion.title}
                       className="object-cover w-full h-full"
                       onError={(e) => {
