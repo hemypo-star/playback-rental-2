@@ -57,7 +57,7 @@ const PrivacyPolicy = () => {
             </p>
             <ul className="list-none pl-6 mb-4">
               <li>Email: PlaybackRental@yandex.ru</li>
-              <li>Телефон: +7 (923) 530-30-20</li>
+              <li>Телефон: +7 996 527 0026</li>
               <li>Адрес: г. Кемерово, ул. Демьяна Бедного, 6</li>
             </ul>
           </section>

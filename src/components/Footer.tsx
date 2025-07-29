@@ -17,9 +17,9 @@ export const Footer = () => {
                 <Mail className="h-4 w-4" />
                 PlaybackRental@yandex.ru
               </a>
-              <a href="tel:+79235303020" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <a href="tel:+79965270026" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                 <Phone className="h-4 w-4" />
-                +7 (923) 530-30-20
+                +7 (996) 527-0026
               </a>
               <div className="flex items-center gap-3 pt-2 py-0">
                 <a href="https://vk.com/playbackrental" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
