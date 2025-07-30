@@ -53,8 +53,8 @@ const ContactDetails = () => {
           <div>
             <h3 className="font-medium mb-1">Telegram</h3>
             <p className="text-muted-foreground">
-              <a href="https://t.me/PlaybackRental" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                @PlaybackRental
+              <a href="https://t.me/Playbackrental_admin" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                @PlaybackRental_admin
               </a>
             </p>
           </div>
