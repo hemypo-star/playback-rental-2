@@ -6,6 +6,7 @@ import { Calendar, User, Phone, Mail, FileText } from 'lucide-react';
 import { BookingWithProduct } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
 import { BookingPeriod } from '@/types/product';
+import { formatDateRange } from '@/utils/dateUtils';
 
 interface BookingDetailsDialogProps {
   booking: BookingWithProduct | null;
@@ -60,7 +61,7 @@ export const BookingDetailsDialog: React.FC<BookingDetailsDialogProps> = ({
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <div>
               <div className="font-medium">
-                {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                {formatDateRange(new Date(booking.startDate), new Date(booking.endDate), true)}
               </div>
               <div className="text-sm text-muted-foreground">Период аренды</div>
             </div>

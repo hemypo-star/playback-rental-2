@@ -7,6 +7,7 @@ import { Trash2, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { BookingWithProduct, GroupedBooking } from './types';
 import { BookingDetailsTable } from './BookingDetailsTable';
 import { BookingPeriod } from '@/types/product';
+import { formatDateRange } from '@/utils/dateUtils';
 
 interface GroupedBookingRowProps {
   groupedBooking: GroupedBooking;
@@ -83,11 +84,11 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
           </div>
         </TableCell>
         <TableCell className="w-1/4">
-          <div className="text-sm">
-            <div>{new Date(groupedBooking.startDate).toLocaleDateString()}</div>
-            <div className="text-muted-foreground">
-              до {new Date(groupedBooking.endDate).toLocaleDateString()}
-            </div>
+          {formatDateRange(
+              new Date(groupedBooking.startDate), 
+              new Date(groupedBooking.endDate), 
+              true
+            )}
           </div>
         </TableCell>
         <TableCell className="w-1/6">
