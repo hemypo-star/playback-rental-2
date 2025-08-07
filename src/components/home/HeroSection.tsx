@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRightIcon, SearchIcon } from 'lucide-react';
+import { ArrowRightIcon, SearchIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DateRangePickerRu  from '@/components/booking/DateRangePickerRu';
 import { Input } from '@/components/ui/input';
@@ -56,7 +56,12 @@ export const HeroSection = () => {
         scrollTop: true
       }
     });
+    };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
   };
+  
   return <section className="relative h-screen max-h-[800px] flex items-center overflow-hidden">
       <div className="absolute inset-0 z-0 bg-gradient-to-r from-black/70 to-black/40" />
       <div className="absolute inset-0 z-0 bg-cover bg-center" style={{
@@ -99,7 +104,19 @@ export const HeroSection = () => {
             </div>
             
             <form onSubmit={handleSearchSubmit} className="relative">
-              <Input type="text" placeholder="Поиск по названию или описанию..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pr-12 h-10" />
+               <Input type="text" placeholder="Поиск по названию или описанию..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pr-20 h-10" />
+              {searchQuery && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClearSearch}
+                  className="absolute right-10 top-1 h-8 w-8 p-0 hover:bg-muted"
+                  aria-label="Очистить поиск"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
               <Button type="submit" size="icon" className="absolute right-1 top-1 h-8 w-8" disabled={!searchQuery.trim()}>
                 <SearchIcon className="h-4 w-4" />
               </Button>

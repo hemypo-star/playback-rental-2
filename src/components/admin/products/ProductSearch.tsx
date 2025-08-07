@@ -1,6 +1,7 @@
 
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ProductSearchProps {
   value: string;
@@ -9,6 +10,10 @@ interface ProductSearchProps {
 }
 
 export default function ProductSearch({ value, onChange, placeholder = "Поиск товаров..." }: ProductSearchProps) {
+  const handleClear = () => {
+    onChange('');
+  };
+  
   return (
     <div className="relative">
       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -17,8 +22,20 @@ export default function ProductSearch({ value, onChange, placeholder = "Поис
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-10 max-w-sm"
+        className="pl-10 pr-10 max-w-sm"
       />
+      {value && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={handleClear}
+          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted"
+          aria-label="Очистить поиск"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 }
