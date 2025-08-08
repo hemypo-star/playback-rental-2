@@ -12,10 +12,6 @@ const RentalFeatures = () => {
           <CheckIcon className="h-4 w-4 text-green-600 mt-1 flex-shrink-0" />
           <span className="text-sm">Профессиональное оборудование в отличном состоянии</span>
         </li>
-        <li className="flex items-start gap-2">
-          <CheckIcon className="h-4 w-4 text-green-600 mt-1 flex-shrink-0" />
-          <span className="text-sm">Залог - паспорт или фиксированная сумма по договору</span>
-        </li>
         
         
         <li className="flex items-start gap-2">
