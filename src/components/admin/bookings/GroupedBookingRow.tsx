@@ -89,7 +89,6 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
               new Date(groupedBooking.endDate), 
               true
             )}
-          </div>
         </TableCell>
         <TableCell className="w-1/6">
           <div className="font-medium">
