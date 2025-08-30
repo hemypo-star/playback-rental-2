@@ -57,7 +57,7 @@ const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }:
                 className="bg-white/90 text-foreground border-0 h-12 w-full sm:w-auto sm:min-w-[240px] whitespace-nowrap"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {bookingDates.startDate && bookingDates.endDate {effectiveStartDate && effectiveEndDate 
+                {effectiveStartDate && effectiveEndDate 
                   ? `${format(effectiveStartDate, 'dd.MM.yyyy HH:00')} — ${format(effectiveEndDate, 'dd.MM.yyyy HH:00')}`
                   : "Выберите даты"
                 }
