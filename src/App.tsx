@@ -11,6 +11,7 @@ import { Navbar } from "./components/Navbar";
 import RequireAuth from "./components/RequireAuth";
 import { resetStoragePermissions } from "./services/storageService";
 import { AuthProvider } from "./contexts/AuthContext";
+import { BookingDatesProvider } from "./contexts/BookingDatesContext";
 
 // Pages
 import Index from "./pages/Index";
@@ -93,9 +94,11 @@ const App = () => {
         <TooltipProvider>
           <ToasterProvider>
             <AuthProvider>
-              <CartProvider>
-                {appContent}
-              </CartProvider>
+               <BookingDatesProvider>
+                <CartProvider>
+                  {appContent}
+                </CartProvider>
+              </BookingDatesProvider>
             </AuthProvider>
           </ToasterProvider>
         </TooltipProvider>

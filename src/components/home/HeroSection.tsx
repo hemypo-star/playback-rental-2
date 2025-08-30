@@ -8,10 +8,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import type { BookingPeriod } from '@/types/product';
+import { useBookingDates } from '@/contexts/BookingDatesContext';
 export const HeroSection = () => {
   const navigate = useNavigate();
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  const { startDate, endDate, setBookingDates } = useBookingDates();
   const [searchQuery, setSearchQuery] = useState('');
   const [bannerImage, setBannerImage] = useState('');
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -34,8 +34,7 @@ export const HeroSection = () => {
   }, []);
   const handleDateRangeChange = (range: { start: Date | null; end: Date | null }) => {
     if (range.start && range.end) {
-      setStartDate(range.start);
-      setEndDate(range.end);
+      setBookingDates(range.start, range.end);
     }
   };
   const handleSearchClick = () => {

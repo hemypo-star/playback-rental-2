@@ -6,7 +6,8 @@ import DateRangePickerRu from '@/components/booking/DateRangePickerRu';
 import { format } from 'date-fns';
 import SearchBar from './SearchBar';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useBookingDates } from '@/contexts/BookingDatesContext';
 
 interface CatalogHeaderProps {
   onSearch: (query: string) => void;
@@ -21,11 +22,19 @@ interface CatalogHeaderProps {
 const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }: CatalogHeaderProps) => {
   const isMobile = useIsMobile();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  
+  const { startDate: globalStartDate, endDate: globalEndDate, setBookingDates } = useBookingDates();
+
+  // Use global dates as fallback if props not provided
+  const effectiveStartDate = bookingDates.startDate || globalStartDate;
+  const effectiveEndDate = bookingDates.endDate || globalEndDate;
+
   const handleDateRangeChange = (range: { start: Date | null; end: Date | null }) => {
     if (range.start && range.end) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Update both local and global state
       onBookingChange(range.start, range.end);
+      setBookingDates(range.start, range.end);
     }
   };
   
@@ -48,8 +57,8 @@ const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }:
                 className="bg-white/90 text-foreground border-0 h-12 w-full sm:w-auto sm:min-w-[240px] whitespace-nowrap"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {bookingDates.startDate && bookingDates.endDate 
-                  ? `${format(bookingDates.startDate, 'dd.MM.yyyy HH:00')} — ${format(bookingDates.endDate, 'dd.MM.yyyy HH:00')}`
+                {bookingDates.startDate && bookingDates.endDate {effectiveStartDate && effectiveEndDate 
+                  ? `${format(effectiveStartDate, 'dd.MM.yyyy HH:00')} — ${format(effectiveEndDate, 'dd.MM.yyyy HH:00')}`
                   : "Выберите даты"
                 }
               </Button>
@@ -58,8 +67,8 @@ const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }:
               <div className="w-full md:w-[700px] max-w-full">
                 <DateRangePickerRu
                   onChange={handleDateRangeChange}
-                  initialStartDate={bookingDates.startDate}
-                  initialEndDate={bookingDates.endDate}
+                  initialStartDate={effectiveStartDate}
+                  initialEndDate={effectiveEndDate}
                   onDateConfirmed={() => setIsPopoverOpen(false)}
                 />
               </div>

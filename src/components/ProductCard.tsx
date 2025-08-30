@@ -13,6 +13,7 @@ import { getProductBookings } from '@/services/bookingService';
 import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityUtils';
 import { useQuery } from '@tanstack/react-query';
 import { getCategories } from '@/services/categoryService';
+import { useBookingDates } from '@/contexts/BookingDatesContext';
 
 type ProductCardProps = {
   product: Product;
@@ -31,7 +32,12 @@ const ProductCard = ({
   const navigate = useNavigate();
   const { addToCart, isProductInCart } = useCartContext();
   
-  const hasBookingDates = bookingDates?.startDate && bookingDates?.endDate;
+  const { startDate: globalStartDate, endDate: globalEndDate } = useBookingDates();
+  
+  // Use global dates as fallback if props not provided
+  const effectiveStartDate = bookingDates?.startDate || globalStartDate;
+  const effectiveEndDate = bookingDates?.endDate || globalEndDate;
+  const hasBookingDates = effectiveStartDate && effectiveEndDate;
   const productInCart = isProductInCart(product.id);
   
   // Load categories to get category name by ID
@@ -58,7 +64,7 @@ const ProductCard = ({
     e.stopPropagation();
     
     if (hasBookingDates && isAvailableForDates) {
-      addToCart(product, bookingDates.startDate, bookingDates.endDate);
+      addToCart(product, effectiveStartDate, effectiveEndDate);
       toast.success(`Товар "${product.title}" добавлен в корзину`);
     } else {
       navigate(`/product/${product.id}`, {
@@ -79,16 +85,16 @@ const ProductCard = ({
   const availableQuantity = getAvailableQuantity(
     product, 
     productBookings, 
-    bookingDates?.startDate, 
-    bookingDates?.endDate
+    effectiveStartDate, 
+    effectiveEndDate
   );
   
   const isAvailableForDates = isQuantityAvailable(
     product, 
     productBookings, 
     1, 
-    bookingDates?.startDate, 
-    bookingDates?.endDate
+    effectiveStartDate, 
+    effectiveEndDate
   );
 
   // Determine if product is available considering both general availability and date-specific availability
@@ -107,7 +113,10 @@ const ProductCard = ({
       to={`/product/${product.id}`} 
       state={{
         prevPath: window.location.pathname,
-        bookingDates,
+        bookingDates: { 
+          startDate: effectiveStartDate, 
+          endDate: effectiveEndDate 
+        },
         scrollTop: true
       }} 
       className="group block h-full"
