@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getCategories } from '@/services/categoryService';
 import { getProductBookings } from '@/services/bookingService';
 import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityUtils';
+import { useBookingDates } from '@/contexts/BookingDatesContext';
 
 type VirtualizedProductGridProps = {
   products: Product[];
@@ -33,7 +34,17 @@ const VirtualizedProductGrid = ({
   const [visibleProducts, setVisibleProducts] = useState(8);
   const isMobile = useIsMobile();
   
-  const hasBookingDates = Boolean(bookingDates?.startDate && bookingDates?.endDate);
+  const { startDate: globalStartDate, endDate: globalEndDate } = useBookingDates();
+    
+    // Use props dates if available, otherwise fall back to global dates
+    const effectiveStartDate = bookingDates?.startDate || globalStartDate;
+    const effectiveEndDate = bookingDates?.endDate || globalEndDate;
+    const hasBookingDates = Boolean(effectiveStartDate && effectiveEndDate);
+    
+    const effectiveBookingDates = {
+      startDate: effectiveStartDate,
+      endDate: effectiveEndDate
+    };
 
   // Load categories with memoization
   const { data: categories = [] } = useQuery({
@@ -85,16 +96,16 @@ const VirtualizedProductGrid = ({
       const availableQuantity = getAvailableQuantity(
         product, 
         productBookings, 
-        bookingDates?.startDate, 
-        bookingDates?.endDate
+        effectiveStartDate, 
+        effectiveEndDate
       );
       
       const isAvailableForDates = isQuantityAvailable(
         product, 
         productBookings, 
         1, 
-        bookingDates?.startDate, 
-        bookingDates?.endDate
+        effectiveStartDate, 
+        effectiveEndDate
       );
 
       return {
@@ -105,7 +116,7 @@ const VirtualizedProductGrid = ({
         isLoadingBookings: false
       };
     });
-  }, [products, categoryMap, allBookings, bookingDates]);
+  }, [products, categoryMap, allBookings, effectiveStartDate, effectiveEndDate]);
 
   const handleLoadMore = useCallback(() => {
     setVisibleProducts(prev => prev + (isMobile ? 6 : 16));
@@ -170,7 +181,7 @@ const VirtualizedProductGrid = ({
             isAvailableForDates={product.isAvailableForDates}
             isLoadingBookings={product.isLoadingBookings}
             hasBookingDates={hasBookingDates}
-            bookingDates={bookingDates}
+            bookingDates={effectiveBookingDates}
           />
         ))}
       </div>

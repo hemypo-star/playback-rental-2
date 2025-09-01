@@ -8,12 +8,14 @@ import CatalogHeader from '@/components/catalog/CatalogHeader';
 import CategorySidebar from '@/components/catalog/CategorySidebar';
 import VirtualizedProductGrid from '@/components/catalog/VirtualizedProductGrid';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useBookingDates } from '@/contexts/BookingDatesContext';
 
 const Catalog = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const categoryFromUrl = searchParams.get('category');
   const isMobile = useIsMobile();
+  const { startDate: globalStartDate, endDate: globalEndDate, setBookingDates: setGlobalBookingDates } = useBookingDates();
   
   const locationState = location.state as { 
     activeCategory?: string; 
@@ -25,9 +27,10 @@ const Catalog = () => {
   
   const [search, setSearch] = useState(locationState?.search || '');
   const [activeTab, setActiveTab] = useState(categoryFromUrl || locationState?.activeCategory || 'all');
+// Initialize with location state dates or global dates
   const [bookingDates, setBookingDates] = useState<{startDate?: Date, endDate?: Date}>({
-    startDate: locationState?.startDate,
-    endDate: locationState?.endDate
+    startDate: locationState?.startDate || globalStartDate,
+    endDate: locationState?.endDate || globalEndDate
   });
   
   // Fetch categories with optimized caching
@@ -69,12 +72,14 @@ const Catalog = () => {
 
   const handleBookingChange = (startDate: Date | undefined, endDate: Date | undefined) => {
     setBookingDates({ startDate, endDate });
+    setGlobalBookingDates(startDate, endDate);
   };
 
   const handleClearFilters = () => {
     setSearch('');
     setActiveTab('all');
     setBookingDates({});
+    setGlobalBookingDates(undefined, undefined);
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
     if (searchInput) searchInput.value = '';
   };

@@ -9,6 +9,7 @@ import { Product } from '@/types/product';
 import { useCartContext } from '@/hooks/useCart';
 import { toast } from 'sonner';
 import { formatPriceRub } from '@/utils/pricingUtils';
+import { useBookingDates } from '@/contexts/BookingDatesContext';
 
 type ProductCardMemoProps = {
   product: Product;
@@ -36,15 +37,26 @@ const ProductCardMemo = memo(({
 }: ProductCardMemoProps) => {
   const navigate = useNavigate();
   const { addToCart, isProductInCart } = useCartContext();
+  const { startDate: globalStartDate, endDate: globalEndDate } = useBookingDates();
   const productInCart = isProductInCart(product.id);
 
+  // Use props dates if available, otherwise fall back to global dates
+  const effectiveStartDate = bookingDates?.startDate || globalStartDate;
+  const effectiveEndDate = bookingDates?.endDate || globalEndDate;
+  const localHasBookingDates = Boolean(effectiveStartDate && effectiveEndDate);
+  
+  const effectiveBookingDates = {
+    startDate: effectiveStartDate,
+    endDate: effectiveEndDate
+  };
+  
   const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (hasBookingDates && isAvailableForDates && availableQuantity > 0) {
+    if (localHasBookingDates && isAvailableForDates && availableQuantity > 0) {
       try {
-        const success = await addToCart(product, bookingDates!.startDate, bookingDates!.endDate, 1);
+        const success = await addToCart(product, effectiveStartDate!, effectiveEndDate!, 1);
         if (success) {
           toast.success(`Товар "${product.title}" добавлен в корзину`);
         }
@@ -52,7 +64,7 @@ const ProductCardMemo = memo(({
         console.error('Error adding to cart:', error);
         toast.error('Ошибка при добавлении в корзину');
       }
-    } else if (hasBookingDates && !isAvailableForDates) {
+    } else if (localHasBookingDates && !isAvailableForDates) {
       toast.error('Товар недоступен на выбранные даты');
     } else {
       navigate(`/product/${product.id}`, {
@@ -61,7 +73,7 @@ const ProductCardMemo = memo(({
         }
       });
     }
-  }, [hasBookingDates, isAvailableForDates, availableQuantity, addToCart, product, bookingDates, navigate]);
+  }, [localHasBookingDates, isAvailableForDates, availableQuantity, addToCart, product, effectiveStartDate, effectiveEndDate, navigate]);
 
   // Memoize truncate function to prevent re-computation
   const truncatedDescription = React.useMemo(() => {
@@ -74,11 +86,11 @@ const ProductCardMemo = memo(({
   // Determine if product is available considering both general availability and date-specific availability
   const currentlyAvailable = React.useMemo(() => {
     if (!product.available) return false;
-    if (hasBookingDates) {
+    if (localHasBookingDates) {
       return isAvailableForDates;
     }
     return availableQuantity > 0;
-  }, [product.available, hasBookingDates, isAvailableForDates, availableQuantity]);
+  }, [product.available, localHasBookingDates, isAvailableForDates, availableQuantity]);
 
   // Memoize the availability status text
   const availabilityStatus = React.useMemo(() => {
@@ -86,7 +98,7 @@ const ProductCardMemo = memo(({
       return { text: "Проверяем наличие...", className: "text-gray-400 font-medium" };
     }
     
-    if (hasBookingDates) {
+    if (localHasBookingDates) {
       if (isAvailableForDates) {
         return {
           text: `Доступно: ${availableQuantity} шт. на выбранные даты`,
@@ -111,7 +123,7 @@ const ProductCardMemo = memo(({
         className: "text-red-600 font-medium"
       };
     }
-  }, [isLoadingBookings, hasBookingDates, isAvailableForDates, availableQuantity]);
+  }, [product.available, localHasBookingDates, isAvailableForDates, availableQuantity]);
 
   // Memoize formatted price
   const formattedPrice = React.useMemo(() => formatPriceRub(product.price), [product.price]);
@@ -121,9 +133,9 @@ const ProductCardMemo = memo(({
       to={`/product/${product.id}`} 
       state={{
         prevPath: window.location.pathname,
-        bookingDates,
+        bookingDates: effectiveBookingDates,
         scrollTop: true
-      }} 
+      }}
       className="group block h-full"
     >
       <Card className={`h-full flex flex-col overflow-hidden card-hover ${featured ? 'border-primary/20' : ''}`}>
@@ -140,7 +152,7 @@ const ProductCardMemo = memo(({
           {!currentlyAvailable && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               <div className="bg-white/90 text-black font-medium px-3 py-1 rounded">
-                {hasBookingDates && !isAvailableForDates ? 'Забронировано на эти даты' : 'Нет в наличии'}
+                {localHasBookingDates && !isAvailableForDates ? 'Забронировано на эти даты' : 'Нет в наличии'}
               </div>
             </div>
           )}
@@ -178,12 +190,12 @@ const ProductCardMemo = memo(({
           </div>
           <Button 
             size="sm" 
-            variant={hasBookingDates && currentlyAvailable ? "default" : "outline"} 
+            variant={localHasBookingDates && currentlyAvailable ? "default" : "outline"}
             className={`rounded-full smooth-transition ${productInCart ? 'bg-[#ea384c] hover:bg-[#ea384c]/90 text-white' : ''}`}
             onClick={handleAddToCart}
-            disabled={!currentlyAvailable || (hasBookingDates && availableQuantity === 0)}
+            disabled={!currentlyAvailable || (localHasBookingDates && availableQuantity === 0)}
           >
-            {hasBookingDates && currentlyAvailable ? <ShoppingCart className="h-4 w-4" /> : <CalendarIcon className="h-4 w-4" />}
+            {localHasBookingDates && currentlyAvailable ? <ShoppingCart className="h-4 w-4" /> : <CalendarIcon className="h-4 w-4" />}
           </Button>
         </CardFooter>
       </Card>
