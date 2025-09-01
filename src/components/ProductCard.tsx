@@ -113,6 +113,8 @@ const ProductCard = ({
       to={`/product/${product.id}`} 
       state={{
         prevPath: window.location.pathname,
+        startDate: effectiveStartDate,
+        endDate: effectiveEndDate,
         bookingDates: { 
           startDate: effectiveStartDate, 
           endDate: effectiveEndDate 

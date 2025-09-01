@@ -27,14 +27,18 @@ const ProductDetail = () => {
   const isMobile = useIsMobile();
   const addToCartButtonRef = useRef<HTMLButtonElement>(null);
   
-  const locationState = location.state as { startDate?: Date; endDate?: Date } | null;
+  const locationState = location.state as { 
+    startDate?: Date; 
+    endDate?: Date; 
+    bookingDates?: { startDate?: Date; endDate?: Date }
+  } | null;
   
   const [bookingDates, setBookingDates] = useState<{
     startDate?: Date;
     endDate?: Date;
   }>({
-    startDate: locationState?.startDate,
-    endDate: locationState?.endDate
+    startDate: locationState?.bookingDates?.startDate || locationState?.startDate,
+    endDate: locationState?.bookingDates?.endDate || locationState?.endDate
   });
   
   const [selectedQuantity, setSelectedQuantity] = useState(1);

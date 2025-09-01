@@ -133,6 +133,8 @@ const ProductCardMemo = memo(({
       to={`/product/${product.id}`} 
       state={{
         prevPath: window.location.pathname,
+        startDate: effectiveStartDate,
+        endDate: effectiveEndDate,
         bookingDates: effectiveBookingDates,
         scrollTop: true
       }}
