@@ -132,9 +132,17 @@ const formatCheckoutMessage = (data) => {
     data.items.forEach((item, index) => {
       const startDate = new Date(item.startDate).toLocaleDateString('ru-RU');
       const endDate = new Date(item.endDate).toLocaleDateString('ru-RU');
+      const startTime = item.startTime ? item.startTime.padStart(2, '0') + ':00' : '';
+      const endTime = item.endTime ? item.endTime.padStart(2, '0') + ':00' : '';
+      
       message += `${index + 1}. ${item.title}\n`;
       message += `   💰 ${item.price}₽\n`;
-      message += `   📅 ${startDate} - ${endDate}\n\n`;
+       // Format date and time display
+      if (startDate === endDate) {
+        message += `   📅 ${startDate} с ${startTime} до ${endTime}\n\n`;
+      } else {
+        message += `   📅 ${startDate} в ${startTime} - ${endDate} в ${endTime}\n\n`;
+      }
     });
   }
   

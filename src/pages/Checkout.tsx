@@ -212,6 +212,8 @@ const Checkout = () => {
             price: group.price,
             startDate: group.startDate.toISOString(),
             endDate: group.endDate.toISOString(),
+            startTime: group.startDate.getHours().toString().padStart(2, '0'),
+            endTime: group.endDate.getHours().toString().padStart(2, '0'),
             quantity: group.totalQuantity
           })),
           totalAmount: getCartTotal()
