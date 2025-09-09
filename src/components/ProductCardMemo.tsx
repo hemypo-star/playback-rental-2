@@ -10,6 +10,7 @@ import { useCartContext } from '@/hooks/useCart';
 import { toast } from 'sonner';
 import { formatPriceRub } from '@/utils/pricingUtils';
 import { useBookingDates } from '@/contexts/BookingDatesContext';
+import { isValidBookingDate } from '@/utils/dateUtils';
 
 type ProductCardMemoProps = {
   product: Product;
@@ -43,11 +44,13 @@ const ProductCardMemo = memo(({
   // Use props dates if available, otherwise fall back to global dates
   const effectiveStartDate = bookingDates?.startDate || globalStartDate;
   const effectiveEndDate = bookingDates?.endDate || globalEndDate;
-  const localHasBookingDates = Boolean(effectiveStartDate && effectiveEndDate);
+  const validStartDate = isValidBookingDate(effectiveStartDate) ? effectiveStartDate : undefined;
+  const validEndDate = isValidBookingDate(effectiveEndDate) ? effectiveEndDate : undefined;
+  const localHasBookingDates = Boolean(validStartDate && validEndDate);  
   
   const effectiveBookingDates = {
-    startDate: effectiveStartDate,
-    endDate: effectiveEndDate
+    startDate: validStartDate,
+    endDate: validEndDate
   };
   
   const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
@@ -56,7 +59,7 @@ const ProductCardMemo = memo(({
     
     if (localHasBookingDates && isAvailableForDates && availableQuantity > 0) {
       try {
-        const success = await addToCart(product, effectiveStartDate!, effectiveEndDate!, 1);
+        const success = await addToCart(product, validStartDate!, validEndDate!, 1);
         if (success) {
           toast.success(`Товар "${product.title}" добавлен в корзину`);
         }
@@ -133,8 +136,8 @@ const ProductCardMemo = memo(({
       to={`/product/${product.id}`} 
       state={{
         prevPath: window.location.pathname,
-        startDate: effectiveStartDate,
-        endDate: effectiveEndDate,
+        startDate: validStartDate,
+        endDate: validEndDate,
         bookingDates: effectiveBookingDates,
         scrollTop: true
       }}

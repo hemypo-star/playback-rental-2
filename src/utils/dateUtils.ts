@@ -8,11 +8,18 @@ export interface DateRange {
 }
 
 /**
+ * Validates booking date (non-null, valid, and not epoch 0)
+ */
+export const isValidBookingDate = (date?: Date | null): date is Date => {
+  return !!date && !isNaN(date.getTime()) && date.getTime() > 0;
+};
+
+/**
  * Format a date range as a string
  */
 export const formatDateRange = (start: Date | undefined | null, end: Date | undefined | null, showTime: boolean = false): string => {
   // Check if dates are valid before processing
-  if (!start || !end) {
+  if (!isValidBookingDate(start) || !isValidBookingDate(end)) {
     return 'Дата не указана';
   }
 

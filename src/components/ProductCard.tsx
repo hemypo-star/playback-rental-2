@@ -14,6 +14,7 @@ import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityU
 import { useQuery } from '@tanstack/react-query';
 import { getCategories } from '@/services/categoryService';
 import { useBookingDates } from '@/contexts/BookingDatesContext';
+import { isValidBookingDate } from '@/utils/dateUtils';
 
 type ProductCardProps = {
   product: Product;
@@ -37,7 +38,9 @@ const ProductCard = ({
   // Use global dates as fallback if props not provided
   const effectiveStartDate = bookingDates?.startDate || globalStartDate;
   const effectiveEndDate = bookingDates?.endDate || globalEndDate;
-  const hasBookingDates = effectiveStartDate && effectiveEndDate;
+  const validStartDate = isValidBookingDate(effectiveStartDate) ? effectiveStartDate : undefined;
+  const validEndDate = isValidBookingDate(effectiveEndDate) ? effectiveEndDate : undefined;
+  const hasBookingDates = Boolean(validStartDate && validEndDate);
   const productInCart = isProductInCart(product.id);
   
   // Load categories to get category name by ID
@@ -64,7 +67,7 @@ const ProductCard = ({
     e.stopPropagation();
     
     if (hasBookingDates && isAvailableForDates) {
-      addToCart(product, effectiveStartDate, effectiveEndDate);
+      addToCart(product, validStartDate!, validEndDate!);
       toast.success(`Товар "${product.title}" добавлен в корзину`);
     } else {
       navigate(`/product/${product.id}`, {
@@ -85,16 +88,16 @@ const ProductCard = ({
   const availableQuantity = getAvailableQuantity(
     product, 
     productBookings, 
-    effectiveStartDate, 
-    effectiveEndDate
+    validStartDate, 
+    validEndDate
   );
   
   const isAvailableForDates = isQuantityAvailable(
     product, 
     productBookings, 
     1, 
-    effectiveStartDate, 
-    effectiveEndDate
+    validStartDate, 
+    validEndDate
   );
 
   // Determine if product is available considering both general availability and date-specific availability
@@ -116,8 +119,8 @@ const ProductCard = ({
         startDate: effectiveStartDate,
         endDate: effectiveEndDate,
         bookingDates: { 
-          startDate: effectiveStartDate, 
-          endDate: effectiveEndDate 
+          startDate: validStartDate, 
+          endDate: validEndDate 
         },
         scrollTop: true
       }} 
