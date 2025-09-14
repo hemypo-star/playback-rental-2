@@ -9,6 +9,7 @@ import { BookingPeriod } from '@/types/product';
 import DateRangePickerRu from '@/components/booking/DateRangePickerRu';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { isValidBookingDate } from '@/utils/dateUtils';
 type BookingCalendarProps = {
   onBookingChange: (booking: BookingPeriod) => void;
   bookedPeriods?: BookingPeriod[];
@@ -112,7 +113,7 @@ const BookingCalendar = ({
           <div className="flex items-center gap-2">
             <CalendarIcon className="h-4 w-4 text-[#ea384c]" />
             <span className="text-sm text-[#222]">
-              {startDate && endDate ? `${formatDate(startDate)} — ${formatDate(endDate)}` : "Выберите даты аренды"}
+                {isValidBookingDate(startDate) && isValidBookingDate(endDate) ? `${formatDate(startDate)} — ${formatDate(endDate)}` : "Выберите даты аренды"}
             </span>
           </div>
         </div>

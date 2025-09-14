@@ -19,6 +19,7 @@ import ProductTabs from '@/components/product/ProductTabs';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ScrollToTopLink } from '@/components/ui/navigation-menu';
 import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityUtils';
+import { isValidBookingDate } from '@/utils/dateUtils';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -66,9 +67,11 @@ const ProductDetail = () => {
   });
 
   const handleBookingChange = (bookingPeriod: BookingPeriod) => {
+    const start = isValidBookingDate(bookingPeriod.startDate) ? bookingPeriod.startDate : undefined;
+    const end = isValidBookingDate(bookingPeriod.endDate) ? bookingPeriod.endDate : undefined;
     setBookingDates({
-      startDate: bookingPeriod.startDate,
-      endDate: bookingPeriod.endDate
+      startDate: start,
+      endDate: end
     });
     // Reset quantity when dates change
     setSelectedQuantity(1);

@@ -7,7 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { formatDateRange } from '@/utils/dateUtils';
+import { formatDateRange, isValidBookingDate } from '@/utils/dateUtils';
 import BookingCalendar from '@/components/BookingCalendar';
 import { BookingPeriod } from '@/types/product';
 import { useBookingDates } from '@/contexts/BookingDatesContext';
@@ -44,12 +44,14 @@ const DateFilterPopover = ({
   }, [effectiveStartDate, effectiveEndDate]);
   
   const handleBookingChange = (booking: BookingPeriod) => {
-    setTempStartDate(booking.startDate);
-    setTempEndDate(booking.endDate);
+    const start = isValidBookingDate(booking.startDate) ? booking.startDate : undefined;
+    const end = isValidBookingDate(booking.endDate) ? booking.endDate : undefined;
+    setTempStartDate(start);
+    setTempEndDate(end);
     
     // Update both local and global state
-    onDateRangeChange(booking.startDate, booking.endDate);
-    setBookingDates(booking.startDate, booking.endDate);
+    onDateRangeChange(start, end);
+    setBookingDates(start, end);
     
     // Force close the popover
     setIsOpen(false);
@@ -86,7 +88,7 @@ const DateFilterPopover = ({
           className="bg-white/10 text-white border-white/20 hover:bg-white/20 h-12 w-full md:w-auto"
         >
           <CalendarIcon className="mr-2 h-5 w-5" />
-          {effectiveStartDate && effectiveEndDate ? formatDateRange(effectiveStartDate, effectiveEndDate, true) : "Выбрать время"}
+          {isValidBookingDate(effectiveStartDate) && isValidBookingDate(effectiveEndDate) ? formatDateRange(effectiveStartDate!, effectiveEndDate!, true) : "Выбрать время"}
         </Button>
       </PopoverTrigger>
       <PopoverContent 
