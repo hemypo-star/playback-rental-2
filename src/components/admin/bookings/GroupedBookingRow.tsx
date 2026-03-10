@@ -40,7 +40,8 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
       : 'Вы уверены, что хотите удалить это бронирование?';
     
     if (confirm(confirmMessage)) {
-      await onDelete(groupedBooking.id);
+      // ПЕРЕДАЕМ order_id (или сгенерированный ключ), чтобы удалить все товары махом
+      await onDelete(groupedBooking.order_id || groupedBooking.id);
     }
   };
 

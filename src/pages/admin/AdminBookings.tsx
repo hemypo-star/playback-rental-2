@@ -13,6 +13,7 @@ import { BookingDetailsDialog } from '@/components/admin/bookings/BookingDetails
 import { BookingPeriod } from '@/types/product';
 import { groupBookingsByOrder } from '@/utils/bookingGroupingUtils';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
+import { groupBookingsByOrder, getBookingsForOrder } from '@/utils/bookingGroupingUtils';
 
 const AdminBookings = () => {
   const [search, setSearch] = useState('');
@@ -152,41 +153,31 @@ const AdminBookings = () => {
     }
   };
 
-  const handleDeleteBooking = async (id: string) => {
-    console.log('handleDeleteBooking called with id:', id);
-    
-    // Prevent multiple deletion attempts
-    if (isDeleting === id) {
-      console.log('Already deleting this booking, ignoring request');
-      return;
-    }
+  const handleDeleteBooking = async (idOrOrderId: string) => {
+    if (isDeleting === idOrOrderId) return;
 
-    const confirmed = confirm('Вы уверены, что хотите удалить это бронирование? Это действие нельзя отменить.');
-    console.log('User confirmed deletion:', confirmed);
+    // Ищем все бронирования, которые принадлежат этому заказу/группе
+    const bookingsToDelete = getBookingsForOrder(bookingsWithProducts, idOrOrderId);
     
-    if (!confirmed) {
-      return;
-    }
+    // Если это не группа, удаляем только переданный ID
+    const isGroupDelete = bookingsToDelete.length > 0;
+    const idsToDelete = isGroupDelete ? bookingsToDelete.map(b => b.id) : [idOrOrderId];
 
-    setIsDeleting(id);
+    // Мы уже спросили подтверждение в GroupedBookingRow, но оставим тут фоллбэк
+    setIsDeleting(idOrOrderId);
 
     try {
-      console.log('Calling deleteBooking service for ID:', id);
-      const result = await deleteBooking(id);
-      console.log('Booking deletion result:', result);
+      // Удаляем все связанные товары одним махом через Promise.all
+      await Promise.all(idsToDelete.map(id => deleteBooking(id)));
       
       toast({
         title: 'Успех',
-        description: 'Бронирование успешно удалено.'
+        description: idsToDelete.length > 1 ? `Заказ успешно удален (${idsToDelete.length} шт.)` : 'Бронирование успешно удалено.'
       });
       
-      console.log('Invalidating queries to refresh data');
-      // Invalidate unified cache keys for both Dashboard and Bookings
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       
-      // If the deleted booking was open in dialog, close it
-      if (selectedBooking?.id === id) {
-        console.log('Closing dialog for deleted booking');
+      if (selectedBooking && idsToDelete.includes(selectedBooking.id)) {
         setDialogOpen(false);
         setSelectedBooking(null);
       }
@@ -194,7 +185,7 @@ const AdminBookings = () => {
       console.error('Error deleting booking:', error);
       toast({
         title: 'Ошибка',
-        description: error.message || 'Не удалось удалить бронирование.',
+        description: error.message || 'Не удалось удалить данные.',
         variant: 'destructive'
       });
     } finally {
