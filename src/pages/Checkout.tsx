@@ -170,8 +170,6 @@ const Checkout = () => {
       setNotificationStatus({ status: 'sending', message: 'Отправляем уведомление...' });
       
       try {
-        const firstItem = groupedArray[0];
-        
         const { data, error } = await supabase.functions.invoke('send-telegram-notification', {
           body: {
             type: 'checkout',
@@ -179,14 +177,15 @@ const Checkout = () => {
               name: formData.name,
               email: formData.email,
               phone: formData.phone,
-              startDate: firstItem.startDate.toISOString(),
-              endDate: firstItem.endDate.toISOString(),
-              startTime: firstItem.startDate.getHours().toString().padStart(2, '0') + ':00',
-              endTime: firstItem.endDate.getHours().toString().padStart(2, '0') + ':00',
+              // Кладём даты внутрь каждого товара, как того ждет Edge-функция:
               items: groupedArray.map(g => ({
                 title: g.title,
                 price: g.price,
-                quantity: g.totalQuantity
+                quantity: g.totalQuantity,
+                startDate: g.startDate.toISOString(),
+                endDate: g.endDate.toISOString(),
+                startTime: g.startDate.getHours().toString().padStart(2, '0') + ':00',
+                endTime: g.endDate.getHours().toString().padStart(2, '0') + ':00'
               })),
               totalAmount: getCartTotal()
             }
