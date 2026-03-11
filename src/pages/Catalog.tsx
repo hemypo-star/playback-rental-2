@@ -42,15 +42,13 @@ const Catalog = () => {
     staleTime: 10 * 60 * 1000, // 10 minutes - longer cache for categories
   });
   
-  // Fetch products with optimized query - only available products for catalog
+  // Fetch products with optimized query - получаем ВСЕ товары, чтобы карточка могла показать статус "Забронировано"
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['catalog-products', bookingDates.startDate, bookingDates.endDate],
     queryFn: () => {
-      if (bookingDates.startDate && bookingDates.endDate) {
-        return productService.getAvailableProducts(bookingDates.startDate, bookingDates.endDate);
-      }
-      // For catalog, only show available products
-      return productService.getAvailableProductsOnly();
+      // Возвращаем все товары независимо от дат. 
+      // Компонент ProductCard сам решит, заблокировать ли кнопку и показать ли плашку "Забронировано"
+      return productService.getProducts(); 
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

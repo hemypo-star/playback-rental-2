@@ -266,7 +266,7 @@ export const BookingDetailsTable = ({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Дата и время заезда</Label>
+              <Label>Дата и время начала</Label>
               <Input 
                 type="datetime-local" 
                 value={newStartDate}
@@ -274,7 +274,7 @@ export const BookingDetailsTable = ({
               />
             </div>
             <div className="space-y-2">
-              <Label>Дата и время выезда</Label>
+              <Label>Дата и время окончания</Label>
               <Input 
                 type="datetime-local" 
                 value={newEndDate}
