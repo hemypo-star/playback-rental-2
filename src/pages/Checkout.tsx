@@ -119,58 +119,30 @@ const Checkout = () => {
     setLoading(true);
     setNotificationStatus({ status: 'sending', message: 'Обрабатываем заказ...' });
     
+    // Создаем единый ID для группировки в админке
+    const orderId = crypto.randomUUID(); 
+    
     try {
-      // Group cart items by product ID and combine quantities
-      const groupedItems = new Map<string, {
-        productId: string;
-        title: string;
-        price: number;
-        startDate: Date;
-        endDate: Date;
-        totalQuantity: number;
-      }>();
-
+      // 1. Группируем товары
+      const groupedItems = new Map<string, any>();
       cartItems.forEach(item => {
         const key = item.productId;
         if (groupedItems.has(key)) {
-          const existing = groupedItems.get(key)!;
-          existing.totalQuantity += item.quantity;
+          groupedItems.get(key)!.totalQuantity += item.quantity;
         } else {
-          groupedItems.set(key, {
-            productId: item.productId,
-            title: item.title,
-            price: item.price,
-            startDate: item.startDate,
-            endDate: item.endDate,
-            totalQuantity: item.quantity
-          });
+          groupedItems.set(key, { ...item, totalQuantity: item.quantity });
         }
       });
 
-      console.log('Creating bookings for grouped items:', {
-        originalItems: cartItems.length,
-        groupedItems: groupedItems.size,
-        groups: Array.from(groupedItems.values()).map(g => ({
-          productId: g.productId,
-          title: g.title,
-          quantity: g.totalQuantity
-        }))
-      });
+      const groupedArray = Array.from(groupedItems.values());
 
-      // Create one booking per unique product with correct total quantity
-      for (const group of groupedItems.values()) {
+      // 2. Создаем записи в БД
+      for (const group of groupedArray) {
         const rentalPrice = calculateRentalPrice(group.price, group.startDate, group.endDate);
         const totalPrice = rentalPrice * group.totalQuantity;
         
-        console.log('Creating booking:', {
-          productId: group.productId,
-          title: group.title,
-          quantity: group.totalQuantity,
-          rentalPrice,
-          totalPrice
-        });
-
         await createBooking({
+          order_id: orderId, // Добавляем order_id в БД для связи строк
           productId: group.productId,
           customerName: formData.name,
           customerEmail: formData.email,
@@ -183,84 +155,75 @@ const Checkout = () => {
           notes: `Заказ: ${group.title} (${group.totalQuantity} шт.)`
         });
       }
-      
-      // Invalidate all relevant caches after successful booking creation
+
+      // Инвалидация кэшей после успешного создания записей
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       await queryClient.invalidateQueries({ queryKey: ['products'] });
-      
-      // Invalidate specific product bookings for each unique product
-      for (const group of groupedItems.values()) {
+      for (const group of groupedArray) {
         await queryClient.invalidateQueries({ 
           queryKey: ['product-bookings', group.productId] 
         });
       }
-      await queryClient.invalidateQueries({ 
-        queryKey: ['cart-products'] 
-      });
-      
-      // Send Telegram notification with enhanced feedback
+      await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
+
+      // 3. Отправляем уведомление в Telegram (ОДИН РАЗ)
       setNotificationStatus({ status: 'sending', message: 'Отправляем уведомление...' });
       
       try {
-        console.log('Sending enhanced Telegram notification for checkout...');
-        const result = await sendCheckoutNotification({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          items: Array.from(groupedItems.values()).map(group => ({
-            title: group.title,
-            price: group.price,
-            startDate: group.startDate.toISOString(),
-            endDate: group.endDate.toISOString(),
-            startTime: group.startDate.getHours().toString().padStart(2, '0'),
-            endTime: group.endDate.getHours().toString().padStart(2, '0'),
-            quantity: group.totalQuantity
-          })),
-          totalAmount: getCartTotal()
-        });
+        const firstItem = groupedArray[0];
         
-        if (result.success) {
+        const { data, error } = await supabase.functions.invoke('send-telegram-notification', {
+          body: {
+            type: 'checkout',
+            data: {
+              name: formData.name,
+              email: formData.email,
+              phone: formData.phone,
+              startDate: firstItem.startDate.toISOString(),
+              endDate: firstItem.endDate.toISOString(),
+              startTime: firstItem.startDate.getHours().toString().padStart(2, '0') + ':00',
+              endTime: firstItem.endDate.getHours().toString().padStart(2, '0') + ':00',
+              items: groupedArray.map(g => ({
+                title: g.title,
+                price: g.price,
+                quantity: g.totalQuantity
+              })),
+              totalAmount: getCartTotal()
+            }
+          }
+        });
+
+        if (error) throw error;
+
+        if (data && data.success) {
           setNotificationStatus({ 
             status: 'success', 
-            message: `Уведомление отправлено (${result.successfulChats}/${result.attemptedChats} получателей)` 
+            message: 'Заказ оформлен и уведомление отправлено!' 
           });
-          console.log('Enhanced Telegram notification sent successfully:', result);
-          toast.success('Уведомление отправлено!');
         } else {
-          const isPartialSuccess = result.successfulChats > 0;
           setNotificationStatus({ 
-            status: isPartialSuccess ? 'partial' : 'failed',
-            message: result.message,
-            details: `Доставлено: ${result.successfulChats}/${result.attemptedChats} получателей`
+            status: 'partial',
+            message: 'Заказ оформлен, но уведомление могло не дойти до всех получателей'
           });
-          
-          if (isPartialSuccess) {
-            console.warn('Partial notification delivery:', result);
-            toast.warning('Заказ оформлен, но не все уведомления доставлены');
-          } else {
-            console.error('Failed to send notifications:', result);
-            toast.warning('Заказ оформлен, но уведомления не отправлены');
-          }
+          toast.warning('Заказ оформлен, но возникла заминка с уведомлением');
         }
       } catch (telegramError) {
-        console.error('Error sending enhanced Telegram notification:', telegramError);
+        console.error('Error sending Telegram notification:', telegramError);
         setNotificationStatus({ 
           status: 'failed', 
-          message: 'Ошибка отправки уведомлений',
+          message: 'Ошибка отправки уведомления',
           details: telegramError instanceof Error ? telegramError.message : 'Неизвестная ошибка'
         });
         toast.warning('Заказ оформлен, но произошла ошибка при отправке уведомлений');
       }
       
+      // 4. Завершение
       clearCart();
       setOrderComplete(true);
       toast.success('Заказ оформлен успешно!');
-      console.log('Booking completed successfully:', {
-        uniqueProducts: groupedItems.size,
-        totalValue: getCartTotal()
-      });
+
     } catch (error) {
-      console.error('Error during checkout:', error);
+      console.error('Checkout error:', error);
       setNotificationStatus({ 
         status: 'failed', 
         message: 'Ошибка при оформлении заказа',
@@ -269,7 +232,7 @@ const Checkout = () => {
       toast.error('Ошибка при оформлении заказа');
     } finally {
       setLoading(false);
-      // Clear notification status after 5 seconds
+      // Очищаем статус уведомления через 5 секунд
       setTimeout(() => {
         setNotificationStatus({ status: 'idle' });
       }, 5000);
