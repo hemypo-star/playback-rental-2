@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { slugify } from '@/utils/slugify';
 import * as productService from '@/services/productService';
 import * as categoryService from '@/services/categoryService';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
@@ -12,8 +12,9 @@ import { useBookingDates } from '@/contexts/BookingDatesContext';
 
 const Catalog = () => {
   const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const categoryFromUrl = searchParams.get('category');
+  const navigate = useNavigate();
+  const { categorySlug } = useParams<{ categorySlug?: string }>();
+  
   const isMobile = useIsMobile();
   const { startDate: globalStartDate, endDate: globalEndDate, setBookingDates: setGlobalBookingDates } = useBookingDates();
   
@@ -26,8 +27,9 @@ const Catalog = () => {
   } | null;
   
   const [search, setSearch] = useState(locationState?.search || '');
-  const [activeTab, setActiveTab] = useState(categoryFromUrl || locationState?.activeCategory || 'all');
-// Initialize with location state dates or global dates
+  const [activeTab, setActiveTab] = useState('all');
+  
+  // Initialize with location state dates or global dates
   const [bookingDates, setBookingDates] = useState<{startDate?: Date, endDate?: Date}>({
     startDate: locationState?.startDate || globalStartDate,
     endDate: locationState?.endDate || globalEndDate
@@ -53,22 +55,51 @@ const Catalog = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Синхронизация activeTab с URL (slug)
   useEffect(() => {
-    if (categoryFromUrl || locationState?.activeCategory) {
-      setActiveTab(categoryFromUrl || locationState?.activeCategory || 'all');
+    if (categories.length > 0) {
+      if (categorySlug) {
+        // Ищем категорию, slug которой совпадает с URL
+        const matchedCategory = categories.find(c => slugify(c.name) === categorySlug);
+        if (matchedCategory) {
+          setActiveTab(matchedCategory.category_id.toString());
+        } else {
+          setActiveTab('all'); // Если категория не найдена, сбрасываем на "все"
+        }
+      } else if (locationState?.activeCategory) {
+        setActiveTab(locationState.activeCategory);
+      } else {
+        setActiveTab('all');
+      }
     }
-    
+  }, [categorySlug, categories, locationState?.activeCategory]);
+
+  // Восстановление поиска и скролла из state
+  useEffect(() => {
     if (locationState?.search) {
       setSearch(locationState.search);
     }
     
     if (locationState?.scrollTop) {
-      // Use requestAnimationFrame for smoother scrolling
       requestAnimationFrame(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     }
-  }, [categoryFromUrl, locationState]);
+  }, [locationState]);
+
+  // Обработчик смены категории (обновляет и стейт, и URL)
+  const handleCategoryChange = (categoryId: string) => {
+    setActiveTab(categoryId);
+    
+    if (categoryId === 'all') {
+      navigate('/catalog');
+    } else {
+      const selectedCat = categories.find(c => c.category_id.toString() === categoryId);
+      if (selectedCat) {
+        navigate(`/catalog/${slugify(selectedCat.name)}`);
+      }
+    }
+  };
 
   const handleBookingChange = (startDate: Date | undefined, endDate: Date | undefined) => {
     setBookingDates({ startDate, endDate });
@@ -77,7 +108,7 @@ const Catalog = () => {
 
   const handleClearFilters = () => {
     setSearch('');
-    setActiveTab('all');
+    handleCategoryChange('all'); // Используем новый обработчик вместо setActiveTab('all')
     setBookingDates({});
     setGlobalBookingDates(undefined, undefined);
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
@@ -119,7 +150,7 @@ const Catalog = () => {
           <CategorySidebar
             categories={categories}
             activeTab={activeTab}
-            onCategoryChange={setActiveTab}
+            onCategoryChange={handleCategoryChange}
           />
         </div>
       )}
@@ -131,7 +162,7 @@ const Catalog = () => {
             <CategorySidebar
               categories={categories}
               activeTab={activeTab}
-              onCategoryChange={setActiveTab}
+              onCategoryChange={handleCategoryChange}
             />
           )}
           
