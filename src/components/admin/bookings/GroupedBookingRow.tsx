@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -40,13 +39,23 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
       : 'Вы уверены, что хотите удалить это бронирование?';
     
     if (confirm(confirmMessage)) {
-      // ПЕРЕДАЕМ order_id (или сгенерированный ключ), чтобы удалить все товары махом
       await onDelete(groupedBooking.order_id || groupedBooking.id);
     }
   };
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
+  };
+
+  // 1. Функция для определения цвета строки в зависимости от статуса заказа (20% прозрачность)
+  const getRowColorClass = (status: string) => {
+    switch (status) {
+      case 'confirmed': return 'bg-green-500/20 hover:bg-green-500/30';
+      case 'pending': return 'bg-yellow-400/20 hover:bg-yellow-400/30';
+      case 'cancelled': return 'bg-red-500/20 hover:bg-red-500/30';
+      case 'completed': return 'bg-blue-500/20 hover:bg-blue-500/30';
+      default: return 'hover:bg-muted/50';
+    }
   };
 
   // Get first item for display
@@ -56,7 +65,8 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
   return (
     <>
       <TableRow 
-        className="cursor-pointer hover:bg-muted/50"
+        // 2. Применяем динамический класс подсветки строки
+        className={`cursor-pointer transition-colors ${getRowColorClass(groupedBooking.status)}`}
         onClick={toggleExpanded}
       >
         <TableCell>
@@ -103,7 +113,7 @@ export const GroupedBookingRow: React.FC<GroupedBookingRowProps> = ({
               size="sm"
               onClick={handleDelete}
               disabled={isDeleting === groupedBooking.id}
-              className="text-red-600 hover:text-red-700"
+              className="text-red-600 hover:text-red-700 bg-white/50" // Кнопки делаем слегка прозрачными чтобы фон не мешал
             >
               {isDeleting === groupedBooking.id ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

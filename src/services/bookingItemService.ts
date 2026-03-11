@@ -20,7 +20,7 @@ export const addBookingItem = async (request: AddBookingItemRequest): Promise<vo
   try {
     console.log('Adding item to booking:', request);
     
-    // Get the original booking to maintain the same dates and customer info
+    // 1. Получаем оригинальное бронирование
     const { data: originalBooking, error: fetchError } = await supabase
       .from('bookings')
       .select('*')
@@ -29,8 +29,28 @@ export const addBookingItem = async (request: AddBookingItemRequest): Promise<vo
     
     if (fetchError) throw fetchError;
     if (!originalBooking) throw new Error('Original booking not found');
+
+    // 2. Логика генерации order_id
+    let currentOrderId = originalBooking.order_id;
+
+    if (!currentOrderId) {
+      // Если order_id нет, генерируем новый стандартный UUID
+      currentOrderId = crypto.randomUUID();
+      console.log('Генерируем новый order_id для старого бронирования:', currentOrderId);
+
+      // Обязательно обновляем родительское бронирование в БД, присваивая ему этот order_id
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update({ order_id: currentOrderId })
+        .eq('id', originalBooking.id);
+
+      if (updateError) {
+        console.error('Ошибка при обновлении order_id у родительского бронирования:', updateError);
+        throw updateError;
+      }
+    }
     
-    // Create a new booking entry for the additional item
+    // 3. Создаем новую запись для добавленного товара
     const newBookingData = {
       product_id: request.productId,
       customer_name: originalBooking.customer_name,
@@ -41,8 +61,12 @@ export const addBookingItem = async (request: AddBookingItemRequest): Promise<vo
       status: originalBooking.status,
       quantity: request.quantity,
       total_price: request.price * request.quantity,
-      order_id: originalBooking.order_id || originalBooking.id, // Use order_id or fallback to booking id
-      notes: originalBooking.notes
+      notes: originalBooking.notes,
+      
+      // Используем существующий или только что созданный order_id
+      order_id: currentOrderId,
+      // Сохраняем оригинальное время создания, чтобы сортировка и логика фронтенда работали безупречно
+      created_at: originalBooking.created_at 
     };
     
     const { error: insertError } = await supabase
@@ -51,7 +75,7 @@ export const addBookingItem = async (request: AddBookingItemRequest): Promise<vo
     
     if (insertError) throw insertError;
     
-    console.log('Successfully added item to booking');
+    console.log('Successfully added item to booking. Order ID:', currentOrderId);
   } catch (error) {
     console.error('Error adding item to booking:', error);
     throw error;

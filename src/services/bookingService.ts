@@ -238,3 +238,49 @@ export const getAvailableProducts = async (startDate: Date, endDate: Date) => {
     return [];
   }
 };
+
+export const updateBookingDates = async (
+  bookingId: string, 
+  startDate: string, 
+  endDate: string,
+  orderId?: string
+) => {
+  try {
+    console.log('Запуск updateBookingDates. Параметры:', { bookingId, orderId, startDate, endDate });
+    
+    let query = supabase
+      .from('bookings')
+      .update({ 
+        start_date: startDate,
+        end_date: endDate
+      });
+      
+    // Регулярное выражение для проверки, является ли строка настоящим UUID
+    const isValidUUID = (id: string) => 
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    // Если orderId существует И является настоящим UUID (не начинается с "auto_...")
+    if (orderId && isValidUUID(orderId)) {
+      console.log('Обновляем все товары в заказе по order_id:', orderId);
+      query = query.eq('order_id', orderId);
+    } else {
+      // Иначе это "фейковый" order_id от старого бронирования, поэтому обновляем только по ID самого бронирования
+      console.log('Обновляем один товар по id:', bookingId);
+      query = query.eq('id', bookingId);
+    }
+    
+    // .select() возвращает обновленные строки
+    const { data, error } = await query.select();
+    
+    if (error) {
+      console.error('Ошибка Supabase при обновлении дат:', error);
+      throw error;
+    }
+    
+    console.log('Даты успешно обновлены в БД. Результат:', data);
+    return data;
+  } catch (error) {
+    console.error('Критическая ошибка в updateBookingDates:', error);
+    throw error;
+  }
+};

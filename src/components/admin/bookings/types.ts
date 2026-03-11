@@ -7,6 +7,7 @@ export interface BookingWithProduct extends BookingPeriod {
 }
 
 export interface GroupedBookingItem {
+  bookingId?: string; // <-- ДОБАВИТЬ ЭТУ СТРОКУ
   product?: Product;
   quantity: number;
   productId: string;
@@ -26,3 +27,4 @@ export interface GroupedBooking {
   createdAt: Date;
   items: GroupedBookingItem[];
 }
+

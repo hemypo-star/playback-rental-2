@@ -1,21 +1,31 @@
-
 import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Trash2, Loader2, Plus } from 'lucide-react';
+import { Trash2, Loader2, Plus, CalendarDays } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { GroupedBooking } from './types';
 import { BookingStatusSelect } from './BookingStatusSelect';
 import { AddProductDialog } from './AddProductDialog';
 import { InlineQuantityEditor } from './InlineQuantityEditor';
+import { updateBookingDates, deleteBooking } from '@/services/bookingService'; // Добавили deleteBooking
+import { formatDateRange } from '@/utils/dateUtils';
+import { useToast } from '@/hooks/use-toast';
 
 interface BookingDetailsTableProps {
   groupedBooking: GroupedBooking;
   onStatusUpdate?: (id: string, status: string) => void;
   onDelete?: (id: string) => void;
   isDeleting?: string | null;
-  onItemsChanged?: () => void; // New prop to notify parent of changes
+  onItemsChanged?: () => void;
 }
+
+const formatForDateTimeInput = (date: Date) => {
+  const d = new Date(date);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
 
 export const BookingDetailsTable = ({ 
   groupedBooking, 
@@ -24,37 +34,110 @@ export const BookingDetailsTable = ({
   isDeleting,
   onItemsChanged
 }: BookingDetailsTableProps) => {
+  const { toast } = useToast();
   const [addProductDialogOpen, setAddProductDialogOpen] = useState(false);
+  
+  const [editDatesOpen, setEditDatesOpen] = useState(false);
+  const [newStartDate, setNewStartDate] = useState(formatForDateTimeInput(groupedBooking.startDate));
+  const [newEndDate, setNewEndDate] = useState(formatForDateTimeInput(groupedBooking.endDate));
+  const [isUpdatingDates, setIsUpdatingDates] = useState(false);
+
+  // Стейт для лоадера удаления отдельного товара
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
 
   const handleDeleteClick = async (e: React.MouseEvent, bookingId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Delete button clicked for booking:', bookingId);
-    
-    if (onDelete) {
-      console.log('Calling onDelete function');
-      await onDelete(bookingId);
-    } else {
-      console.log('onDelete function not provided');
-    }
+    if (onDelete) await onDelete(bookingId);
   };
 
   const handleStatusSelectClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
-  const handleItemsChanged = () => {
-    if (onItemsChanged) {
-      onItemsChanged();
+  const handleSaveDates = async () => {
+    try {
+      setIsUpdatingDates(true);
+      const startISO = new Date(newStartDate).toISOString();
+      const endISO = new Date(newEndDate).toISOString();
+
+      await updateBookingDates(groupedBooking.id, startISO, endISO, groupedBooking.order_id);
+      
+      setEditDatesOpen(false);
+      toast({ title: 'Успешно', description: 'Даты бронирования обновлены' });
+      
+      if (onItemsChanged) onItemsChanged();
+    } catch (error: any) {
+      toast({ title: 'Ошибка', description: error.message || 'Не удалось обновить даты бронирования', variant: 'destructive' });
+    } finally {
+      setIsUpdatingDates(false);
     }
   };
 
-  // Safely get the first product or create a fallback
+  // ФУНКЦИЯ УДАЛЕНИЯ КОНКРЕТНОГО ТОВАРА
+  const handleDeleteItem = async (e: React.MouseEvent, itemBookingId?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!itemBookingId) {
+      toast({ title: 'Ошибка', description: 'ID товара не найден', variant: 'destructive' });
+      return;
+    }
+
+    const isLastItem = groupedBooking.items.length === 1;
+    const confirmMessage = isLastItem
+      ? 'Это единственный товар в заказе. Его удаление приведет к удалению всего бронирования. Продолжить?'
+      : 'Вы уверены, что хотите удалить этот товар из бронирования?';
+
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setDeletingItemId(itemBookingId);
+      // Удаляем конкретную строку из таблицы БД
+      await deleteBooking(itemBookingId);
+      
+      toast({
+        title: 'Успешно',
+        description: isLastItem ? 'Бронирование полностью удалено' : 'Товар успешно удален',
+      });
+      
+      // Обновляем данные на фронтенде
+      if (onItemsChanged) onItemsChanged();
+    } catch (error: any) {
+      console.error('Ошибка при удалении товара:', error);
+      toast({ title: 'Ошибка', description: error.message || 'Не удалось удалить товар', variant: 'destructive' });
+    } finally {
+      setDeletingItemId(null);
+    }
+  };
+
   const firstItem = groupedBooking.items[0];
   const firstProduct = firstItem?.product;
 
   return (
     <div className="mt-4 p-4 bg-muted/30 rounded-lg border">
+      
+      <div className="flex items-center justify-between mb-4 p-3 bg-background rounded-md border">
+        <div>
+          <span className="text-xs text-muted-foreground block mb-1">Период аренды:</span>
+          <span className="text-sm font-medium">
+            {formatDateRange(new Date(groupedBooking.startDate), new Date(groupedBooking.endDate), true)}
+          </span>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            setNewStartDate(formatForDateTimeInput(groupedBooking.startDate));
+            setNewEndDate(formatForDateTimeInput(groupedBooking.endDate));
+            setEditDatesOpen(true);
+          }}
+        >
+          <CalendarDays className="h-4 w-4 mr-2" />
+          Изменить даты
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-sm font-medium">Детали заказа</h4>
         <div className="flex items-center gap-3">
@@ -115,11 +198,12 @@ export const BookingDetailsTable = ({
             <TableHead>Количество</TableHead>
             <TableHead>Цена за единицу</TableHead>
             <TableHead>Сумма</TableHead>
+            <TableHead className="w-[50px]"></TableHead> {/* Колонка для кнопки удаления */}
           </TableRow>
         </TableHeader>
         <TableBody>
           {groupedBooking.items.map((item, index) => (
-            <TableRow key={`${groupedBooking.id}-detail-${index}`} className="group">
+            <TableRow key={`${groupedBooking.id}-detail-${index}`} className="group hover:bg-muted/50 transition-colors">
               <TableCell>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{item.product?.title || 'Неизвестный продукт'}</span>
@@ -130,7 +214,7 @@ export const BookingDetailsTable = ({
                   bookingId={groupedBooking.id}
                   productId={item.productId}
                   currentQuantity={item.quantity}
-                  onSuccess={handleItemsChanged}
+                  onSuccess={() => { if (onItemsChanged) onItemsChanged(); }}
                 />
               </TableCell>
               <TableCell>
@@ -140,10 +224,27 @@ export const BookingDetailsTable = ({
                 {item.product?.price && item.quantity ? 
                   `${(item.product.price * item.quantity).toLocaleString()} ₽` : '—'}
               </TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => handleDeleteItem(e, item.bookingId)}
+                  disabled={deletingItemId === item.bookingId}
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                  title="Удалить товар"
+                >
+                  {deletingItemId === item.bookingId ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </TableCell>
             </TableRow>
           ))}
+          {/* colSpan изменен с 3 на 4 из-за новой колонки */}
           <TableRow className="border-t-2 font-medium bg-muted/20">
-            <TableCell colSpan={3} className="text-right">Итого:</TableCell>
+            <TableCell colSpan={4} className="text-right">Итого:</TableCell>
             <TableCell className="font-bold">
               {groupedBooking.totalPrice?.toLocaleString() || '0'} ₽
             </TableCell>
@@ -155,8 +256,43 @@ export const BookingDetailsTable = ({
         open={addProductDialogOpen}
         onOpenChange={setAddProductDialogOpen}
         groupedBooking={groupedBooking}
-        onSuccess={handleItemsChanged}
+        onSuccess={() => { if (onItemsChanged) onItemsChanged(); }}
       />
+
+      <Dialog open={editDatesOpen} onOpenChange={setEditDatesOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактирование дат аренды</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Дата и время заезда</Label>
+              <Input 
+                type="datetime-local" 
+                value={newStartDate}
+                onChange={(e) => setNewStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Дата и время выезда</Label>
+              <Input 
+                type="datetime-local" 
+                value={newEndDate}
+                onChange={(e) => setNewEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDatesOpen(false)} disabled={isUpdatingDates}>
+              Отмена
+            </Button>
+            <Button onClick={handleSaveDates} disabled={isUpdatingDates}>
+              {isUpdatingDates && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Сохранить изменения
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
