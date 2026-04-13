@@ -60,12 +60,8 @@ export const CategoriesSection = () => {
       <div className="container px-4 mx-auto">
         <div className="text-center md:text-left mb-8">
           <span className="chip mb-4">Наше оборудование</span>
-          <h2 className="heading-2">Категории оборудования</h2>
+          <h2 className="heading-2">Категории</h2>
         </div>
-        
-        <p className="body-text max-w-2xl mx-auto md:mx-0 mb-12">
-          Выберите из нашего широкого ассортимента профессионального оборудования для вашего следующего проекта
-        </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {isLoading ? (
