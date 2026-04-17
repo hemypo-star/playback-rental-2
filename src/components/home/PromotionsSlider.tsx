@@ -9,18 +9,27 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getProductImageUrl } from "@/utils/imageUtils";
 
-export const PromotionsSlider = () => {
-  const { data: promotions, isLoading, error } = useQuery({
+interface PromotionsSliderProps {
+  excludeId?: string; // ID текущей акции, которую нужно скрыть
+  title?: string;
+}
+
+export const PromotionsSlider = ({ excludeId, title = "Акции" }: PromotionsSliderProps) => {
+  const { data: allPromotions, isLoading, error } = useQuery({
     queryKey: ['activePromotions'],
     queryFn: getActivePromotions
   });
   
+  // Фильтруем список, исключая текущую акцию
+  const promotions = excludeId 
+    ? allPromotions?.filter(p => p.id !== excludeId)
+    : allPromotions;
+
   if ((!promotions || promotions.length === 0) && !isLoading) {
     return null;
   }
   
   const renderPromotionCard = (promotion: any) => {
-    // Определяем URL: если есть контент и слаг, ведем на свою страницу, иначе берем внешнюю/другую ссылку
     const targetUrl = promotion.content && promotion.slug 
       ? `/promotions/${promotion.slug}` 
       : promotion.linkurl;
@@ -49,10 +58,8 @@ export const PromotionsSlider = () => {
       </Card>
     );
 
-    // Если ссылки нет вообще, просто выводим карточку
     if (!targetUrl) return cardContent;
 
-    // Если внешняя ссылка, используем стандартный тег a для новой вкладки
     if (isExternal) {
       return (
         <a href={targetUrl} target="_blank" rel="noopener noreferrer" className="block h-full">
@@ -61,7 +68,6 @@ export const PromotionsSlider = () => {
       );
     }
 
-    // Внутренняя маршрутизация
     return (
       <Link to={targetUrl} className="block h-full">
         {cardContent}
@@ -72,37 +78,29 @@ export const PromotionsSlider = () => {
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto">
-        <h2 className="heading-2 mb-8 text-center">Акции</h2>
+        <h2 className="heading-2 mb-8 text-center">{title}</h2>
         
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="w-full h-[140px]">
-                <Skeleton className="w-full h-full" />
-              </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="aspect-[3/4] w-full rounded-xl" />
             ))}
           </div>
         ) : error ? (
-          <div className="text-center text-destructive">
-            Ошибка загрузки акций
-          </div>
+          <div className="text-center text-destructive">Ошибка загрузки</div>
         ) : (
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true
-            }}
-            className="w-full"
-          >
+          <Carousel opts={{ align: "start", loop: true }} className="w-full">
             <CarouselContent>
               {promotions?.map((promotion) => (
-                <CarouselItem key={promotion.id} className="md:basis-1/4 lg:basis-1/5">
+                <CarouselItem key={promotion.id} className="basis-1/2 md:basis-1/4 lg:basis-1/5">
                   {renderPromotionCard(promotion)}
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="left-1 lg:-left-12" />
-            <CarouselNext className="right-1 lg:-right-12" />
+            <div className="hidden md:block">
+              <CarouselPrevious className="-left-12" />
+              <CarouselNext className="-right-12" />
+            </div>
           </Carousel>
         )}
       </div>

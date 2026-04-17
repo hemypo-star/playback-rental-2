@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Promotion } from '@/types/promotion';
 import { getProductImageUrl } from '@/utils/imageUtils';
+import { PromotionsSlider } from '@/components/home/PromotionsSlider';
+import { Button } from '@/components/ui/button';
 
 export default function PromotionDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,16 +19,18 @@ export default function PromotionDetail() {
           .from('promotions')
           .select('*')
           .eq('slug', slug)
-          .eq('active', true) // Отсекаем неактивные
+          .eq('active', true)
           .single();
 
         if (error || !data) {
           navigate('/not-found', { replace: true });
         } else {
           setPromotion(data);
+          // Скроллим наверх при переключении между акциями
+          window.scrollTo(0, 0);
         }
       } catch (err) {
-        console.error("Error fetching promotion details:", err);
+        console.error("Error fetching promotion:", err);
         navigate('/not-found', { replace: true });
       } finally {
         setLoading(false);
@@ -47,41 +51,70 @@ export default function PromotionDetail() {
   if (!promotion) return null;
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
-      <h1 className="text-4xl md:text-5xl font-bold mb-8 text-center">{promotion.title}</h1>
-      
-      {promotion.imageurl && (
-        <div className="mb-10 rounded-xl overflow-hidden shadow-lg mx-auto max-w-2xl bg-muted">
-          <img 
-            src={getProductImageUrl(promotion.imageurl)} 
-            alt={promotion.title} 
-            className="w-full h-auto object-cover max-h-[600px]"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.onerror = null;
-              target.src = '/placeholder.svg';
-            }}
-          />
-        </div>
-      )}
+    <div className="min-h-screen bg-background">
+      {/* Сетка основной части страницы */}
+      <div className="container mx-auto px-4 py-8 md:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
+          
+          {/* Левая колонка: Изображение */}
+          <div className="w-full">
+            <div className="rounded-2xl overflow-hidden shadow-xl bg-muted aspect-[3/4]">
+              <img 
+                src={getProductImageUrl(promotion.imageurl)} 
+                alt={promotion.title} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = '/placeholder.svg';
+                }}
+              />
+            </div>
+          </div>
 
-      {/* Класс whitespace-pre-wrap отвечает за сохранение переносов из обычного Textarea */}
-      <div className="text-lg leading-relaxed whitespace-pre-wrap mb-10 text-gray-800">
-        {promotion.content}
+          {/* Правая колонка: Текст и Кнопка */}
+          <div className="flex flex-col space-y-6">
+            <h1 className="text-3xl md:text-5xl font-bold text-foreground leading-tight">
+              {promotion.title}
+            </h1>
+
+            <div className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">
+              {promotion.content}
+            </div>
+
+            {promotion.linkurl && (
+              <div className="pt-4">
+                <Button 
+                  asChild 
+                  size="lg" 
+                  className="w-full md:w-max px-12 h-14 text-lg font-semibold"
+                >
+                  <a 
+                    href={promotion.linkurl} 
+                    target={promotion.linkurl.startsWith('http') ? "_blank" : "_self"} 
+                    rel="noopener noreferrer"
+                  >
+                    Перейти
+                  </a>
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {promotion.linkurl && (
-        <div className="text-center mt-8">
-          <a 
-            href={promotion.linkurl} 
-            target={promotion.linkurl.startsWith('http') ? "_blank" : "_self"} 
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-12 px-8 py-3"
-          >
-            Узнать подробности / Забронировать
-          </a>
-        </div>
-      )}
+      {/* Разделитель */}
+      <div className="container mx-auto px-4">
+        <hr className="border-muted" />
+      </div>
+
+      {/* Нижний слайдер: Другие акции */}
+      <div className="bg-muted/30">
+        <PromotionsSlider 
+          excludeId={promotion.id} 
+          title="Другие актуальные акции" 
+        />
+      </div>
     </div>
   );
 }
