@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
@@ -13,7 +13,8 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 
 const promotionSchema = z.object({
   title: z.string().min(1, 'Название акции обязательно'),
-  linkUrl: z.string().min(1, 'URL страницы акции обязателен'),
+  linkUrl: z.string().optional(),
+  content: z.string().optional(),
   active: z.boolean().default(true),
 });
 
@@ -38,6 +39,7 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
     defaultValues: {
       title: promotion?.title || '',
       linkUrl: promotion?.linkurl || '',
+      content: promotion?.content || '',
       active: promotion?.active !== undefined ? promotion.active : true,
     },
   });
@@ -58,6 +60,7 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
       imageFile,
       imageUrl: typeof imagePreviewUrl === 'string' ? imagePreviewUrl : undefined,
       linkUrl: values.linkUrl,
+      content: values.content,
       active: values.active,
     });
   };
@@ -67,12 +70,30 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <FormField
           control={form.control}
+          name="active"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Активна</FormLabel>
+                <FormDescription>
+                  Акция будет отображаться на сайте, если включена
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Название акции</FormLabel>
+              <FormLabel>Название акции (формирует URL)</FormLabel>
               <FormControl>
-                <Input placeholder="Введите название акции" {...field} />
+                <Input placeholder="Например: Весенняя скидка" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -89,17 +110,13 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
                 previewUrl={imagePreviewUrl}
               />
               <FormDescription className="mt-2">
-                Рекомендуемый размер: 900×1200px, соотношение сторон 3:4
+                Рекомендуемый размер: 900×1200px. Будет использоваться и в слайдере, и на странице акции.
               </FormDescription>
             </div>
             {imagePreviewUrl && (
               <div className="w-full max-w-xs mx-auto">
                 <AspectRatio ratio={3/4} className="bg-muted overflow-hidden rounded-md border">
-                  <img
-                    src={imagePreviewUrl}
-                    alt="Preview"
-                    className="object-cover w-full h-full"
-                  />
+                  <img src={imagePreviewUrl} alt="Preview" className="object-cover w-full h-full" />
                 </AspectRatio>
               </div>
             )}
@@ -108,15 +125,19 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
 
         <FormField
           control={form.control}
-          name="linkUrl"
+          name="content"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>URL страницы акции</FormLabel>
+              <FormLabel>Текст акции (для создания внутренней страницы)</FormLabel>
               <FormControl>
-                <Input placeholder="Например: /catalog или /product/123" {...field} />
+                <Textarea 
+                  placeholder="Опишите подробные условия вашей акции... (переносы строк сохранятся)" 
+                  rows={6}
+                  {...field} 
+                />
               </FormControl>
               <FormDescription>
-                Относительный URL (/catalog) или абсолютный (https://example.com)
+                Если заполнить это поле, будет создана отдельная страница акции.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -125,32 +146,23 @@ const PromotionForm = ({ promotion, onSubmit, onCancel, isSubmitting }: Promotio
 
         <FormField
           control={form.control}
-          name="active"
+          name="linkUrl"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Активна</FormLabel>
-                <FormDescription>
-                  Акция будет отображаться на сайте, если активна
-                </FormDescription>
-              </div>
+            <FormItem>
+              <FormLabel>Сторонняя ссылка / Внешний ресурс</FormLabel>
               <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
+                <Input placeholder="Например: https://partner.com" {...field} />
               </FormControl>
+              <FormDescription>
+                Заполняйте, только если хотите увести пользователя с сайта или перенаправить на другой раздел без создания отдельной страницы акции.
+              </FormDescription>
+              <FormMessage />
             </FormItem>
           )}
         />
 
         <div className="flex justify-end space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Отмена
           </Button>
           <Button type="submit" disabled={isSubmitting}>

@@ -1,4 +1,3 @@
-
 import { ToasterProvider } from "@/hooks/Toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,15 +14,17 @@ import { BookingDatesProvider } from "./contexts/BookingDatesContext";
 
 // Pages
 import Index from "./pages/Index";
-// Direct import for Catalog instead of lazy loading
 import Catalog from "./pages/Catalog";
-// Keep lazy loading for other pages
+
+// Lazy loading for other pages
 const ProductDetail = lazy(() => import("./pages/ProductDetail"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Login = lazy(() => import("./pages/Login"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks"));
 const Contact = lazy(() => import("./pages/Contact"));
+const PromotionDetail = lazy(() => import("./pages/PromotionDetail")); // НОВЫЙ ИМПОРТ
+
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import UserAgreement from "./pages/UserAgreement";
@@ -35,29 +36,24 @@ const Loading = () => (
   </div>
 );
 
-// Memoize the QueryClient to prevent recreation on every render
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes default stale time
+      staleTime: 5 * 60 * 1000, 
     },
   },
 });
 
 const App = () => {
   useEffect(() => {
-    // Initialize the database with seed data
     seedDatabase().catch(console.error);
-    
-    // Initialize storage buckets
     resetStoragePermissions().catch(error => {
       console.error("Error initializing storage buckets:", error);
     });
   }, []);
 
-  // Memoize the main app structure to prevent unnecessary re-renders
   const appContent = useMemo(() => (
     <div className="flex flex-col min-h-screen main-content">
       <Navbar />
@@ -68,6 +64,7 @@ const App = () => {
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/catalog/:categorySlug" element={<Catalog />} />
             <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/promotions/:slug" element={<PromotionDetail />} /> {/* НОВЫЙ РОУТ */}
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/contact" element={<Contact />} />
