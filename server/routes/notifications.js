@@ -141,7 +141,7 @@ const formatCheckoutMessage = (data) => {
       if (startDate === endDate) {
         message += `   📅 ${startDate} с ${startTime} до ${endTime}\n\n`;
       } else {
-        message += `   📅 ${startDate} в ${startTime} - ${endDate} в ${endTime}\n\n`;
+        message += `   📅 Дата начала: ${startDate} в ${startTime} \n\n 📅 Дата окончания: ${endDate} в ${endTime}\n\n`;
       }
     });
   }
