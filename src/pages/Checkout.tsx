@@ -1,3 +1,4 @@
+// src/pages/Checkout.tsx
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -25,7 +26,6 @@ import { formatDateRange } from '@/utils/dateUtils';
 import { useCartContext } from '@/hooks/useCart';
 import { createBooking } from '@/services/bookingService';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import BookingCalendar from '@/components/BookingCalendar';
 import { BookingPeriod } from '@/types/product';
 import { calculateRentalPrice, calculateRentalDetails, formatCurrency } from '@/utils/pricingUtils';
@@ -119,7 +119,6 @@ const Checkout = () => {
     setLoading(true);
     setNotificationStatus({ status: 'sending', message: 'Обрабатываем заказ...' });
     
-    // Создаем единый ID для группировки в админке
     const orderId = crypto.randomUUID(); 
     
     try {
@@ -142,7 +141,7 @@ const Checkout = () => {
         const totalPrice = rentalPrice * group.totalQuantity;
         
         await createBooking({
-          order_id: orderId, // Добавляем order_id в БД для связи строк
+          order_id: orderId,
           productId: group.productId,
           customerName: formData.name,
           customerEmail: formData.email,
@@ -156,7 +155,6 @@ const Checkout = () => {
         });
       }
 
-      // Инвалидация кэшей после успешного создания записей
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });
       await queryClient.invalidateQueries({ queryKey: ['products'] });
       for (const group of groupedArray) {
@@ -166,54 +164,34 @@ const Checkout = () => {
       }
       await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
 
-      // 3. Отправляем уведомление в Telegram (ОДИН РАЗ)
+      // 3. Отправляем уведомление через наш сервис (бэкенд Node.js)
       setNotificationStatus({ status: 'sending', message: 'Отправляем уведомление...' });
-      
+
       try {
-        const { data, error } = await supabase.functions.invoke('send-telegram-notification', {
-          body: {
-            type: 'checkout',
-            data: {
-              name: formData.name,
-              email: formData.email,
-              phone: formData.phone,
-              // Кладём даты внутрь каждого товара, как того ждет Edge-функция:
-              items: groupedArray.map(g => ({
-                title: g.title,
-                price: g.price,
-                quantity: g.totalQuantity,
-                startDate: g.startDate.toISOString(),
-                endDate: g.endDate.toISOString(),
-                startTime: g.startDate.getHours().toString().padStart(2, '0') + ':00',
-                endTime: g.endDate.getHours().toString().padStart(2, '0') + ':00'
-              })),
-              totalAmount: getCartTotal()
-            }
-          }
+        const response = await sendCheckoutNotification({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          items: groupedArray.map(g => ({
+            title: g.title,
+            price: g.price,
+            quantity: g.totalQuantity,
+            startDate: g.startDate.toISOString(),
+            endDate: g.endDate.toISOString(),
+            startTime: g.startDate.getHours().toString().padStart(2, '0') + ':00',
+            endTime: g.endDate.getHours().toString().padStart(2, '0') + ':00'
+          })),
+          totalAmount: getCartTotal()
         });
 
-        if (error) throw error;
-
-        if (data && data.success) {
-          setNotificationStatus({ 
-            status: 'success', 
-            message: 'Заказ оформлен и уведомление отправлено!' 
-          });
+        if (response && response.success) {
+          setNotificationStatus({ status: 'success', message: 'Заказ оформлен!' });
         } else {
-          setNotificationStatus({ 
-            status: 'partial',
-            message: 'Заказ оформлен, но уведомление могло не дойти до всех получателей'
-          });
-          toast.warning('Заказ оформлен, но возникла заминка с уведомлением');
+          setNotificationStatus({ status: 'partial', message: 'Заказ оформлен, но возникла ошибка с Telegram' });
         }
       } catch (telegramError) {
-        console.error('Error sending Telegram notification:', telegramError);
-        setNotificationStatus({ 
-          status: 'failed', 
-          message: 'Ошибка отправки уведомления',
-          details: telegramError instanceof Error ? telegramError.message : 'Неизвестная ошибка'
-        });
-        toast.warning('Заказ оформлен, но произошла ошибка при отправке уведомлений');
+        console.error('Telegram notification failed:', telegramError);
+        setNotificationStatus({ status: 'failed', message: 'Ошибка уведомления' });
       }
       
       // 4. Завершение
@@ -231,7 +209,6 @@ const Checkout = () => {
       toast.error('Ошибка при оформлении заказа');
     } finally {
       setLoading(false);
-      // Очищаем статус уведомления через 5 секунд
       setTimeout(() => {
         setNotificationStatus({ status: 'idle' });
       }, 5000);
