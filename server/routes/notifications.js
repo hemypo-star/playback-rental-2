@@ -1,29 +1,22 @@
 const express = require('express');
 const router = express.Router();
 
-// Хелпер для отправки с таймаутом (защита от 504)
-const fetchWithTimeout = async (url, options, timeout = 5000) => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(id);
-    return response;
-  } catch (e) {
-    clearTimeout(id);
-    throw e;
-  }
-};
-
-// Функция отправки сообщения в Telegram
+// ==========================================
+// 1. TELEGRAM LOGIC
+// ==========================================
 const sendTelegramMessage = async (message, chatId) => {
-  const result = { chatId, success: false };
+  const result = { chatId, platform: 'Telegram', success: false };
+  
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    if (!botToken) throw new Error('Bot token missing');
-
+    if (!botToken) {
+      result.error = 'Telegram bot token not configured';
+      return result;
+    }
+    
     const url = `https://tg-proxy.hemypo.workers.dev/bot${botToken}/sendMessage`;
-    const response = await fetchWithTimeout(url, {
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -31,18 +24,116 @@ const sendTelegramMessage = async (message, chatId) => {
         text: message,
         parse_mode: 'Markdown',
       }),
-    }, 5000);
-
-    const data = await response.json();
-    result.success = data.ok;
-    if (!data.ok) result.error = data.description;
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      result.error = `HTTP ${response.status}: ${errorData}`;
+      return result;
+    }
+    
+    result.success = true;
     return result;
   } catch (error) {
-    result.error = error.name === 'AbortError' ? 'Timeout' : error.message;
+    result.error = error.message;
     return result;
   }
 };
 
+const getTelegramChatIds = () => {
+  const chatIds = [];
+  if (process.env.TELEGRAM_CHAT_ID) chatIds.push(process.env.TELEGRAM_CHAT_ID);
+  // Поддержка дополнительных ID из .env (TELEGRAM_CHAT_ID_2...10)
+  for (let i = 2; i <= 10; i++) {
+    const additionalId = process.env[`TELEGRAM_CHAT_ID_${i}`];
+    if (additionalId) chatIds.push(additionalId);
+  }
+  return chatIds;
+};
+
+// ==========================================
+// 2. MAX LOGIC (Финальная рабочая версия)
+// ==========================================
+const sendMaxMessage = async (message, targetId) => {
+  const result = { targetId, platform: 'MAX', success: false };
+  try {
+    const botToken = process.env.MAX_BOT_TOKEN;
+    if (!botToken) {
+      result.error = 'MAX bot token not configured';
+      return result;
+    }
+
+    const numericId = parseInt(targetId, 10);
+    // Передаем user_id в URL, так как это Protobuf API
+    const url = `https://platform-api.max.ru/messages?user_id=${numericId}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': botToken // Без Bearer
+      },
+      body: JSON.stringify({
+        text: message
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      result.error = `HTTP ${response.status}: ${errorText}`;
+      return result;
+    }
+
+    result.success = true;
+    return result;
+  } catch (error) {
+    result.error = error.message;
+    return result;
+  }
+};
+
+const getMaxUserIds = () => {
+  const ids = [];
+  if (process.env.MAX_USER_ID) ids.push(process.env.MAX_USER_ID);
+  if (process.env.MAX_CHAT_ID) ids.push(process.env.MAX_CHAT_ID); // Совместимость имен
+  
+  for (let i = 2; i <= 10; i++) {
+    const additionalId = process.env[`MAX_USER_ID_${i}`] || process.env[`MAX_CHAT_ID_${i}`];
+    if (additionalId) ids.push(additionalId);
+  }
+  return ids;
+};
+
+// ==========================================
+// 3. ORCHESTRATION
+// ==========================================
+const sendToAllPlatforms = async (message) => {
+  const tgIds = getTelegramChatIds();
+  const maxIds = getMaxUserIds();
+  
+  const tasks = [
+    ...tgIds.map(id => sendTelegramMessage(message, id)),
+    ...maxIds.map(id => sendMaxMessage(message, id))
+  ];
+  
+  if (tasks.length === 0) {
+    return { success: false, error: 'No recipients configured' };
+  }
+  
+  const results = await Promise.all(tasks);
+  const successCount = results.filter(r => r.success).length;
+  
+  return { 
+    success: successCount > 0, 
+    total: tasks.length,
+    successCount,
+    details: results 
+  };
+};
+
+// ==========================================
+// 4. FORMATTERS
+// ==========================================
 // Форматирование сообщения для контактной формы
 const formatContactMessage = (data) => {
   return `🔔 *Новая заявка с сайта*\n\n` +
@@ -86,64 +177,28 @@ const formatCheckoutMessage = (data) => {
   return message;
 };
 
-// Роут для уведомлений из формы контактов
-router.post('/contact', async (req, res) => {
-  try {
-    const telegramMessage = formatContactMessage(req.body);
-    
-    // Собираем все чаты из ENV
-    const chatIds = [
-      process.env.TELEGRAM_CHAT_ID,
-      process.env.TELEGRAM_CHAT_ID_2,
-      process.env.TELEGRAM_CHAT_ID_3
-    ].filter(Boolean);
+// ==========================================
+// 5. API ROUTES
+// ==========================================
 
-    if (chatIds.length === 0) {
-      throw new Error("No Telegram Chat IDs configured on server");
-    }
-
-    const results = await Promise.all(chatIds.map(id => sendTelegramMessage(telegramMessage, id)));
-    const success = results.some(r => r.success);
-
-    res.status(success ? 200 : 500).json({ success, details: results });
-  } catch (error) {
-    console.error('Contact error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Роут для уведомлений о заказах
 router.post('/checkout', async (req, res) => {
   try {
-    const { name, email, phone, items, totalAmount } = req.body;
-    
-    // Вызываем нашу функцию форматирования
-    const telegramMessage = formatCheckoutMessage({ name, email, phone, items, totalAmount });
-    
-    // Собираем все чаты из ENV
-    const chatIds = [
-      process.env.TELEGRAM_CHAT_ID,
-      process.env.TELEGRAM_CHAT_ID_2,
-      process.env.TELEGRAM_CHAT_ID_3
-    ].filter(Boolean);
-
-    if (chatIds.length === 0) {
-      throw new Error("No Telegram Chat IDs configured on server");
-    }
-
-    const results = await Promise.all(chatIds.map(id => sendTelegramMessage(telegramMessage, id)));
-    const success = results.some(r => r.success);
-
-    res.status(success ? 200 : 500).json({ success, details: results });
+    const message = formatCheckoutMessage(req.body);
+    const result = await sendToAllPlatforms(message);
+    res.status(result.success ? 200 : 500).json(result);
   } catch (error) {
-    console.error('Checkout error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Роут для повторной отправки (заглушка из старого кода)
-router.post('/retry-failed', async (req, res) => {
-  res.json({ success: true, processed: 0, message: 'No failed notifications to retry' });
+router.post('/contact', async (req, res) => {
+  try {
+    const message = formatContactMessage(req.body);
+    const result = await sendToAllPlatforms(message);
+    res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 module.exports = router;
