@@ -21,29 +21,29 @@ export const BookingDatesProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
 
-  // Load dates from localStorage on initialization
+  // Загружаем даты из sessionStorage при инициализации приложения
   useEffect(() => {
     try {
-      const savedDates = localStorage.getItem(STORAGE_KEY);
+      const savedDates = sessionStorage.getItem(STORAGE_KEY);
       if (savedDates) {
         const parsed = JSON.parse(savedDates);
         if (parsed.startDate) setStartDate(new Date(parsed.startDate));
         if (parsed.endDate) setEndDate(new Date(parsed.endDate));
       }
     } catch (error) {
-      console.error('Error loading booking dates from localStorage:', error);
+      console.error('Error loading booking dates from sessionStorage:', error);
     }
   }, []);
 
-  // Save dates to localStorage whenever they change
+  // Сохраняем даты в sessionStorage при их изменении
   useEffect(() => {
     if (startDate && endDate) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString()
       }));
     } else {
-      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
     }
   }, [startDate, endDate]);
 
@@ -55,7 +55,7 @@ export const BookingDatesProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const clearBookingDates = useCallback(() => {
     setStartDate(undefined);
     setEndDate(undefined);
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
   const hasBookingDates = useMemo(() => {

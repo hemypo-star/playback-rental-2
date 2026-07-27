@@ -6,6 +6,7 @@ import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityU
 import { getProductById } from '@/services/apiService';
 import { getProductBookings } from '@/services/bookingService';
 import { useQueryClient } from '@tanstack/react-query';
+import React, { createContext, useContext } from 'react';
 
 export interface CartItem {
   id: string;
@@ -23,9 +24,9 @@ export const useCart = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Load cart from localStorage on initial render
+  // Load cart from sessionStorage on initial render
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
+    const savedCart = sessionStorage.getItem('cart');
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart);
@@ -36,15 +37,15 @@ export const useCart = () => {
         }));
         setCartItems(hydratedCart);
       } catch (error) {
-        console.error('Failed to parse cart from localStorage:', error);
-        localStorage.removeItem('cart');
+        console.error('Failed to parse cart from sessionStorage:', error);
+        sessionStorage.removeItem('cart');
       }
     }
   }, []);
 
-  // Save cart to localStorage whenever it changes
+  // Save cart to sessionStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
+    sessionStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
   // Helper function to check availability for a product
@@ -246,7 +247,7 @@ export const useCart = () => {
     const productIds = [...new Set(cartItems.map(item => item.productId))];
     
     setCartItems([]);
-    localStorage.removeItem('cart');
+    sessionStorage.removeItem('cart');
     
     // Invalidate caches for all products that were in the cart
     for (const productId of productIds) {
@@ -316,9 +317,6 @@ export const useCart = () => {
     isProductInCart
   }), [cartItems, addToCart, removeFromCart, updateItemQuantity, clearCart, updateCartDates, getCartTotal, cartCount, isProductInCart]);
 };
-
-// Create a CartProvider for global state management
-import React, { createContext, useContext } from 'react';
 
 type CartContextType = ReturnType<typeof useCart>;
 
