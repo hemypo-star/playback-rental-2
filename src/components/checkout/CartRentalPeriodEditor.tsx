@@ -1,10 +1,10 @@
-
 import BookingCalendar from "@/components/BookingCalendar";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Clock } from "lucide-react";
+import { Clock, AlertCircle } from "lucide-react";
 import { formatDateRange } from "@/utils/dateUtils";
 import { BookingPeriod } from "@/types/product";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CartRentalPeriodEditorProps {
   initialStartDate?: Date;
@@ -23,39 +23,49 @@ const CartRentalPeriodEditor = ({
 }: CartRentalPeriodEditorProps) => {
   const [lastBooking, setLastBooking] = useState<string | null>(null);
 
-  // Create a memoized handler to prevent multiple calls with the same data
   const handleBookingChange = useCallback((booking: BookingPeriod) => {
-    // Create a unique signature for this booking to detect duplicates
     const bookingSignature = `${booking.startDate.getTime()}-${booking.endDate.getTime()}`;
     
-    // Only call onBookingChange if this is a new booking signature
     if (bookingSignature !== lastBooking) {
       setLastBooking(bookingSignature);
       onBookingChange(booking);
       
-      // Close the dialog/modal if onClose is provided
       if (onClose) {
         onClose();
       }
     }
   }, [lastBooking, onBookingChange, onClose]);
 
-  // Handle closing
   const handleCalendarClose = useCallback(() => {
     if (onClose) {
       onClose();
     }
   }, [onClose]);
 
-  if (!initialStartDate || !initialEndDate) return null;
+  const isMissingDates = !initialStartDate || !initialEndDate;
 
   return (
-    <Card className="mb-8">
+    <Card className={`mb-8 ${isMissingDates ? 'border-destructive/50 shadow-sm' : ''}`}>
       <CardHeader>
-        <CardTitle>Редактировать время аренды</CardTitle>
-        <CardDescription>Вы можете изменить время аренды если нужно</CardDescription>
+        <CardTitle className={isMissingDates ? "text-destructive" : ""}>
+          {isMissingDates ? "Выберите время аренды" : "Редактировать время аренды"}
+        </CardTitle>
+        <CardDescription>
+          {isMissingDates 
+            ? "Укажите период для расчета стоимости и оформления заказа" 
+            : "Вы можете изменить время аренды если нужно"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
+        {isMissingDates && (
+          <Alert variant="destructive" className="mb-4 bg-destructive/10">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Даты аренды были сброшены. Пожалуйста, выберите новый период.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <BookingCalendar
           onBookingChange={handleBookingChange}
           initialStartDate={initialStartDate}
@@ -63,11 +73,12 @@ const CartRentalPeriodEditor = ({
           isCompact={false}
           onClose={handleCalendarClose}
         />
+        
         {selectedBookingTime && (
           <div className="mt-4 p-3 bg-primary/10 rounded-md">
             <p className="text-sm font-medium flex items-center">
               <Clock className="h-4 w-4 mr-2" />
-              Выбранное новое время аренды: {formatDateRange(selectedBookingTime.startDate, selectedBookingTime.endDate, true)}
+              Выбранное время аренды: {formatDateRange(selectedBookingTime.startDate, selectedBookingTime.endDate, true)}
             </p>
           </div>
         )}

@@ -14,8 +14,9 @@ export interface CartItem {
   title: string;
   price: number;
   imageUrl: string;
-  startDate: Date;
-  endDate: Date;
+  // Даты теперь опциональны, так как могут сбрасываться при новой сессии
+  startDate?: Date; 
+  endDate?: Date;
   quantity: number;
 }
 
@@ -24,31 +25,48 @@ export const useCart = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Load cart from sessionStorage on initial render
+  // Гибридная загрузка: корзина из local, даты из session
   useEffect(() => {
-    const savedCart = sessionStorage.getItem('cart');
+    const savedCart = localStorage.getItem('cart');
+    const sessionDatesStr = sessionStorage.getItem('booking-dates');
+    
+    let activeStart: Date | undefined;
+    let activeEnd: Date | undefined;
+
+    // Пытаемся получить даты из текущей сессии
+    if (sessionDatesStr) {
+      try {
+        const parsedDates = JSON.parse(sessionDatesStr);
+        if (parsedDates.startDate) activeStart = new Date(parsedDates.startDate);
+        if (parsedDates.endDate) activeEnd = new Date(parsedDates.endDate);
+      } catch (e) {
+        console.error('Failed to parse session dates:', e);
+      }
+    }
+
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart);
         const hydratedCart = parsedCart.map((item: any) => ({
           ...item,
-          startDate: new Date(item.startDate),
-          endDate: new Date(item.endDate)
+          // Строго синхронизируем даты товаров с активной сессией. 
+          // Если сессия пуста (новая вкладка), даты обнулятся, но товары останутся.
+          startDate: activeStart,
+          endDate: activeEnd
         }));
         setCartItems(hydratedCart);
       } catch (error) {
-        console.error('Failed to parse cart from sessionStorage:', error);
-        sessionStorage.removeItem('cart');
+        console.error('Failed to parse cart from localStorage:', error);
+        localStorage.removeItem('cart');
       }
     }
   }, []);
 
-  // Save cart to sessionStorage whenever it changes
+  // Сохраняем товары обратно в localStorage для долговечности
   useEffect(() => {
-    sessionStorage.setItem('cart', JSON.stringify(cartItems));
+    localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // Helper function to check availability for a product
   const checkProductAvailability = useCallback(async (productId: string, startDate: Date, endDate: Date, requestedQuantity: number) => {
     try {
       const [product, bookings] = await Promise.all([
@@ -70,13 +88,11 @@ export const useCart = () => {
     }
   }, []);
 
-  // Check if a product is in the cart
   const isProductInCart = useCallback((productId: string) => {
     return cartItems.some(item => item.productId === productId);
   }, [cartItems]);
 
   const addToCart = useCallback(async (product: Product, startDate?: Date, endDate?: Date, quantity: number = 1) => {
-    // Check if required dates are provided
     if (!startDate || !endDate) {
       toast({
         title: "Сначала выберите даты",
@@ -86,11 +102,10 @@ export const useCart = () => {
       return false;
     }
 
-    // Check if this product with the same dates already exists in cart
     const existingItemIndex = cartItems.findIndex(item => 
       item.productId === product.id &&
-      item.startDate.getTime() === startDate.getTime() &&
-      item.endDate.getTime() === endDate.getTime()
+      item.startDate?.getTime() === startDate.getTime() &&
+      item.endDate?.getTime() === endDate.getTime()
     );
 
     let totalRequestedQuantity = quantity;
@@ -98,7 +113,6 @@ export const useCart = () => {
       totalRequestedQuantity += cartItems[existingItemIndex].quantity;
     }
 
-    // Check availability for the total requested quantity
     const availability = await checkProductAvailability(product.id, startDate, endDate, totalRequestedQuantity);
     
     if (!availability.available) {
@@ -111,7 +125,6 @@ export const useCart = () => {
     }
 
     if (existingItemIndex >= 0) {
-      // Update existing item quantity
       setCartItems(prevItems => 
         prevItems.map((item, index) => 
           index === existingItemIndex 
@@ -125,10 +138,8 @@ export const useCart = () => {
         description: `Количество ${product.title} увеличено на ${quantity} шт.`,
       });
     } else {
-      // Generate a unique cart item ID
       const cartItemId = `${product.id}_${Date.now()}`;
 
-      // Add the item to the cart
       setCartItems(prevItems => [
         ...prevItems,
         {
@@ -149,13 +160,8 @@ export const useCart = () => {
       });
     }
 
-    // Invalidate product data to refresh availability
-    await queryClient.invalidateQueries({ 
-      queryKey: ['product-bookings', product.id] 
-    });
-    await queryClient.invalidateQueries({ 
-      queryKey: ['cart-products'] 
-    });
+    await queryClient.invalidateQueries({ queryKey: ['product-bookings', product.id] });
+    await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
 
     return true;
   }, [toast, checkProductAvailability, queryClient, cartItems]);
@@ -165,14 +171,9 @@ export const useCart = () => {
     
     setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
 
-    // Invalidate related caches if we have the product info
     if (item) {
-      await queryClient.invalidateQueries({ 
-        queryKey: ['product-bookings', item.productId] 
-      });
-      await queryClient.invalidateQueries({ 
-        queryKey: ['cart-products'] 
-      });
+      await queryClient.invalidateQueries({ queryKey: ['product-bookings', item.productId] });
+      await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
     }
 
     toast({
@@ -187,38 +188,33 @@ export const useCart = () => {
       return;
     }
 
-    // Find the item to get product details
     const item = cartItems.find(cartItem => cartItem.id === itemId);
     if (!item) return;
 
-    // Check availability for the new quantity
-    const availability = await checkProductAvailability(item.productId, item.startDate, item.endDate, newQuantity);
-    
-    if (!availability.available) {
-      toast({
-        title: "Недостаточно товара",
-        description: `Доступно только ${availability.maxQuantity} шт. на выбранные даты. Количество установлено на максимум.`,
-        variant: "destructive",
-      });
+    // Проверяем доступность только если даты уже выбраны
+    if (item.startDate && item.endDate) {
+      const availability = await checkProductAvailability(item.productId, item.startDate, item.endDate, newQuantity);
       
-      // Set quantity to maximum available
-      const maxQuantity = Math.max(1, availability.maxQuantity);
-      setCartItems(prevItems => 
-        prevItems.map(cartItem => 
-          cartItem.id === itemId 
-            ? { ...cartItem, quantity: maxQuantity }
-            : cartItem
-        )
-      );
-      
-      // Invalidate caches
-      await queryClient.invalidateQueries({ 
-        queryKey: ['product-bookings', item.productId] 
-      });
-      await queryClient.invalidateQueries({ 
-        queryKey: ['cart-products'] 
-      });
-      return;
+      if (!availability.available) {
+        toast({
+          title: "Недостаточно товара",
+          description: `Доступно только ${availability.maxQuantity} шт. на выбранные даты. Количество установлено на максимум.`,
+          variant: "destructive",
+        });
+        
+        const maxQuantity = Math.max(1, availability.maxQuantity);
+        setCartItems(prevItems => 
+          prevItems.map(cartItem => 
+            cartItem.id === itemId 
+              ? { ...cartItem, quantity: maxQuantity }
+              : cartItem
+          )
+        );
+        
+        await queryClient.invalidateQueries({ queryKey: ['product-bookings', item.productId] });
+        await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
+        return;
+      }
     }
 
     setCartItems(prevItems => 
@@ -229,13 +225,8 @@ export const useCart = () => {
       )
     );
 
-    // Invalidate caches
-    await queryClient.invalidateQueries({ 
-      queryKey: ['product-bookings', item.productId] 
-    });
-    await queryClient.invalidateQueries({ 
-      queryKey: ['cart-products'] 
-    });
+    await queryClient.invalidateQueries({ queryKey: ['product-bookings', item.productId] });
+    await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
 
     toast({
       title: "Количество обновлено",
@@ -247,33 +238,27 @@ export const useCart = () => {
     const productIds = [...new Set(cartItems.map(item => item.productId))];
     
     setCartItems([]);
-    sessionStorage.removeItem('cart');
+    localStorage.removeItem('cart'); // Очищаем из local
     
-    // Invalidate caches for all products that were in the cart
     for (const productId of productIds) {
-      await queryClient.invalidateQueries({ 
-        queryKey: ['product-bookings', productId] 
-      });
+      await queryClient.invalidateQueries({ queryKey: ['product-bookings', productId] });
     }
-    await queryClient.invalidateQueries({ 
-      queryKey: ['cart-products'] 
-    });
+    await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
   }, [cartItems, queryClient]);
 
-  // Update cart dates for all items - prevent duplicate updates
   const updateCartDates = useCallback((startDate: Date, endDate: Date) => {
     if (!startDate || !endDate) {
       return false;
     }
 
-    // Check if any items would actually change
     const wouldChange = cartItems.some(item => 
+      !item.startDate || !item.endDate ||
       item.startDate.getTime() !== startDate.getTime() || 
       item.endDate.getTime() !== endDate.getTime()
     );
 
     if (!wouldChange) {
-      return false; // No need to update if dates haven't changed
+      return false; 
     }
 
     setCartItems(prevItems => 
@@ -294,17 +279,18 @@ export const useCart = () => {
 
   const getCartTotal = useCallback(() => {
     const total = cartItems.reduce((total, item) => {
+      // Если даты сброшены, стоимость товара не учитывается (или равна 0)
+      if (!item.startDate || !item.endDate) return total; 
+      
       const itemTotal = calculateRentalPrice(item.price, item.startDate, item.endDate);
       return total + (itemTotal * item.quantity);
     }, 0);
     
-    // Ensure the final total is properly rounded
     return Math.round(total);
   }, [cartItems]);
 
   const cartCount = useMemo(() => cartItems.reduce((count, item) => count + item.quantity, 0), [cartItems]);
 
-  // Memoize the return value to prevent unnecessary re-renders
   return useMemo(() => ({
     cartItems,
     addToCart,

@@ -1,34 +1,17 @@
-// src/pages/Checkout.tsx
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeftIcon, 
-  CalendarIcon, 
-  ShieldCheckIcon, 
-  TrashIcon,
-  Clock,
   AlertTriangleIcon,
   CheckCircle,
   AlertCircle,
+  Clock,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { formatDateRange } from '@/utils/dateUtils';
 import { useCartContext } from '@/hooks/useCart';
 import { createBooking } from '@/services/bookingService';
 import { toast } from 'sonner';
-import BookingCalendar from '@/components/BookingCalendar';
 import { BookingPeriod } from '@/types/product';
-import { calculateRentalPrice, calculateRentalDetails, formatCurrency } from '@/utils/pricingUtils';
+import { calculateRentalPrice } from '@/utils/pricingUtils';
 import { isPhoneComplete } from '@/utils/phoneMask';
 import CartList from '@/components/checkout/CartList';
 import CartRentalPeriodEditor from '@/components/checkout/CartRentalPeriodEditor';
@@ -57,14 +40,11 @@ const Checkout = () => {
 
   const { 
     cartItems, 
-    removeFromCart, 
     getCartTotal, 
     clearCart,
     updateCartDates 
   } = useCartContext();
   
-  const navigate = useNavigate();
-  const location = useLocation();
   const queryClient = useQueryClient();
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +85,11 @@ const Checkout = () => {
     if (cartItems.length === 0) {
       errors.push('Корзина пуста');
     }
+
+    // 🛑 АРХИТЕКТУРНЫЙ ГЕЙТ: Проверка наличия дат
+    if (cartItems.some(item => !item.startDate || !item.endDate)) {
+      errors.push('Необходимо выбрать даты аренды для товаров в корзине');
+    }
     
     setFormErrors(errors);
     return errors.length === 0;
@@ -112,7 +97,7 @@ const Checkout = () => {
   
   const handleCheckout = async () => {
     if (!validateForm()) {
-      toast.error('Пожалуйста, заполните все поля формы корректно');
+      toast.error('Пожалуйста, исправьте ошибки перед оформлением');
       return;
     }
     
@@ -122,7 +107,6 @@ const Checkout = () => {
     const orderId = crypto.randomUUID(); 
     
     try {
-      // 1. Группируем товары
       const groupedItems = new Map<string, any>();
       cartItems.forEach(item => {
         const key = item.productId;
@@ -135,9 +119,9 @@ const Checkout = () => {
 
       const groupedArray = Array.from(groupedItems.values());
 
-      // 2. Создаем записи в БД
       for (const group of groupedArray) {
-        const rentalPrice = calculateRentalPrice(group.price, group.startDate, group.endDate);
+        // Мы уже прошли validateForm, поэтому уверены в наличии startDate и endDate
+        const rentalPrice = calculateRentalPrice(group.price, group.startDate!, group.endDate!);
         const totalPrice = rentalPrice * group.totalQuantity;
         
         await createBooking({
@@ -146,8 +130,8 @@ const Checkout = () => {
           customerName: formData.name,
           customerEmail: formData.email,
           customerPhone: formData.phone,
-          startDate: group.startDate.toISOString(),
-          endDate: group.endDate.toISOString(),
+          startDate: group.startDate!.toISOString(),
+          endDate: group.endDate!.toISOString(),
           status: 'pending',
           totalPrice: totalPrice,
           quantity: group.totalQuantity,
@@ -164,7 +148,6 @@ const Checkout = () => {
       }
       await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
 
-      // 3. Отправляем заказ в JSON-формате через webhook
       setWebhookStatus({ status: 'sending', message: 'Отправляем заказ в webhook...' });
 
       const orderPayload = {
@@ -173,17 +156,17 @@ const Checkout = () => {
         email: formData.email,
         phone: formData.phone,
         items: groupedArray.map(g => {
-          const rentalPrice = calculateRentalPrice(g.price, g.startDate, g.endDate);
+          const rentalPrice = calculateRentalPrice(g.price, g.startDate!, g.endDate!);
 
           return {
             productId: g.productId,
             title: g.title,
             price: g.price,
             quantity: g.totalQuantity,
-            startDate: g.startDate.toISOString(),
-            endDate: g.endDate.toISOString(),
-            startTime: g.startDate.getHours().toString().padStart(2, '0') + ':00',
-            endTime: g.endDate.getHours().toString().padStart(2, '0') + ':00',
+            startDate: g.startDate!.toISOString(),
+            endDate: g.endDate!.toISOString(),
+            startTime: g.startDate!.getHours().toString().padStart(2, '0') + ':00',
+            endTime: g.endDate!.getHours().toString().padStart(2, '0') + ':00',
             totalPrice: rentalPrice * g.totalQuantity,
           };
         }),
@@ -208,7 +191,6 @@ const Checkout = () => {
         });
       }
       
-      // 4. Завершение
       clearCart();
       setOrderComplete(true);
       toast.success('Заказ оформлен успешно!');
@@ -260,7 +242,7 @@ const Checkout = () => {
           Вернуться к каталогу
         </Link>
       </div>
-      <h1 className="heading-2 mb-8">Корзина</h1>
+      <h1 className="heading-2 mb-8">Оформление заказа</h1>
       
       {formErrors.length > 0 && (
         <Alert variant="destructive" className="mb-6">
@@ -301,7 +283,7 @@ const Checkout = () => {
           )}
         </div>
         <div>
-          <CheckoutForm formData={formData} onInputChange={handleInputChange} />
+          <CheckoutForm formData={formData} onInputChange={handleInputChange} onSubmit={handleCheckout} />
           <div className="mt-6">
             <CheckoutOrderSummary onCheckout={handleCheckout} loading={loading} />
           </div>
