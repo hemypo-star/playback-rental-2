@@ -1,8 +1,6 @@
-
-import { TabsContent } from '@/components/ui/tabs';
 import { BookingPeriod, Product } from '@/types/product';
 import { formatDateRange } from '@/utils/dateUtils';
-import { Clock, CalendarIcon, CheckIcon, XIcon } from 'lucide-react';
+import { CalendarIcon, CheckIcon, XIcon, InfoIcon } from 'lucide-react';
 import RentalFeatures from './RentalFeatures';
 
 interface ProductTabsProps {
@@ -65,98 +63,76 @@ const ProductTabs = ({
     );
   
   return (
-    <TabsContent value="details" className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Компонент RentalFeatures должен адаптироваться под ширину родителя */}
         <RentalFeatures />
         
-        {/* Pricing Section */}
-        <div className="p-6 rounded-xl glass-card">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-primary/10">
-              <Clock className="h-5 w-5 text-primary" />
-            </div>
-            <h3 className="font-medium">Стоимость аренды</h3>
-          </div>
-          <ul className="space-y-2">
-            <li className="flex items-center gap-2">
-              <span className="text-muted-foreground">4 часа:</span>
-              <span className="font-medium">{(product.price * 0.7).toLocaleString()} ₽</span>
-              <span className="text-xs text-green-600">(-30%)</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-muted-foreground">Сутки:</span>
-              <span className="font-medium">{product.price.toLocaleString()} ₽</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-muted-foreground">от 3-ех суток:</span>
-              <span className="font-medium">{(product.price * 0.9).toLocaleString()} ₽/день</span>
-              <span className="text-xs text-green-600">(-10%)</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-muted-foreground">от 5 дней:</span>
-              <span className="font-medium">{(product.price * 0.7).toLocaleString()} ₽/день</span>
-              <span className="text-xs text-green-600">(-30%)</span>
-            </li>
-          </ul>
-        </div>
-        
         {/* Availability Section */}
-        <div className="p-6 rounded-xl glass-card">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-primary/10">
-              <CalendarIcon className="h-5 w-5 text-primary" />
+        <div className="p-8 rounded-2xl border bg-card text-card-foreground shadow-sm flex flex-col h-full">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-primary/10">
+              <CalendarIcon className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="font-medium">Доступность</h3>
+            <h3 className="text-xl font-semibold tracking-tight">Доступность</h3>
           </div>
           
           {product.available ? (
-            <>
+            <div className="flex-1">
               {bookingDates.startDate && bookingDates.endDate ? (
                 hasDateConflict ? (
-                  <div className="text-red-600 font-medium flex items-center gap-2 mb-4">
-                    <XIcon className="h-4 w-4" />
+                  <div className="text-destructive font-medium flex items-center gap-2 mb-6 p-4 bg-destructive/10 rounded-lg">
+                    <XIcon className="h-5 w-5 shrink-0" />
                     <span>Товар недоступен для выбранных дат</span>
                   </div>
                 ) : (
-                  <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
-                    <CheckIcon className="h-4 w-4" />
+                  <div className="text-green-600 dark:text-green-500 font-medium flex items-center gap-2 mb-6 p-4 bg-green-50 dark:bg-green-500/10 rounded-lg">
+                    <CheckIcon className="h-5 w-5 shrink-0" />
                     <span>Доступно для аренды с {formatDateRange(bookingDates.startDate, bookingDates.endDate)}</span>
                   </div>
                 )
               ) : (
-                <div className="text-green-600 font-medium flex items-center gap-2 mb-4">
-                  <CheckIcon className="h-4 w-4" />
+                <div className="text-green-600 dark:text-green-500 font-medium flex items-center gap-2 mb-6 p-4 bg-green-50 dark:bg-green-500/10 rounded-lg">
+                  <CheckIcon className="h-5 w-5 shrink-0" />
                   <span>Доступно для аренды</span>
                 </div>
               )}
               
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground mt-auto border-t pt-4">
                 {relevantBooking && (
                   <div>
-                    <p className="mb-2 font-medium">
+                    <p className="mb-2 font-medium flex items-center gap-2">
+                      <InfoIcon className="h-4 w-4" />
                       {hasDateConflict ? "Конфликтующее бронирование:" : "Ближайшее бронирование:"}
                     </p>
-                    <div className="text-sm bg-secondary p-2 rounded">
-                      {formatDateRange(relevantBooking.startDate, relevantBooking.endDate)}
+                    <div className="text-sm bg-secondary/50 p-3 rounded-md border border-border/50">
+                      <span className="font-medium text-foreground">
+                        {formatDateRange(relevantBooking.startDate, relevantBooking.endDate)}
+                      </span>
                       {hasDateConflict && (
-                        <div className="mt-1 text-red-500">
-                          Эти даты уже забронированы. Пожалуйста, выберите другой период.
+                        <div className="mt-2 text-destructive font-medium">
+                          Эти даты уже забронированы. Пожалуйста, выберите другой период в календаре.
                         </div>
                       )}
                     </div>
                   </div>
                 )}
                 {!relevantBooking && (
-                  <p className="mb-4">Нет предстоящих бронирований.</p>
+                  <p className="flex items-center gap-2">
+                    <InfoIcon className="h-4 w-4" /> 
+                    Нет предстоящих бронирований. Свободно на любые даты!
+                  </p>
                 )}
               </div>
-            </>
+            </div>
           ) : (
-            <div className="text-red-500 font-medium mb-4">Забронирован</div>
+            <div className="text-destructive font-medium mb-4 p-4 bg-destructive/10 rounded-lg text-center">
+              Товар снят с публикации или временно недоступен
+            </div>
           )}
         </div>
       </div>
-    </TabsContent>
+    </div>
   );
 };
 

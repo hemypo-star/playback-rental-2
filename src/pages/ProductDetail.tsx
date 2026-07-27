@@ -5,7 +5,6 @@ import { ArrowLeftIcon, CalendarIcon } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BookingCalendar from '@/components/BookingCalendar';
 import PricingCalculator from '@/components/PricingCalculator';
 import QuantitySelector from '@/components/QuantitySelector';
@@ -147,7 +146,8 @@ const ProductDetail = () => {
   const renderStockStatus = () => {
     if (isLoadingBookings) {
       return (
-        <div className="text-gray-400 font-medium">
+        <div className="text-muted-foreground font-medium flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
           Проверяем наличие...
         </div>
       );
@@ -158,14 +158,14 @@ const ProductDetail = () => {
     
     if (quantityToShow > 0) {
       return (
-        <div className="text-green-600 font-medium">
+        <div className="text-green-600 dark:text-green-500 font-medium bg-green-50 dark:bg-green-500/10 w-fit px-3 py-1 rounded-md">
           {hasBookingDates ? 'Доступно' : 'В наличии'}: {quantityToShow} шт.
           {hasBookingDates && ' на выбранные даты'}
         </div>
       );
     } else {
       return (
-        <div className="text-red-600 font-medium">
+        <div className="text-destructive font-medium bg-destructive/10 w-fit px-3 py-1 rounded-md">
           {hasBookingDates ? 'Забронировано на выбранные даты' : 'Нет в наличии'}
         </div>
       );
@@ -206,12 +206,12 @@ const ProductDetail = () => {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           <ProductImage imageUrl={product.imageUrl} title={product.title} />
 
           <div className="space-y-6">
             <div className="space-y-4">
-              <h1 className="text-3xl font-bold">{product.title}</h1>
+              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">{product.title}</h1>
               <div className="flex items-center gap-4">
                 <div className="text-2xl font-bold">{product.price.toLocaleString()} ₽/сутки</div>
               </div>
@@ -221,7 +221,7 @@ const ProductDetail = () => {
               
               {/* Display full description */}
               {product.description && (
-                <div className="prose prose-sm max-w-none">
+                <div className="prose prose-sm max-w-none pt-2">
                   <p className="text-muted-foreground leading-relaxed">
                     {product.description}
                   </p>
@@ -232,7 +232,7 @@ const ProductDetail = () => {
             <Separator />
 
             <div className="space-y-6">
-              <h3 className="text-lg font-medium">Заказать оборудование</h3>
+              <h3 className="text-xl font-semibold">Заказать оборудование</h3>
               
               <BookingCalendar 
                 onBookingChange={handleBookingChange} 
@@ -245,7 +245,7 @@ const ProductDetail = () => {
 
               {/* Quantity Selector - only show if dates are selected and quantity > 1 available */}
               {bookingDates.startDate && bookingDates.endDate && availableQuantity > 1 && (
-                <div className="space-y-2">
+                <div className="space-y-3 bg-secondary/30 p-4 rounded-xl border border-border/50">
                   <label className="text-sm font-medium">Количество:</label>
                   <QuantitySelector
                     quantity={selectedQuantity}
@@ -267,23 +267,23 @@ const ProductDetail = () => {
               <Button 
                 ref={addToCartButtonRef}
                 size="lg" 
-                className={`w-full ${hasDateConflict ? 'bg-[#ea384c] hover:bg-[#ea384c]/90' : ''}`}
+                className={`w-full text-base h-12 ${hasDateConflict ? 'bg-destructive hover:bg-destructive/90' : ''}`}
                 disabled={!product.available || !bookingDates.startDate || !bookingDates.endDate || addingToCart || hasDateConflict}
                 onClick={handleAddToCart}
               >
                 {addingToCart ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2"></div>
                     В процессе...
                   </>
                 ) : hasDateConflict ? (
                   <>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <CalendarIcon className="mr-2 h-5 w-5" />
                     Количество недоступно
                   </>
                 ) : (
                   <>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <CalendarIcon className="mr-2 h-5 w-5" />
                     {bookingDates.startDate && bookingDates.endDate ? 
                       `Добавить в корзину${selectedQuantity > 1 ? ` (${selectedQuantity} шт.)` : ''}` : 
                       'Выберите даты'
@@ -295,19 +295,15 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        <div className="mt-16">
-          <Tabs defaultValue="details">
-            <TabsList className="mb-8 overflow-x-auto flex w-full justify-start pb-1">
-              <TabsTrigger value="details">Подробности</TabsTrigger>
-            </TabsList>
-            
-            <ProductTabs 
-              product={product}
-              bookings={bookings || []}
-              onBookingChange={handleBookingChange}
-              bookingDates={bookingDates}
-            />
-          </Tabs>
+        {/* Секция "Подробности" без использования избыточных табов */}
+        <div className="mt-16 pt-12 border-t">
+          <h2 className="text-3xl font-bold tracking-tight mb-8">Подробности</h2>
+          <ProductTabs 
+            product={product}
+            bookings={bookings || []}
+            onBookingChange={handleBookingChange}
+            bookingDates={bookingDates}
+          />
         </div>
       </div>
     </div>

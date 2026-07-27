@@ -13,7 +13,6 @@ interface CheckoutOrderSummaryProps {
 const CheckoutOrderSummary = ({ onCheckout, loading }: CheckoutOrderSummaryProps) => {
   const { cartItems, getCartTotal } = useCartContext();
   
-  // Проверяем, есть ли товары без выбранных дат
   const hasMissingDates = cartItems.some(item => !item.startDate || !item.endDate);
 
   return (
@@ -30,23 +29,21 @@ const CheckoutOrderSummary = ({ onCheckout, loading }: CheckoutOrderSummaryProps
         ) : (
           <>
             {cartItems.map((item) => {
-              // Теперь мы уверены, что даты существуют благодаря тернарному оператору выше
-              // Но для TypeScript добавляем fallback на случай непредвиденных состояний
               if (!item.startDate || !item.endDate) return null;
 
               const hours = Math.ceil((item.endDate.getTime() - item.startDate.getTime()) / (1000 * 60 * 60));
               const pricingDetails = calculateRentalDetails(item.price, hours);
+              const rowTotal = pricingDetails.total * item.quantity;
 
               return (
                 <div key={item.id} className="space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{item.title}</span>
-                    <span>{formatCurrency(pricingDetails.total)}</span>
+                    <span>{formatCurrency(rowTotal)}</span>
                   </div>
-                  {pricingDetails.dayDiscount > 0 && (
-                    <div className="flex justify-between text-xs text-green-600">
-                      <span>Скидка:</span>
-                      <span>-{pricingDetails.dayDiscount}%</span>
+                  {item.quantity > 1 && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {item.quantity} шт. × {formatCurrency(pricingDetails.total)}
                     </div>
                   )}
                 </div>

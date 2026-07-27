@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { differenceInHours } from 'date-fns';
 import { calculateRentalDetails } from '@/utils/pricingUtils';
@@ -22,38 +21,25 @@ export const PricingCalculator: React.FC<PricingCalculatorProps> = ({
   const [pricing, setPricing] = useState<{
     hours: number;
     days: number;
-    subtotal: number;
-    discount: number;
     total: number;
-    hourlyRate: number;
-    dayDiscount: number; 
   }>({
     hours: 0,
     days: 0,
-    subtotal: 0,
-    discount: 0,
     total: 0,
-    hourlyRate: 0,
-    dayDiscount: 0,
   });
 
   useEffect(() => {
     if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
       const hours = differenceInHours(endDate, startDate);
-      if (hours <= 0) return; // Avoid negative or zero hours
+      if (hours <= 0) return;
       
-      const days = Math.ceil(hours / 24);
-      
-      const { total, subtotal, discount, hourlyRate, dayDiscount } = calculateRentalDetails(basePrice, hours);
+      const days = Math.ceil(hours / 24) || 1;
+      const { total } = calculateRentalDetails(basePrice, hours);
       
       setPricing({
         hours,
         days,
-        subtotal,
-        discount,
         total,
-        hourlyRate,
-        dayDiscount,
       });
     }
   }, [startDate, endDate, basePrice]);
@@ -61,6 +47,13 @@ export const PricingCalculator: React.FC<PricingCalculatorProps> = ({
   if (!startDate || !endDate) {
     return null;
   }
+
+  // Склонение дней
+  const getDaysLabel = (days: number) => {
+    if (days % 10 === 1 && days % 100 !== 11) return 'день';
+    if ([2, 3, 4].includes(days % 10) && ![12, 13, 14].includes(days % 100)) return 'дня';
+    return 'дней';
+  };
 
   return (
     <AnimatedTransition show={true} type="slide-up">
@@ -77,33 +70,14 @@ export const PricingCalculator: React.FC<PricingCalculatorProps> = ({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Период аренды:</span>
               <span>
-                {pricing.hours} ч. ({pricing.days} {pricing.days === 1 ? 'день' : 'дней'})
+                {pricing.hours} ч. ({pricing.days} {getDaysLabel(pricing.days)})
               </span>
             </div>
-            
-            {pricing.dayDiscount > 0 && (
-              <div className="flex justify-between text-green-600 dark:text-green-400">
-                <span>Скидка за объем:</span>
-                <span>-{pricing.dayDiscount}%</span>
-              </div>
-            )}
           </div>
           
           <Separator />
           
           <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Подытог:</span>
-              <span>{pricing.subtotal.toLocaleString()} ₽</span>
-            </div>
-            
-            {pricing.discount > 0 && (
-              <div className="flex justify-between text-green-600 dark:text-green-400">
-                <span>Скидка:</span>
-                <span>-{pricing.discount.toLocaleString()} ₽</span>
-              </div>
-            )}
-            
             <div className="flex justify-between font-medium text-lg pt-2">
               <span>Итого:</span>
               <span>{pricing.total.toLocaleString()} ₽</span>

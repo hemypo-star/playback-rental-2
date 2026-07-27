@@ -12,7 +12,6 @@ import QuantitySelector from "@/components/QuantitySelector";
 const CartList = () => {
   const { cartItems, removeFromCart, updateItemQuantity } = useCartContext();
 
-  // Get bookings for all products in cart to calculate available quantities with real-time updates
   const cartProductIds = [...new Set(cartItems.map(item => item.productId))];
   
   const { data: productData = {} } = useQuery({
@@ -34,8 +33,8 @@ const CartList = () => {
       }, {} as Record<string, any>);
     },
     enabled: cartProductIds.length > 0,
-    staleTime: 30 * 1000, // 30 seconds for real-time updates
-    refetchInterval: 60 * 1000 // Refetch every minute
+    staleTime: 30 * 1000, 
+    refetchInterval: 60 * 1000 
   });
 
   if (cartItems.length === 0) {
@@ -70,26 +69,22 @@ const CartList = () => {
       <CardContent>
         <div className="space-y-6">
           {cartItems.map((item) => {
-            // Безопасная проверка наличия дат
             const hasDates = Boolean(item.startDate && item.endDate);
             
-            // Расчет часов только если даты существуют
             const hours = hasDates 
               ? Math.ceil((item.endDate!.getTime() - item.startDate!.getTime()) / (1000 * 60 * 60)) 
               : 0;
             
-            // Расчет стоимости (если дат нет, возвращаем нулевые значения)
             const pricingDetails = hasDates 
               ? calculateRentalDetails(item.price, hours) 
-              : { total: 0, subtotal: 0, discount: 0, dayDiscount: 0 };
+              : { total: 0 };
               
             const itemTotal = pricingDetails.total * item.quantity;
 
-            // Расчет доступного количества
             const productInfo = productData[item.productId];
             const availableQuantity = (productInfo && hasDates) ? 
               getAvailableQuantity(productInfo.product, productInfo.bookings, item.startDate!, item.endDate!) : 
-              item.quantity; // Fallback, если данные не загружены или даты сброшены
+              item.quantity; 
 
             return (
               <div key={item.id} className="flex gap-4">
@@ -99,7 +94,6 @@ const CartList = () => {
                 <div className="flex-1">
                   <h3 className="font-medium mb-1">{item.title}</h3>
                   
-                  {/* Безопасный рендер дат с визуальным предупреждением */}
                   <p className={`text-sm mb-2 flex items-center ${hasDates ? 'text-muted-foreground' : 'text-destructive font-medium'}`}>
                     {hasDates ? (
                       <>
@@ -114,18 +108,12 @@ const CartList = () => {
                     )}
                   </p>
                   
-                  {pricingDetails.dayDiscount > 0 && (
-                    <p className="text-xs text-green-600 mb-1">Скидка: {pricingDetails.dayDiscount}%</p>
-                  )}
-                  
-                  {/* Availability warning if quantity exceeds available */}
                   {(hasDates && item.quantity > availableQuantity) && (
                     <p className="text-xs text-red-600 mb-1">
                       ⚠️ Доступно только {availableQuantity} шт. на выбранные даты
                     </p>
                   )}
                   
-                  {/* Quantity Selector */}
                   <div className="mb-3">
                     <QuantitySelector
                       quantity={item.quantity}
@@ -138,14 +126,7 @@ const CartList = () => {
                   <div className="flex justify-between items-center">
                     <div>
                       {hasDates ? (
-                        pricingDetails.discount > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm line-through text-muted-foreground">{formatCurrency(pricingDetails.subtotal * item.quantity)}</p>
-                            <p className="font-medium">{formatCurrency(itemTotal)}</p>
-                          </div>
-                        ) : (
-                          <p className="font-medium">{formatCurrency(itemTotal)}</p>
-                        )
+                        <p className="font-medium">{formatCurrency(itemTotal)}</p>
                       ) : (
                         <p className="font-medium text-muted-foreground">0 ₽</p>
                       )}
