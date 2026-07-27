@@ -193,3 +193,19 @@ export const getBusinessHoursOptions = (
   
   return options;
 };
+
+/**
+ * Формирует строгую ISO-строку с учетом часового пояса пункта проката (UTC+7).
+ * Гарантирует, что выбранные в календаре 15:00 останутся 15:00 по местному времени проката,
+ * независимо от того, в каком часовом поясе находится браузер клиента.
+ */
+export const formatToShopTimezone = (date: Date): string => {
+  const yyyy = date.getFullYear();
+  const MM = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  
+  // Жестко фиксируем смещение региона (UTC+7)
+  return `${yyyy}-${MM}-${dd}T${hh}:${mm}:00+07:00`;
+};
