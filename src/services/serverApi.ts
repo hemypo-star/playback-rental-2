@@ -1,35 +1,33 @@
-
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-interface ContactNotificationData {
-  name: string;
-  email: string;
-  phone?: string;
-  subject?: string;
-  message: string;
-}
-
-interface CheckoutNotificationData {
+interface OrderWebhookData {
+  orderId: string;
   name: string;
   email: string;
   phone: string;
   items: Array<{
+    productId?: string;
     title: string;
     price: number;
+    quantity: number;
     startDate: string;
     endDate: string;
     startTime: string;
     endTime: string;
+    totalPrice?: number;
   }>;
   totalAmount: number;
+  currency?: string;
 }
 
-interface NotificationResponse {
+interface OrderWebhookResponse {
   success: boolean;
   message: string;
-  details?: any[];
-  attemptedChats?: number;
-  successfulChats?: number;
+  orderId?: string;
+  webhookStatus?: number;
+  webhookResponse?: unknown;
+  error?: string;
+  details?: unknown;
 }
 
 interface BackupResponse {
@@ -39,14 +37,12 @@ interface BackupResponse {
   error?: string;
 }
 
-// Generic API call helper with HTTP configuration
-const apiCall = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
+const apiCall = async <T = any>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const url = `${API_BASE_URL}${endpoint}`;
-  
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       ...options.headers,
     },
     mode: 'cors',
@@ -57,12 +53,12 @@ const apiCall = async (endpoint: string, options: RequestInit = {}): Promise<any
   try {
     console.log(`Making HTTP API call to: ${url}`);
     const response = await fetch(url, defaultOptions);
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.error || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData?.error || errorData?.message || `HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error(`API call failed to ${url}:`, error);
@@ -70,18 +66,10 @@ const apiCall = async (endpoint: string, options: RequestInit = {}): Promise<any
   }
 };
 
-// Telegram notification services
-export const sendContactNotification = async (data: ContactNotificationData): Promise<NotificationResponse> => {
-  console.log('Sending contact notification to server API...');
-  return apiCall('/notifications/contact', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-};
+export const sendOrderWebhook = async (data: OrderWebhookData): Promise<OrderWebhookResponse> => {
+  console.log('Sending order JSON to webhook through server API...');
 
-export const sendCheckoutNotification = async (data: CheckoutNotificationData): Promise<NotificationResponse> => {
-  console.log('Sending checkout notification to server API...');
-  return apiCall('/notifications/checkout', {
+  return apiCall<OrderWebhookResponse>('/notifications/checkout', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -90,6 +78,7 @@ export const sendCheckoutNotification = async (data: CheckoutNotificationData): 
 // Storage management services
 export const ensureStorageBucket = async (bucketName: string): Promise<{ success: boolean; message: string }> => {
   console.log(`Ensuring storage bucket ${bucketName} exists...`);
+
   return apiCall('/storage/ensure-bucket', {
     method: 'POST',
     body: JSON.stringify({ bucketName }),
@@ -97,9 +86,9 @@ export const ensureStorageBucket = async (bucketName: string): Promise<{ success
 };
 
 // Backup services
-export const createBackup = async (type: 'database' | 'storage' | 'full'): Promise<void> => {
+export const createBackup = async (type: 'database' | 'storage' | 'full'): Promise<BackupResponse | void> => {
   console.log(`Creating ${type} backup...`);
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}/backup/create`, {
       method: 'POST',
@@ -114,9 +103,9 @@ export const createBackup = async (type: 'database' | 'storage' | 'full'): Promi
       throw new Error(errorData?.error || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    // Get filename from Content-Disposition header
     const contentDisposition = response.headers.get('Content-Disposition');
     let filename = `backup-${Date.now()}`;
+
     if (contentDisposition) {
       const matches = contentDisposition.match(/filename="(.+)"/);
       if (matches) {
@@ -124,7 +113,6 @@ export const createBackup = async (type: 'database' | 'storage' | 'full'): Promi
       }
     }
 
-    // Get the blob and create download
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -142,10 +130,35 @@ export const createBackup = async (type: 'database' | 'storage' | 'full'): Promi
   }
 };
 
-// Failed notifications retry
-export const retryFailedNotifications = async (): Promise<{ success: boolean; processed: number }> => {
-  console.log('Retrying failed notifications...');
-  return apiCall('/notifications/retry-failed', {
+export const sendOrderWebhookDirect = async (orderData: any) => {
+  const webhookUrl = import.meta.env.VITE_ORDER_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    throw new Error('VITE_ORDER_WEBHOOK_URL is not configured');
+  }
+
+  const payload = {
+    event: 'order.created',
+    source: 'playback-rental',
+    createdAt: new Date().toISOString(),
+    ...orderData,
+  };
+
+  const response = await fetch(webhookUrl, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
   });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Webhook failed: HTTP ${response.status} ${errorText}`);
+  }
+
+  return {
+    success: true,
+  };
 };

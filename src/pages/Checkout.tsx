@@ -36,7 +36,7 @@ import CheckoutForm from '@/components/checkout/CheckoutForm';
 import CheckoutOrderSummary from '@/components/checkout/CheckoutOrderSummary';
 import CheckoutSuccess from '@/components/checkout/CheckoutSuccess';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { sendCheckoutNotification } from '@/services/telegramService';
+import { sendOrderWebhookDirect } from '@/services/serverApi';
 import { useQueryClient } from '@tanstack/react-query';
 
 const Checkout = () => {
@@ -49,7 +49,7 @@ const Checkout = () => {
   });
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [selectedBookingTime, setSelectedBookingTime] = useState<BookingPeriod | null>(null);
-  const [notificationStatus, setNotificationStatus] = useState<{
+  const [webhookStatus, setWebhookStatus] = useState<{
     status: 'idle' | 'sending' | 'partial' | 'success' | 'failed';
     message?: string;
     details?: string;
@@ -117,7 +117,7 @@ const Checkout = () => {
     }
     
     setLoading(true);
-    setNotificationStatus({ status: 'sending', message: 'Обрабатываем заказ...' });
+    setWebhookStatus({ status: 'sending', message: 'Обрабатываем заказ...' });
     
     const orderId = crypto.randomUUID(); 
     
@@ -164,34 +164,48 @@ const Checkout = () => {
       }
       await queryClient.invalidateQueries({ queryKey: ['cart-products'] });
 
-      // 3. Отправляем уведомление через наш сервис (бэкенд Node.js)
-      setNotificationStatus({ status: 'sending', message: 'Отправляем уведомление...' });
+      // 3. Отправляем заказ в JSON-формате через webhook
+      setWebhookStatus({ status: 'sending', message: 'Отправляем заказ в webhook...' });
 
-      try {
-        const response = await sendCheckoutNotification({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          items: groupedArray.map(g => ({
+      const orderPayload = {
+        orderId,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        items: groupedArray.map(g => {
+          const rentalPrice = calculateRentalPrice(g.price, g.startDate, g.endDate);
+
+          return {
+            productId: g.productId,
             title: g.title,
             price: g.price,
             quantity: g.totalQuantity,
             startDate: g.startDate.toISOString(),
             endDate: g.endDate.toISOString(),
             startTime: g.startDate.getHours().toString().padStart(2, '0') + ':00',
-            endTime: g.endDate.getHours().toString().padStart(2, '0') + ':00'
-          })),
-          totalAmount: getCartTotal()
-        });
+            endTime: g.endDate.getHours().toString().padStart(2, '0') + ':00',
+            totalPrice: rentalPrice * g.totalQuantity,
+          };
+        }),
+        totalAmount: getCartTotal(),
+        currency: 'RUB',
+      };
+
+      try {
+        const response = await sendOrderWebhookDirect(orderPayload);
 
         if (response && response.success) {
-          setNotificationStatus({ status: 'success', message: 'Заказ оформлен!' });
+          setWebhookStatus({ status: 'success', message: 'Заказ отправлен в webhook!' });
         } else {
-          setNotificationStatus({ status: 'partial', message: 'Заказ оформлен, но возникла ошибка с Telegram' });
+          setWebhookStatus({ status: 'partial', message: 'Заказ сохранён, но webhook вернул ошибку' });
         }
-      } catch (telegramError) {
-        console.error('Telegram notification failed:', telegramError);
-        setNotificationStatus({ status: 'failed', message: 'Ошибка уведомления' });
+      } catch (webhookError) {
+        console.error('Order webhook failed:', webhookError);
+        setWebhookStatus({
+          status: 'partial',
+          message: 'Заказ сохранён, но не отправлен в webhook',
+          details: webhookError instanceof Error ? webhookError.message : 'Неизвестная ошибка webhook',
+        });
       }
       
       // 4. Завершение
@@ -201,7 +215,7 @@ const Checkout = () => {
 
     } catch (error) {
       console.error('Checkout error:', error);
-      setNotificationStatus({ 
+      setWebhookStatus({ 
         status: 'failed', 
         message: 'Ошибка при оформлении заказа',
         details: error instanceof Error ? error.message : 'Неизвестная ошибка'
@@ -210,13 +224,13 @@ const Checkout = () => {
     } finally {
       setLoading(false);
       setTimeout(() => {
-        setNotificationStatus({ status: 'idle' });
+        setWebhookStatus({ status: 'idle' });
       }, 5000);
     }
   };
 
   const getStatusIcon = () => {
-    switch (notificationStatus.status) {
+    switch (webhookStatus.status) {
       case 'sending': return <Clock className="h-4 w-4 animate-spin" />;
       case 'success': return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'partial': return <AlertCircle className="h-4 w-4 text-yellow-600" />;
@@ -226,7 +240,7 @@ const Checkout = () => {
   };
 
   const getStatusVariant = () => {
-    switch (notificationStatus.status) {
+    switch (webhookStatus.status) {
       case 'success': return 'default';
       case 'partial': return 'default';
       case 'failed': return 'destructive';
@@ -262,13 +276,13 @@ const Checkout = () => {
         </Alert>
       )}
 
-      {notificationStatus.status !== 'idle' && (
+      {webhookStatus.status !== 'idle' && (
         <Alert variant={getStatusVariant()} className="mb-6">
           {getStatusIcon()}
           <AlertDescription>
-            <div className="font-medium">{notificationStatus.message}</div>
-            {notificationStatus.details && (
-              <div className="text-sm mt-1 opacity-90">{notificationStatus.details}</div>
+            <div className="font-medium">{webhookStatus.message}</div>
+            {webhookStatus.details && (
+              <div className="text-sm mt-1 opacity-90">{webhookStatus.details}</div>
             )}
           </AlertDescription>
         </Alert>
