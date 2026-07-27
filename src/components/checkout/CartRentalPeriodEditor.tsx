@@ -61,7 +61,7 @@ const CartRentalPeriodEditor = ({
           <Alert variant="destructive" className="mb-4 bg-destructive/10">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Даты аренды были сброшены. Пожалуйста, выберите новый период.
+              Даты аренды устарели, пожалуйста, выберите новый период
             </AlertDescription>
           </Alert>
         )}
