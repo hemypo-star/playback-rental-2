@@ -64,6 +64,14 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
   
   const handleDateHover = (date: Date | null) => setHoverDate(date);
 
+  // Сбрасывает выбранный диапазон дат и время (кнопка "Сбросить" в календаре)
+  const resetSelection = () => {
+    setSelection({ from: null, to: null });
+    setHoverDate(null);
+    setStartTime("10");
+    setEndTime("10");
+  };
+
   const getDayClasses = (date: Date, currentMonth: number): {
     base: string;
     disabled: string | false;
@@ -176,5 +184,6 @@ export function useDateRangeCalendar(initialStartDate?: Date, initialEndDate?: D
     setStartTime,
     setEndTime,
     getFormattedDateRange,
+    resetSelection,
   };
 }

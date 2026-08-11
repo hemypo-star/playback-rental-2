@@ -19,6 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ScrollToTopLink } from '@/components/ui/navigation-menu';
 import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityUtils';
 import { isValidBookingDate } from '@/utils/dateUtils';
+import { useBookingDates } from '@/contexts/BookingDatesContext';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,21 +27,24 @@ const ProductDetail = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const addToCartButtonRef = useRef<HTMLButtonElement>(null);
-  
-  const locationState = location.state as { 
-    startDate?: Date; 
-    endDate?: Date; 
+  const { startDate: globalStartDate, endDate: globalEndDate, setBookingDates: setGlobalBookingDates } = useBookingDates();
+
+  const locationState = location.state as {
+    startDate?: Date;
+    endDate?: Date;
     bookingDates?: { startDate?: Date; endDate?: Date }
   } | null;
-  
+
+  // Falls back to the site-wide selected dates so this page stays consistent
+  // with the search bar / catalog when opened without a location state (e.g. direct link)
   const [bookingDates, setBookingDates] = useState<{
     startDate?: Date;
     endDate?: Date;
   }>({
-    startDate: locationState?.bookingDates?.startDate || locationState?.startDate,
-    endDate: locationState?.bookingDates?.endDate || locationState?.endDate
+    startDate: locationState?.bookingDates?.startDate || locationState?.startDate || globalStartDate,
+    endDate: locationState?.bookingDates?.endDate || locationState?.endDate || globalEndDate
   });
-  
+
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const { addToCart } = useCartContext();
@@ -72,6 +76,9 @@ const ProductDetail = () => {
       startDate: start,
       endDate: end
     });
+    // Propagate to the site-wide selected dates so the search bar, catalog
+    // and cart all reflect the date picked here too
+    setGlobalBookingDates(start, end);
     // Reset quantity when dates change
     setSelectedQuantity(1);
   };

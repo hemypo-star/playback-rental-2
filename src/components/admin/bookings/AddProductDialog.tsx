@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { getAvailableProductsForBooking, addBookingItem } from '@/services/bookingItemService';
+import { calculateRentalPrice } from '@/utils/pricingUtils';
 import { GroupedBooking } from './types';
 import QuantitySelector from '@/components/QuantitySelector';
 import { ProductCombobox } from './ProductCombobox';
@@ -39,7 +40,9 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
   });
 
   const selectedProduct = availableProducts?.find(p => p.id === selectedProductId);
-  const totalPrice = selectedProduct ? selectedProduct.price * quantity : 0;
+  const totalPrice = selectedProduct
+    ? calculateRentalPrice(selectedProduct.price, groupedBooking.startDate, groupedBooking.endDate) * quantity
+    : 0;
   const maxQuantity = selectedProduct?.quantity || 1;
 
   // Reset form when dialog closes

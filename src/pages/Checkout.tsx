@@ -21,6 +21,7 @@ import CheckoutSuccess from '@/components/checkout/CheckoutSuccess';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { sendOrderWebhookDirect } from '@/services/serverApi';
 import { useQueryClient } from '@tanstack/react-query';
+import { useBookingDates } from '@/contexts/BookingDatesContext';
 
 const Checkout = () => {
   const [loading, setLoading] = useState(false);
@@ -38,15 +39,16 @@ const Checkout = () => {
     details?: string;
   }>({ status: 'idle' });
 
-  const { 
-    cartItems, 
-    getCartTotal, 
+  const {
+    cartItems,
+    getCartTotal,
     clearCart,
-    updateCartDates 
+    updateCartDates
   } = useCartContext();
-  
+  const { setBookingDates: setGlobalBookingDates } = useBookingDates();
+
   const queryClient = useQueryClient();
-  
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -56,6 +58,9 @@ const Checkout = () => {
     setSelectedBookingTime(booking);
     if (booking && booking.startDate && booking.endDate) {
       updateCartDates(booking.startDate, booking.endDate);
+      // Keep the site-wide selected dates in sync too, so the search bar
+      // and catalog reflect the period chosen here in the cart
+      setGlobalBookingDates(booking.startDate, booking.endDate);
     }
   };
 

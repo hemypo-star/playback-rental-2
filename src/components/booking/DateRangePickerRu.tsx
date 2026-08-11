@@ -54,11 +54,17 @@ const DateRangePickerRu = ({
     buildDaysGrid,
     setStartTime,
     setEndTime,
-    getFormattedDateRange
+    getFormattedDateRange,
+    resetSelection
   } = useDateRangeCalendar(initialStartDate, initialEndDate);
-  
+
   const daysOfWeek = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"].map(d => d.toUpperCase());
-  
+
+  const handleReset = () => {
+    resetSelection();
+    onChange({ start: null, end: null });
+  };
+
   const handleConfirmTime = () => {
     if (!selection.from) return;
     const dateRange = getFormattedDateRange();
@@ -111,7 +117,12 @@ const DateRangePickerRu = ({
           </div>}
       </div>
 
-      <div className="flex justify-center mt-6">
+      <div className="flex justify-center items-center gap-3 mt-6">
+        {selection.from && (
+          <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground hover:text-foreground">
+            Сбросить даты
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={handleConfirmTime} className="text-[#ea384c] border-[#ea384c] hover:bg-[#ea384c] hover:text-white w-full max-w-xs py-[20px]">
           Подтвердить время
         </Button>

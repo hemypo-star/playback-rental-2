@@ -6,6 +6,7 @@ import { getAvailableQuantity, isQuantityAvailable } from '@/utils/availabilityU
 import { getProductById } from '@/services/apiService';
 import { getProductBookings } from '@/services/bookingService';
 import { useQueryClient } from '@tanstack/react-query';
+import { useBookingDates } from '@/contexts/BookingDatesContext';
 import React, { createContext, useContext } from 'react';
 
 export interface CartItem {
@@ -24,35 +25,19 @@ export const useCart = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { startDate: globalStartDate, endDate: globalEndDate } = useBookingDates();
 
-  // Гибридная загрузка: корзина из local, даты из session
+  // Загружаем товары из localStorage. Даты не читаем здесь напрямую -
+  // они синхронизируются отдельным эффектом ниже с активной сессией.
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
-    const sessionDatesStr = sessionStorage.getItem('booking-dates');
-    
-    let activeStart: Date | undefined;
-    let activeEnd: Date | undefined;
-
-    // Пытаемся получить даты из текущей сессии
-    if (sessionDatesStr) {
-      try {
-        const parsedDates = JSON.parse(sessionDatesStr);
-        if (parsedDates.startDate) activeStart = new Date(parsedDates.startDate);
-        if (parsedDates.endDate) activeEnd = new Date(parsedDates.endDate);
-      } catch (e) {
-        console.error('Failed to parse session dates:', e);
-      }
-    }
-
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart);
         const hydratedCart = parsedCart.map((item: any) => ({
           ...item,
-          // Строго синхронизируем даты товаров с активной сессией. 
-          // Если сессия пуста (новая вкладка), даты обнулятся, но товары останутся.
-          startDate: activeStart,
-          endDate: activeEnd
+          startDate: undefined,
+          endDate: undefined
         }));
         setCartItems(hydratedCart);
       } catch (error) {
@@ -61,6 +46,25 @@ export const useCart = () => {
       }
     }
   }, []);
+
+  // Строго синхронизируем даты товаров в корзине с глобально выбранными датами,
+  // где бы они ни менялись на сайте (поиск, страница товара, редактор в корзине).
+  // Если сессия пуста (новая вкладка), даты обнулятся, но товары останутся.
+  useEffect(() => {
+    setCartItems(prevItems => {
+      if (prevItems.length === 0) return prevItems;
+      const alreadyInSync = prevItems.every(item =>
+        item.startDate?.getTime() === globalStartDate?.getTime() &&
+        item.endDate?.getTime() === globalEndDate?.getTime()
+      );
+      if (alreadyInSync) return prevItems;
+      return prevItems.map(item => ({
+        ...item,
+        startDate: globalStartDate,
+        endDate: globalEndDate
+      }));
+    });
+  }, [globalStartDate, globalEndDate]);
 
   // Сохраняем товары обратно в localStorage для долговечности
   useEffect(() => {

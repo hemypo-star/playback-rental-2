@@ -11,6 +11,7 @@ import { AddProductDialog } from './AddProductDialog';
 import { InlineQuantityEditor } from './InlineQuantityEditor';
 import { updateBookingDates, deleteBooking } from '@/services/bookingService'; // Добавили deleteBooking
 import { formatDateRange } from '@/utils/dateUtils';
+import { calculateRentalPrice } from '@/utils/pricingUtils';
 import { useToast } from '@/hooks/use-toast';
 
 interface BookingDetailsTableProps {
@@ -221,8 +222,8 @@ export const BookingDetailsTable = ({
                 {item.product?.price ? `${item.product.price.toLocaleString()} ₽` : '—'}
               </TableCell>
               <TableCell className="font-medium">
-                {item.product?.price && item.quantity ? 
-                  `${(item.product.price * item.quantity).toLocaleString()} ₽` : '—'}
+                {item.product?.price && item.quantity ?
+                  `${(calculateRentalPrice(item.product.price, groupedBooking.startDate, groupedBooking.endDate) * item.quantity).toLocaleString()} ₽` : '—'}
               </TableCell>
               <TableCell>
                 <Button

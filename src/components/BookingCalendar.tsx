@@ -78,6 +78,24 @@ const BookingCalendar = ({
         createdAt: new Date()
       });
       setIsOpen(false);
+    } else {
+      // Reset button in the calendar was pressed
+      setStartDate(undefined);
+      setEndDate(undefined);
+      onBookingChange({
+        id: '',
+        productId: '',
+        startDate: new Date(0),
+        endDate: new Date(0),
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        status: 'pending',
+        totalPrice: 0,
+        quantity: 1,
+        createdAt: new Date()
+      });
+      setIsOpen(false);
     }
   }, [onBookingChange]);
 

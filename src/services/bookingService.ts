@@ -4,6 +4,7 @@ import { supabaseServiceClient } from './supabaseClient';
 import { getProducts } from './productService';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDateRu, isDateRangeAvailable } from '@/utils/dateUtils';
+import { calculateRentalPrice } from '@/utils/pricingUtils';
 
 export const getBookings = async (): Promise<BookingPeriod[]> => {
   try {
@@ -240,44 +241,71 @@ export const getAvailableProducts = async (startDate: Date, endDate: Date) => {
 };
 
 export const updateBookingDates = async (
-  bookingId: string, 
-  startDate: string, 
+  bookingId: string,
+  startDate: string,
   endDate: string,
   orderId?: string
 ) => {
   try {
     console.log('Запуск updateBookingDates. Параметры:', { bookingId, orderId, startDate, endDate });
-    
-    let query = supabase
-      .from('bookings')
-      .update({ 
-        start_date: startDate,
-        end_date: endDate
-      });
-      
+
     // Регулярное выражение для проверки, является ли строка настоящим UUID
-    const isValidUUID = (id: string) => 
+    const isValidUUID = (id: string) =>
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    // Находим все строки бронирования, которые нужно обновить (весь заказ или одну позицию)
+    let selectQuery = supabase.from('bookings').select('id, quantity, product_id');
 
     // Если orderId существует И является настоящим UUID (не начинается с "auto_...")
     if (orderId && isValidUUID(orderId)) {
       console.log('Обновляем все товары в заказе по order_id:', orderId);
-      query = query.eq('order_id', orderId);
+      selectQuery = selectQuery.eq('order_id', orderId);
     } else {
       // Иначе это "фейковый" order_id от старого бронирования, поэтому обновляем только по ID самого бронирования
       console.log('Обновляем один товар по id:', bookingId);
-      query = query.eq('id', bookingId);
+      selectQuery = selectQuery.eq('id', bookingId);
     }
-    
-    // .select() возвращает обновленные строки
-    const { data, error } = await query.select();
-    
-    if (error) {
-      console.error('Ошибка Supabase при обновлении дат:', error);
-      throw error;
+
+    const { data: rows, error: fetchError } = await selectQuery;
+    if (fetchError) {
+      console.error('Ошибка при получении бронирований для пересчета суммы:', fetchError);
+      throw fetchError;
     }
-    
-    console.log('Даты успешно обновлены в БД. Результат:', data);
+    if (!rows || rows.length === 0) {
+      throw new Error('Бронирование не найдено');
+    }
+
+    // Пересчитываем сумму каждой позиции по новым датам, используя актуальные цены товаров.
+    // Раньше даты обновлялись без пересчета total_price, из-за чего сумма заказа "зависала".
+    const products = await getProducts();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const updates = rows.map(row => {
+      const product = products.find(p => p.id === row.product_id);
+      const unitPrice = product?.price || 0;
+      const newTotalPrice = calculateRentalPrice(unitPrice, start, end) * (row.quantity || 1);
+
+      return supabase
+        .from('bookings')
+        .update({
+          start_date: startDate,
+          end_date: endDate,
+          total_price: newTotalPrice
+        })
+        .eq('id', row.id)
+        .select();
+    });
+
+    const results = await Promise.all(updates);
+    const failed = results.find(r => r.error);
+    if (failed?.error) {
+      console.error('Ошибка Supabase при обновлении дат:', failed.error);
+      throw failed.error;
+    }
+
+    const data = results.flatMap(r => r.data || []);
+    console.log('Даты и суммы успешно обновлены в БД. Результат:', data);
     return data;
   } catch (error) {
     console.error('Критическая ошибка в updateBookingDates:', error);

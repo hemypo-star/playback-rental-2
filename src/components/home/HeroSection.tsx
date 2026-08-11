@@ -35,6 +35,9 @@ export const HeroSection = () => {
   const handleDateRangeChange = (range: { start: Date | null; end: Date | null }) => {
     if (range.start && range.end) {
       setBookingDates(range.start, range.end);
+    } else {
+      // Reset button in the calendar was pressed
+      setBookingDates(undefined, undefined);
     }
   };
   const handleSearchClick = () => {

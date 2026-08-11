@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { BookingPeriod } from '@/types/product';
+import { calculateRentalPrice } from '@/utils/pricingUtils';
 
 export interface AddBookingItemRequest {
   bookingId: string;
@@ -60,7 +61,11 @@ export const addBookingItem = async (request: AddBookingItemRequest): Promise<vo
       end_date: originalBooking.end_date,
       status: originalBooking.status,
       quantity: request.quantity,
-      total_price: request.price * request.quantity,
+      total_price: calculateRentalPrice(
+        request.price,
+        new Date(originalBooking.start_date),
+        new Date(originalBooking.end_date)
+      ) * request.quantity,
       notes: originalBooking.notes,
       
       // Используем существующий или только что созданный order_id
@@ -104,9 +109,14 @@ export const updateBookingItemQuantity = async (request: UpdateBookingItemReques
     if (fetchError) throw fetchError;
     if (!bookingItem) throw new Error('Booking item not found');
     
-    // Calculate new total price
+    // Calculate new total price using the booking's own rental period,
+    // not just a flat unitPrice x quantity (that ignored the day count)
     const unitPrice = bookingItem.products.price;
-    const newTotalPrice = unitPrice * request.newQuantity;
+    const newTotalPrice = calculateRentalPrice(
+      unitPrice,
+      new Date(bookingItem.start_date),
+      new Date(bookingItem.end_date)
+    ) * request.newQuantity;
     
     // Update the booking
     const { error: updateError } = await supabase

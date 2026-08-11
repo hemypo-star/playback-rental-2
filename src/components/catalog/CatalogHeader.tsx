@@ -35,6 +35,10 @@ const CatalogHeader = ({ onSearch, onBookingChange, bookingDates, searchValue }:
       // Update both local and global state
       onBookingChange(range.start, range.end);
       setBookingDates(range.start, range.end);
+    } else {
+      // Reset button in the calendar was pressed
+      onBookingChange(undefined, undefined);
+      setBookingDates(undefined, undefined);
     }
   };
   
