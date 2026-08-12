@@ -54,6 +54,19 @@ export const Orders: CollectionConfig = {
       name: 'notes',
       type: 'textarea',
     },
+    {
+      // Shows this order's line items inline on its edit page — the
+      // "grouped order" view the old app needed a bespoke
+      // GroupedBookingRow/BookingDetailsTable component tree for. Editing
+      // an item's dates/quantity here goes through the same beforeValidate
+      // hook as the API (price recalculation, availability check), so the
+      // admin UI can't drift from what the storefront enforces.
+      name: 'items',
+      type: 'join',
+      collection: 'orderItems',
+      on: 'order',
+      defaultColumns: ['product', 'listingType', 'quantity', 'startDate', 'endDate', 'lineTotal'],
+    },
     // Outbound sync bookkeeping (Phase 1, task 7): set once this order has
     // been pushed to МойСклад as a corresponding customerorder document,
     // via the /submit endpoint below.

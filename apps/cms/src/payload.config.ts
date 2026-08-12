@@ -21,6 +21,15 @@ const dirname = path.dirname(filename)
 export default buildConfig({
   admin: {
     user: Users.slug,
+    components: {
+      afterNavLinks: ['/src/components/admin/CalendarNavLink#CalendarNavLink'],
+      views: {
+        calendar: {
+          Component: '/src/components/admin/CalendarView#CalendarView',
+          path: '/calendar',
+        },
+      },
+    },
   },
   collections: [Users, Media, Categories, Products, Orders, OrderItems, Promotions],
   globals: [SiteSettings],
