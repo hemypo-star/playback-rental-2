@@ -1,0 +1,291 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro'
+import { getAdminToken } from '../../../lib/admin/session'
+import { cmsFetch } from '../../../lib/admin/api'
+import { mediaUrl } from '../../../lib/payload'
+import type { Product } from '@playback-rental/shared-types'
+
+const user = Astro.locals.adminUser!
+const token = getAdminToken(Astro.cookies)!
+
+const id = Number(Astro.params.id)
+if (!Number.isFinite(id)) return Astro.redirect('/admin/stock')
+const product = await cmsFetch<Product>(`/products/${id}?depth=1`, token)
+if (!product) return Astro.redirect('/admin/stock')
+
+const categoryName = typeof product.category === 'object' ? product.category.name : '—'
+const images = (product.images ?? []).filter((img): img is Exclude<typeof img, number> => typeof img === 'object')
+---
+
+<AdminLayout title={product.title} subtitle={categoryName} activeTab="stock" user={user}>
+  <a href="/admin/stock" class="text-[12.5px] font-semibold text-subtle hover:text-foreground">← Весь склад</a>
+
+  <p id="page-error" class="hidden rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]"></p>
+
+  <div class="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
+    <div class="flex flex-col gap-3.5">
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Синхронизировано из МойСклад — только чтение</div>
+        <div class="mt-2 text-[13.5px] text-subtle">{product.description || 'Без описания'}</div>
+
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Цена, ₽</label>
+        <input
+          id="f-price"
+          type="number"
+          min="0"
+          value={product.price}
+          class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        />
+
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Остаток</label>
+        <input
+          id="f-quantity"
+          type="number"
+          min="0"
+          value={product.quantity}
+          class="mt-1.5 h-11 w-40 rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        />
+
+        <label class="mt-4 flex items-center gap-2 text-[13px]">
+          <input id="f-available" type="checkbox" checked={product.available} class="h-4 w-4" />
+          Доступен для аренды/продажи
+        </label>
+
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Подзаголовок (не синхронизируется)</label>
+        <input
+          id="f-subtitle"
+          type="text"
+          value={product.subtitle ?? ''}
+          placeholder="Например: Полный кадр · 4K 120p"
+          class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        />
+
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Бейдж на карточке (не синхронизируется)</label>
+        <input
+          id="f-tag"
+          type="text"
+          value={product.tag ?? ''}
+          placeholder={categoryName}
+          class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        />
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Изображения</div>
+        <div id="images-list" class="mt-3 flex flex-wrap gap-3">
+          {
+            images.map((img, i) => (
+              <div class="relative w-24 rounded-xl border border-border p-1.5" data-image-item data-media-id={img.id}>
+                <img src={mediaUrl(img)} class="aspect-square w-full rounded-lg object-cover" />
+                <div class="mt-1 flex items-center justify-between">
+                  <button type="button" data-move="-1" disabled={i === 0} class="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">
+                    ←
+                  </button>
+                  <button type="button" data-remove-image class="text-[11px] text-accent hover:text-[#B03017]">
+                    ✕
+                  </button>
+                  <button type="button" data-move="1" disabled={i === images.length - 1} class="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">
+                    →
+                  </button>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+        <input id="f-add-image" type="file" accept="image/*" class="mt-3 text-[13px]" />
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <label class="flex items-center gap-2 text-[13px]">
+          <input id="f-isKit" type="checkbox" checked={Boolean(product.isKit)} class="h-4 w-4" />
+          Это набор (Наборы на витрине)
+        </label>
+
+        <div id="kit-fields" class:list={['mt-4', { hidden: !product.isKit }]}>
+          <label class="block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">
+            Цена по отдельности (для зачёркнутой цены), ₽
+          </label>
+          <input
+            id="f-oldPrice"
+            type="number"
+            min="0"
+            value={product.oldPrice ?? ''}
+            class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+          />
+
+          <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Что в комплекте</label>
+          <div id="kit-items-list" class="mt-1.5 flex flex-col gap-2">
+            {
+              (product.kitItems ?? []).map((item) => (
+                <div class="flex gap-2" data-kit-item>
+                  <input
+                    type="text"
+                    value={item.label}
+                    class="h-10 flex-1 rounded-xl border border-input bg-muted-well px-3 text-[13.5px] outline-none focus:border-foreground focus:bg-white"
+                  />
+                  <button type="button" data-remove-kit-item class="w-9 shrink-0 rounded-xl bg-muted text-[13px] text-subtle hover:text-accent">
+                    ✕
+                  </button>
+                </div>
+              ))
+            }
+          </div>
+          <button id="add-kit-item" type="button" class="mt-2 text-[12.5px] font-semibold text-subtle hover:text-foreground">
+            + добавить позицию
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3.5">
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <button id="save-btn" type="button" data-product-id={product.id} class="btn-primary w-full justify-center">
+          Сохранить
+        </button>
+        <a href={`/product/${product.id}`} target="_blank" class="mt-3 block text-center text-[12px] text-subtle hover:text-accent">
+          Открыть на сайте →
+        </a>
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">МойСклад</div>
+        <div class="mt-2 flex flex-col gap-1 text-[12.5px] text-subtle">
+          <span>Тип: {product.listingType === 'rental' ? 'Аренда' : 'Продажа'}</span>
+          <span>ID: {product.moySkladId}</span>
+          {product.lastSyncedAt ? <span>Синхронизирован: {new Date(product.lastSyncedAt).toLocaleString('ru-RU')}</span> : null}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { uploadMedia } from '../../../scripts/admin-media-upload'
+
+    const errorEl = document.getElementById('page-error')!
+    function showError(msg: string) {
+      errorEl.textContent = msg
+      errorEl.classList.remove('hidden')
+    }
+
+    const saveBtn = document.getElementById('save-btn') as HTMLButtonElement
+    const productId = saveBtn.dataset.productId
+    const imagesList = document.getElementById('images-list')!
+    const kitItemsList = document.getElementById('kit-items-list')!
+
+    function currentImageIds(): number[] {
+      return Array.from(imagesList.querySelectorAll<HTMLElement>('[data-image-item]')).map((el) => Number(el.dataset.mediaId))
+    }
+
+    function wireImageButtons(item: HTMLElement) {
+      item.querySelector('[data-remove-image]')?.addEventListener('click', () => item.remove())
+      item.querySelectorAll<HTMLButtonElement>('[data-move]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const dir = Number(btn.dataset.move)
+          const sibling = dir < 0 ? item.previousElementSibling : item.nextElementSibling
+          if (!sibling) return
+          if (dir < 0) imagesList.insertBefore(item, sibling)
+          else imagesList.insertBefore(sibling, item)
+        })
+      })
+    }
+    imagesList.querySelectorAll<HTMLElement>('[data-image-item]').forEach(wireImageButtons)
+
+    document.getElementById('f-add-image')?.addEventListener('change', async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      try {
+        const media = await uploadMedia(file)
+        // Built with createElement/textContent, not innerHTML string
+        // interpolation — media.url is server-controlled (Payload's own
+        // upload response), not raw user text, so this wasn't reachable as
+        // a real injection today, but a template string here is a latent
+        // trap for whoever adds the next field.
+        const item = document.createElement('div')
+        item.className = 'relative w-24 rounded-xl border border-border p-1.5'
+        item.dataset.imageItem = ''
+        item.dataset.mediaId = String(media.id)
+        const img = document.createElement('img')
+        img.src = media.url
+        img.className = 'aspect-square w-full rounded-lg object-cover'
+        const controls = document.createElement('div')
+        controls.className = 'mt-1 flex items-center justify-between'
+        controls.innerHTML = `
+          <button type="button" data-move="-1" class="text-[11px] text-subtle hover:text-foreground">←</button>
+          <button type="button" data-remove-image class="text-[11px] text-accent hover:text-[#B03017]">✕</button>
+          <button type="button" data-move="1" class="text-[11px] text-subtle hover:text-foreground">→</button>`
+        item.append(img, controls)
+        imagesList.appendChild(item)
+        wireImageButtons(item)
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Не удалось загрузить файл')
+      }
+    })
+
+    function addKitItemRow(value = '') {
+      // .value assignment, not innerHTML interpolation — a DOM property
+      // assignment can't break out into markup no matter what value
+      // contains, unlike the string-escaping approach this replaced (which
+      // only escaped `"` and would have let `<`/`>` through unescaped).
+      const row = document.createElement('div')
+      row.className = 'flex gap-2'
+      row.dataset.kitItem = ''
+      const input = document.createElement('input')
+      input.type = 'text'
+      input.value = value
+      input.className = 'h-10 flex-1 rounded-xl border border-input bg-muted-well px-3 text-[13.5px] outline-none focus:border-foreground focus:bg-white'
+      const removeBtn = document.createElement('button')
+      removeBtn.type = 'button'
+      removeBtn.dataset.removeKitItem = ''
+      removeBtn.className = 'w-9 shrink-0 rounded-xl bg-muted text-[13px] text-subtle hover:text-accent'
+      removeBtn.textContent = '✕'
+      removeBtn.addEventListener('click', () => row.remove())
+      row.append(input, removeBtn)
+      kitItemsList.appendChild(row)
+    }
+    kitItemsList.querySelectorAll<HTMLElement>('[data-kit-item]').forEach((row) => {
+      row.querySelector('[data-remove-kit-item]')?.addEventListener('click', () => row.remove())
+    })
+    document.getElementById('add-kit-item')?.addEventListener('click', () => addKitItemRow())
+
+    const isKitCheckbox = document.getElementById('f-isKit') as HTMLInputElement
+    const kitFields = document.getElementById('kit-fields')!
+    isKitCheckbox.addEventListener('change', () => {
+      kitFields.classList.toggle('hidden', !isKitCheckbox.checked)
+    })
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.classList.add('hidden')
+      const isKit = isKitCheckbox.checked
+      const kitItems = Array.from(kitItemsList.querySelectorAll<HTMLInputElement>('[data-kit-item] input'))
+        .map((input) => input.value.trim())
+        .filter(Boolean)
+        .map((label) => ({ label }))
+
+      const data: Record<string, unknown> = {
+        price: Number((document.getElementById('f-price') as HTMLInputElement).value) || 0,
+        quantity: Number((document.getElementById('f-quantity') as HTMLInputElement).value) || 0,
+        available: (document.getElementById('f-available') as HTMLInputElement).checked,
+        subtitle: (document.getElementById('f-subtitle') as HTMLInputElement).value,
+        tag: (document.getElementById('f-tag') as HTMLInputElement).value,
+        images: currentImageIds(),
+        isKit,
+      }
+      if (isKit) {
+        data.oldPrice = Number((document.getElementById('f-oldPrice') as HTMLInputElement).value) || null
+        data.kitItems = kitItems
+      }
+
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        showError(body?.errors?.[0]?.message || 'Не удалось сохранить')
+        return
+      }
+      window.location.href = '/admin/stock'
+    })
+  </script>
+</AdminLayout>

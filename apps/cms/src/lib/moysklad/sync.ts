@@ -1,4 +1,4 @@
-import type { Payload } from 'payload'
+import type { Payload, RequiredDataFromCollectionSlug } from 'payload'
 import { msGet, msGetBinary, msPaginate } from './client'
 import {
   fetchAllFolders,
@@ -9,8 +9,44 @@ import {
 } from './folders'
 import { slugify } from './slugify'
 
-function extractIdFromHref(href: string): string {
-  return href.split('?')[0].split('/').filter(Boolean).pop() as string
+// Shapes for the МойСклад JSON API 1.2 entities this module actually reads
+// fields from — not full API coverage, just what's used here.
+interface MsHrefRef {
+  meta?: { href?: string }
+}
+
+export interface MsImage {
+  meta?: { href?: string }
+  filename?: string
+}
+
+// /entity/product and /entity/service rows have the same fields this module
+// cares about (name, price, folder, image/stock via the separate stock
+// report) — one shape covers both Товар and Услуга here.
+interface MsListing {
+  id: string
+  name: string
+  description?: string
+  code?: string
+  externalCode?: string
+  productFolder?: MsHrefRef
+  salePrices?: { value?: number }[]
+}
+
+// A row from /report/stock/all.
+interface MsStockRow {
+  meta?: { href?: string }
+  stock: number
+  image?: MsImage
+}
+
+// Was cast `as string` — a malformed/empty href made .pop() return
+// undefined, which the cast doesn't actually convert, just lies to the
+// compiler about. Downstream that put the literal value `undefined` in as
+// a Map key instead of failing loudly, so a bad row degraded to "silently
+// unfindable later" rather than a visible error.
+function extractIdFromHref(href: string): string | null {
+  return href.split('?')[0].split('/').filter(Boolean).pop() ?? null
 }
 
 // МойСклад webhook hrefs look like .../entity/product/{id} or
@@ -41,8 +77,8 @@ export interface SyncOptions {
 }
 
 export interface SyncResult {
-  categories: { created: number; updated: number }
-  products: { created: number; updated: number; skipped: number; total: number; unmatchedInventory: string[] }
+  categories: { created: number; updated: number; failed: string[] }
+  products: { created: number; updated: number; total: number; unmatchedInventory: string[]; failed: string[] }
 }
 
 async function upsertCategory(payload: Payload, folder: MsFolder): Promise<{ id: number; created: boolean }> {
@@ -93,6 +129,7 @@ export async function syncCategories(
   idMap: Map<string, { payloadId: number; listingType: ListingType }>
   created: number
   updated: number
+  failed: string[]
 }> {
   const rentalFolderIds = resolveRentalFolderIds(allFolders)
   const saleFolderIds = resolveSaleFolderIds(allFolders)
@@ -100,6 +137,7 @@ export async function syncCategories(
   const idMap = new Map<string, { payloadId: number; listingType: ListingType }>()
   let created = 0
   let updated = 0
+  const failed: string[] = []
 
   for (const folder of allFolders) {
     const listingType: ListingType | null = rentalFolderIds.has(folder.id)
@@ -109,18 +147,27 @@ export async function syncCategories(
         : null
     if (!listingType) continue
 
-    const result = await upsertCategory(payload, folder)
-    idMap.set(folder.id, { payloadId: result.id, listingType })
-    if (result.created) created++
-    else updated++
+    // One bad folder (a transient DB error, a slug collision retry that
+    // still fails) must not abort every folder after it — a partial run
+    // that skips one category is recoverable next sync; a run that silently
+    // stops halfway through the folder list is not.
+    try {
+      const result = await upsertCategory(payload, folder)
+      idMap.set(folder.id, { payloadId: result.id, listingType })
+      if (result.created) created++
+      else updated++
+    } catch (err) {
+      payload.logger.error({ err, folderId: folder.id, folderName: folder.name }, 'МойСклад sync: failed to upsert category, skipping')
+      failed.push(folder.name)
+    }
   }
 
-  return { idMap, created, updated }
+  return { idMap, created, updated, failed }
 }
 
 async function uploadImageOnce(
   payload: Payload,
-  image: { meta?: { href?: string }; filename?: string } | undefined,
+  image: MsImage | undefined,
   name: string,
 ): Promise<number | undefined> {
   const href = image?.meta?.href
@@ -146,7 +193,7 @@ async function uploadImageOnce(
   return doc.id as number
 }
 
-async function upsertProduct(payload: Payload, moySkladId: string, data: Record<string, unknown>) {
+async function upsertProduct(payload: Payload, moySkladId: string, data: RequiredDataFromCollectionSlug<'products'>) {
   const existingDoc = await payload.find({
     collection: 'products',
     where: { moySkladId: { equals: moySkladId } },
@@ -184,8 +231,8 @@ export async function syncProducts(
   // Accounting-tree products, indexed by lowercased name — the correlation
   // key for rental services — and their stock/image via /report/stock/all,
   // indexed by product id.
-  const accountingProductsByName = new Map<string, any>()
-  for await (const page of msPaginate<any>('/entity/product')) {
+  const accountingProductsByName = new Map<string, MsListing>()
+  for await (const page of msPaginate<MsListing>('/entity/product')) {
     for (const p of page) {
       const folderId = p.productFolder?.meta?.href ? extractIdFromHref(p.productFolder.meta.href) : null
       if (folderId && accountingFolderIds.has(folderId)) {
@@ -194,21 +241,22 @@ export async function syncProducts(
     }
   }
 
-  const stockById = new Map<string, { stock: number; image?: any }>()
-  for await (const page of msPaginate<any>('/report/stock/all')) {
+  const stockById = new Map<string, { stock: number; image?: MsImage }>()
+  for await (const page of msPaginate<MsStockRow>('/report/stock/all')) {
     for (const row of page) {
-      stockById.set(extractIdFromHref(row.meta.href), { stock: row.stock, image: row.image })
+      const id = row?.meta?.href ? extractIdFromHref(row.meta.href) : null
+      if (id) stockById.set(id, { stock: row.stock, image: row.image })
     }
   }
 
   let created = 0
   let updated = 0
-  let skipped = 0
   let processed = 0
   const unmatchedInventory: string[] = []
+  const failed: string[] = []
 
   // --- Rental listings (services) ---
-  outerServices: for await (const page of msPaginate<any>('/entity/service')) {
+  outerServices: for await (const page of msPaginate<MsListing>('/entity/service')) {
     for (const s of page) {
       const folderId = s.productFolder?.meta?.href ? extractIdFromHref(s.productFolder.meta.href) : null
       const categoryEntry = folderId ? categoryIdMap.get(folderId) : undefined
@@ -217,37 +265,46 @@ export async function syncProducts(
       }
       if (opts.limit && processed >= opts.limit) break outerServices
 
-      const inventoryProduct = accountingProductsByName.get(stripRentalPrefix(s.name).toLowerCase())
-      const stock = inventoryProduct ? stockById.get(inventoryProduct.id) : undefined
-      if (!inventoryProduct) unmatchedInventory.push(s.name)
+      // One bad listing (a malformed stock row, a transient DB error on
+      // upsert) must not abort the rest of the run — everything before it
+      // is already committed, and everything after it is otherwise lost
+      // silently until the next full run.
+      try {
+        const inventoryProduct = accountingProductsByName.get(stripRentalPrefix(s.name).toLowerCase())
+        const stock = inventoryProduct ? stockById.get(inventoryProduct.id) : undefined
+        if (!inventoryProduct) unmatchedInventory.push(s.name)
 
-      const priceKopecks = s.salePrices?.[0]?.value ?? 0
-      const imageSource = stock?.image
-      const mediaId = await uploadImageOnce(payload, imageSource, s.name)
+        const priceKopecks = s.salePrices?.[0]?.value ?? 0
+        const imageSource = stock?.image
+        const mediaId = await uploadImageOnce(payload, imageSource, s.name)
 
-      const data: Record<string, unknown> = {
-        title: s.name,
-        listingType: 'rental',
-        description: s.description || '',
-        price: Math.round(priceKopecks) / 100,
-        category: categoryEntry.payloadId,
-        quantity: stock?.stock ?? 0,
-        moySkladId: s.id,
-        moySkladCode: s.code || s.externalCode || '',
-        moySkladInventoryProductId: inventoryProduct?.id || null,
-        lastSyncedAt: new Date().toISOString(),
+        const data: RequiredDataFromCollectionSlug<'products'> = {
+          title: s.name,
+          listingType: 'rental',
+          description: s.description || '',
+          price: Math.round(priceKopecks) / 100,
+          category: categoryEntry.payloadId,
+          quantity: stock?.stock ?? 0,
+          moySkladId: s.id,
+          moySkladCode: s.code || s.externalCode || '',
+          moySkladInventoryProductId: inventoryProduct?.id || null,
+          lastSyncedAt: new Date().toISOString(),
+        }
+        if (mediaId) data.images = [mediaId]
+
+        const result = await upsertProduct(payload, s.id, data)
+        if (result === 'created') created++
+        else updated++
+      } catch (err) {
+        payload.logger.error({ err, moySkladId: s.id, name: s.name }, 'МойСклад sync: failed to upsert rental listing, skipping')
+        failed.push(s.name)
       }
-      if (mediaId) data.images = [mediaId]
-
-      const result = await upsertProduct(payload, s.id, data)
-      if (result === 'created') created++
-      else updated++
       processed++
     }
   }
 
   // --- Sale listings (products) ---
-  outerProducts: for await (const page of msPaginate<any>('/entity/product')) {
+  outerProducts: for await (const page of msPaginate<MsListing>('/entity/product')) {
     for (const p of page) {
       const folderId = p.productFolder?.meta?.href ? extractIdFromHref(p.productFolder.meta.href) : null
       const categoryEntry = folderId ? categoryIdMap.get(folderId) : undefined
@@ -256,31 +313,36 @@ export async function syncProducts(
       }
       if (opts.limit && processed >= opts.limit) break outerProducts
 
-      const stock = stockById.get(p.id)
-      const priceKopecks = p.salePrices?.[0]?.value ?? 0
-      const mediaId = await uploadImageOnce(payload, stock?.image, p.name)
+      try {
+        const stock = stockById.get(p.id)
+        const priceKopecks = p.salePrices?.[0]?.value ?? 0
+        const mediaId = await uploadImageOnce(payload, stock?.image, p.name)
 
-      const data: Record<string, unknown> = {
-        title: p.name,
-        listingType: 'sale',
-        description: p.description || '',
-        price: Math.round(priceKopecks) / 100,
-        category: categoryEntry.payloadId,
-        quantity: stock?.stock ?? 0,
-        moySkladId: p.id,
-        moySkladCode: p.code || p.externalCode || '',
-        lastSyncedAt: new Date().toISOString(),
+        const data: RequiredDataFromCollectionSlug<'products'> = {
+          title: p.name,
+          listingType: 'sale',
+          description: p.description || '',
+          price: Math.round(priceKopecks) / 100,
+          category: categoryEntry.payloadId,
+          quantity: stock?.stock ?? 0,
+          moySkladId: p.id,
+          moySkladCode: p.code || p.externalCode || '',
+          lastSyncedAt: new Date().toISOString(),
+        }
+        if (mediaId) data.images = [mediaId]
+
+        const result = await upsertProduct(payload, p.id, data)
+        if (result === 'created') created++
+        else updated++
+      } catch (err) {
+        payload.logger.error({ err, moySkladId: p.id, name: p.name }, 'МойСклад sync: failed to upsert sale listing, skipping')
+        failed.push(p.name)
       }
-      if (mediaId) data.images = [mediaId]
-
-      const result = await upsertProduct(payload, p.id, data)
-      if (result === 'created') created++
-      else updated++
       processed++
     }
   }
 
-  return { created, updated, skipped, total: processed, unmatchedInventory }
+  return { created, updated, total: processed, unmatchedInventory, failed }
 }
 
 export async function syncAll(payload: Payload, opts: SyncOptions = {}): Promise<SyncResult> {
@@ -288,16 +350,17 @@ export async function syncAll(payload: Payload, opts: SyncOptions = {}): Promise
   const categories = await syncCategories(payload, allFolders)
   const products = await syncProducts(payload, categories.idMap, allFolders, opts)
   return {
-    categories: { created: categories.created, updated: categories.updated },
+    categories: { created: categories.created, updated: categories.updated, failed: categories.failed },
     products,
   }
 }
 
-async function buildStockLookup(): Promise<Map<string, { stock: number; image?: any }>> {
-  const stockById = new Map<string, { stock: number; image?: any }>()
-  for await (const page of msPaginate<any>('/report/stock/all')) {
+async function buildStockLookup(): Promise<Map<string, { stock: number; image?: MsImage }>> {
+  const stockById = new Map<string, { stock: number; image?: MsImage }>()
+  for await (const page of msPaginate<MsStockRow>('/report/stock/all')) {
     for (const row of page) {
-      stockById.set(extractIdFromHref(row.meta.href), { stock: row.stock, image: row.image })
+      const id = row?.meta?.href ? extractIdFromHref(row.meta.href) : null
+      if (id) stockById.set(id, { stock: row.stock, image: row.image })
     }
   }
   return stockById
@@ -341,7 +404,7 @@ export async function syncSingleEntity(
   }
 
   if (entityType === 'service') {
-    const s = await msGet<any>(`/entity/service/${entityId}`)
+    const s = await msGet<MsListing>(`/entity/service/${entityId}`)
     const folderId = s.productFolder?.meta?.href ? extractIdFromHref(s.productFolder.meta.href) : null
     if (!folderId || !rentalFolderIds.has(folderId)) {
       return { synced: false, reason: 'Service is outside the rental folder scope' }
@@ -351,8 +414,8 @@ export async function syncSingleEntity(
       allFolders.find((f) => f.id === folderId)!,
     )
 
-    const accountingProductsByName = new Map<string, any>()
-    for await (const page of msPaginate<any>('/entity/product')) {
+    const accountingProductsByName = new Map<string, MsListing>()
+    for await (const page of msPaginate<MsListing>('/entity/product')) {
       for (const p of page) {
         const pFolderId = p.productFolder?.meta?.href ? extractIdFromHref(p.productFolder.meta.href) : null
         if (pFolderId && accountingFolderIds.has(pFolderId)) {
@@ -367,7 +430,7 @@ export async function syncSingleEntity(
     const priceKopecks = s.salePrices?.[0]?.value ?? 0
     const mediaId = await uploadImageOnce(payload, stock?.image, s.name)
 
-    const data: Record<string, unknown> = {
+    const data: RequiredDataFromCollectionSlug<'products'> = {
       title: s.name,
       listingType: 'rental',
       description: s.description || '',
@@ -385,7 +448,7 @@ export async function syncSingleEntity(
   }
 
   if (entityType === 'product') {
-    const p = await msGet<any>(`/entity/product/${entityId}`)
+    const p = await msGet<MsListing>(`/entity/product/${entityId}`)
     const folderId = p.productFolder?.meta?.href ? extractIdFromHref(p.productFolder.meta.href) : null
 
     if (folderId && saleFolderIds.has(folderId)) {
@@ -398,7 +461,7 @@ export async function syncSingleEntity(
       const priceKopecks = p.salePrices?.[0]?.value ?? 0
       const mediaId = await uploadImageOnce(payload, stock?.image, p.name)
 
-      const data: Record<string, unknown> = {
+      const data: RequiredDataFromCollectionSlug<'products'> = {
         title: p.name,
         listingType: 'sale',
         description: p.description || '',
@@ -420,9 +483,9 @@ export async function syncSingleEntity(
       // resync it, so a stock/photo change here propagates to the listing
       // that's actually shown on the storefront.
       const matchName = `аренда ${p.name.trim()}`.toLowerCase()
-      let matchedService: any = null
-      for await (const page of msPaginate<any>('/entity/service')) {
-        matchedService = page.find((s: any) => s.name.trim().toLowerCase() === matchName)
+      let matchedService: MsListing | null = null
+      for await (const page of msPaginate<MsListing>('/entity/service')) {
+        matchedService = page.find((s) => s.name.trim().toLowerCase() === matchName) ?? null
         if (matchedService) break
       }
       if (!matchedService) {

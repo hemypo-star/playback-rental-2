@@ -2,6 +2,12 @@ import type { CollectionConfig } from 'payload'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
+  access: {
+    read: () => true,
+    create: ({ req }) => Boolean(req.user),
+    update: ({ req }) => Boolean(req.user),
+    delete: ({ req }) => Boolean(req.user),
+  },
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'moySkladFolderId', 'order'],
@@ -24,6 +30,15 @@ export const Categories: CollectionConfig = {
     {
       name: 'description',
       type: 'textarea',
+    },
+    {
+      // Short badge on the homepage category tile (e.g. "35мм", "SONY") —
+      // admin-editable, not derived from МойСклад.
+      name: 'tag',
+      type: 'text',
+      admin: {
+        description: 'Short badge shown on the homepage category tile (e.g. "35мм", "SONY"). Not synced.',
+      },
     },
     {
       name: 'image',

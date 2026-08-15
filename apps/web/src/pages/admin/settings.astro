@@ -1,0 +1,262 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import { getAdminToken } from '../../lib/admin/session'
+import { cmsFetch } from '../../lib/admin/api'
+import { mediaUrl } from '../../lib/payload'
+import type { SiteSettings } from '@playback-rental/shared-types'
+
+const user = Astro.locals.adminUser!
+const token = getAdminToken(Astro.cookies)!
+
+const settings = (await cmsFetch<SiteSettings>('/globals/site-settings?depth=1', token)) ?? ({} as SiteSettings)
+const steps = settings.howItWorksSteps ?? []
+---
+
+<AdminLayout title="Настройки сайта" subtitle="Весь некаталожный текст и картинки сайта" activeTab="settings" user={user}>
+  <p id="page-error" class="hidden rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]"></p>
+  <p id="page-success" class="hidden rounded-2xl bg-[#E4F6E9] px-4 py-3 text-[13px] text-[#0B6B32]">Сохранено.</p>
+
+  <div class="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
+    <div class="flex flex-col gap-3.5">
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Главная — герой</div>
+
+        <div class="mt-3 flex gap-4">
+          <div>
+            <div class="text-[11px] text-subtle">Десктоп</div>
+            <img
+              id="hero-desktop-preview"
+              src={mediaUrl(settings.heroBannerImage) ?? ''}
+              class:list={['mt-1 h-24 w-20 rounded-xl object-cover bg-muted', { hidden: !settings.heroBannerImage }]}
+            />
+            <input id="f-hero-desktop" type="file" accept="image/*" class="mt-1.5 block text-[12px]" />
+            <input type="hidden" id="f-hero-desktop-id" value={typeof settings.heroBannerImage === 'object' ? settings.heroBannerImage?.id : (settings.heroBannerImage ?? '')} />
+          </div>
+          <div>
+            <div class="text-[11px] text-subtle">Мобильный</div>
+            <img
+              id="hero-mobile-preview"
+              src={mediaUrl(settings.heroBannerImageMobile) ?? ''}
+              class:list={['mt-1 h-24 w-20 rounded-xl object-cover bg-muted', { hidden: !settings.heroBannerImageMobile }]}
+            />
+            <input id="f-hero-mobile" type="file" accept="image/*" class="mt-1.5 block text-[12px]" />
+            <input type="hidden" id="f-hero-mobile-id" value={typeof settings.heroBannerImageMobile === 'object' ? settings.heroBannerImageMobile?.id : (settings.heroBannerImageMobile ?? '')} />
+          </div>
+        </div>
+
+        {
+          [
+            ['heroKicker', 'Кикер', settings.heroKicker],
+            ['heroCity', 'Город', settings.heroCity],
+            ['heroHeadline', 'Заголовок', settings.heroHeadline],
+          ].map(([id, label, value]) => (
+            <div>
+              <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">{label}</label>
+              <input
+                id={`f-${id}`}
+                type="text"
+                value={(value as string) ?? ''}
+                class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+              />
+            </div>
+          ))
+        }
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Подзаголовок</label>
+        <textarea
+          id="f-heroSubtext"
+          rows="2"
+          class="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        >
+{settings.heroSubtext ?? ''}</textarea
+        >
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Главная — факты</div>
+        <div class="mt-3 grid grid-cols-2 gap-3.5">
+          <div>
+            <label class="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Залог — значение</label>
+            <input id="f-depositLabel" type="text" value={settings.depositLabel ?? ''} class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white" />
+          </div>
+          <div>
+            <label class="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Залог — подпись</label>
+            <input id="f-depositCaption" type="text" value={settings.depositCaption ?? ''} class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white" />
+          </div>
+          <div>
+            <label class="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Выдача — значение</label>
+            <input id="f-pickupTimeLabel" type="text" value={settings.pickupTimeLabel ?? ''} class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white" />
+          </div>
+          <div>
+            <label class="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Выдача — подпись</label>
+            <input id="f-pickupTimeCaption" type="text" value={settings.pickupTimeCaption ?? ''} class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white" />
+          </div>
+        </div>
+
+        <div class="mt-4 text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Шаги «Как это работает»</div>
+        <div id="steps-list" class="mt-1.5 flex flex-col gap-2.5">
+          {
+            steps.map((s) => (
+              <div class="flex gap-2 rounded-xl bg-muted p-2.5" data-step-row>
+                <div class="flex-1">
+                  <input type="text" data-field="title" value={s.title} placeholder="Заголовок шага" class="h-9 w-full rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground" />
+                  <input type="text" data-field="text" value={s.text} placeholder="Текст шага" class="mt-1.5 h-9 w-full rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground" />
+                </div>
+                <button type="button" data-remove-step class="w-8 shrink-0 self-start rounded-lg bg-white text-[13px] text-subtle hover:text-accent">✕</button>
+              </div>
+            ))
+          }
+        </div>
+        <button id="add-step" type="button" class="mt-2 text-[12.5px] font-semibold text-subtle hover:text-foreground">+ добавить шаг</button>
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Блок «Нужен совет»</div>
+        <label class="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Кикер</label>
+        <input id="f-ctaKicker" type="text" value={settings.ctaKicker ?? ''} class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white" />
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Заголовок</label>
+        <input id="f-ctaHeadline" type="text" value={settings.ctaHeadline ?? ''} class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white" />
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Подтекст</label>
+        <textarea id="f-ctaSubtext" rows="2" class="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white">
+{settings.ctaSubtext ?? ''}</textarea
+        >
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Контакты</div>
+        <div class="mt-3 grid grid-cols-2 gap-3.5">
+          {
+            [
+              ['contactPhone', 'Телефон', settings.contactPhone],
+              ['contactEmail', 'Email', settings.contactEmail],
+              ['contactTelegram', 'Telegram (@handle)', settings.contactTelegram],
+              ['contactTelegramUrl', 'Telegram (ссылка)', settings.contactTelegramUrl],
+              ['contactVkUrl', 'VK (ссылка)', settings.contactVkUrl],
+              ['contactAddress', 'Адрес', settings.contactAddress],
+              ['contactHours', 'Часы работы', settings.contactHours],
+              ['yandexMapsUrl', 'Яндекс.Карты (ссылка)', settings.yandexMapsUrl],
+              ['twoGisUrl', '2ГИС (ссылка)', settings.twoGisUrl],
+            ].map(([id, label, value]) => (
+              <div>
+                <label class="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">{label}</label>
+                <input id={`f-${id}`} type="text" value={(value as string) ?? ''} class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white" />
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3.5">
+      <div class="sticky top-3.5 rounded-3xl border border-border bg-card p-6">
+        <button id="save-btn" type="button" class="btn-primary w-full justify-center">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { uploadMedia } from '../../scripts/admin-media-upload'
+
+    const errorEl = document.getElementById('page-error')!
+    const successEl = document.getElementById('page-success')!
+    function showError(msg: string) {
+      successEl.classList.add('hidden')
+      errorEl.textContent = msg
+      errorEl.classList.remove('hidden')
+    }
+
+    function wireUpload(fileInputId: string, hiddenId: string, previewId: string) {
+      document.getElementById(fileInputId)?.addEventListener('change', async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (!file) return
+        try {
+          const media = await uploadMedia(file)
+          ;(document.getElementById(hiddenId) as HTMLInputElement).value = String(media.id)
+          const preview = document.getElementById(previewId) as HTMLImageElement
+          preview.src = media.url
+          preview.classList.remove('hidden')
+        } catch (err) {
+          showError(err instanceof Error ? err.message : 'Не удалось загрузить файл')
+        }
+      })
+    }
+    wireUpload('f-hero-desktop', 'f-hero-desktop-id', 'hero-desktop-preview')
+    wireUpload('f-hero-mobile', 'f-hero-mobile-id', 'hero-mobile-preview')
+
+    const stepsList = document.getElementById('steps-list')!
+    function wireStepRemove(row: HTMLElement) {
+      row.querySelector('[data-remove-step]')?.addEventListener('click', () => row.remove())
+    }
+    stepsList.querySelectorAll<HTMLElement>('[data-step-row]').forEach(wireStepRemove)
+    document.getElementById('add-step')?.addEventListener('click', () => {
+      const row = document.createElement('div')
+      row.className = 'flex gap-2 rounded-xl bg-muted p-2.5'
+      row.dataset.stepRow = ''
+      row.innerHTML = `
+        <div class="flex-1">
+          <input type="text" data-field="title" placeholder="Заголовок шага" class="h-9 w-full rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground" />
+          <input type="text" data-field="text" placeholder="Текст шага" class="mt-1.5 h-9 w-full rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground" />
+        </div>
+        <button type="button" data-remove-step class="w-8 shrink-0 self-start rounded-lg bg-white text-[13px] text-subtle hover:text-accent">✕</button>`
+      stepsList.appendChild(row)
+      wireStepRemove(row)
+    })
+
+    function val(id: string): string {
+      return (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement)?.value ?? ''
+    }
+
+    document.getElementById('save-btn')?.addEventListener('click', async () => {
+      errorEl.classList.add('hidden')
+      successEl.classList.add('hidden')
+
+      const steps = Array.from(stepsList.querySelectorAll<HTMLElement>('[data-step-row]'))
+        .map((row) => ({
+          title: (row.querySelector('[data-field="title"]') as HTMLInputElement).value.trim(),
+          text: (row.querySelector('[data-field="text"]') as HTMLInputElement).value.trim(),
+        }))
+        .filter((s) => s.title && s.text)
+
+      const heroDesktopId = val('f-hero-desktop-id')
+      const heroMobileId = val('f-hero-mobile-id')
+
+      const data = {
+        heroBannerImage: heroDesktopId ? Number(heroDesktopId) : null,
+        heroBannerImageMobile: heroMobileId ? Number(heroMobileId) : null,
+        heroKicker: val('f-heroKicker'),
+        heroCity: val('f-heroCity'),
+        heroHeadline: val('f-heroHeadline'),
+        heroSubtext: val('f-heroSubtext'),
+        depositLabel: val('f-depositLabel'),
+        depositCaption: val('f-depositCaption'),
+        pickupTimeLabel: val('f-pickupTimeLabel'),
+        pickupTimeCaption: val('f-pickupTimeCaption'),
+        howItWorksSteps: steps,
+        ctaKicker: val('f-ctaKicker'),
+        ctaHeadline: val('f-ctaHeadline'),
+        ctaSubtext: val('f-ctaSubtext'),
+        contactPhone: val('f-contactPhone'),
+        contactEmail: val('f-contactEmail'),
+        contactTelegram: val('f-contactTelegram'),
+        contactTelegramUrl: val('f-contactTelegramUrl'),
+        contactVkUrl: val('f-contactVkUrl'),
+        contactAddress: val('f-contactAddress'),
+        contactHours: val('f-contactHours'),
+        yandexMapsUrl: val('f-yandexMapsUrl'),
+        twoGisUrl: val('f-twoGisUrl'),
+      }
+
+      const res = await fetch('/api/globals/site-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        showError(body?.errors?.[0]?.message || 'Не удалось сохранить')
+        return
+      }
+      successEl.classList.remove('hidden')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    })
+  </script>
+</AdminLayout>

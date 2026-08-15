@@ -1,0 +1,279 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro'
+import { getAdminToken } from '../../../lib/admin/session'
+import { getAdminOrderDetail } from '../../../lib/admin/api'
+import { rub, ORDER_STATUS_TONE } from '../../../lib/admin/format'
+
+const user = Astro.locals.adminUser!
+const token = getAdminToken(Astro.cookies)!
+
+const id = Number(Astro.params.id)
+if (!Number.isFinite(id)) {
+  return Astro.redirect('/admin/orders')
+}
+
+let detail
+try {
+  detail = await getAdminOrderDetail(token, id)
+} catch {
+  return Astro.redirect('/admin/orders')
+}
+const { order, items } = detail
+
+// datetime-local inputs need "YYYY-MM-DDTHH:mm" in local time, not a raw ISO
+// string (which Payload stores in UTC).
+function toLocalInput(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+const STATUS_OPTIONS: { value: typeof order.status; label: string }[] = [
+  { value: 'pending', label: 'Ожидает звонка' },
+  { value: 'confirmed', label: 'Подтверждён' },
+  { value: 'completed', label: 'Завершён' },
+  { value: 'cancelled', label: 'Отменён' },
+]
+---
+
+<AdminLayout title={`Заказ #${order.id}`} subtitle={order.customerName} activeTab="orders" user={user}>
+  <div class="flex items-center justify-between">
+    <a href="/admin/orders" class="text-[12.5px] font-semibold text-subtle hover:text-foreground">← Все заказы</a>
+    <button
+      id="delete-order"
+      type="button"
+      class="rounded-full bg-transparent px-4 py-2 text-[11px] font-semibold tracking-[0.1em] text-accent uppercase transition-colors duration-200 hover:bg-accent hover:text-white"
+    >
+      Удалить заказ
+    </button>
+  </div>
+
+  <p id="page-error" class="hidden rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]"></p>
+
+  <div class="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
+    <div class="flex flex-col gap-3.5">
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Позиции</div>
+        <div class="mt-3.5 flex flex-col gap-2.5">
+          {
+            items.map((item) => (
+              <div class="grid grid-cols-[1.6fr_100px_1fr_1fr_90px_36px] items-center gap-2.5 rounded-2xl bg-muted p-3" data-item-row={item.id}>
+                <span class="truncate text-[13.5px] font-medium">{item.product.title}</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  data-field="quantity"
+                  class="h-9 w-full rounded-lg border border-input bg-white px-2 text-[13px] outline-none focus:border-foreground"
+                />
+                {item.listingType === 'rental' ? (
+                  <input
+                    type="datetime-local"
+                    value={toLocalInput(item.startDate)}
+                    data-field="startDate"
+                    class="h-9 w-full rounded-lg border border-input bg-white px-2 text-[12px] outline-none focus:border-foreground"
+                  />
+                ) : (
+                  <span />
+                )}
+                {item.listingType === 'rental' ? (
+                  <input
+                    type="datetime-local"
+                    value={toLocalInput(item.endDate)}
+                    data-field="endDate"
+                    class="h-9 w-full rounded-lg border border-input bg-white px-2 text-[12px] outline-none focus:border-foreground"
+                  />
+                ) : (
+                  <span />
+                )}
+                <span class="text-right text-[13.5px] font-semibold" data-line-total>
+                  {rub(item.lineTotal)}
+                </span>
+                <button type="button" data-remove-item class="justify-self-end text-[13px] text-subtle hover:text-accent" aria-label="Удалить позицию">
+                  ✕
+                </button>
+              </div>
+            ))
+          }
+          {items.length === 0 ? <div class="py-6 text-center text-[13px] text-subtle">Нет позиций</div> : null}
+        </div>
+        <div class="mt-4 flex justify-end gap-2 text-[13px] text-subtle">
+          Изменения по позициям сохраняются автоматически при потере фокуса поля.
+        </div>
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Заметки</div>
+        <textarea
+          id="notes-field"
+          rows="4"
+          class="mt-3 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none transition-colors duration-200 focus:border-foreground focus:bg-white"
+        >
+{order.notes ?? ''}</textarea
+        >
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3.5">
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Статус</div>
+        <select
+          id="status-field"
+          class="mt-3 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground"
+        >
+          {STATUS_OPTIONS.map((o) => <option value={o.value} selected={o.value === order.status}>{o.label}</option>)}
+        </select>
+
+        <div class="mt-5 text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Сумма</div>
+        <div class="mt-2 text-[24px] font-medium tracking-[-0.03em]">{rub(order.totalPrice)}</div>
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Клиент</div>
+        <div class="mt-3 flex flex-col gap-2 text-[13.5px]">
+          <span>{order.customerName}</span>
+          <a href={`mailto:${order.customerEmail}`} class="text-subtle hover:text-accent">{order.customerEmail}</a>
+          <a href={`tel:${order.customerPhone}`} class="text-subtle hover:text-accent">{order.customerPhone}</a>
+        </div>
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">МойСклад</div>
+        {
+          order.submittedAt ? (
+            <div class="mt-3 text-[13px] text-subtle">
+              Отправлен {new Date(order.submittedAt).toLocaleString('ru-RU')}
+              {order.moySkladOrderId ? <div class="mt-1 text-foreground">Заказ МойСклад: {order.moySkladOrderId}</div> : <div class="mt-1 text-accent">Не запушен в МойСклад — см. логи сервера.</div>}
+            </div>
+          ) : (
+            <button
+              id="submit-order"
+              type="button"
+              class="btn-primary mt-3 w-full justify-center"
+            >
+              Отправить в МойСклад
+            </button>
+          )
+        }
+        <p id="submit-result" class="mt-3 hidden text-[12.5px]"></p>
+      </div>
+    </div>
+  </div>
+
+  <script define:vars={{ orderId: order.id }}>
+    const errorEl = document.getElementById('page-error')
+    function showError(msg) {
+      errorEl.textContent = msg
+      errorEl.classList.remove('hidden')
+    }
+    function clearError() {
+      errorEl.classList.add('hidden')
+    }
+
+    async function patchOrder(data) {
+      clearError()
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        showError(body?.errors?.[0]?.message || 'Не удалось сохранить изменения')
+      }
+      return res.ok
+    }
+
+    document.getElementById('status-field')?.addEventListener('change', (e) => {
+      patchOrder({ status: e.target.value })
+    })
+
+    let notesTimer
+    document.getElementById('notes-field')?.addEventListener('blur', (e) => {
+      clearTimeout(notesTimer)
+      patchOrder({ notes: e.target.value })
+    })
+
+    document.getElementById('delete-order')?.addEventListener('click', async () => {
+      if (!confirm('Удалить заказ вместе со всеми позициями? Это необратимо.')) return
+      const items = document.querySelectorAll('[data-item-row]')
+      for (const row of items) {
+        await fetch(`/api/orderItems/${row.dataset.itemRow}`, { method: 'DELETE' })
+      }
+      const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' })
+      if (res.ok) {
+        window.location.href = '/admin/orders'
+      } else {
+        showError('Не удалось удалить заказ')
+      }
+    })
+
+    document.getElementById('submit-order')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget
+      btn.disabled = true
+      btn.textContent = 'Отправляем…'
+      clearError()
+
+      const res = await fetch(`/api/orders/${orderId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const body = await res.json().catch(() => null)
+      const resultEl = document.getElementById('submit-result')
+      resultEl.classList.remove('hidden')
+
+      if (res.ok && body?.success) {
+        resultEl.textContent = body.moySkladOrderId
+          ? `Отправлено. МойСклад: ${body.moySkladOrderId}`
+          : 'Отправлено, но МойСклад вернул ошибку — см. логи сервера.'
+        setTimeout(() => window.location.reload(), 900)
+      } else {
+        btn.disabled = false
+        btn.textContent = 'Отправить в МойСклад'
+        showError(body?.error || 'Не удалось отправить заказ')
+      }
+    })
+
+    document.querySelectorAll('[data-item-row]').forEach((row) => {
+      const itemId = row.dataset.itemRow
+      const lineTotalEl = row.querySelector('[data-line-total]')
+
+      row.querySelectorAll('[data-field]').forEach((input) => {
+        input.addEventListener('change', async () => {
+          clearError()
+          const field = input.dataset.field
+          let value = input.value
+          if (field === 'quantity') value = Number(value)
+          if (field === 'startDate' || field === 'endDate') value = new Date(value).toISOString()
+
+          const res = await fetch(`/api/orderItems/${itemId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [field]: value }),
+          })
+          const body = await res.json().catch(() => null)
+          if (!res.ok) {
+            showError(body?.errors?.[0]?.message || 'Не удалось сохранить позицию')
+            return
+          }
+          if (lineTotalEl && body?.doc?.lineTotal != null) {
+            lineTotalEl.textContent = `${Math.round(body.doc.lineTotal).toLocaleString('ru-RU')} ₽`
+          }
+        })
+      })
+
+      row.querySelector('[data-remove-item]')?.addEventListener('click', async () => {
+        if (!confirm('Удалить эту позицию?')) return
+        clearError()
+        const res = await fetch(`/api/orderItems/${itemId}`, { method: 'DELETE' })
+        if (res.ok) {
+          row.remove()
+        } else {
+          showError('Не удалось удалить позицию')
+        }
+      })
+    })
+  </script>
+</AdminLayout>

@@ -1,4 +1,5 @@
 import { msGet } from './client'
+import { calculateRentalDays } from '../rental/pricing'
 
 const BASE_URL = 'https://api.moysklad.ru/api/remap/1.2'
 // The account is shared with unrelated businesses (Sneaker Base, Fixit,
@@ -12,7 +13,7 @@ function getToken(): string {
   return token
 }
 
-async function msPost<T = any>(path: string, body: unknown): Promise<T> {
+async function msPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
     headers: {
@@ -40,11 +41,21 @@ async function msDelete(path: string): Promise<void> {
   }
 }
 
+// МойСклад returns every created/fetched entity with at least these two
+// fields — enough for what this module does with the response (link it
+// into other entities' `assortment`/`agent` refs by href, store the id).
+interface MsEntityRef {
+  id: string
+  meta: { href: string }
+}
+
 export interface OrderItemForPush {
   moySkladId: string // service id (rental) or product id (sale)
   listingType: 'rental' | 'sale'
   quantity: number
-  unitPrice: number // RUB
+  unitPrice: number // RUB, per day for rental
+  startDate?: string | null // rental only
+  endDate?: string | null // rental only
 }
 
 /**
@@ -58,7 +69,7 @@ export async function findOrCreateCounterparty(
   email: string,
   phone: string,
 ): Promise<{ id: string; href: string }> {
-  const existing = await msGet<{ rows: any[] }>(
+  const existing = await msGet<{ rows: MsEntityRef[] }>(
     `/entity/counterparty?filter=${encodeURIComponent(`phone=${phone}`)}&limit=1`,
   )
   if (existing.rows.length > 0) {
@@ -66,7 +77,7 @@ export async function findOrCreateCounterparty(
     return { id: c.id, href: c.meta.href }
   }
 
-  const created = await msPost<any>('/entity/counterparty', {
+  const created = await msPost<MsEntityRef>('/entity/counterparty', {
     name,
     email,
     phone,
@@ -94,19 +105,32 @@ export async function pushOrderToMoySklad(params: {
     params.customerPhone,
   )
 
-  const positions = params.items.map((item) => ({
-    quantity: item.quantity,
-    price: Math.round(item.unitPrice * 100), // МойСклад stores money in kopecks
-    assortment: {
-      meta: {
-        href: `${BASE_URL}/entity/${item.listingType === 'rental' ? 'service' : 'product'}/${item.moySkladId}`,
-        type: item.listingType === 'rental' ? 'service' : 'product',
-        mediaType: 'application/json',
-      },
-    },
-  }))
+  const positions = params.items.map((item) => {
+    // Rental services are priced per day in МойСклад too (unit of measure
+    // "Сутки" on the assortment item) — quantity must be cart-quantity ×
+    // rental days, or the pushed order undercounts a multi-day booking down
+    // to a single day (caught via a live test push: a 2-day/100₽-per-day
+    // rental landed in МойСклад as qty 1 × 100₽ instead of qty 2 × 100₽).
+    const days =
+      item.listingType === 'rental' && item.startDate && item.endDate
+        ? calculateRentalDays(new Date(item.startDate), new Date(item.endDate))
+        : 1
+    const quantity = item.listingType === 'rental' ? item.quantity * days : item.quantity
 
-  const created = await msPost<any>('/entity/customerorder', {
+    return {
+      quantity,
+      price: Math.round(item.unitPrice * 100), // МойСклад stores money in kopecks
+      assortment: {
+        meta: {
+          href: `${BASE_URL}/entity/${item.listingType === 'rental' ? 'service' : 'product'}/${item.moySkladId}`,
+          type: item.listingType === 'rental' ? 'service' : 'product',
+          mediaType: 'application/json',
+        },
+      },
+    }
+  })
+
+  const created = await msPost<MsEntityRef>('/entity/customerorder', {
     organization: {
       meta: {
         href: `${BASE_URL}/entity/organization/${PLAYBACK_RENTAL_ORG_ID}`,

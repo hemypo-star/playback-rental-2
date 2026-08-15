@@ -35,8 +35,54 @@ async function recalcOrderTotal(req: PayloadRequest, orderRef: unknown): Promise
   })
 }
 
+// Public checkout needs to edit/remove its own draft cart lines (quantity,
+// dates) before submitting — but once an order has been submitted, its line
+// items are the historical record of what was actually booked/pushed to
+// МойСклад/Telegram, so further public edits must be blocked (only admins
+// can amend a booking after the fact, via /cms).
+async function canModifyOrderItem({ req, id }: { req: any; id?: number | string }): Promise<boolean> {
+  if (req.user) return true
+  // No id means this is a bulk update/delete (a `where` filter, not a single
+  // document) — there's nothing here to check "is this order submitted yet"
+  // against, so an anonymous request can't be allowed through.
+  if (!id) return false
+  const item = await req.payload.findByID({ collection: 'orderItems', id, overrideAccess: true, depth: 0 })
+  if (!item) return false
+  const orderId = typeof item.order === 'object' ? item.order?.id : item.order
+  // An orphaned row (no resolvable order) has nothing to check "is this
+  // submitted yet" against — fail closed, not open, or any anonymous request
+  // could freely edit/delete it.
+  if (!orderId) return false
+  const order = await req.payload.findByID({ collection: 'orders', id: orderId, overrideAccess: true, depth: 0 })
+  return !order?.submittedAt
+}
+
+// Mirrors canModifyOrderItem's "not yet submitted" rule for creates — public
+// checkout attaches new draft lines to its own just-created order, but once
+// that order has been submitted (pushed to МойСклад, Telegram notified), a
+// new anonymous item must not be attachable: nothing would re-push or
+// re-notify, so the stored total would silently drift from what was
+// actually charged and communicated.
+async function canCreateOrderItem({ req, data }: { req: any; data?: Record<string, unknown> }): Promise<boolean> {
+  if (req.user) return true
+  const orderRef = data?.order
+  const orderId = typeof orderRef === 'object' && orderRef !== null ? (orderRef as { id: number }).id : orderRef
+  if (!orderId) return false
+  const order = await req.payload.findByID({ collection: 'orders', id: orderId as number, overrideAccess: true, depth: 0 })
+  return !order?.submittedAt
+}
+
 export const OrderItems: CollectionConfig = {
   slug: 'orderItems',
+  access: {
+    // No PII on this collection (product ref/dates/qty/lineTotal only) — public
+    // read is intentional, it's how the storefront shows booked-out dates on
+    // a product's availability calendar to any visitor.
+    read: () => true,
+    create: canCreateOrderItem,
+    update: canModifyOrderItem,
+    delete: canModifyOrderItem,
+  },
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['order', 'product', 'listingType', 'quantity', 'startDate', 'endDate', 'lineTotal'],
@@ -119,6 +165,12 @@ export const OrderItems: CollectionConfig = {
         if (product.listingType === 'rental') {
           if (!data.startDate || !data.endDate) {
             throw new APIError('startDate and endDate are required for rental line items', 400, undefined, true)
+          }
+          // calculateRentalDays treats a non-positive duration as 0 days,
+          // which calculateLineTotal below turns into a silent 0 lineTotal —
+          // a free rental — rather than an error. Reject it here instead.
+          if (new Date(data.endDate) <= new Date(data.startDate)) {
+            throw new APIError('endDate must be after startDate', 400, undefined, true)
           }
           const available = await isRentalQuantityAvailable(
             req,

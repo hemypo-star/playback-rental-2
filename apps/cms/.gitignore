@@ -3,6 +3,7 @@ node_modules
 .env
 .env.local
 payload-types.ts
+*.tsbuildinfo
 
 # Synced/uploaded media — re-downloadable via `pnpm sync:moysklad`, not source
 media/

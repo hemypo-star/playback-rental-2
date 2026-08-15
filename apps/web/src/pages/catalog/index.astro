@@ -1,0 +1,12 @@
+---
+import Layout from '../../layouts/Layout.astro'
+import CatalogPage from '../../components/CatalogPage.astro'
+
+const searchQuery = Astro.url.searchParams.get('q') ?? undefined
+const sort = Astro.url.searchParams.get('sort') ?? undefined
+const kitOnly = Astro.url.searchParams.get('type') === 'kit'
+---
+
+<Layout title={kitOnly ? 'Наборы' : 'Каталог техники'}>
+  <CatalogPage searchQuery={searchQuery} sort={sort} kitOnly={kitOnly} />
+</Layout>

@@ -1,0 +1,10 @@
+---
+import Layout from '../layouts/Layout.astro'
+import CheckoutPage from '../components/CheckoutPage'
+---
+
+<Layout title="Оформление заказа">
+  <div class="container-page pb-20 pt-3.5">
+    <CheckoutPage client:load />
+  </div>
+</Layout>

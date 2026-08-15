@@ -1,0 +1,108 @@
+---
+import CategorySidebar from './CategorySidebar.astro'
+import ProductCard from './ProductCard.astro'
+import RentalDatePicker from './RentalDatePicker'
+import { getCategories, getProducts } from '../lib/payload'
+import { pluralizeRu } from '../lib/dateRange'
+import type { Category } from '@playback-rental/shared-types'
+
+interface Props {
+  activeCategory?: Category
+  searchQuery?: string
+  sort?: string
+  kitOnly?: boolean
+}
+
+const { activeCategory, searchQuery, sort = 'pop', kitOnly = false } = Astro.props
+
+const SORT_PARAM: Record<string, string> = {
+  pop: '-lastSyncedAt',
+  asc: 'price',
+  desc: '-price',
+}
+
+const [categories, productsResult, allForCounts] = await Promise.all([
+  getCategories(),
+  getProducts({
+    categoryId: activeCategory?.id,
+    search: searchQuery,
+    isKit: kitOnly ? true : undefined,
+    limit: 100,
+    sort: SORT_PARAM[sort] ?? SORT_PARAM.pop,
+  }),
+  getProducts({ limit: 500 }),
+])
+const products = productsResult.docs
+
+const categoryCounts = new Map<number, number>()
+for (const p of allForCounts.docs) {
+  const catId = typeof p.category === 'object' ? p.category.id : p.category
+  categoryCounts.set(catId, (categoryCounts.get(catId) ?? 0) + 1)
+}
+
+const basePath = activeCategory ? `/catalog/${activeCategory.slug}` : '/catalog'
+const resultsWord = pluralizeRu(products.length, 'позиция', 'позиции', 'позиций')
+---
+
+<section class="container-page pt-3.5">
+  <div class="flex flex-wrap items-end justify-between gap-5 rounded-3xl border border-border bg-card p-[26px_28px]" style="animation:bnIn 560ms cubic-bezier(0.16,1,0.3,1) both">
+    <div>
+      <div class="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-subtle">
+        <a href="/" class="border-none transition-colors duration-200 hover:text-accent">Главная</a> / {kitOnly ? 'Наборы' : 'Каталог'}
+      </div>
+      <h1 class="mt-3 text-[clamp(30px,3.8vw,52px)] font-medium leading-none tracking-[-0.045em]">{kitOnly ? 'Наборы' : activeCategory ? activeCategory.name : 'Каталог'}</h1>
+      <div class="mt-2.5 text-[13px] text-subtle">{products.length} {resultsWord}</div>
+    </div>
+    <div class="flex min-h-12 shrink-0 items-center gap-3.5 whitespace-nowrap rounded-full bg-muted py-0 pl-5 pr-2">
+      <RentalDatePicker client:load variant="compact" />
+    </div>
+  </div>
+</section>
+
+<section class="container-page grid-12 items-start pb-20 pt-3.5">
+  <CategorySidebar
+    categories={categories}
+    categoryCounts={categoryCounts}
+    totalCount={allForCounts.totalDocs}
+    activeSlug={activeCategory?.slug}
+    searchQuery={searchQuery}
+    sort={sort}
+  />
+
+  <div class="col-span-full min-w-0 lg:col-span-9">
+    <form method="get" action={basePath} class="relative mb-3.5">
+      <input
+        type="text"
+        name="q"
+        value={searchQuery}
+        placeholder="Поиск оборудования..."
+        class="h-12 w-full rounded-2xl border border-border bg-card pl-11 pr-4 text-[14.5px] font-medium placeholder:font-normal placeholder:text-subtle"
+      />
+      <input type="hidden" name="sort" value={sort} />
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-subtle">
+        <circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m21 21-4.3-4.3" />
+      </svg>
+    </form>
+
+    {products.length === 0 ? (
+      <div class="rounded-3xl border border-border bg-card px-6 py-20 text-center">
+        <div class="text-[17px] font-semibold">Ничего не найдено</div>
+        <p class="mx-auto mt-2 max-w-[360px] text-[14px] text-subtle">
+          Попробуйте изменить запрос или посмотреть весь каталог.
+        </p>
+        <a href="/catalog" class="btn-outline mt-4 inline-flex h-10 px-5 text-[11px]">Сбросить фильтры</a>
+      </div>
+    ) : (
+      <div class="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+        {products.map((p, i) => (
+          <ProductCard product={p} delay={i * 45} />
+        ))}
+      </div>
+    )}
+  </div>
+</section>
+
+<script>
+  import { initCatalogAvailability } from '../scripts/catalog-availability'
+  initCatalogAvailability()
+</script>

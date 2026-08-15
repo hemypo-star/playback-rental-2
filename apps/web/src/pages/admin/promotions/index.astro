@@ -1,0 +1,46 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro'
+import { getAdminToken } from '../../../lib/admin/session'
+import { cmsFetch } from '../../../lib/admin/api'
+import type { PayloadFindResult, Promotion } from '@playback-rental/shared-types'
+
+const user = Astro.locals.adminUser!
+const token = getAdminToken(Astro.cookies)!
+
+const result = await cmsFetch<PayloadFindResult<Promotion>>('/promotions?sort=order&limit=100&depth=0', token)
+const promotions = result?.docs ?? []
+---
+
+<AdminLayout
+  title="Акции"
+  subtitle={`${promotions.length} акций`}
+  activeTab="promotions"
+  actionLabel="Новая акция"
+  actionHref="/admin/promotions/new"
+  user={user}
+>
+  <div class="rounded-3xl border border-border bg-card p-6">
+    <div class="grid grid-cols-[2.2fr_1fr_90px_100px] gap-3.5 px-2.5 pb-3 text-[10px] font-semibold tracking-[0.13em] text-subtle uppercase">
+      <span>Название</span><span>Slug</span><span>Порядок</span><span>Статус</span>
+    </div>
+    {
+      promotions.map((p) => (
+        <a
+          href={`/admin/promotions/${p.id}`}
+          class="grid grid-cols-[2.2fr_1fr_90px_100px] items-center gap-3.5 rounded-2xl px-2.5 py-3.5 text-[13.5px] transition-colors duration-200 hover:bg-muted"
+        >
+          <span class="truncate font-medium">{p.title}</span>
+          <span class="truncate text-[12.5px] text-subtle">{p.slug ?? '—'}</span>
+          <span>{p.order}</span>
+          <span
+            class="justify-self-start rounded-full px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase"
+            style={{ background: p.active ? '#E4F6E9' : '#F0EFEC', color: p.active ? '#0B6B32' : '#75736E' }}
+          >
+            {p.active ? 'Активна' : 'Скрыта'}
+          </span>
+        </a>
+      ))
+    }
+    {promotions.length === 0 ? <div class="px-2.5 py-8 text-center text-[13.5px] text-subtle">Пока нет акций</div> : null}
+  </div>
+</AdminLayout>

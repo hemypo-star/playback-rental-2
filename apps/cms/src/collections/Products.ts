@@ -2,11 +2,31 @@ import type { CollectionConfig } from 'payload'
 
 export const Products: CollectionConfig = {
   slug: 'products',
+  access: {
+    read: () => true,
+    create: ({ req }) => Boolean(req.user),
+    update: ({ req }) => Boolean(req.user),
+    delete: ({ req }) => Boolean(req.user),
+  },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'listingType', 'category', 'price', 'quantity', 'available'],
+    defaultColumns: ['title', 'category', 'quantity', 'price', 'stockStatus'],
   },
   fields: [
+    {
+      // Computed, not stored — matches the delivered design's Stock badge
+      // ("В наличии" / "Мало" / "Нет в наличии") over the real Products list
+      // so search/sort/filter/pagination stay intact instead of being
+      // reimplemented in a bespoke static view.
+      name: 'stockStatus',
+      type: 'ui',
+      label: 'Статус',
+      admin: {
+        components: {
+          Cell: '/src/components/admin/StockStatusCell#StockStatusCell',
+        },
+      },
+    },
     {
       name: 'title',
       type: 'text',
@@ -34,6 +54,25 @@ export const Products: CollectionConfig = {
     {
       name: 'description',
       type: 'textarea',
+    },
+    {
+      // Short spec line shown under the title on cards/product page (e.g.
+      // "Полный кадр · 4K 120p") — МойСклад has nothing structured enough to
+      // derive this from, so it's admin-editable with no sync involvement.
+      name: 'subtitle',
+      type: 'text',
+      admin: {
+        description: 'Short spec line shown under the title on cards and the product page (e.g. "Полный кадр · 4K 120p"). Not synced.',
+      },
+    },
+    {
+      // Short chip label on the catalog card image (e.g. "Камера", "Набор") —
+      // falls back to the category name in the UI when unset.
+      name: 'tag',
+      type: 'text',
+      admin: {
+        description: 'Short badge shown on the card image (e.g. "Камера", "Набор"). Falls back to the category name when unset. Not synced.',
+      },
     },
     {
       name: 'price',
@@ -73,6 +112,42 @@ export const Products: CollectionConfig = {
       admin: {
         description: 'Manual override to hide/pause a product for rental regardless of МойСклад stock (e.g. under repair). Not synced.',
       },
+    },
+    // Kits ("Наборы") — a bundle is just a product (own moySkladId, price,
+    // quantity, availability — priced and booked exactly like any other
+    // rental listing) with these extra admin-editable fields describing
+    // what's inside it and the discount story. Never synced.
+    {
+      name: 'isKit',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Marks this product as a bundled kit ("Наборы" on the storefront) rather than a single item. Not synced.',
+      },
+    },
+    {
+      name: 'oldPrice',
+      type: 'number',
+      min: 0,
+      admin: {
+        description: 'Combined price of the items if rented separately — shown struck through next to the kit price. Kits only. Not synced.',
+        condition: (data) => Boolean(data?.isKit),
+      },
+    },
+    {
+      name: 'kitItems',
+      type: 'array',
+      admin: {
+        description: 'What\'s included, shown as a numbered list ("Что в комплекте"). Kits only. Not synced.',
+        condition: (data) => Boolean(data?.isKit),
+      },
+      fields: [
+        {
+          name: 'label',
+          type: 'text',
+          required: true,
+        },
+      ],
     },
     // Sync bookkeeping. For listingType 'rental', moySkladId points at a
     // МойСклад *service* entity (Аренда оборудования — rentals are modeled

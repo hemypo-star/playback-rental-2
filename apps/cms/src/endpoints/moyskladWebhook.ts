@@ -1,8 +1,19 @@
 import type { Endpoint } from 'payload'
 import { parseEntityHref, syncSingleEntity } from '../lib/moysklad/sync'
+import { secretsMatch } from '../lib/security/timingSafe'
 
 // МойСклад webhook payload shape: { events: [{ meta: { href, type }, action, accountId }] }
 // https://dev.moysklad.ru/doc/api/remap/1.2/#... (webhooks)
+// Untrusted external input — fields are optional/unknown-shaped on purpose,
+// every access below is guarded rather than assumed present.
+interface MsWebhookEvent {
+  meta?: { href?: string }
+  action?: string
+}
+
+interface MsWebhookBody {
+  events?: MsWebhookEvent[]
+}
 export const moyskladWebhookEndpoint: Endpoint = {
   path: '/webhooks/moysklad',
   method: 'post',
@@ -13,18 +24,18 @@ export const moyskladWebhookEndpoint: Endpoint = {
     // query param (?secret=...); reject anything else.
     const expectedSecret = process.env.MOYSKLAD_WEBHOOK_SECRET
     const providedSecret = new URL(req.url || '', 'http://localhost').searchParams.get('secret')
-    if (!expectedSecret || providedSecret !== expectedSecret) {
+    if (!expectedSecret || !secretsMatch(providedSecret, expectedSecret)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    let body: any
+    let body: MsWebhookBody
     try {
       body = req.json ? await req.json() : {}
     } catch {
       return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
 
-    const events: any[] = Array.isArray(body?.events) ? body.events : []
+    const events: MsWebhookEvent[] = Array.isArray(body?.events) ? body.events : []
     if (events.length === 0) {
       return Response.json({ received: 0, results: [] })
     }
@@ -53,12 +64,23 @@ export const moyskladWebhookEndpoint: Endpoint = {
           return {
             href,
             synced: false,
+            // Distinct from the structural "not applicable" reasons above
+            // (no href, unparseable, DELETE) — this one is a genuine,
+            // possibly-transient failure, and the only kind worth telling
+            // МойСклад to retry over.
+            failed: true,
             reason: error instanceof Error ? error.message : 'Unknown error',
           }
         }
       }),
     )
 
-    return Response.json({ received: events.length, results })
+    // Previously always 200, even when every event above threw — a
+    // transport-level "success" response meant МойСклад had no reason to
+    // ever redeliver a failed event (DB hiccup, rate limit, a unique-
+    // constraint race from a concurrent duplicate delivery). Surface real
+    // failures as a non-2xx so its webhook delivery actually retries.
+    const hasFailure = results.some((r) => r.failed)
+    return Response.json({ received: events.length, results }, { status: hasFailure ? 502 : 200 })
   },
 }

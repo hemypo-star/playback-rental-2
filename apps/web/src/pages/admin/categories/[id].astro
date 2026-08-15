@@ -1,0 +1,188 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro'
+import { getAdminToken } from '../../../lib/admin/session'
+import { cmsFetch } from '../../../lib/admin/api'
+import { mediaUrl } from '../../../lib/payload'
+import type { Category } from '@playback-rental/shared-types'
+
+const user = Astro.locals.adminUser!
+const token = getAdminToken(Astro.cookies)!
+
+const isNew = Astro.params.id === 'new'
+let category: Category | null = null
+if (!isNew) {
+  const id = Number(Astro.params.id)
+  if (!Number.isFinite(id)) return Astro.redirect('/admin/categories')
+  category = await cmsFetch<Category>(`/categories/${id}?depth=1`, token)
+  if (!category) return Astro.redirect('/admin/categories')
+}
+---
+
+<AdminLayout
+  title={isNew ? 'Новая категория' : category!.name}
+  subtitle={isNew ? undefined : category!.slug}
+  activeTab="categories"
+  user={user}
+>
+  <a href="/admin/categories" class="text-[12.5px] font-semibold text-subtle hover:text-foreground">← Все категории</a>
+
+  <p id="page-error" class="hidden rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]"></p>
+
+  <div class="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
+    <div class="flex flex-col gap-3.5">
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <label class="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Название</label>
+        <input
+          id="f-name"
+          type="text"
+          value={category?.name ?? ''}
+          class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        />
+
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Slug</label>
+        <input
+          id="f-slug"
+          type="text"
+          value={category?.slug ?? ''}
+          class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        />
+
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Описание</label>
+        <textarea
+          id="f-description"
+          rows="3"
+          class="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        >
+{category?.description ?? ''}</textarea
+        >
+
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Тег (бейдж на плитке)</label>
+        <input
+          id="f-tag"
+          type="text"
+          value={category?.tag ?? ''}
+          class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        />
+
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Порядок</label>
+        <input
+          id="f-order"
+          type="number"
+          value={category?.order ?? 0}
+          class="mt-1.5 h-11 w-40 rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        />
+      </div>
+
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Изображение</div>
+        <div class="mt-3 flex items-center gap-4">
+          <img
+            id="image-preview"
+            src={mediaUrl(category?.image) ?? ''}
+            class:list={['h-20 w-20 rounded-xl object-cover bg-muted', { hidden: !category?.image }]}
+          />
+          <input id="f-image" type="file" accept="image/*" class="text-[13px]" />
+        </div>
+        <input type="hidden" id="f-image-id" value={typeof category?.image === 'object' ? category?.image?.id : (category?.image ?? '')} />
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-3.5">
+      <div class="rounded-3xl border border-border bg-card p-6">
+        <button id="save-btn" type="button" data-is-new={String(isNew)} data-category-id={category?.id} class="btn-primary w-full justify-center">
+          {isNew ? 'Создать' : 'Сохранить'}
+        </button>
+        {
+          !isNew ? (
+            <button
+              id="delete-btn"
+              type="button"
+              class="mt-3 w-full rounded-full bg-transparent px-4 py-2.5 text-[11px] font-semibold tracking-[0.1em] text-accent uppercase transition-colors duration-200 hover:bg-accent hover:text-white"
+            >
+              Удалить категорию
+            </button>
+          ) : null
+        }
+      </div>
+      {
+        category?.moySkladFolderId ? (
+          <div class="rounded-3xl border border-border bg-card p-6">
+            <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">МойСклад</div>
+            <div class="mt-2 text-[12.5px] text-subtle">Синхронизируется, id: {category.moySkladFolderId}</div>
+          </div>
+        ) : null
+      }
+    </div>
+  </div>
+
+  <script>
+    // Normal top-level import (not define:vars + dynamic import) — Astro
+    // bundles a plain <script> like this through Vite's module graph
+    // properly for both dev and production builds; define:vars forces a
+    // script inline, which doesn't reliably survive a bundled static
+    // import the same way. isNew/categoryId come off the save button's
+    // data-* attributes instead of define:vars for the same reason.
+    import { uploadMedia } from '../../../scripts/admin-media-upload'
+
+    const errorEl = document.getElementById('page-error')!
+    function showError(msg: string) {
+      errorEl.textContent = msg
+      errorEl.classList.remove('hidden')
+    }
+
+    const saveBtn = document.getElementById('save-btn') as HTMLButtonElement
+    const isNew = saveBtn.dataset.isNew === 'true'
+    const categoryId = saveBtn.dataset.categoryId
+
+    document.getElementById('f-image')?.addEventListener('change', async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      try {
+        const media = await uploadMedia(file)
+        ;(document.getElementById('f-image-id') as HTMLInputElement).value = String(media.id)
+        const preview = document.getElementById('image-preview') as HTMLImageElement
+        preview.src = media.url
+        preview.classList.remove('hidden')
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Не удалось загрузить файл')
+      }
+    })
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.classList.add('hidden')
+      const imageId = (document.getElementById('f-image-id') as HTMLInputElement).value
+      const data = {
+        name: (document.getElementById('f-name') as HTMLInputElement).value,
+        slug: (document.getElementById('f-slug') as HTMLInputElement).value,
+        description: (document.getElementById('f-description') as HTMLTextAreaElement).value,
+        tag: (document.getElementById('f-tag') as HTMLInputElement).value,
+        order: Number((document.getElementById('f-order') as HTMLInputElement).value) || 0,
+        image: imageId ? Number(imageId) : null,
+      }
+
+      const url = isNew ? '/api/categories' : `/api/categories/${categoryId}`
+      const res = await fetch(url, {
+        method: isNew ? 'POST' : 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        showError(body?.errors?.[0]?.message || 'Не удалось сохранить')
+        return
+      }
+      window.location.href = isNew ? `/admin/categories/${body.doc.id}` : '/admin/categories'
+    })
+
+    document.getElementById('delete-btn')?.addEventListener('click', async () => {
+      if (!confirm('Удалить эту категорию?')) return
+      const res = await fetch(`/api/categories/${categoryId}`, { method: 'DELETE' })
+      if (res.ok) {
+        window.location.href = '/admin/categories'
+      } else {
+        const body = await res.json().catch(() => null)
+        showError(body?.errors?.[0]?.message || 'Не удалось удалить — возможно, есть связанные товары')
+      }
+    })
+  </script>
+</AdminLayout>

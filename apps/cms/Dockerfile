@@ -1,0 +1,62 @@
+# Build context is the repo root (a pnpm workspace) — see compose.yaml's
+# `build.context: .` / `build.dockerfile: apps/cms/Dockerfile`. This image is
+# NOT built with Next's `output: 'standalone'`: standalone tracing breaks
+# `payload migrate` and the МойСклад scripts (they need the real TS sources
+# and full node_modules at runtime, not a pruned trace), and pnpm's symlinked
+# node_modules don't trace cleanly anyway. The runtime stage instead carries
+# the whole workspace forward, node_modules included — bigger image, correct
+# behavior; see docs/PLAN-docker-admin.md Step 2 for the reasoning.
+
+FROM node:22-bookworm-slim AS base
+# sharp (image processing) and @swc/core (Next's compiler) need native
+# addons built for this exact base — bookworm-slim over alpine avoids the
+# glibc/musl mismatch that would otherwise force rebuilding them.
+RUN corepack enable
+WORKDIR /repo
+
+# ---- deps: install only this package's workspace subgraph -----------------
+FROM base AS deps
+# pnpm needs every workspace package's package.json to resolve the graph,
+# even filtered to one target — but not their source, so this layer only
+# invalidates when a manifest changes, not on every source edit.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .nvmrc ./
+COPY apps/cms/package.json apps/cms/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/shared-types/package.json packages/shared-types/package.json
+# --frozen-lockfile: refuse to silently re-resolve deps if the lockfile is
+# out of date — a stale lockfile should fail the build, not drift quietly.
+RUN pnpm install --frozen-lockfile --filter cms...
+
+# ---- dev: hot-reload target, used by compose.dev.yaml ---------------------
+# No COPY of apps/cms source here — compose.dev.yaml bind-mounts it over
+# this layer for live editing, with an anonymous volume shadowing
+# node_modules so the host's (possibly macOS-built) copy never overwrites
+# this image's Linux-built native addons (sharp, @swc/core).
+FROM deps AS dev
+WORKDIR /repo/apps/cms
+EXPOSE 3000
+CMD ["pnpm", "dev"]
+
+# ---- build: compile the Next app + regenerate Payload's import map --------
+FROM deps AS build
+COPY apps/cms apps/cms
+WORKDIR /repo/apps/cms
+# Baked in here, not left to a developer's local `generate:importmap` run,
+# so a forgotten regeneration can never ship stale (see CLAUDE.md gotcha).
+# DATABASE_URI isn't reachable at build time (no db service exists yet in
+# the build stage) — Next's build only needs the config to be syntactically
+# importable, not a live DB connection, so a bogus placeholder is enough.
+ENV DATABASE_URI=postgresql://build:build@localhost:5432/build
+ENV PAYLOAD_SECRET=build-time-placeholder-not-used-at-runtime
+RUN pnpm payload generate:importmap
+RUN pnpm build
+
+# ---- runtime ----------------------------------------------------------
+FROM base AS runtime
+ENV NODE_ENV=production
+WORKDIR /repo/apps/cms
+COPY --from=build /repo /repo
+EXPOSE 3000
+# Migrations run before every start, including restarts of an already-
+# migrated container — payload migrate is a no-op when nothing's pending.
+CMD ["sh", "-c", "pnpm payload migrate && pnpm start"]

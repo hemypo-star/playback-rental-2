@@ -1,0 +1,103 @@
+---
+// Ported from the prod branch's PromotionDetail.tsx (absent on the stale
+// main branch — see CLAUDE.md dev log and docs/PLAN-docker-admin.md task
+// for "Страница акции /promotions/:slug"). Content/linked
+// products/categories are admin-editable via /admin/promotions/[id].
+import Layout from '../../layouts/Layout.astro'
+import ProductCard from '../../components/ProductCard.astro'
+import PromoCarousel from '../../components/PromoCarousel'
+import { getPromotionBySlug, getActivePromotions, mediaUrl } from '../../lib/payload'
+import type { Product, Category } from '@playback-rental/shared-types'
+
+const { slug } = Astro.params
+const promo = slug ? await getPromotionBySlug(slug) : undefined
+if (!promo) {
+  return Astro.redirect('/404')
+}
+
+const imageUrl = mediaUrl(promo.image)
+const linkedProducts = (promo.linkedProducts ?? []).filter((p): p is Product => typeof p === 'object')
+const linkedCategories = (promo.linkedCategories ?? []).filter((c): c is Category => typeof c === 'object')
+
+const otherPromotions = (await getActivePromotions())
+  .filter((p) => p.id !== promo.id)
+  .map((p) => ({
+    id: p.id,
+    title: p.title,
+    kicker: p.kicker || undefined,
+    text: p.text || undefined,
+    imageUrl: mediaUrl(p.image),
+    linkUrl: p.linkUrl || (p.slug ? `/promotions/${p.slug}` : undefined),
+  }))
+---
+
+<Layout title={promo.title} description={promo.text ?? undefined}>
+  <section class="container-page py-16">
+    <div class="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_1.2fr]">
+      <div class="aspect-[3/4] overflow-hidden rounded-[26px] bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">
+        {imageUrl && <img src={imageUrl} alt={promo.title} class="h-full w-full object-cover" />}
+      </div>
+      <div>
+        {promo.kicker && <div class="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">{promo.kicker}</div>}
+        <h1 class="mt-2.5 text-[clamp(30px,4vw,46px)] font-medium tracking-[-0.04em]">{promo.title}</h1>
+        {
+          promo.content && (
+            <div class="mt-6 max-w-[560px] whitespace-pre-wrap text-[15px] leading-[1.65] text-muted-foreground">{promo.content}</div>
+          )
+        }
+        {
+          promo.linkUrl && !promo.linkUrl.startsWith('/promotions/') && (
+            <a href={promo.linkUrl} class="btn-primary mt-6 inline-flex">
+              Подробнее
+            </a>
+          )
+        }
+      </div>
+    </div>
+
+    {
+      linkedProducts.length > 0 && (
+        <div class="mt-16">
+          <h2 class="text-[clamp(22px,2.6vw,32px)] font-medium tracking-[-0.03em]">Товары по акции</h2>
+          <div class="mt-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4">
+            {linkedProducts.map((p, i) => (
+              <ProductCard product={p} delay={i * 60} />
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    {
+      linkedCategories.length > 0 && (
+        <div class="mt-16">
+          <h2 class="text-[clamp(22px,2.6vw,32px)] font-medium tracking-[-0.03em]">Категории по акции</h2>
+          <div class="mt-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+            {linkedCategories.map((c) => {
+              const catImageUrl = mediaUrl(c.image)
+              return (
+                <a
+                  href={`/catalog/${c.slug}`}
+                  class="rounded-[24px] border border-border bg-card p-4 transition-[transform,box-shadow,border-color] duration-[420ms] hover:-translate-y-1 hover:border-[rgba(10,10,10,0.15)] hover:shadow-[var(--shadow-medium)]"
+                >
+                  <div class="relative aspect-[4/3] overflow-hidden rounded-2xl bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">
+                    {catImageUrl && <img src={catImageUrl} alt={c.name} class="h-full w-full object-cover" />}
+                  </div>
+                  <div class="mt-4 px-1 pb-1 text-[19px] font-medium leading-[1.2] tracking-[-0.025em]">{c.name}</div>
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      )
+    }
+
+    {
+      otherPromotions.length > 0 && (
+        <div class="mt-16 border-t border-border pt-2">
+          <PromoCarousel client:visible promos={otherPromotions} />
+        </div>
+      )
+    }
+  </section>
+</Layout>

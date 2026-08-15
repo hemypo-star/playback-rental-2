@@ -1,0 +1,41 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro'
+import { getAdminToken } from '../../../lib/admin/session'
+import { cmsFetch } from '../../../lib/admin/api'
+import type { PayloadFindResult, Category } from '@playback-rental/shared-types'
+
+const user = Astro.locals.adminUser!
+const token = getAdminToken(Astro.cookies)!
+
+const result = await cmsFetch<PayloadFindResult<Category>>('/categories?sort=order&limit=200&depth=0', token)
+const categories = result?.docs ?? []
+---
+
+<AdminLayout
+  title="Категории"
+  subtitle={`${categories.length} категорий`}
+  activeTab="categories"
+  actionLabel="Новая категория"
+  actionHref="/admin/categories/new"
+  user={user}
+>
+  <div class="rounded-3xl border border-border bg-card p-6">
+    <div class="grid grid-cols-[2fr_1.2fr_1fr_90px] gap-3.5 px-2.5 pb-3 text-[10px] font-semibold tracking-[0.13em] text-subtle uppercase">
+      <span>Название</span><span>Slug</span><span>Тег</span><span>Порядок</span>
+    </div>
+    {
+      categories.map((c) => (
+        <a
+          href={`/admin/categories/${c.id}`}
+          class="grid grid-cols-[2fr_1.2fr_1fr_90px] items-center gap-3.5 rounded-2xl px-2.5 py-3.5 text-[13.5px] transition-colors duration-200 hover:bg-muted"
+        >
+          <span class="truncate font-medium">{c.name}</span>
+          <span class="truncate text-[12.5px] text-subtle">{c.slug}</span>
+          <span class="truncate text-[12.5px] text-subtle">{c.tag ?? '—'}</span>
+          <span>{c.order}</span>
+        </a>
+      ))
+    }
+    {categories.length === 0 ? <div class="px-2.5 py-8 text-center text-[13.5px] text-subtle">Пока нет категорий</div> : null}
+  </div>
+</AdminLayout>

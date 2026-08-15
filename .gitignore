@@ -28,3 +28,9 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Claude Code local session/tooling state - machine-specific, not project source
+.claude/
+
+# pnpm content-addressable store, if ever created locally under the repo root
+.pnpm-store/

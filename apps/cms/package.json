@@ -9,9 +9,10 @@
     "start": "next start",
     "payload": "payload",
     "generate:types": "payload generate:types",
-    "sync:moysklad": "tsx --env-file=.env src/scripts/sync-moysklad.ts",
-    "register:moysklad-webhook": "tsx --env-file=.env src/scripts/register-moysklad-webhook.ts",
-    "reconcile:moysklad": "tsx --env-file=.env src/scripts/reconcile-moysklad.ts"
+    "sync:moysklad": "tsx --env-file-if-exists=.env src/scripts/sync-moysklad.ts",
+    "register:moysklad-webhook": "tsx --env-file-if-exists=.env src/scripts/register-moysklad-webhook.ts",
+    "reconcile:moysklad": "tsx --env-file-if-exists=.env src/scripts/reconcile-moysklad.ts",
+    "reconcile:moysklad:daemon": "tsx --env-file-if-exists=.env src/scripts/reconcile-daemon.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "latest",

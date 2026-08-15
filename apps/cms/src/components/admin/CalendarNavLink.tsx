@@ -2,7 +2,7 @@ import React from 'react'
 
 export const CalendarNavLink: React.FC = () => (
   <a
-    href="/admin/calendar"
+    href="/cms/calendar"
     className="nav__link"
     style={{ display: 'flex', alignItems: 'center', padding: '8px 0' }}
   >

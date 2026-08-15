@@ -11,7 +11,7 @@ function getToken(): string {
   return token
 }
 
-export async function msGet<T = any>(path: string): Promise<T> {
+export async function msGet<T = unknown>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: {
       Authorization: `Bearer ${getToken()}`,
@@ -41,7 +41,7 @@ export interface MsListResponse<T> {
 }
 
 // Paginates through a МойСклад list endpoint, yielding all rows.
-export async function* msPaginate<T = any>(
+export async function* msPaginate<T = unknown>(
   path: string,
   pageSize = 100,
 ): AsyncGenerator<T[], void, unknown> {

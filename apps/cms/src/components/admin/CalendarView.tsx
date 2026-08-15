@@ -3,7 +3,23 @@ import { DefaultTemplate } from '@payloadcms/next/templates'
 import type { AdminViewServerProps } from 'payload'
 
 const DAYS_TO_SHOW = 14
+// Only pending/confirmed orders hold a live reservation against stock —
+// cancelled/completed orders don't occupy a slot, so they're excluded from
+// both the query and the legend (showing them would be a dead legend entry
+// bars never actually use).
 const ACTIVE_STATUSES = ['pending', 'confirmed']
+
+// Matches the delivered design's occupancy Gantt: confirmed bookings render
+// as a solid bar ("Аренда"), pending ones as a hatched bar ("Бронь") — same
+// visual grammar, backed by the real order status instead of invented data.
+const STATUS_TONE: Record<string, { background: string; color: string; label: string }> = {
+  confirmed: { background: '#0A0A0A', color: '#fff', label: 'Подтверждён' },
+  pending: {
+    background: 'repeating-linear-gradient(45deg, rgba(10,10,10,0.5), rgba(10,10,10,0.5) 1px, #fff 1px, #fff 4px)',
+    color: '#0A0A0A',
+    label: 'Ожидает звонка',
+  },
+}
 
 function startOfDay(d: Date): Date {
   const copy = new Date(d)
@@ -15,13 +31,6 @@ function addDays(d: Date, n: number): Date {
   const copy = new Date(d)
   copy.setDate(copy.getDate() + n)
   return copy
-}
-
-const STATUS_COLOR: Record<string, string> = {
-  pending: '#e0b23f',
-  confirmed: '#3fae5c',
-  cancelled: '#c04b4b',
-  completed: '#4a7fc0',
 }
 
 export const CalendarView = async (props: AdminViewServerProps) => {
@@ -93,22 +102,25 @@ export const CalendarView = async (props: AdminViewServerProps) => {
       user={req.user ?? undefined}
       visibleEntities={initPageResult.visibleEntities}
     >
-      <div style={{ padding: '1rem 2.5rem' }}>
-        <h1>Календарь занятости</h1>
-        <p style={{ color: 'var(--theme-elevation-500)', marginBottom: '1.5rem' }}>
-          Ближайшие {DAYS_TO_SHOW} дней, только товары в аренде с активными бронированиями показаны первыми.
-        </p>
-
-        <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem', fontSize: '0.85rem' }}>
-          {Object.entries(STATUS_COLOR).map(([status, color]) => (
-            <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span style={{ width: 12, height: 12, background: color, display: 'inline-block', borderRadius: 2 }} />
-              {status}
-            </div>
-          ))}
+      <div style={{ padding: '2rem 2.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 23, fontWeight: 700, letterSpacing: '-0.03em' }}>Календарь занятости</h1>
+            <p style={{ margin: '0.2rem 0 0', fontSize: 13, color: 'var(--theme-elevation-500)' }}>
+              Ближайшие {DAYS_TO_SHOW} дней — товары с активными бронированиями показаны первыми.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--theme-elevation-500)' }}>
+            {Object.entries(STATUS_TONE).map(([status, tone]) => (
+              <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 12, height: 12, borderRadius: 4, background: tone.background, border: '1px solid var(--theme-elevation-150)', display: 'inline-block' }} />
+                {tone.label}
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div style={{ overflowX: 'auto', border: '1px solid var(--theme-elevation-150)', borderRadius: 4 }}>
+        <div style={{ marginTop: 20, overflowX: 'auto', border: '1px solid var(--theme-elevation-100)', borderRadius: 20, background: 'var(--theme-elevation-0)' }}>
           <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 900 }}>
             <thead>
               <tr>
@@ -116,11 +128,17 @@ export const CalendarView = async (props: AdminViewServerProps) => {
                   style={{
                     position: 'sticky',
                     left: 0,
-                    background: 'var(--theme-elevation-50)',
-                    padding: '0.5rem',
+                    background: 'var(--theme-elevation-0)',
+                    padding: '0.85rem 1rem',
                     textAlign: 'left',
                     minWidth: 220,
-                    borderRight: '1px solid var(--theme-elevation-150)',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    color: 'var(--theme-elevation-400)',
+                    borderBottom: '1px solid var(--theme-elevation-100)',
+                    borderRight: '1px solid var(--theme-elevation-100)',
                   }}
                 >
                   Товар
@@ -129,12 +147,13 @@ export const CalendarView = async (props: AdminViewServerProps) => {
                   <th
                     key={day.toISOString()}
                     style={{
-                      padding: '0.5rem',
+                      padding: '0.85rem 0.4rem',
                       minWidth: 70,
                       textAlign: 'center',
-                      fontWeight: 400,
-                      fontSize: '0.8rem',
-                      borderLeft: '1px solid var(--theme-elevation-150)',
+                      fontWeight: 500,
+                      fontSize: 12,
+                      color: 'var(--theme-elevation-500)',
+                      borderBottom: '1px solid var(--theme-elevation-100)',
                     }}
                   >
                     {day.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}
@@ -146,19 +165,23 @@ export const CalendarView = async (props: AdminViewServerProps) => {
               {orderedProducts.map((product: any) => {
                 const items = itemsByProduct.get(product.id) || []
                 return (
-                  <tr key={product.id} style={{ borderTop: '1px solid var(--theme-elevation-100)' }}>
+                  <tr key={product.id}>
                     <td
                       style={{
                         position: 'sticky',
                         left: 0,
-                        background: 'var(--theme-bg)',
-                        padding: '0.5rem',
-                        borderRight: '1px solid var(--theme-elevation-150)',
+                        background: 'var(--theme-elevation-0)',
+                        padding: '0.7rem 1rem',
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        letterSpacing: '-0.012em',
+                        borderTop: '1px solid var(--theme-elevation-50)',
+                        borderRight: '1px solid var(--theme-elevation-100)',
                       }}
                     >
                       {product.title}
                     </td>
-                    <td colSpan={days.length} style={{ position: 'relative', padding: 0, height: 36 }}>
+                    <td colSpan={days.length} style={{ position: 'relative', padding: 0, height: 40, borderTop: '1px solid var(--theme-elevation-50)' }}>
                       {items.map((item: any) => {
                         const itemStart = startOfDay(new Date(item.startDate))
                         const itemEnd = startOfDay(new Date(item.endDate))
@@ -169,25 +192,28 @@ export const CalendarView = async (props: AdminViewServerProps) => {
                         const orderStatus = orderStatusById.get(
                           typeof item.order === 'object' ? item.order.id : item.order,
                         )
+                        const tone = STATUS_TONE[orderStatus] ?? { background: '#6E6E73', color: '#fff', label: orderStatus }
                         return (
                           <div
                             key={item.id}
-                            title={`${item.quantity} шт. — заказ #${typeof item.order === 'object' ? item.order.id : item.order}`}
+                            title={`${item.quantity} шт. — заказ #${typeof item.order === 'object' ? item.order.id : item.order} · ${tone.label}`}
                             style={{
                               position: 'absolute',
                               left: `${(startOffset / days.length) * 100}%`,
                               width: `${(span / days.length) * 100}%`,
                               top: 6,
-                              height: 24,
-                              background: STATUS_COLOR[orderStatus] || '#999',
-                              borderRadius: 3,
-                              color: '#fff',
-                              fontSize: '0.75rem',
+                              height: 28,
+                              background: tone.background,
+                              borderRadius: 9,
+                              color: tone.color,
+                              fontSize: 12,
+                              fontWeight: 600,
                               display: 'flex',
                               alignItems: 'center',
-                              padding: '0 6px',
+                              padding: '0 8px',
                               overflow: 'hidden',
                               whiteSpace: 'nowrap',
+                              border: '1px solid var(--theme-elevation-150)',
                             }}
                           >
                             ×{item.quantity}
@@ -200,7 +226,7 @@ export const CalendarView = async (props: AdminViewServerProps) => {
               })}
               {orderedProducts.length === 0 && (
                 <tr>
-                  <td colSpan={days.length + 1} style={{ padding: '1rem', textAlign: 'center' }}>
+                  <td colSpan={days.length + 1} style={{ padding: '2rem', textAlign: 'center', color: 'var(--theme-elevation-400)' }}>
                     Нет товаров в аренде
                   </td>
                 </tr>

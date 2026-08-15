@@ -1,0 +1,49 @@
+# Dev overlay — hot reload via bind mounts, still fully containerized (no
+# local `pnpm dev`/`pnpm build` outside Docker, per the project's Docker-only
+# workflow). Run with:
+#   docker compose -f compose.yaml -f compose.dev.yaml up --build
+#
+# Still publishes only `web` (same as prod) — day-to-day dev should exercise
+# the real single-port proxy path, not a shortcut around it.
+#
+# node_modules anonymous volumes: each bind mount below shadows the app
+# directory with the host's source tree, which would otherwise blow away the
+# Linux-built node_modules the image installed (host node_modules can carry
+# macOS-built native addons — sharp, @swc/core — that break in the
+# container). Docker seeds a fresh anonymous volume from the image's
+# existing content the first time it's mounted, so pointing one at each
+# node_modules path preserves the container's own install instead.
+
+services:
+  # Excluded from dev's default `up` — no reason for local iteration to
+  # continuously hit the real (shared, cross-business) МойСклад account on
+  # a timer. Still runnable on demand: `docker compose run --rm reconcile`.
+  reconcile:
+    profiles: [jobs]
+
+  cms:
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./apps/cms:/repo/apps/cms
+      - cms_node_modules:/repo/apps/cms/node_modules
+    healthcheck:
+      start_period: 40s
+
+  web:
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./apps/web:/repo/apps/web
+      - ./packages/shared-types:/repo/packages/shared-types
+      - web_node_modules:/repo/apps/web/node_modules
+      - shared_types_node_modules:/repo/packages/shared-types/node_modules
+
+volumes:
+  cms_node_modules:
+  web_node_modules:
+  shared_types_node_modules:

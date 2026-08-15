@@ -1,0 +1,173 @@
+# Production stack. Only `web` publishes a port — `db` and `cms` are
+# reachable solely over the compose network, matching the single-public-port
+# design in apps/web/src/middleware.ts (which reverse-proxies /cms, /api,
+# /_next to the cms service). Run with:
+#   docker compose up --build
+# Dev mode (hot reload, bind mounts) overlays compose.dev.yaml on top — see
+# that file's header comment.
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: playback
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: playback_cms
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U playback -d playback_cms']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  cms:
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      # Stable forever once set for real — rotating it invalidates every
+      # existing session (admin logins, checkout submitToken checks).
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      # Public storefront origin — feeds cors/csrf (payload.config.ts) and
+      # Next's serverActions.allowedOrigins (next.config.mjs).
+      WEB_URL: ${WEB_URL:?set WEB_URL in .env}
+      MEDIA_STATIC_DIR: /data/media
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+      MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
+      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
+    volumes:
+      - cms_media:/data/media
+    healthcheck:
+      # /api/access is Payload's built-in, unauthenticated access-control
+      # introspection endpoint — always 200, no login needed, so it doubles
+      # as a cheap liveness probe.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/api/access').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      cms:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '4321'
+      # Server-side (SSR + this app's own reverse proxy) reaches the CMS
+      # over the compose network directly — never the public URL.
+      CMS_INTERNAL_URL: http://cms:3000
+      # Browser-side stays same-origin; middleware.ts proxies the rest.
+      PUBLIC_PAYLOAD_URL: ''
+    ports:
+      - '${WEB_PORT:-8080}:4321'
+
+  # Actually schedules reconcile-moysklad.ts's sync (a review found it was
+  # never wired to anything — the only safety net against a missed webhook
+  # was a human running `pnpm reconcile:moysklad` by hand). Unlike the
+  # one-off jobs below, this has no `profiles:` — it's part of the default
+  # `docker compose up` set and stays up under the same `restart:
+  # unless-stopped` policy as db/cms/web, re-syncing on its own interval
+  # (MOYSKLAD_RECONCILE_INTERVAL_MIN, default 60) for as long as the stack
+  # is up. Disabled in dev — see compose.dev.yaml.
+  reconcile:
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      MEDIA_STATIC_DIR: /data/media
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+      MOYSKLAD_RECONCILE_INTERVAL_MIN: ${MOYSKLAD_RECONCILE_INTERVAL_MIN:-60}
+    volumes:
+      - cms_media:/data/media
+    command: ['pnpm', 'reconcile:moysklad:daemon']
+
+  # МойСклад one-off scripts — not started by `docker compose up` (profiles:
+  # [jobs] excludes them from the default set). Run one-off with e.g.:
+  #   docker compose run --rm sync-moysklad
+  # Reuses the cms image/env (same DATABASE_URI, MOYSKLAD_* vars, media
+  # volume) so a sync run sees exactly what the running app sees.
+  sync-moysklad:
+    profiles: [jobs]
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      MEDIA_STATIC_DIR: /data/media
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+    volumes:
+      - cms_media:/data/media
+    command: ['pnpm', 'sync:moysklad']
+
+  reconcile-moysklad:
+    profiles: [jobs]
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      MEDIA_STATIC_DIR: /data/media
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+    volumes:
+      - cms_media:/data/media
+    command: ['pnpm', 'reconcile:moysklad']
+
+  register-moysklad-webhook:
+    profiles: [jobs]
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+      MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
+      # The webhook target is *this* deployment's public API — WEB_URL, not
+      # an internal address, since МойСклад calls it from the outside.
+      WEB_URL: ${WEB_URL:?set WEB_URL in .env}
+    command: ['pnpm', 'register:moysklad-webhook']
+
+volumes:
+  pgdata:
+  cms_media:

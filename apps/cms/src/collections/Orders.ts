@@ -1,9 +1,39 @@
+import { randomBytes } from 'crypto'
 import type { CollectionConfig } from 'payload'
 import { pushOrderToMoySklad } from '../lib/moysklad/orders'
-import { sendOrderNotification } from '../lib/telegram/notify'
+import { sendOrderNotification } from '../lib/notifications/webhook'
+import { calculateRentalDays } from '../lib/rental/pricing'
+import { secretsMatch } from '../lib/security/timingSafe'
+
+// The rate actually frozen into this line's lineTotal at booking time — not
+// the product's current live price, which may have changed (a МойСклад sync,
+// an admin edit) between when the customer was quoted and when this order is
+// submitted. orderItems doesn't store its own unitPrice, only the computed
+// total, so back-derive it the same way it was computed.
+function frozenUnitPrice(item: { listingType: string; quantity: number; lineTotal: number; startDate?: string; endDate?: string }): number {
+  if (item.quantity <= 0) return 0
+  if (item.listingType === 'sale') return item.lineTotal / item.quantity
+  const days = item.startDate && item.endDate ? calculateRentalDays(new Date(item.startDate), new Date(item.endDate)) : 0
+  if (days <= 0) return 0
+  return item.lineTotal / (item.quantity * days)
+}
 
 export const Orders: CollectionConfig = {
   slug: 'orders',
+  access: {
+    // Public checkout creates its own order shell (then attaches orderItems
+    // to it) — but reading/updating/deleting orders is admin-only, since
+    // customerName/Email/Phone live here. Without this, any visitor could
+    // list every customer's contact details over the public REST API.
+    // The /:id/submit endpoint below still works for anonymous checkout —
+    // custom endpoints aren't gated by collection access — but requires the
+    // caller to present this order's submitToken (see below), so it can't be
+    // force-submitted by a third party guessing/enumerating sequential ids.
+    create: () => true,
+    read: ({ req }) => Boolean(req.user),
+    update: ({ req }) => Boolean(req.user),
+    delete: ({ req }) => Boolean(req.user),
+  },
   admin: {
     useAsTitle: 'customerName',
     defaultColumns: ['customerName', 'status', 'totalPrice', 'createdAt'],
@@ -40,6 +70,11 @@ export const Orders: CollectionConfig = {
         { label: 'Cancelled', value: 'cancelled' },
         { label: 'Completed', value: 'completed' },
       ],
+      admin: {
+        components: {
+          Cell: '/src/components/admin/OrderStatusCell#OrderStatusCell',
+        },
+      },
     },
     {
       name: 'totalPrice',
@@ -65,7 +100,9 @@ export const Orders: CollectionConfig = {
       type: 'join',
       collection: 'orderItems',
       on: 'order',
-      defaultColumns: ['product', 'listingType', 'quantity', 'startDate', 'endDate', 'lineTotal'],
+      admin: {
+        defaultColumns: ['product', 'listingType', 'quantity', 'startDate', 'endDate', 'lineTotal'],
+      },
     },
     // Outbound sync bookkeeping (Phase 1, task 7): set once this order has
     // been pushed to МойСклад as a corresponding customerorder document,
@@ -87,7 +124,26 @@ export const Orders: CollectionConfig = {
         description: 'Set once /submit has run (pushed to МойСклад + notified) — a checkout only submits once.',
       },
     },
+    {
+      // Generated on create (see hooks below), returned to the anonymous
+      // client as part of the create response, and required by /:id/submit.
+      // Without this, order ids being small sequential integers would let
+      // anyone force-submit (МойСклад push + Telegram notify) any order —
+      // including ones still being built by their actual customer — just by
+      // guessing/enumerating ids.
+      name: 'submitToken',
+      type: 'text',
+      admin: { hidden: true },
+    },
   ],
+  hooks: {
+    beforeChange: [
+      ({ operation, data }) => {
+        if (operation === 'create') data.submitToken = randomBytes(24).toString('hex')
+        return data
+      },
+    ],
+  },
   endpoints: [
     {
       // Deliberately a separate, explicit action rather than an afterChange
@@ -101,12 +157,20 @@ export const Orders: CollectionConfig = {
       handler: async (req) => {
         const orderId = Number(req.routeParams?.id)
 
-        const order = await req.payload.findByID({ collection: 'orders', id: orderId, req })
+        const order = await req.payload.findByID({ collection: 'orders', id: orderId, req, overrideAccess: true })
         if (!order) {
           return Response.json({ error: 'Order not found' }, { status: 404 })
         }
         if (order.submittedAt) {
           return Response.json({ error: 'Order already submitted' }, { status: 409 })
+        }
+
+        if (!req.user) {
+          const body = await req.json?.().catch(() => null)
+          const providedToken = body?.submitToken
+          if (!secretsMatch(providedToken, order.submitToken || '')) {
+            return Response.json({ error: 'Invalid or missing submitToken' }, { status: 403 })
+          }
         }
 
         const itemsResult = await req.payload.find({
@@ -134,7 +198,9 @@ export const Orders: CollectionConfig = {
               moySkladId: item.product.moySkladId,
               listingType: item.listingType,
               quantity: item.quantity,
-              unitPrice: item.product.price,
+              unitPrice: frozenUnitPrice(item),
+              startDate: item.startDate,
+              endDate: item.endDate,
             })),
           })
           moySkladOrderId = pushed.id
@@ -150,7 +216,7 @@ export const Orders: CollectionConfig = {
           customerName: order.customerName,
           customerEmail: order.customerEmail,
           customerPhone: order.customerPhone,
-          totalPrice: order.totalPrice,
+          totalPrice: order.totalPrice ?? 0,
           items: items.map((item) => ({
             title: item.product.title,
             quantity: item.quantity,

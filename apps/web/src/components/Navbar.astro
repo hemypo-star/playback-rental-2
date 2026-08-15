@@ -1,0 +1,58 @@
+---
+import CartBadge from './CartBadge'
+import AdminPanelLink from './AdminPanelLink'
+import RentalDatePicker from './RentalDatePicker'
+
+const currentPath = Astro.url.pathname
+const isActive = (path: string) => currentPath === path || currentPath.startsWith(`${path}/`)
+---
+
+<div class="sticky top-0 z-[60] px-3.5 pt-3 sm:px-[14px]" style="background:linear-gradient(180deg,rgba(239,238,235,0.96) 60%,rgba(239,238,235,0))">
+  <header class="container-page flex h-16 items-center gap-4 rounded-[20px] border border-border bg-white/[0.86] px-4 shadow-[var(--shadow-soft)] backdrop-blur-[20px] backdrop-saturate-[1.6] sm:gap-[30px] sm:px-4">
+    <a href="/" class="flex shrink-0 items-baseline gap-[7px] select-none">
+      <span class="text-[15px] font-bold uppercase tracking-[0.02em]">Playback</span>
+      <span class="hidden text-[15px] font-normal uppercase tracking-[0.02em] text-subtle sm:inline">Rental</span>
+      <span class="text-[10px] text-accent" style="transform:translateY(-6px)">®</span>
+    </a>
+
+    <nav class="ml-1 hidden min-w-0 items-center gap-1 whitespace-nowrap md:flex">
+      <a href="/catalog" class:list={["rounded-full px-[13px] py-2 text-[11px] font-semibold uppercase tracking-[0.12em] border-0 transition-colors duration-200 hover:bg-primary hover:text-primary-foreground", isActive('/catalog') ? 'bg-primary text-primary-foreground' : 'text-foreground']}>Каталог</a>
+      <a href="/catalog?type=kit" class:list={["rounded-full px-[13px] py-2 text-[11px] font-semibold uppercase tracking-[0.12em] border-0 transition-colors duration-200 hover:bg-primary hover:text-primary-foreground", currentPath.includes('type=kit') ? 'bg-primary text-primary-foreground' : 'text-foreground']}>Наборы</a>
+      <a href="/how-it-works" class:list={["rounded-full px-[13px] py-2 text-[11px] font-semibold uppercase tracking-[0.12em] border-0 transition-colors duration-200 hover:bg-primary hover:text-primary-foreground", isActive('/how-it-works') ? 'bg-primary text-primary-foreground' : 'text-foreground']}>Условия</a>
+      <a href="/contact" class:list={["rounded-full px-[13px] py-2 text-[11px] font-semibold uppercase tracking-[0.12em] border-0 transition-colors duration-200 hover:bg-primary hover:text-primary-foreground", isActive('/contact') ? 'bg-primary text-primary-foreground' : 'text-foreground']}>Контакты</a>
+    </nav>
+
+    <div class="flex-1"></div>
+
+    <div class="hidden shrink-0 items-center gap-2 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.1em] text-subtle xl:flex">
+      <span class="h-1.5 w-1.5 rounded-full bg-accent" style="animation:bnBlink 2.6s ease-in-out infinite"></span>
+      <span>10:00—21:00</span>
+    </div>
+
+    <RentalDatePicker client:load variant="navbar" />
+
+    <a
+      href="/checkout"
+      class="flex h-[38px] shrink-0 items-center gap-2.5 whitespace-nowrap rounded-full bg-primary py-0 pl-4 pr-1.5 text-primary-foreground transition-[background-color,gap] duration-200 hover:bg-primary-hover hover:gap-3.5"
+    >
+      <span class="text-[11px] font-semibold uppercase tracking-[0.1em]">Корзина</span>
+      <CartBadge client:load />
+    </a>
+
+    <AdminPanelLink client:load />
+
+    <input type="checkbox" id="mobile-menu-toggle" class="peer hidden" />
+    <label for="mobile-menu-toggle" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full md:hidden" aria-label="Меню">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
+        <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
+      </svg>
+    </label>
+
+    <div class="peer-[:checked]:flex absolute left-0 right-0 top-[68px] hidden flex-col gap-1 rounded-[20px] border border-border bg-card p-3 shadow-[var(--shadow-lifted)] md:hidden">
+      <a href="/catalog" class="rounded-xl px-3 py-2 text-[14.5px] font-medium hover:bg-muted">Каталог</a>
+      <a href="/catalog?type=kit" class="rounded-xl px-3 py-2 text-[14.5px] font-medium hover:bg-muted">Наборы</a>
+      <a href="/how-it-works" class="rounded-xl px-3 py-2 text-[14.5px] font-medium hover:bg-muted">Условия</a>
+      <a href="/contact" class="rounded-xl px-3 py-2 text-[14.5px] font-medium hover:bg-muted">Контакты</a>
+    </div>
+  </header>
+</div>

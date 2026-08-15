@@ -1,0 +1,41 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro'
+import KpiCards from '../../components/admin/KpiCards.astro'
+import { getAdminToken } from '../../lib/admin/session'
+import { getAdminKpi, getAdminAnalytics } from '../../lib/admin/api'
+import { rub } from '../../lib/admin/format'
+
+const user = Astro.locals.adminUser!
+const token = getAdminToken(Astro.cookies)!
+
+const [kpi, { rows }] = await Promise.all([getAdminKpi(token), getAdminAnalytics(token)])
+const maxRevenue = rows.length ? rows[0].revenue : 1
+---
+
+<AdminLayout title="Аналитика" subtitle="Выручка по категориям, кроме отменённых заказов" activeTab="analytics" user={user}>
+  <KpiCards kpi={kpi} />
+
+  <div class="rounded-3xl border border-border bg-card p-6">
+    <div class="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Выручка по категориям</div>
+    <div class="mt-3.5">
+      {
+        rows.map((r) => (
+          // Track background is the design's literal #F0EFEC, not the
+          // --color-muted token (#F4F3F1) — close but a distinct value used
+          // only for this bar and the "ok" stock-status badge.
+          <div class="grid grid-cols-[200px_1fr_100px] items-center gap-4.5 rounded-2xl px-2.5 py-3 transition-colors duration-200 hover:bg-muted">
+            <span class="truncate text-[14px]">{r.name}</span>
+            <div class="h-3.5 overflow-hidden rounded-full bg-[#F0EFEC]">
+              <div
+                class="h-full origin-left rounded-full bg-primary"
+                style={{ width: `${Math.max(4, (r.revenue / maxRevenue) * 100)}%`, animation: 'bnRule 900ms cubic-bezier(0.16,1,0.3,1) both' }}
+              />
+            </div>
+            <span class="text-right text-[14px] font-semibold">{rub(r.revenue)}</span>
+          </div>
+        ))
+      }
+      {rows.length === 0 ? <div class="px-2.5 py-8 text-center text-[13.5px] text-subtle">Пока нет данных</div> : null}
+    </div>
+  </div>
+</AdminLayout>

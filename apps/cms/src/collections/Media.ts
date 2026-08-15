@@ -2,6 +2,12 @@ import type { CollectionConfig } from 'payload'
 
 export const Media: CollectionConfig = {
   slug: 'media',
+  access: {
+    read: () => true,
+    create: ({ req }) => Boolean(req.user),
+    update: ({ req }) => Boolean(req.user),
+    delete: ({ req }) => Boolean(req.user),
+  },
   admin: {
     useAsTitle: 'alt',
   },
@@ -23,6 +29,11 @@ export const Media: CollectionConfig = {
     },
   ],
   upload: {
+    // Relative (resolved against cwd, i.e. apps/cms — matches local dev)
+    // unless overridden with an absolute path, which Docker does to point
+    // at a mounted volume (see compose.yaml) so uploads survive container
+    // recreation independently of the image.
+    staticDir: process.env.MEDIA_STATIC_DIR || 'media',
     imageSizes: [
       {
         name: 'thumbnail',

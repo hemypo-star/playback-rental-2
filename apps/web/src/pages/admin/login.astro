@@ -1,0 +1,83 @@
+---
+import Layout from '../../layouts/Layout.astro'
+import { getAdminUser, isAdminInitialized } from '../../lib/admin/session'
+
+// Not gated by middleware.ts (this is one of the ADMIN_PUBLIC_PATHS), so
+// these two redirects are this page's own responsibility.
+const user = await getAdminUser(Astro.cookies)
+if (user) {
+  return Astro.redirect('/admin')
+}
+if (!(await isAdminInitialized())) {
+  return Astro.redirect('/admin/first-register')
+}
+
+const nextPath = Astro.url.searchParams.get('next') || '/admin'
+---
+
+<Layout title="Вход в админку">
+  <div class="flex min-h-[70vh] items-center justify-center py-16">
+    <div class="card-surface w-full max-w-[380px] p-8">
+      <h1 class="text-[22px] font-bold tracking-[-0.03em]">Вход в админку</h1>
+      <p class="mt-1.5 text-[13px] text-subtle">Playback Rental</p>
+
+      <form id="login-form" class="mt-6 flex flex-col gap-4">
+        <div>
+          <label for="email" class="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autocomplete="username"
+            class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none transition-[border-color,background-color] duration-200 focus:border-foreground focus:bg-white"
+          />
+        </div>
+        <div>
+          <label for="password" class="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Пароль</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autocomplete="current-password"
+            class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none transition-[border-color,background-color] duration-200 focus:border-foreground focus:bg-white"
+          />
+        </div>
+
+        <p id="login-error" class="hidden text-[13px] text-accent"></p>
+
+        <button type="submit" class="btn-primary mt-1 justify-center">Войти</button>
+      </form>
+    </div>
+  </div>
+
+  <script define:vars={{ nextPath }}>
+    const form = document.getElementById('login-form')
+    const errorEl = document.getElementById('login-error')
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      errorEl.classList.add('hidden')
+
+      const data = new FormData(form)
+      const res = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.get('email'),
+          password: data.get('password'),
+        }),
+      })
+
+      if (res.ok) {
+        window.location.href = nextPath
+        return
+      }
+
+      const body = await res.json().catch(() => null)
+      errorEl.textContent = body?.errors?.[0]?.message || 'Неверный email или пароль'
+      errorEl.classList.remove('hidden')
+    })
+  </script>
+</Layout>
