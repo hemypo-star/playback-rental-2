@@ -108,6 +108,6 @@ export async function proxy(request: NextRequest) {
 // "does the remainder start with this," not "does it equal this."
 export const config = {
   matcher: [
-    '/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact|catalog|product|promotions|checkout|admin\\/login|admin\\/first-register|admin\\/orders|admin$|$).*)',
+    '/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact|catalog|product|promotions|checkout|admin\\/login|admin\\/first-register|admin\\/orders|admin\\/calendar|admin\\/stock|admin\\/clients|admin\\/analytics|admin$|$).*)',
   ],
 }
