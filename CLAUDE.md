@@ -986,3 +986,69 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   One page group remains: `media`/`users`/`settings` — the last of Stage 3,
   after which only Stage 4 (delete `apps/web`, cleanup) is left on the
   whole `docs/PLAN-next-migration.md` plan.
+- **2026-08-20** — **Stage 3 (admin port), fifth and final commit — Stage 3
+  complete.** Page group 6 of 6 per section 3.5: `media`, `users`,
+  `settings` — the plan's own "long tail" grouping, all three screens the
+  delivered mockup never designed at all (same reasoning as Категории/Акции
+  from the previous commit). Same Server Actions pattern as every prior
+  group. `changeOwnPassword()` (`(admin)/admin/users/actions.ts`) reads the
+  acting admin's own id from `getAdminUser()` itself rather than trusting a
+  client-supplied id — the same "this is you" self-guard the original
+  Astro page enforced client-side (only rendering a delete button for other
+  rows), now enforced server-side too, so it can't be bypassed by calling
+  the action directly with someone else's id. `settings` always POSTs the
+  whole `SiteSettings` object, never a partial patch — the standing risk on
+  this global, called out since the 2026-08-14 Step 7 dev log entry, is a
+  save that silently drops a field. `MediaGrid`/`UsersPanel`/
+  `SettingsForm.tsx` replace the Astro sources' raw DOM manipulation with
+  React state, same pattern the previous commit's Category/Promotion/
+  ProductForm established.
+
+  With all 17 `/admin/*` pages now ported, `proxy.ts`'s matcher lost its
+  dozen granular per-route `admin/*` exclusions in favor of one plain
+  `admin` alternative — nothing under `/admin/*` falls through to Astro
+  anymore, so the earlier discipline (exclude only what's actually ported,
+  to keep the strangler-fig invariant honest) no longer has anything left
+  to protect.
+
+  **Real bug found and fixed, unrelated to this page group's own logic**:
+  `apps/cms/.gitignore`'s `media/` line (meant to exclude the synced-upload
+  directory `apps/cms/media/`, re-downloadable via `sync:moysklad`) was
+  unanchored — gitignore patterns without a leading `/` match a directory
+  of that name at *any* depth, so it also silently swallowed this page
+  group's own `src/app/(admin)/admin/media/` route the moment it was
+  created: `git status` never listed `actions.ts`/`page.tsx` for that
+  route at all. Caught immediately, before committing, because the number
+  of files staged via `git add` didn't match the number actually written —
+  fixed by anchoring the pattern to `/media/` (relative to that
+  `.gitignore`'s own directory), confirmed via `git check-ignore` both ways
+  (the real upload directory still ignored, the admin route no longer is).
+
+  Verified live: real Playwright session — media page's file count and a
+  real per-item alt-text save (confirmed via a direct API check, not just
+  the UI); users page correctly shows "это вы" only on the acting admin's
+  own row; created a second admin and confirmed it appeared in the list;
+  changed the acting admin's own password and confirmed a **fresh login
+  with the new password actually works** (logged out and back in for
+  real, not just trusted the UI's success message); deleted the second
+  admin and confirmed removal; settings page saved a real field edit plus
+  an added "Как это работает" step, confirmed via a direct API query that
+  `howItWorksSteps` grew to 5 rows with the right content and nothing else
+  was dropped — the exact scenario the standing risk note above exists to
+  catch. All scratch state (two admin users, one uploaded media file, the
+  extra settings step, the edited field) reverted/deleted afterward;
+  confirmed `/api/users/init` back to `{"initialized":false}` and zero
+  remaining media docs. Zero browser console errors. `next build` compiles
+  all three new routes as dynamic. Lint clean (only the same pre-existing
+  `no-img-element` advisories). `design-sync audit` shows no new gaps.
+
+  **This closes Stage 3** — all six page groups (auth+shell+login/first-
+  register; index; orders; calendar/stock/clients/analytics; categories/
+  promotions/products; media/users/settings) landed the same day they were
+  started, across six commits, the same cadence Stage 2 set. Only **Stage 4
+  (cleanup)** remains on the whole `docs/PLAN-next-migration.md` plan:
+  delete `apps/web` entirely, drop the fallback proxy from `proxy.ts`, drop
+  `cors`/`csrf`/`serverActions.allowedOrigins` down to a single origin, drop
+  `CMS_INTERNAL_URL`/`PUBLIC_PAYLOAD_URL`, and decide the fate of
+  `packages/shared-types` and the `/cms` route now that the custom admin UI
+  it was staged behind is fully live in this same process.
