@@ -590,3 +590,86 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   most care, since it's the only one with a real mutation (`submitOrder()`, planned to
   become a Server Action on the Local API rather than a client-side REST POST, retiring
   the `mutate()`/`{ doc, message }` wrapper along with the REST call it exists for).
+- **2026-08-20** — **Stage 2 page group 7 of 7 (checkout) done — Stage 2 complete.**
+  Ports `apps/web`'s `checkout.astro` + `CheckoutPage.tsx` to `apps/cms`'s
+  `(frontend)/checkout/page.tsx` + `components/CheckoutPage.tsx`. This is the plan's
+  own flagged "needs the most care" page group — the only one with a real mutation
+  (order creation) — so unlike parts 1–6 (straight syntax ports), this one got a real
+  architectural change: `submitOrder()` becomes a Server Action
+  (`checkout/actions.ts`'s `submitCheckout()`) using the Local API directly, instead of
+  the old REST flow's 1+N+1 separate HTTP round trips (`createOrder`, one
+  `createOrderItem` per cart line, `submitOrder`) through `apps/web/src/lib/payload.ts`'s
+  `mutate()`/`{ doc, message }` wrapper. The `/:id/submit` custom Payload endpoint's
+  actual business logic (МойСклад push, notification webhook, `submittedAt` stamping)
+  lived entirely inline in its handler (`apps/cms/src/collections/Orders.ts`) before
+  this commit — extracted into a new shared file, `apps/cms/src/lib/rental/
+  submitOrder.ts`, so the new Server Action and the endpoint (still needed as-is,
+  unchanged behavior, for `apps/web`'s REST-based checkout until Stage 4 deletes that
+  app) call the exact same code rather than duplicating the МойСклад-push/notification
+  logic. `Orders.ts`'s endpoint handler is now a thin wrapper: it still owns the
+  `submitToken` check specifically (an HTTP-boundary-specific authorization concept —
+  protects the public endpoint from someone force-submitting an order by guessing/
+  enumerating ids — that the Server Action doesn't need, since it only ever submits the
+  order it just created in the same request, not an arbitrary externally-supplied id).
+  The Server Action's `payload.create()` calls for orders/orderItems explicitly pass
+  `overrideAccess: false` — Payload's Local API defaults to `true` (bypassing
+  collection access control entirely), but this is genuinely public/anonymous
+  checkout, so it's deliberately evaluated under the real collection access rules a
+  genuine anonymous REST caller would hit, not silently bypassed. Kept the original's
+  rollback-on-item-failure behavior (delete any orderItems already created if a later
+  cart line fails validation) and its "leave the order shell in place" behavior
+  (deleting orders is admin-only by design — same constraint the old REST flow had,
+  since a checkout flow was never allowed to delete the order shell itself). Two
+  TypeScript quirks surfaced wiring the Local API `create()` calls: an explicit `notes:
+  undefined` key in the create-data object routed `payload.create()`'s overload
+  resolution into a confusing "missing draft property" error rather than the expected
+  one — fixed by only including the `notes` key in the object when it's actually set.
+  And `status`, despite having a schema `defaultValue` (`'pending'`), still needs to be
+  passed explicitly in the `create()` call's data — Payload's generated `Data` type for
+  a required field doesn't know about runtime-applied defaults, so TypeScript still
+  demands it. `proxy.ts` matcher extended to exclude `checkout` — nothing is left in
+  the fallback list that isn't ported.
+  Verification was more thorough than any prior part, deliberately, given this is the
+  one page group with a real mutation: confirmed Playwright is available globally on
+  this machine (at `/opt/node22/lib/node_modules/playwright`, using the pre-installed
+  Chromium at `/opt/pw-browsers`) even though it's not a project dependency, and used a
+  real browser session (not just curl) for the first time in this whole migration
+  effort. Seeded a real product+category via a scratch Local API script (same pattern
+  as parts 4–6), then drove a real Chromium session: navigated to the product page,
+  clicked two days in the live availability calendar to pick rental dates, clicked "В
+  корзину", navigated to `/checkout`, filled the contact form, checked both consent
+  checkboxes, and submitted — reached the real "Заявка отправлена!" success state with
+  zero browser console errors. Then queried the Local API directly (a second scratch
+  script) to confirm the order and orderItem genuinely persisted with correct data:
+  right `totalPrice`/`lineTotal`/dates/status, `submittedAt` actually set (proving
+  `submitOrder()` really ran, not just that the client showed a success message). Also
+  confirmed via the dev server log that the graceful-МойСклад-failure path was
+  genuinely exercised, not just theoretically present in the code — the log showed the
+  real caught "MOYSKLAD_API_TOKEN is not set" error (this scratch env has no real
+  credentials, per this project's standing rule to never exercise live МойСклад
+  credentials without explicit sign-off), and checkout still completed successfully
+  despite that failure, exactly as designed. Ran a second, deliberately adversarial
+  browser session: added the same product to cart, then used the checkout page's own
+  quantity +/- control to push the requested quantity past the seeded stock (6
+  requested against 3 in stock) and submitted. The exact validation message from the
+  `OrderItems` `beforeValidate` hook ("Only a limited quantity of \"Sony FX3\" is
+  available for these dates (requested 6)") surfaced correctly in the UI's error
+  banner. Checked the DB afterward and confirmed the expected partial-failure state:
+  an orphaned order shell (empty items array, `totalPrice` 0, `submittedAt` null) with
+  no orphaned orderItem — matching the intended rollback design exactly, not a phantom
+  row. All seeded test data (2 orders, 1 orderItem, 1 product, 1 category) deleted via
+  scratch scripts before committing, scratch scripts and Playwright test scripts
+  removed. `next build` compiles `/checkout` as static ○ (unlike the other 6 page
+  groups, all force-dynamic or otherwise server-data-driven) — checkout has no server
+  data fetching of its own, the cart is entirely client-side localStorage. Lint clean
+  after applying the same `react-hooks/set-state-in-effect` suppression pattern
+  established in parts 1 and 5 (one new instance here: an early-exit branch in the
+  availability-check effect that resets state to `{}` when there are no dates
+  selected). `design-sync` audit showed no new gaps introduced.
+  **This is the last page group — Stage 2 (storefront port) is now fully done, all 7
+  page groups landed the same day they were started.** `docs/ROADMAP-2.0.md` updated
+  accordingly (Stage 2's own line flipped from "in progress" to "done", the plan's
+  overall Net summary, and the "suggested order of attack" list, which now points at
+  Stage 3 — admin port — as the next real body of work). Remaining on
+  `docs/PLAN-next-migration.md`: Stage 3 (admin port) and Stage 4 (cleanup, delete
+  `apps/web`) — both still fully unstarted.
