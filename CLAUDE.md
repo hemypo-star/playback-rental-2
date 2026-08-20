@@ -877,3 +877,49 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
 
   Three of six page groups remain: calendar/stock/clients/analytics,
   categories/promotions/`products/[id]`, media/users/settings.
+- **2026-08-20** — **Stage 3 (admin port), third commit**: page group 4 of 6
+  per section 3.5 — `calendar`, `stock`, `clients`, `analytics`. All four are
+  read-only, so unlike the previous commit's `orders` group, no new Server
+  Actions were needed — just four `lib/admin/data/*.ts` functions
+  (`endpoints/admin/{calendar,stock,clients,analytics}.ts`'s bodies minus
+  their own `req.user` check, same pattern as `kpi.ts`/`orders.ts`) and four
+  pages calling them directly. The endpoints themselves stay untouched,
+  still serving `apps/web`'s REST-based admin until Stage 4. The calendar
+  page's Gantt-bar hover already used the design's overshoot curve
+  (`cubic-bezier(0.34,1.56,0.64,1)`, `scaleY(1.16)`) verbatim in the Astro
+  source — the one place section 3.6 flagged in advance as still linear in
+  the old code turned out to already be correct here, nothing to fix.
+  `proxy.ts` matcher extended to exclude all four routes.
+
+  One real tooling snag, unrelated to the port itself: the scratch Local API
+  seed script (`tsx`, same pattern used throughout Stage 2) crashed on
+  `payload/dist/bin/loadEnv.js`'s `const { loadEnvConfig } = nextEnvImport`
+  destructure — `nextEnvImport` came back `undefined` under `tsx`'s
+  esbuild-based CJS transform specifically, not under `next dev` itself.
+  Root cause not fully chased down (most likely version skew: `pnpm ls`
+  shows both `@next/env@16.3.1` and a stale `@next/env@15.5.23` still
+  present in `node_modules`, and `tsx`'s module resolution for a bare
+  standalone script may be picking a different one than Next's own bundler
+  does) — worked around by seeding through direct authenticated REST calls
+  (`/api/users/first-register` for the token, then `Authorization: JWT
+  <token>` on plain `fetch`/`curl` POSTs to `/api/{categories,products,
+  orders,orderItems}`) instead of the Local API script, which sidesteps the
+  broken import path entirely. Flagged here rather than fixed since it only
+  affects scratch verification tooling, not shipped code — worth a proper
+  look if a future session hits it again, e.g. `pnpm why @next/env` to find
+  what still pulls in 15.5.23.
+
+  Verified live: a real Playwright/Chromium session logged in through
+  `/admin/login` and landed on `/admin/orders` (confirming the bare `/admin`
+  redirect still works end to end), then visited all four new pages with
+  real seeded category/product/order/orderItem data — calendar Gantt bar,
+  stock row, client card, and analytics revenue bar all confirmed rendering
+  the real values, zero browser console errors on any page. All scratch
+  data deleted afterward via the same REST/JWT approach; confirmed
+  `/api/users/init` back to `{"initialized":false}`. `next build` compiles
+  all four new routes as dynamic. Lint clean. `design-sync audit` shows no
+  new gaps — `bnRule` and `bnBar` both hit their exact design counts (2/2,
+  1/1) for the first time this migration.
+
+  Two of six page groups remain: `categories`/`promotions`/`products/[id]`,
+  `media`/`users`/`settings`.
