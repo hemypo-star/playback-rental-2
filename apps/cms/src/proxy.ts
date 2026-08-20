@@ -88,15 +88,26 @@ export async function proxy(request: NextRequest) {
 
 // Excludes what this app already serves natively: (payload)'s /cms, /api,
 // /_next, the public assets moved into apps/cms/public (favicon, fonts),
-// and each (frontend) route as Stage 2 ports it — proxying those to Astro
-// would just be a slower, wrong-origin round-trip to routes/files that
-// already resolve correctly here. Update this list every time a page moves.
+// and each (frontend)/(admin) route as Stage 2/3 ports it — proxying those
+// to Astro would just be a slower, wrong-origin round-trip to routes/files
+// that already resolve correctly here. Update this list every time a page
+// moves.
 //
 // The trailing `|$` excludes the bare root path itself: for `/`, everything
 // after the leading `/` this pattern matches on is the empty string, which
 // (absent `|$`) trivially satisfies a negative lookahead against a list of
 // non-empty literals — matching `/` into the proxy fallback rather than
 // this app's own (frontend)/page.tsx, now that the homepage is ported.
+//
+// `admin$` (Stage 3): same empty-remainder trick, scoped to just the literal
+// "admin" alternative — needed because `admin/login` and `admin/first-
+// register` are separate, more specific alternatives below it, and every
+// other /admin/* subpath (orders, calendar, ...) must keep falling through
+// to Astro until each is ported in turn. A bare `admin` alternative (no `$`)
+// would incorrectly swallow all of those too, since alternation here tests
+// "does the remainder start with this," not "does it equal this."
 export const config = {
-  matcher: ['/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact|catalog|product|promotions|checkout|$).*)'],
+  matcher: [
+    '/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact|catalog|product|promotions|checkout|admin\\/login|admin\\/first-register|admin$|$).*)',
+  ],
 }
