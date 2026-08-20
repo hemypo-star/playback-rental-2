@@ -93,7 +93,7 @@ Everything above that isn't struck through, in one place:
 4. ~~**Next.js migration 0.1/0.2**~~ — scope the lint/type-check ignore flags, upgrade to Next 16.3 — done 2026-08-20.
 5. **~28 `: any` usages** in `apps/cms/src/lib/moysklad` and `apps/cms/src/endpoints` — tracked since 2026-08-14 as a follow-up, currently shielded by the blanket `ignoreDuringBuilds`/`ignoreBuildErrors` flags item 4 above is supposed to narrow.
 6. **Design-token wiring** — `tokens.css`/`interactions.css` exist but aren't imported into either app yet; the 86-of-89-transitions-wrong-easing and missing-keyframe gaps `docs/DESIGN-SYNC.md` measured are still live in the shipped Astro code today.
-7. **Hierarchical categories UI** — undocumented in every plan and in the design reference; needs an explicit design decision (indent depth, styling) rather than inheriting one from the bundle.
+7. ~~**Hierarchical categories UI**~~ — undocumented in every plan and in the design reference; needs an explicit design decision (indent depth, styling) rather than inheriting one from the bundle. Done 2026-08-20: documented the shipped storefront-sidebar behavior as a hand-authored spec, [`docs/design-reference/hierarchical-categories.md`](design-reference/hierarchical-categories.md), so Stage 2 of the Next.js migration has something to build against. The two admin-side gaps flagged alongside this in plan #3 §3.6 (Категории/Акции/etc. screens with no mockup) are still open — this only covers the public sidebar.
 8. **`packages/shared-types` fate** — plan #3 §Stage 4 conditions its removal on whether "the legacy Vite/React app is still used" — that app has no retirement plan of its own except master-plan Phase 4, which is now several stages away.
 9. **React 18/19 dedupe hack** (`resolve.dedupe` in `astro.config.mjs`) — plan #3 notes it disappears with Astro but the *cause* (legacy root app pinned to React 18, same pnpm workspace) persists until that app is actually deleted.
 
@@ -121,6 +121,6 @@ Not a plan-vs-plan conflict, but a code-vs-source-of-truth one: `CLAUDE.md` and 
 
 1. **Decide the timeline question (Conflict 3) first** — it's cheap (one conversation) and changes how much of the below is worth doing before a cutover date is picked.
 2. ~~**If proceeding with the Next.js migration:** do Stage 0.1/0.2 (scope lint flags, Next 16.3) before touching Stage 1~~ — done 2026-08-20. Next up in Stage 0: write the hierarchical-categories spec (item 3 below), then Stage 1 (shell + proxy reversal).
-3. **Write a one-paragraph spec for hierarchical categories** (open item 7) before Stage 2 gets there, so it's not designed from scratch mid-port.
+3. ~~**Write a one-paragraph spec for hierarchical categories**~~ (open item 7) before Stage 2 gets there, so it's not designed from scratch mid-port — done 2026-08-20.
 4. **Stop polishing `apps/web`'s Docker setup** (Conflict 1) — anything beyond what's already shipped is work plan #3 deletes.
 5. **Revisit `/cms` retirement (open item 2) only after Stage 3 of plan #3 lands** — at that point it's a Next route-group decision, not a proxy one, and Step 8 as written no longer applies cleanly.

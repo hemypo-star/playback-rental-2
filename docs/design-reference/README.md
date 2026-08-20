@@ -19,3 +19,7 @@ root `CLAUDE.md`.
 - `template.html` — the raw artifact bundle before final decode (kept for
   reference; regenerate `dc_script.txt`/`markup.html`/`dc_props.json` from
   this if they're ever lost, following the recipe in the root `CLAUDE.md`).
+- `hierarchical-categories.md` — **not** extracted from the bundle. The
+  storefront category tree (`Categories.parent`) postdates this bundle and
+  has no spec here to build against; this hand-authored doc fills that gap
+  for the sidebar only. See `docs/ROADMAP-2.0.md` open item 7.
