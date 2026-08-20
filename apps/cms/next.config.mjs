@@ -18,11 +18,13 @@ const allowedOrigin = new URL(webUrl).host
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Next 16's auto-generated agent-rules files (AGENTS.md/CLAUDE.md) would
-  // otherwise get written into apps/cms on every `next dev` — this project
-  // already has its own root CLAUDE.md convention (see repo root); a second,
-  // Next-authored one inside apps/cms would only conflict with it.
-  agentRules: false,
+  // Next 16 auto-writes agent-rules files (AGENTS.md/CLAUDE.md) into
+  // apps/cms on every `next dev`/`next build`. This project already has its
+  // own root CLAUDE.md convention (see repo root) — apps/cms's copy is
+  // Next's own generated one (framework/route conventions, not project
+  // architecture) and is gitignored so it never collides with the real one;
+  // treat it as disposable, regenerated output, not something to hand-edit.
+  agentRules: true,
   experimental: {
     serverActions: {
       allowedOrigins: [allowedOrigin],

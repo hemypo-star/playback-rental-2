@@ -5,5 +5,11 @@ node_modules
 payload-types.ts
 *.tsbuildinfo
 
+# Next 16's agentRules: true (next.config.mjs) regenerates these on every
+# `next dev`/`next build` — Next's own generated framework/route-convention
+# notes for AI agents, not this project's real CLAUDE.md (repo root).
+/AGENTS.md
+/CLAUDE.md
+
 # Synced/uploaded media — re-downloadable via `pnpm sync:moysklad`, not source
 media/
