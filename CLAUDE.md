@@ -673,3 +673,74 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   Stage 3 — admin port — as the next real body of work). Remaining on
   `docs/PLAN-next-migration.md`: Stage 3 (admin port) and Stage 4 (cleanup, delete
   `apps/web`) — both still fully unstarted.
+- **2026-08-20** — **Stage 3 (admin port) started** — the plan's own "main win," since
+  the custom `/admin` UI's entire REST/proxy/dual-URL surface (Step 1–2 of
+  `docs/PLAN-docker-admin.md`) existed only because `apps/web` and `apps/cms` were
+  separate processes; that reason is gone now that Stage 2 made `apps/cms` the
+  single public entry point. First commit covers 3.1 (auth) + 3.2 (shell) + page
+  group 1 of 6 (`login`, `first-register`), per the plan's own page order (section
+  3.5). `apps/cms/src/lib/admin/auth.ts` replaces `apps/web/src/lib/admin/
+  session.ts` entirely — no more manual `payload-token` cookie read +
+  `Authorization: JWT` re-forward, since that hack existed solely to cross a process
+  boundary that no longer exists; `payload.auth({ headers: await headers() })` reads
+  real request cookies directly, same process. A new top-level `(admin)/admin/
+  layout.tsx` route group (sibling to `(frontend)` and `(payload)`, matching the
+  plan's own route-group table) hosts the real auth guard, per the plan's own
+  instruction that `proxy.ts` should do at most a cheap cookie-presence check — here
+  it doesn't even need that, since every not-yet-ported `/admin/*` subpath still
+  falls through to Astro's own still-active guard. One deliberate simplification,
+  flagged rather than silently dropped: the new guard's redirect to `/admin/login`
+  does *not* preserve a `next=` deep-link param the way Astro's guard did (a Server
+  Component layout has no built-in current-pathname the way `context.url` gave
+  Astro) — confirmed low impact today since the only guarded page that exists yet
+  (bare `/admin`) always redirects onward to `/admin/orders` regardless
+  (`apps/web/src/pages/admin/index.astro` is genuinely nothing but that one
+  redirect, nothing more to port there), but worth revisiting once a guarded page
+  with real content is ported and a mid-navigation session expiry becomes a real
+  scenario to preserve. `AdminSidebar.tsx` (`'use client'`, needs `usePathname()`
+  for the active-tab highlight and a logout click handler) uses `next/link` for
+  nav — real client-side transitions between admin tabs instead of Astro's
+  full-page-reload-per-click, the concrete thing this stage exists to fix.
+  `AdminPageHeader.tsx` exists because Next's shared layout can't receive the
+  `title`/`subtitle`/`activeTab`/`actionLabel` props each Astro page used to pass
+  into `AdminLayout.astro` — every admin page now renders its own header via this
+  small component instead; same visual output, different composition. `/admin/
+  login` and `/admin/first-register` deliberately live under `(frontend)`, not
+  `(admin)` — matching the Astro source's own choice to import the site's `Layout`,
+  not `AdminLayout`, for exactly those two pages — so they never pass through the
+  new guard at all. `proxy.ts`'s matcher gained `admin/login`, `admin/first-
+  register`, and `admin$` — the last reusing Stage 2's own empty-remainder trick (an
+  empty match remainder trivially satisfies a negative lookahead over non-empty
+  alternatives) for the bare `/admin` literal specifically; a plain `admin`
+  alternative without the `$` anchor would have incorrectly excluded every other
+  not-yet-ported `/admin/*` subpath from proxying too, since the matcher's
+  alternation tests "starts with," not "equals." Verified live with a real
+  Playwright browser session (the second time in the whole migration a real browser
+  was used instead of curl, appropriate here since auth/session is exactly the kind
+  of stateful, cookie-dependent behavior curl verifies poorly): registered a real
+  first admin through `/admin/first-register`, then followed the full redirect
+  chain — guard passes -> `/admin` -> `/admin/orders` (not yet ported, correctly
+  fell through the proxy to Astro's own `/admin/orders.astro`, which recognized the
+  same `payload-token` cookie and rendered real KPI data) — confirming session
+  continuity survives the process boundary, the single most load-bearing thing to
+  check about this commit specifically (a session that didn't survive the handoff
+  would have silently broken every not-yet-ported admin page the moment this
+  landed). Also verified: a fresh unauthenticated visit to `/admin/login` stays put
+  (no redirect loop); revisiting either `/admin/login` or `/admin/first-register`
+  while already authenticated bounces straight through to `/admin/orders`;
+  unauthenticated `/admin/orders` still hits Astro's own guard with `next=`
+  preserved, unaffected by this port. Zero browser console errors throughout. Test
+  admin user deleted via a scratch Local API script before committing (confirmed
+  `/admin/first-register` renders again afterward, not `/admin/login`, restoring
+  the dev DB to uninitialized state). `next build` compiles all three new routes as
+  dynamic (auth state can't be cached). Lint clean, one `@next/next/no-location-
+  assign-relative-destination` warning suppressed inline in `AdminRegisterForm.tsx`
+  with a rationale comment (a full page navigation via `window.location.href` after
+  establishing a brand-new session cookie is deliberate — avoids any client-side
+  router transition carrying over stale RSC/state from the pre-auth render — not an
+  oversight). `design-sync audit` shows no new gaps. Five of six Stage 3 page
+  groups remain, per the plan's own section 3.5: shell + `index` (the `index` half
+  of which, per the Astro source just confirmed, is only ever that one redirect —
+  nothing left to actually build there beyond what already shipped this commit),
+  orders list + `orders/[id]`, calendar/stock/clients/analytics, categories/
+  promotions/`products/[id]`, media/users/settings.
