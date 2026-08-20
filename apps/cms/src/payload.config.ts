@@ -74,13 +74,23 @@ export default buildConfig({
   },
   collections: [Users, Media, Categories, Products, Orders, OrderItems, Promotions],
   globals: [SiteSettings],
-  // Lets the storefront (a different origin) do a credentialed
-  // `fetch('/api/users/me', { credentials: 'include' })` to check for an
-  // authenticated CMS session — that's how the Navbar decides whether to
-  // show the "Панель управления" link. Without this the browser blocks the
-  // cross-origin cookie read entirely.
-  cors: [process.env.WEB_URL || 'http://localhost:4322'],
-  csrf: [process.env.WEB_URL || 'http://localhost:4322'],
+  // WEB_URL is this app's OWN public origin (see apps/cms/.env.example —
+  // named for consistency with the root .env.example/compose.yaml, not
+  // because it's a different app's address). Historically (pre docs/PLAN-
+  // next-migration.md Stage 1) apps/web really was a separate origin
+  // needing a credentialed cross-origin `fetch('/api/users/me', {
+  // credentials: 'include' })` for the Navbar's "Панель управления" link —
+  // that's gone now that this app is the single public entry point, but
+  // `cors`/`csrf` still need the value: Payload's cookie-JWT strategy
+  // checks the request's own Origin (or Sec-Fetch-Site as a fallback, only
+  // reached when Origin is absent) against this allowlist even for
+  // same-origin requests, and a Next Server Action's own POST does send an
+  // Origin header — a stale value here silently fails auth on any Server
+  // Action that reads the session (unlike CheckoutPage's submitCheckout()
+  // in Stage 2, which is anonymous; this only surfaced once Stage 3 added
+  // the first Server Action that calls payload.auth()).
+  cors: [process.env.WEB_URL || 'http://localhost:3000'],
+  csrf: [process.env.WEB_URL || 'http://localhost:3000'],
   endpoints: [
     moyskladWebhookEndpoint,
     rentalAvailabilityEndpoint,
