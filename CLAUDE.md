@@ -923,3 +923,66 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
 
   Two of six page groups remain: `categories`/`promotions`/`products/[id]`,
   `media`/`users`/`settings`.
+- **2026-08-20** — **Stage 3 (admin port), fourth commit**: page group 5 of 6
+  per section 3.5 — `categories`, `promotions`, `products/[id]`. Categories
+  and promotions get full list + `[id]` detail (an `id === 'new'` branch
+  handles both create and edit from one route, same as the Astro sources —
+  no separate near-duplicate "new" page); `products` stays edit-only,
+  matching the standing constraint that `moySkladId` is required+readOnly so
+  products only ever originate from `sync:moysklad`. Unlike page group 4's
+  four read-only tabs, this group's mutations are genuine writes — each of
+  `categories`/`promotions`/`products` gets its own `[id]/actions.ts` with
+  the same `requireAdmin()`-before-`overrideAccess` pattern the previous
+  commit's `orders/[id]/actions.ts` established (a Server Action isn't
+  gated by the layout guard just because its page lives under it — that
+  reasoning doesn't change per-collection). New `lib/admin/data/
+  {categories,promotions,products}.ts` are deliberately separate from the
+  storefront's own `lib/data/*.ts` — different depth/filter needs (the
+  admin list wants the full set including hidden/inactive rows at depth:0,
+  the storefront wants only active/available rows at depth:1) — except the
+  product edit page, which reuses `lib/data/products.ts`'s existing
+  `getProductById()` unchanged rather than adding a redundant admin-only
+  wrapper, since it already does exactly what the edit form needs.
+  `lib/admin/mediaUpload.ts` replaces `apps/web/src/scripts/admin-media-
+  upload.ts` — the `define:vars` + runtime-`import('/src/scripts/...')`
+  hack that file carried was purely an Astro workaround (see its own header
+  comment and the 2026-08-14 dev log entry that first added it); a plain
+  client module needs none of it. `CategoryForm`/`PromotionForm`/
+  `ProductForm.tsx` replace the Astro sources' raw DOM manipulation for the
+  image-reorder/remove and kit-item-row UI with ordinary React state
+  arrays — same end behavior, idiomatic for the framework instead of a
+  hand-rolled DOM diff. `proxy.ts` matcher extended to exclude `admin/
+  categories`, `admin/promotions`, `admin/products`.
+
+  Verified live with a real Playwright session against real seeded data (a
+  parent+child category pair, one product, created and deleted via
+  authenticated REST/JWT calls — the same scratch-tooling workaround page
+  group 4 introduced for the still-unresolved `tsx`/`@next/env` crash):
+  the categories list rendered the parent+child hierarchy with the correct
+  indent; created a new category through the live form and confirmed the
+  redirect to its own edit page; opened the child category's edit page and
+  confirmed the parent `<select>` correctly pre-selected the seeded parent
+  (id match verified, not just visually); deleted it, confirmed the list
+  updated. Promotions: created one through the form with a real uploaded
+  image (`page.setInputFiles`, not a simulated click), linked the seeded
+  product and category via the two multi-selects, saved, and confirmed the
+  resulting `/promotions/:slug` public page actually rendered the title and
+  the linked product card — the first time this migration verified an
+  admin write by checking its effect on the *public* site, not just the
+  admin UI or a direct API query. Deleted it afterward and confirmed via a
+  second, temporary admin registration that the uploaded media doc *and*
+  its file on disk were both actually gone (Payload doesn't cascade-delete
+  a referenced media doc when the referencing promotion is deleted, so this
+  needed its own explicit cleanup step, caught by checking `/api/media`
+  came back empty and `find`-ing the upload directory rather than assuming
+  the promotion delete was enough). Products: toggled `isKit` on, added a
+  kit item, changed the price, saved, and confirmed all three persisted via
+  a direct API query afterward. Zero browser console errors across every
+  step. `next build` compiles all six new routes as dynamic. Lint clean
+  (only the same pre-existing `no-img-element` advisories already present
+  on earlier ported pages, from the same deliberate plain-`<img>` choice).
+  `design-sync audit` shows no new gaps.
+
+  One page group remains: `media`/`users`/`settings` — the last of Stage 3,
+  after which only Stage 4 (delete `apps/web`, cleanup) is left on the
+  whole `docs/PLAN-next-migration.md` plan.
