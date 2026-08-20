@@ -92,5 +92,5 @@ export async function proxy(request: NextRequest) {
 // would just be a slower, wrong-origin round-trip to routes/files that
 // already resolve correctly here. Update this list every time a page moves.
 export const config = {
-  matcher: ['/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement).*)'],
+  matcher: ['/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact).*)'],
 }
