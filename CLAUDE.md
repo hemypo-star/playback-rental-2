@@ -744,3 +744,136 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   nothing left to actually build there beyond what already shipped this commit),
   orders list + `orders/[id]`, calendar/stock/clients/analytics, categories/
   promotions/`products/[id]`, media/users/settings.
+- **2026-08-20** — **Stage 3 (admin port), second commit**: 3.3 (endpoint→
+  server-function conversions) + 3.4 (Server Actions) + page group 3 of 6
+  (`orders` list + `orders/[id]`) — the plan's own flagged "most complex" admin
+  page group: status, notes, per-item quantity/date edits, item/order delete,
+  submit-to-МойСклад. `lib/admin/data/{kpi,orders}.ts` turn `endpoints/admin/
+  {kpi,orders,orderDetail}.ts`'s endpoint bodies into plain server-only
+  functions — same queries verbatim, minus each endpoint's own explicit
+  `req.user` check (custom Payload endpoints bypass collection access control
+  entirely; these functions are now only ever called from inside the guarded
+  `(admin)/admin/layout.tsx` subtree, so that layout's guard covers it). The
+  endpoints themselves are untouched, still serving `apps/web`'s REST-based
+  admin until Stage 4 deletes that app. `(admin)/admin/orders/[id]/actions.ts`
+  holds the six Server Actions (`updateOrderStatus`, `updateOrderNotes`,
+  `updateOrderItem`, `deleteOrderItem`, `deleteOrder`, `submitOrderToMoySklad`),
+  replacing the old inline `<script>`'s browser-side `fetch()` calls against
+  Payload's own REST endpoints. `submitOrderToMoySklad` calls the same
+  `lib/rental/submitOrder.ts` the checkout Server Action (Stage 2 part 7) and
+  the REST `/:id/submit` endpoint already share — a third caller, still one
+  implementation.
+
+  Worth its own paragraph: every action re-checks `getAdminUser()` itself
+  before mutating, which goes beyond what section 3.3 covers (3.3 only talks
+  about read endpoints relying on the layout guard). Reason: unlike a page
+  render, a Server Action compiles to its own independently-invokable
+  endpoint — Next does not gate it behind the referencing page's layout guard
+  just because that page lives under it (documented Next.js behavior, not a
+  gap specific to this app). And a Local API call has no real `req.user` of
+  its own to satisfy Orders'/OrderItems' access control (`Boolean(req.user)`)
+  unless a request context is actually built and authenticated first — so
+  skipping the explicit check wouldn't "fail safe" via the collection's own
+  access rules, it would fail broken (every mutation would 401/silently
+  no-op, not just be insecure).
+
+  **The real bug, found and root-caused while verifying `submitOrderToMoySklad`
+  live**: every other mutation (status, notes, item edit, item delete, order
+  delete) succeeded consistently in live testing, but `submitOrderToMoySklad`
+  failed *every* time with a generic "Unauthorized" thrown from inside the
+  action's own `requireAdmin()` check — even though the exact same admin
+  session, the exact same valid, non-expired JWT cookie, was demonstrably
+  still valid (confirmed the session genuinely existed in the DB; confirmed
+  the cookie was present and byte-identical on every request via a temporary
+  header dump). Root cause: `payload.config.ts`'s `cors`/`csrf` arrays are
+  hardcoded to a single value, `process.env.WEB_URL`, and `apps/cms/
+  .env.example` (the local, non-Docker dev copy of the env file, distinct
+  from the root `.env.example`) still set `WEB_URL=http://localhost:4322` —
+  `apps/web`'s *own* address, a stale leftover from before Stage 1
+  (2026-08-20, earlier today) made `apps/cms` the single public entry point.
+
+  The actual mechanism, since this is the valuable part for a future reader:
+  Payload's cookie-JWT auth strategy (`extractJWT`, in `node_modules/payload/
+  dist/auth/extractJWT.js` — not app code, but worth naming so a future
+  reader can go find it again) checks the request's `Origin` header against
+  the `csrf` allowlist *only* when an Origin header is present; when Origin
+  is absent, it falls back to checking `Sec-Fetch-Site` instead (allowing
+  `same-origin`/`same-site`/`none`), a check a plain browser page navigation
+  typically satisfies regardless of the csrf allowlist, since navigations
+  often don't carry Origin at all. A Next Server Action's own internal POST
+  *does* carry an Origin header, though — matching this app's real running
+  address, not the stale `apps/web` one baked into the local env file — so
+  `extractJWT` silently rejected the cookie on every Server Action call
+  specifically, while every plain Server Component page-render's own
+  `payload.auth()` check (in the guarded layout, and in the read-endpoints-
+  turned-functions) kept succeeding, because those never send an Origin the
+  csrf allowlist would need to recognize. This is exactly why it looked like
+  "everything works except this one specific action" rather than "auth is
+  broadly broken" — the split maps precisely onto "page render" vs "Server
+  Action," not onto anything about the specific mutation. It also explains
+  why this went completely unnoticed through the entirety of Stage 1 and
+  Stage 2: Stage 2's only prior Server Action (`submitCheckout`, Stage 2 part
+  7) is anonymous checkout and never calls `payload.auth()` at all, so it
+  never exercised this path — this is the first Server Action in the whole
+  migration that reads the admin session.
+
+  **Fixed** by updating `apps/cms/.env.example`'s `WEB_URL` value from
+  `http://localhost:4322` to `http://localhost:3000` (this app's own local
+  dev address), with a rewritten comment explaining that `WEB_URL` has meant
+  "this app's own public origin" since Stage 1, not `apps/web`'s — kept the
+  variable name for consistency with the root `.env.example` and
+  `compose.yaml`, both of which already had this correct (their own `WEB_URL`
+  comments already describe it as the deployment's public URL, matching
+  `WEB_PORT`) — only the `apps/cms`-local, non-Docker dev copy was stale.
+  Also rewrote the neighboring `cors`/`csrf` comment in `payload.config.ts`
+  itself, which had its own stale explanation ("Lets the storefront, a
+  different origin, do a credentialed fetch...", describing the pre-Stage-1
+  architecture) — replaced with an explanation of the actual current
+  mechanism (Origin/Sec-Fetch-Site validation against this app's own origin,
+  still needed even though there's no genuinely different origin anymore).
+  Also updated the literal fallback default in both `cors: [...]` and
+  `csrf: [...]` from `'http://localhost:4322'` to `'http://localhost:3000'`.
+
+  Root-causing process worth a sentence or two, since it demonstrates real
+  rigor rather than a lucky guess: ruled out a bare Payload/Local-API-level
+  bug first (a tight loop of 10 sequential `payload.findByID()` calls outside
+  any Next.js context, all 10 succeeded — ruling out a DB/connection-pool
+  explanation); ruled out a missing/mismatched cookie by adding a temporary
+  diagnostic that dumped the raw `Cookie` header and auth result inside
+  `getAdminUser()` on every call (cookie present and byte-identical on every
+  call, both succeeding and failing ones); then reproduced the exact same
+  failure pattern under a genuine `next build && next start` production
+  server (not just `next dev`/Turbopack), which ruled out a dev-mode-only
+  artifact before finally reading Payload's own `extractJWT` source to find
+  the real Origin/csrf/Sec-Fetch-Site branching that explained it. All
+  temporary diagnostic logging was removed before committing.
+
+  Verified live (real Playwright/Chromium sessions again — third time in the
+  migration after checkout and Stage 3 part 1's login flow, and the first
+  time production-mode `next start` was also exercised, specifically to rule
+  out the dev-mode theory before landing on the real cause): full login →
+  orders list (real KPI cards + a real order row) → order detail page →
+  status change → notes save (blur-triggered) → item quantity edit, with the
+  recomputed `lineTotal`/order `totalPrice` confirmed via a direct Local API
+  query afterward, not just trusted from the UI → submit-to-МойСклад,
+  exercising the same graceful-failure path Stage 2's checkout already
+  verified (real caught "MOYSKLAD_API_TOKEN is not set" error, order still
+  marked submitted) → item delete (via a native `confirm()` dialog,
+  auto-accepted through Playwright's `page.on('dialog', ...)` API, which the
+  2026-08-14 dev log already noted works fine even though raw CDP
+  click-dispatch on a `confirm()`-guarded button doesn't) → order delete,
+  confirmed via a direct Local API query afterward that both the order and
+  its remaining item were genuinely gone (Payload's own `NotFound` error on a
+  direct `findByID`, not just absent from a list view). Zero browser console
+  errors across every run. All seeded test data (2 products, 1 category, 1
+  admin user, and the order/order-items created and then deleted during the
+  delete-flow test) removed before committing. `next build` compiles both new
+  routes (`/admin/orders`, `/admin/orders/[id]`) as dynamic. Lint clean, with
+  one real fix (not just a suppression): a plain `<a>` tag was switched to
+  `next/link`'s `Link` for consistency with the rest of the new admin shell
+  (which already uses `Link` throughout), unlike the storefront's own
+  deliberate plain-`<a>` choice from earlier stages. `design-sync audit`
+  shows no new gaps.
+
+  Three of six page groups remain: calendar/stock/clients/analytics,
+  categories/promotions/`products/[id]`, media/users/settings.
