@@ -318,3 +318,43 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   file feature (`agentRules: false` in `next.config.mjs`) — first noticed when it
   silently wrote both into `apps/cms/` on `next dev`, stepping on this project's own
   root `CLAUDE.md` convention.
+- **2026-08-20** — Re-enabled `agentRules` (per owner request) — its generated
+  `apps/cms/AGENTS.md`/`CLAUDE.md` are now gitignored instead, so they regenerate
+  freely without colliding with this file. Added 8 `.claude/agents/*.md` project
+  subagents (code-reviewer, tester, security-reviewer, frontend-porter,
+  moysklad-integrator, roadmap-chronicler, cutover-operator, db-migration-reviewer) —
+  carved an exception into the root `.gitignore`'s blanket `.claude/` ignore (was
+  written assuming everything under it is machine-local state) so these stay checked
+  in, same pattern as the existing `.vscode/extensions.json` exception.
+  **Stage 2 (storefront port) started.** First page group done (legal pages,
+  `/privacy-policy` + `/user-agreement`, dropped out of `proxy.ts`'s fallback
+  matcher) — but since every real page needs the shared chrome Stage 1 deliberately
+  deferred, this pass also built it for real: `lib/data/siteSettings.ts` (Local API),
+  Footer (async Server Component), Navbar (`'use client'` — needs `usePathname()`,
+  no server-render equivalent to `Astro.url.pathname` in a shared layout; wrapped in
+  `Suspense` per Next's requirement for `useSearchParams()`), and near-verbatim ports
+  of CartBadge/AdminPanelLink/RentalDatePicker (React 19 both sides, `mounted`
+  hydration-guard kept — `eslint-config-next@16`'s new `react-hooks/set-state-in-effect`
+  rule flags it generically, suppressed inline with rationale rather than rewritten).
+  `cart.ts`/`dates.ts`/`pricing.ts`/`dateRange.ts`/`cart-actions.ts` duplicated from
+  `apps/web` (same live-until-Stage-4 duplication as `global.css`); `cart.ts`'s
+  `ListingType` is now a local literal instead of `@playback-rental/shared-types`, per
+  the plan's own guidance that package is an `apps/web`-only concern going forward.
+  One real bug fixed while porting Navbar: the Astro source checked
+  `currentPath.includes('type=kit')` against `Astro.url.pathname`, which never
+  contains the query string — so "Наборы" never actually highlighted as active in
+  the live app. Ported using the real query param instead of the always-false
+  condition; a deliberate, flagged behavior change, not a silent one.
+  Ran `node tools/design-sync.mjs audit` against the ported chrome rather than
+  carrying the pre-existing duration-200/no-ease gap forward — fixed 19 of 20
+  transitions to the design's dominant `duration-240`/`ease-expo`. Found and fixed a
+  real bug in the audit tool itself while doing this: its animation-keyframe regex
+  required `animation:` to be followed directly by `bnX...` with no quote character,
+  which matches Astro's inline `style="animation:bnX"` but never a ported React
+  `style={{ animation: 'bnX...' }}` — every animation in any ported `.tsx` file was
+  silently auditing as 0×. Confirmed fixed: `bnBlink` went from a false `⚠ 0×` to a
+  real `✓ 1×`.
+  Verified live (real `next dev` + `astro dev` against a real local Postgres, not
+  just `next build`): both new pages 200 with real Navbar/Footer content rendered;
+  still-unported routes (`/`, `/how-it-works`) still correctly fall through the
+  proxy to Astro.
