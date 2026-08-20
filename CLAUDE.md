@@ -445,3 +445,57 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   both dev servers, scratch `.env` files, and the extra `next build` cycle to leave
   `next-env.d.ts` in committed build-mode state) torn down and redone before
   committing.
+- **2026-08-20** — **Stage 2 page group 4 of 7** done: catalog (`apps/cms/src/app/
+  (frontend)/catalog/page.tsx` + `catalog/[slug]/page.tsx`), ported from `apps/web/src/
+  pages/catalog/index.astro` + `catalog/[slug].astro` — both thin wrappers, both marked
+  `force-dynamic` since search/sort/category-filter results depend on the query
+  string. `[slug]/page.tsx` redirects to `/catalog` when the slug doesn't resolve
+  (`Astro.redirect()` → `next/navigation`'s `redirect()`) and has its own
+  `generateMetadata()` for the per-category page title; `getCategoryBySlug()` (new, in
+  `lib/data/categories.ts`) is wrapped in React's `cache()` since `generateMetadata()`
+  and the page component both call it and Local API calls aren't `fetch()`, so they
+  don't get Next's automatic per-request dedup for free the way part 3's homepage data
+  calls do. `CatalogPage.tsx` (ported from `CatalogPage.astro`) stays a plain async
+  Server Component, orchestrating breadcrumb/heading, sidebar, search form, and product
+  grid same as the original. `CategorySidebar.tsx` is `'use client'` — new for this
+  migration (earlier ports mostly reused already-client apps/web sources or stayed
+  server-only) — because the mobile `<select>`'s `onChange` needs a real handler
+  (`window.location.href = ...`), which Astro's plain string `onchange="..."` attribute
+  can't express in JSX; everything else in it is static props-driven markup passed down
+  from `CatalogPage`. `scripts/catalog-availability.ts` duplicated from `apps/web` (same
+  duplicate-not-move pattern as `cart-actions.ts` etc. from part 1), wiring the "only
+  free" toggle + live per-card availability, wired into the page via
+  `CatalogAvailabilityInit.tsx` (same `useEffect`-wrapper pattern as part 1's
+  `CartActionsInit.tsx`). Its `getRentalAvailabilityBulk()` needed a genuinely new file,
+  `lib/rentalAvailability.ts` — a browser-only client doing a plain relative `fetch` to
+  `/api/rental-availability-bulk`, since this can only ever run client-side (selected
+  rental dates are sessionStorage-backed, unknowable at SSR time) and the old REST
+  client's `CMS_INTERNAL_URL`/`PUBLIC_PAYLOAD_URL` split doesn't apply — this app's own
+  `/api` is already same-origin. Continued the duration-200 → duration-240/`ease-expo`
+  sweep in `CategorySidebar.tsx`'s ported links; post-port `design-sync audit` showed no
+  new gaps — the toggle knob's `duration-[320ms]` with the overshoot cubic-bezier,
+  carried over verbatim from the Astro source, already matches the design spec's own
+  value exactly (unlike the `duration-200` instances fixed in earlier parts).
+  `proxy.ts`'s matcher extended to exclude `catalog`.
+  Verified live: local Postgres 16, `next build` compiles both new routes as dynamic
+  `ƒ`. Since this session's dev DB again had zero synced МойСклад data (same as every
+  prior part) and catalog rendering genuinely needs real category/product rows to
+  verify sidebar counts, product-card rendering, category filtering, and search
+  filtering meaningfully (not just "does it 500"), a real category + 2 products were
+  seeded directly via a scratch Local API script (`tsx`, run from inside `apps/cms` so
+  Node module resolution worked) — then deleted via a second scratch script, both
+  scratch files removed, before committing, so no test data or scratch files persisted.
+  With that data live: curl-verified `/catalog` shows the sidebar category count and
+  both product cards; `/catalog/kamery` (the seeded slug) shows the same filtered set;
+  `?q=Sony` correctly narrows to one card; a nonexistent slug (`/catalog/does-not-
+  exist`) returns a 307 redirect to `/catalog`. Also noticed and confirmed as expected
+  (not a bug): the results-count text ("2 позиции") appears in the raw HTML split by
+  empty HTML comments (`2<!-- --> <!-- -->позиции`) — React's own SSR hydration-
+  boundary markers for adjacent JSX text-node siblings, invisible once rendered/
+  hydrated in a real browser. `/product/1` (still unported) continues to reach the
+  Astro app through the proxy fallback, confirmed via a real request. Lint clean (only
+  the same pre-existing `next/no-html-link-for-pages` advisory warnings already present
+  on the committed Navbar, from the deliberate plain-`<a>`-not-`next/link` choice made
+  in earlier parts). All scratch test infra (Postgres, both dev servers, scratch `.env`
+  files, seeded test data, seed/cleanup scripts, and the extra `next build` cycle for
+  `next-env.d.ts`) torn down before committing.
