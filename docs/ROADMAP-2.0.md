@@ -56,8 +56,8 @@ This is the **newest** plan (committed today, 2026-08-20, alongside the first re
 
 **Stage 0 — Prep**
 
-- [ ] 0.1 Scope `typescript.ignoreBuildErrors`/`eslint.ignoreDuringBuilds` to specific paths instead of the whole app — **not done**, both flags are still blanket-`true` in `apps/cms/next.config.mjs`, and there's no `apps/cms` eslint config to scope them with yet.
-- [ ] 0.2 Upgrade Next 15 → 16.3 before migrating — **not done**, `apps/cms/package.json` still pins `"next": "^15"`.
+- [x] 0.1 Scope `typescript.ignoreBuildErrors`/`eslint.ignoreDuringBuilds` to specific paths instead of the whole app — **done 2026-08-20.** Added `apps/cms/eslint.config.mjs`; `no-explicit-any` suppression scoped to `app/(payload)/**`, `endpoints/**`, `components/admin/**`, `lib/rental/**`; `eslint.ignoreDuringBuilds` removed entirely. The handful of errors this surfaced outside those paths (real `any`s in `collections/OrderItems.ts`/`Orders.ts`, three admin nav links using `<a>` instead of `next/link`) were fixed, not suppressed.
+- [x] 0.2 Upgrade Next 15 → 16.3 before migrating — **done 2026-08-20**, `apps/cms/package.json` now pins `"next": "^16.3"` (16.3.1 resolved). The `ReactPortal`/`LayoutProps` bug isn't fixed by the upgrade alone, but combined with the existing Fragment-wrap workaround in `layout.tsx`, `next build`'s generated-type check now passes — `typescript.ignoreBuildErrors` was removed.
 - [~] 0.3 Extract the design bundle into a machine-checkable spec — **partially done.** `tools/design-sync.mjs` and `docs/design-reference/spec/{tokens.css,interactions.css}` exist and were committed today, and the tool's own audit output is written into `docs/DESIGN-SYNC.md`. But neither file is imported anywhere yet (`grep` for `tokens.css`/`interactions.css` in `apps/web/src` and `apps/cms/src` returns nothing) — the plan doesn't apply this until Stage 1, so that's expected, just flagging it's spec-only today, not wired in.
 - [ ] 0.4 Freeze the manual smoke-test checklist — no evidence it's been run as a formal checklist yet (reasonable, since Stage 1 hasn't started).
 - [ ] 0.5 Leave `MOYSKLAD_API_TOKEN`/`NOTIFICATION_WEBHOOK_URL` alone — trivially true so far (nothing's touched them).
@@ -70,7 +70,7 @@ This is the **newest** plan (committed today, 2026-08-20, alongside the first re
 
 **Stage 4 — Cleanup** (delete `apps/web`, drop the proxy/dual-URL/cors machinery plan #2 built) — not started, and not startable until 2–3 are done.
 
-**Net:** of the ~7 estimated working days in this plan, only the prep-stage design extraction (part of 0.3) has actually landed.
+**Net:** of the ~7 estimated working days in this plan, 0.1, 0.2, and part of 0.3 (design extraction) have landed as of 2026-08-20; Stages 1–4 are still fully unstarted.
 
 ---
 
@@ -90,7 +90,7 @@ Everything above that isn't struck through, in one place:
 1. **Cutover to `2.0` (master plan Phase 3–4)** — blocked behind essentially all of plan #3.
 2. **Retire `/cms` from the proxy (docker-admin Step 8)** — waiting on "a week of owner usage" *and* now overlaps plan #3's own Stage 4 decision on the same route (see conflict below).
 3. **Next.js migration, Stages 1–4** — effectively the whole plan; only spec-generation (part of 0.3) is done.
-4. **Next.js migration 0.1/0.2** — scope the lint/type-check ignore flags, upgrade to Next 16.3 — these are meant to happen *before* the migration proper and haven't started.
+4. ~~**Next.js migration 0.1/0.2**~~ — scope the lint/type-check ignore flags, upgrade to Next 16.3 — done 2026-08-20.
 5. **~28 `: any` usages** in `apps/cms/src/lib/moysklad` and `apps/cms/src/endpoints` — tracked since 2026-08-14 as a follow-up, currently shielded by the blanket `ignoreDuringBuilds`/`ignoreBuildErrors` flags item 4 above is supposed to narrow.
 6. **Design-token wiring** — `tokens.css`/`interactions.css` exist but aren't imported into either app yet; the 86-of-89-transitions-wrong-easing and missing-keyframe gaps `docs/DESIGN-SYNC.md` measured are still live in the shipped Astro code today.
 7. **Hierarchical categories UI** — undocumented in every plan and in the design reference; needs an explicit design decision (indent depth, styling) rather than inheriting one from the bundle.
@@ -120,7 +120,7 @@ Not a plan-vs-plan conflict, but a code-vs-source-of-truth one: `CLAUDE.md` and 
 ## Suggested order of attack
 
 1. **Decide the timeline question (Conflict 3) first** — it's cheap (one conversation) and changes how much of the below is worth doing before a cutover date is picked.
-2. **If proceeding with the Next.js migration:** do Stage 0.1/0.2 (scope lint flags, Next 16.3) before touching Stage 1 — both are explicitly sequenced "before, not during" in plan #3 to avoid conflating migration bugs with upgrade bugs.
+2. ~~**If proceeding with the Next.js migration:** do Stage 0.1/0.2 (scope lint flags, Next 16.3) before touching Stage 1~~ — done 2026-08-20. Next up in Stage 0: write the hierarchical-categories spec (item 3 below), then Stage 1 (shell + proxy reversal).
 3. **Write a one-paragraph spec for hierarchical categories** (open item 7) before Stage 2 gets there, so it's not designed from scratch mid-port.
 4. **Stop polishing `apps/web`'s Docker setup** (Conflict 1) — anything beyond what's already shipped is work plan #3 deletes.
 5. **Revisit `/cms` retirement (open item 2) only after Stage 3 of plan #3 lands** — at that point it's a Next route-group decision, not a proxy one, and Step 8 as written no longer applies cleanly.
