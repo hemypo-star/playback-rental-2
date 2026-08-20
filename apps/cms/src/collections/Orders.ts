@@ -184,7 +184,18 @@ export const Orders: CollectionConfig = {
           return Response.json({ error: 'Order has no items' }, { status: 400 })
         }
 
-        const items = itemsResult.docs as any[]
+        // depth: 1 above populates the `product` relationship into an object;
+        // itemsResult.docs is typed generically since payload-types.ts is
+        // generated (gitignored), not checked in — this shape is only what
+        // the pushes below actually read from each line.
+        const items = itemsResult.docs as unknown as Array<{
+          product: { moySkladId: string; title: string }
+          listingType: 'rental' | 'sale'
+          quantity: number
+          lineTotal: number
+          startDate?: string
+          endDate?: string
+        }>
 
         let moySkladOrderId: string | null = null
         let moySkladError: string | null = null

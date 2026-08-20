@@ -25,7 +25,7 @@ async function recalcOrderTotal(req: PayloadRequest, orderRef: unknown): Promise
     depth: 0,
     req,
   })
-  const total = siblings.docs.reduce((sum, item: any) => sum + (item.lineTotal || 0), 0)
+  const total = siblings.docs.reduce((sum, item: { lineTotal?: number | null }) => sum + (item.lineTotal || 0), 0)
 
   await req.payload.update({
     collection: 'orders',
@@ -40,7 +40,7 @@ async function recalcOrderTotal(req: PayloadRequest, orderRef: unknown): Promise
 // items are the historical record of what was actually booked/pushed to
 // МойСклад/Telegram, so further public edits must be blocked (only admins
 // can amend a booking after the fact, via /cms).
-async function canModifyOrderItem({ req, id }: { req: any; id?: number | string }): Promise<boolean> {
+async function canModifyOrderItem({ req, id }: { req: PayloadRequest; id?: number | string }): Promise<boolean> {
   if (req.user) return true
   // No id means this is a bulk update/delete (a `where` filter, not a single
   // document) — there's nothing here to check "is this order submitted yet"
@@ -63,7 +63,7 @@ async function canModifyOrderItem({ req, id }: { req: any; id?: number | string 
 // new anonymous item must not be attachable: nothing would re-push or
 // re-notify, so the stored total would silently drift from what was
 // actually charged and communicated.
-async function canCreateOrderItem({ req, data }: { req: any; data?: Record<string, unknown> }): Promise<boolean> {
+async function canCreateOrderItem({ req, data }: { req: PayloadRequest; data?: Record<string, unknown> }): Promise<boolean> {
   if (req.user) return true
   const orderRef = data?.order
   const orderId = typeof orderRef === 'object' && orderRef !== null ? (orderRef as { id: number }).id : orderRef

@@ -6,6 +6,8 @@
 // unstyled /cms admin panel (Tailwind logs "content option is missing or
 // empty" — see next dev output) — nothing to do with the storefront proxy.
 // apps/web already has the same shadow file for the same reason.
-export default {
+const config = {
   plugins: {},
 }
+
+export default config

@@ -40,25 +40,15 @@ const nextConfig = {
     // the underlying type incompatibility.
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // `next dev` never runs ESLint, so pre-existing `no-explicit-any` uses
-    // went unnoticed until the first real `next build` started failing
-    // outright. The МойСклад integration's own share of this (originally
-    // documented here as "~27 uses") has since been retyped to zero — see
-    // lib/moysklad/*, endpoints/moyskladWebhook.ts — proper interfaces for
-    // the МойСклад JSON API 1.2 entity shapes this app actually reads
-    // fields from, no `any` left anywhere in that module. What's still
-    // suppressed here is much larger than that original estimate suggested:
-    // a full `next lint` run counts ~190 `no-explicit-any` errors spread
-    // across the admin dashboard components/endpoints (AdminKpiWidget,
-    // CalendarView, AnalyticsView, ClientsView, StockStatusCell, every
-    // endpoints/admin/*.ts file) and lib/rental/availability.ts — none of
-    // it МойСклад-specific. Retyping that surface is real, separate work
-    // (tracked as its own follow-up, given the size), not something a
-    // Docker/infra change should be blocked on or rushed to paper over
-    // with guessed types.
-    ignoreDuringBuilds: true,
-  },
+  // eslint.ignoreDuringBuilds used to be blanket-true here: `next dev` never
+  // runs ESLint, so pre-existing `no-explicit-any` uses (~190, spread across
+  // the admin dashboard components/endpoints and lib/rental/availability.ts)
+  // went unnoticed until the first real `next build` started failing
+  // outright. Rather than keep builds blind to lint everywhere, the
+  // suppression is now scoped to just those legacy paths in
+  // eslint.config.mjs (see `legacyAnyPaths`) — new code, including every
+  // route group the Next.js migration adds, is linted at full strictness.
+  // Retyping the legacy surface is separate follow-up work, not a blocker.
 }
 
 export default withPayload(nextConfig, { devBundleServerPackages: false })
