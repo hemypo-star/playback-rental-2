@@ -358,3 +358,33 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   just `next build`): both new pages 200 with real Navbar/Footer content rendered;
   still-unported routes (`/`, `/how-it-works`) still correctly fall through the
   proxy to Astro.
+- **2026-08-20** — **Stage 2 page group 2 of 7** done: `/how-it-works` (static port of
+  the Astro source — its steps/pricing/FAQ arrays are hardcoded in the source itself,
+  not pulled from `SiteSettings`; that's a shorter, different list used only on the
+  homepage, out of scope here) and `/contact` (async Server Component, `getSiteSettings()`
+  from part 1's data layer for phone/email/telegram/vk/address/hours/map links), plus
+  the `ContactForm` client island, both dropped out of `proxy.ts`'s fallback matcher.
+  Real, deliberate behavior change in the port: `apps/web`'s `ContactForm` called
+  `sendContactNotification()`, a REST wrapper in `apps/web/src/lib/payload.ts`; the
+  ported version fetches `/api/contact-notification` directly, since that endpoint
+  already exists natively in `apps/cms` (`src/endpoints/contactNotification.ts`,
+  registered in `payload.config.ts` since an earlier stage) — pure frontend wiring, no
+  new backend code. Also bumped the form's input focus transitions from `duration-200`
+  to `duration-240`/`ease-expo`, continuing part 1's design-sync gap-closing; a
+  post-change audit run showed 24 `duration-240` occurrences, with only the one
+  deliberately-left-alone shared `global.css` `.btn` utility still at `duration-200`
+  (same reasoning as part 1: not worth diverging the two still-live copies over).
+  Verified live (real `next dev` + `astro dev` + local Postgres — had to `ALTER ROLE`
+  to reset a stale password on the existing dev DB role before it would auth this
+  session): `next build` prerendered both new routes as static `○`; both then
+  curl-verified 200 natively off port 3000 with real `SiteSettings` data in the HTML
+  (a real phone number appeared); `/` still 200 through the Astro proxy fallback,
+  confirming the matcher change didn't break anything else; `POST
+  /api/contact-notification` exercised directly — 400 on missing required fields,
+  `{"success":false}` with the documented "`NOTIFICATION_WEBHOOK_URL` not configured"
+  reason when unset in this scratch env (expected no-op per the endpoint's own
+  comment, not a bug). Lint and design-sync audit both clean. All scratch test infra
+  (Postgres, both dev servers, scratch `.env` files) torn down afterward; ran one
+  extra `next build` at the end specifically to leave `next-env.d.ts` back in its
+  committed build-mode state (dev mode rewrites two of its import lines to
+  `.next/dev/types/*`, the drift already documented above) before committing.
