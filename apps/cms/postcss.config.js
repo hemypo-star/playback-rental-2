@@ -6,8 +6,16 @@
 // unstyled /cms admin panel (Tailwind logs "content option is missing or
 // empty" — see next dev output) — nothing to do with the storefront proxy.
 // apps/web already has the same shadow file for the same reason.
+//
+// @tailwindcss/postcss added in docs/PLAN-next-migration.md Stage 1, for
+// src/styles/global.css (the (frontend) route group's stylesheet, ported
+// from apps/web). It only activates for files that actually `@import
+// "tailwindcss"` — Payload's own (payload)/custom.css has no Tailwind
+// directives, so it passes through unaffected, same as before.
 const config = {
-  plugins: {},
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
 }
 
 export default config

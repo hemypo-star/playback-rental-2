@@ -271,3 +271,50 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   itself (retiring `/cms` — deliberately last, needs a week of the owner actually using
   `/admin` day-to-day first, per the plan). `/cms` remains available as the safety net
   it was always meant to be.
+- **2026-08-20** — Wrote `docs/ROADMAP-2.0.md` (cross-checks the three existing plan
+  docs against actual code/git state; open items, conflicts, suggested order of
+  attack) and started `docs/PLAN-next-migration.md`. **Stage 0.1/0.2** done: ESLint's
+  `no-explicit-any` suppression scoped to just the legacy paths that need it
+  (`apps/cms/eslint.config.mjs`, `eslint.ignoreDuringBuilds` removed entirely — new
+  code is linted at full strictness); `apps/cms` upgraded Next 15 → 16.3.1. The
+  `ReactPortal`/`LayoutProps` type-check bug isn't fixed by the Next upgrade alone,
+  but combined with the existing Fragment-wrap workaround in
+  `app/(payload)/layout.tsx`, `next build`'s generated-type check now passes, so
+  `typescript.ignoreBuildErrors` was removed too. Also wrote
+  `docs/design-reference/hierarchical-categories.md` — a hand-authored spec for the
+  storefront category-tree sidebar (undocumented in every plan and in the design
+  bundle, since `Categories.parent` postdates it).
+  **Stage 1 (каркас + разворот прокси)** done and verified live (real `next dev` +
+  `astro dev` running concurrently against a real local Postgres, not just `next
+  build`): `apps/web/public/*` moved to `apps/cms/public` (favicon, self-hosted Golos
+  Text); `apps/cms/src/styles/global.css` is a duplicate of `apps/web`'s copy (not a
+  move — Astro's `Layout.astro` still needs its own copy live until Stage 2 actually
+  ports pages away), wired through a new Tailwind v4 PostCSS setup
+  (`@tailwindcss/postcss` added, since `apps/cms` never needed Tailwind before — the
+  `/cms` admin theme is plain CSS custom properties, no Tailwind directives, so it's
+  unaffected) and now also pulls in `docs/design-reference/spec/{tokens.css,
+  interactions.css}` for the first time anywhere in either app.
+  `apps/cms/src/app/(frontend)/layout.tsx` is a skeleton port of `Layout.astro` —
+  deliberately without Navbar/Footer yet, since those depend on SiteSettings/cart-
+  store islands that are explicitly Stage 2 scope ("Данные"/"Острова"), and nothing
+  routes to this layout yet anyway (every real request still falls through the proxy).
+  `apps/cms/src/proxy.ts` (not `middleware.ts` — Next 16 renamed the convention,
+  confirmed via `@next/codemod`'s own transform source since this app started on 16.3
+  from day one) fallback-proxies everything except `/cms`, `/api`, `/_next`, and the
+  moved public assets to the still-live Astro app; `apps/web/src/middleware.ts` lost
+  its proxy logic entirely (kept only the `/admin` session guard — `/admin/*` pages
+  still live there until Stage 3). One real bug caught by the live test, not just
+  `next build`: an admin-guard redirect (`/admin` → `/admin/login`) 500'd through the
+  new proxy with `TypeError: Invalid URL` — Next's Node-runtime proxy handling chokes
+  on a same-origin-rewritten *relative* Location header the way Astro's own plain
+  Node server never did; fixed by rewriting to an absolute URL on the incoming
+  request's own origin instead (Next then correctly re-relativizes it for the client,
+  matching Astro's original response exactly — confirmed byte-for-byte on `/` between
+  going through the proxy vs hitting Astro directly). `compose.yaml`: published port
+  moved from `web` to `cms` (still named `WEB_PORT` — it's the port the site is on,
+  regardless of which service serves a given request), `web` gained no healthcheck-
+  gated reverse dependency on `cms` (already had one the other way; adding one back
+  would cycle). Also disabled Next 16's new auto-generated `AGENTS.md`/`CLAUDE.md`
+  file feature (`agentRules: false` in `next.config.mjs`) — first noticed when it
+  silently wrote both into `apps/cms/` on `next dev`, stepping on this project's own
+  root `CLAUDE.md` convention.

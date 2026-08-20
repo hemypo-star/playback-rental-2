@@ -1,7 +1,9 @@
-# Production stack. Only `web` publishes a port — `db` and `cms` are
+# Production stack. Only `cms` publishes a port — `db` and `web` are
 # reachable solely over the compose network, matching the single-public-port
-# design in apps/web/src/middleware.ts (which reverse-proxies /cms, /api,
-# /_next to the cms service). Run with:
+# design in apps/cms/src/proxy.ts (which fallback-proxies everything not
+# yet ported to apps/cms's own (frontend)/(admin) route groups over to the
+# web service — docs/PLAN-next-migration.md Stage 1; before that it was the
+# other way around, apps/web proxying /cms, /api, /_next to cms). Run with:
 #   docker compose up --build
 # Dev mode (hot reload, bind mounts) overlays compose.dev.yaml on top — see
 # that file's header comment.
@@ -39,10 +41,16 @@ services:
       # Public storefront origin — feeds cors/csrf (payload.config.ts) and
       # Next's serverActions.allowedOrigins (next.config.mjs).
       WEB_URL: ${WEB_URL:?set WEB_URL in .env}
+      # Fallback-proxy target for everything not yet ported to (frontend)/
+      # (admin) — see apps/cms/src/proxy.ts. Always the *internal*
+      # address of the still-live Astro app, never the public one.
+      WEB_INTERNAL_URL: http://web:4321
       MEDIA_STATIC_DIR: /data/media
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
       NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
+    ports:
+      - '${WEB_PORT:-8080}:3000'
     volumes:
       - cms_media:/data/media
     healthcheck:
@@ -73,13 +81,14 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: '4321'
-      # Server-side (SSR + this app's own reverse proxy) reaches the CMS
-      # over the compose network directly — never the public URL.
+      # Server-side (SSR) reaches the CMS over the compose network directly
+      # — never the public URL. This app no longer proxies anything itself
+      # (see apps/cms/src/proxy.ts) — it's the internal service now.
       CMS_INTERNAL_URL: http://cms:3000
-      # Browser-side stays same-origin; middleware.ts proxies the rest.
+      # Browser-side stays same-origin — Next is the public origin now, and
+      # /api/* resolves there whether the page came from Next or was
+      # fallback-proxied from this app.
       PUBLIC_PAYLOAD_URL: ''
-    ports:
-      - '${WEB_PORT:-8080}:4321'
 
   # Actually schedules reconcile-moysklad.ts's sync (a review found it was
   # never wired to anything — the only safety net against a missed webhook

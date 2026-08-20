@@ -39,14 +39,21 @@ Prerequisites: Node, pnpm, a local Postgres instance.
 pnpm install
 
 # apps/cms/.env — copy from .env.example and fill in:
-#   DATABASE_URI, PAYLOAD_SECRET, WEB_URL, MOYSKLAD_API_TOKEN,
-#   TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID(_2/_3), MOYSKLAD_WEBHOOK_SECRET
-cd apps/cms && pnpm dev     # http://localhost:3000 — /admin for the panel
+#   DATABASE_URI, PAYLOAD_SECRET, WEB_URL, WEB_INTERNAL_URL,
+#   MOYSKLAD_API_TOKEN, MOYSKLAD_WEBHOOK_SECRET
+cd apps/cms && pnpm dev     # http://localhost:3000 — the actual site (docs/PLAN-next-migration.md
+                            # Stage 1: Next fallback-proxies to apps/web for whatever isn't
+                            # ported here yet), /cms for Payload's own admin
 
 # apps/web/.env — copy from .env.example:
-#   PUBLIC_PAYLOAD_URL=http://localhost:3000
-cd apps/web && pnpm dev     # http://localhost:4322
+#   PUBLIC_PAYLOAD_URL=
+cd apps/web && pnpm dev     # http://localhost:4322 — not meant to be opened directly once
+                            # apps/cms is running; it's the fallback-proxy target now
 ```
+
+Full stack (recommended — matches production): `docker compose -f compose.yaml -f
+compose.dev.yaml up --build`, then open `http://localhost:8080`. See `compose.dev.yaml`'s
+header comment.
 
 Payload's Postgres schema is pushed automatically on `pnpm dev` startup (no manual
 migrations in dev). After adding or changing a **custom admin component**
