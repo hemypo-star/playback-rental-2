@@ -548,3 +548,45 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   scratch test infra (Postgres, both dev servers, scratch `.env` files, seeded test
   data, seed/cleanup scripts, extra `next build` cycle for `next-env.d.ts`) torn down
   before committing.
+  **Page group 6 of 7 done** (`3c72106`): promotions detail
+  (`promotions/[slug]/page.tsx`), the smallest port of the six so far — the
+  `Promotions` collection, its admin CRUD, and this route's whole content model
+  (slug/kicker/text/content/linkedProducts/linkedCategories) already existed from
+  2026-08-14's "Страница акции /promotions/:slug" work, so this pass needed zero new
+  data-layer code: `getActivePromotions()`/`getPromotionBySlug()` were both already
+  written in part 3 (for the homepage's promo carousel) and just sat unused until now.
+  `Astro.redirect('/404')` became `next/navigation`'s `notFound()` — apps/web never had
+  an actual `/404.astro` route either, so the original just fell through to Astro's own
+  default not-found handling for that path; `notFound()` is the direct idiomatic
+  equivalent. `proxy.ts` matcher extended to exclude `promotions`. Verified live: this
+  page needed more seeded state than any prior part, since `Promotions.image` is a
+  required (non-nullable) upload field and both the linked-products and
+  linked-categories sections needed real linked data to exercise — the scratch seed
+  script created a real media doc via Payload's Local API file upload (same shape
+  `moysklad/sync.ts`'s own image-upload code uses) alongside a temporary category,
+  product, and promotion, all deleted before committing, with cleanup this time
+  verified to actually remove the uploaded file from disk (checked via `find`, not just
+  the DB row). With that data live: curl-verified title/kicker/content/image, the
+  linked-products section (a real `ProductCard`, including its correct
+  `/api/media/file/...` URL), and the linked-categories tile; a nonexistent slug
+  correctly 404s via `notFound()` rather than a redirect loop or 500. **Caught reviewing
+  the commit, not by the verification originally run**: the commit message initially
+  claimed `getPromotionBySlug()` "gained the same React `cache()` wrap part 4 gave
+  `getCategoryBySlug()`" — the actual first-pass diff only added `import { cache } from
+  'react'` to `lib/data/promotions.ts` without ever wrapping the function itself (still
+  `export async function getPromotionBySlug(...)`, not `export const getPromotionBySlug
+  = cache(...)`), so `generateMetadata()` and the page component would have kept
+  issuing two separate Payload queries per request instead of one deduped call, and the
+  `cache` import would have been dead code. Neither `eslint` nor `tsc --noEmit` flag an
+  unused-but-imported `cache`, so this slipped past the checks that were actually run.
+  Found while reviewing the roadmap-chronicler's write-up of the commit (its own
+  independent verification against the diff caught the mismatch between the claim and
+  the code) and fixed immediately, in the same unpushed commit, rather than left as a
+  known gap — `getPromotionBySlug` is now genuinely `cache(async (slug) => ...)`,
+  re-verified with a clean `eslint`/`next build`. `/checkout` (last page group) still
+  falls through the proxy to Astro, confirmed via a real request. Lint and design-sync
+  audit both otherwise clean, no new gaps. **Checkout is next up and last** in Stage
+  2's page order — per `docs/PLAN-next-migration.md`, the one page group needing the
+  most care, since it's the only one with a real mutation (`submitOrder()`, planned to
+  become a Server Action on the Local API rather than a client-side REST POST, retiring
+  the `mutate()`/`{ doc, message }` wrapper along with the REST call it exists for).
