@@ -58,11 +58,11 @@ This is the **newest** plan (committed today, 2026-08-20, alongside the first re
 
 - [x] 0.1 Scope `typescript.ignoreBuildErrors`/`eslint.ignoreDuringBuilds` to specific paths instead of the whole app — **done 2026-08-20.** Added `apps/cms/eslint.config.mjs`; `no-explicit-any` suppression scoped to `app/(payload)/**`, `endpoints/**`, `components/admin/**`, `lib/rental/**`; `eslint.ignoreDuringBuilds` removed entirely. The handful of errors this surfaced outside those paths (real `any`s in `collections/OrderItems.ts`/`Orders.ts`, three admin nav links using `<a>` instead of `next/link`) were fixed, not suppressed.
 - [x] 0.2 Upgrade Next 15 → 16.3 before migrating — **done 2026-08-20**, `apps/cms/package.json` now pins `"next": "^16.3"` (16.3.1 resolved). The `ReactPortal`/`LayoutProps` bug isn't fixed by the upgrade alone, but combined with the existing Fragment-wrap workaround in `layout.tsx`, `next build`'s generated-type check now passes — `typescript.ignoreBuildErrors` was removed.
-- [~] 0.3 Extract the design bundle into a machine-checkable spec — **partially done.** `tools/design-sync.mjs` and `docs/design-reference/spec/{tokens.css,interactions.css}` exist and were committed today, and the tool's own audit output is written into `docs/DESIGN-SYNC.md`. But neither file is imported anywhere yet (`grep` for `tokens.css`/`interactions.css` in `apps/web/src` and `apps/cms/src` returns nothing) — the plan doesn't apply this until Stage 1, so that's expected, just flagging it's spec-only today, not wired in.
-- [ ] 0.4 Freeze the manual smoke-test checklist — no evidence it's been run as a formal checklist yet (reasonable, since Stage 1 hasn't started).
+- [x] 0.3 Extract the design bundle into a machine-checkable spec — `tools/design-sync.mjs` and `docs/design-reference/spec/{tokens.css,interactions.css}` exist, and both files are now actually wired in (`apps/cms/src/styles/global.css` imports both, done as part of Stage 1 — see below), not just generated.
+- [ ] 0.4 Freeze the manual smoke-test checklist — still not done as a formal written checklist. Stage 1 itself was verified live (real `next dev` + `astro dev` against a real Postgres, not just `next build`), but that was ad hoc, not against a frozen list — worth doing before Stage 2 starts touching real pages.
 - [ ] 0.5 Leave `MOYSKLAD_API_TOKEN`/`NOTIFICATION_WEBHOOK_URL` alone — trivially true so far (nothing's touched them).
 
-**Stage 1 — Shell + proxy reversal** — not started. `apps/cms/src/app/` contains only the `(payload)` route group (`/cms`, `/api`); no `(frontend)` or `(admin)` group exists yet.
+**Stage 1 — Shell + proxy reversal** — **done 2026-08-20**, verified live. `apps/cms` (Next) is now the single public entry point; `apps/cms/src/proxy.ts` (named for Next 16's renamed convention, not `middleware.ts`) fallback-proxies everything not yet ported to the still-live Astro app, which lost its own proxy logic entirely (kept only the `/admin` session guard). `apps/cms/src/app/(frontend)/layout.tsx` exists as a skeleton (no Navbar/Footer yet — Stage 2 scope). One real bug found only by running real `next dev` + `astro dev` concurrently, not by `next build` alone: a same-origin redirect with a relative Location header crashed Next's Node-runtime proxy handling (`TypeError: Invalid URL`) the way Astro's own proxy never did — fixed by always rewriting to an absolute URL. `(admin)` route group still doesn't exist — that's Stage 3.
 
 **Stage 2 — Storefront port** (7 page groups, Local API data layer, cache-freshness handling) — not started.
 
@@ -70,7 +70,7 @@ This is the **newest** plan (committed today, 2026-08-20, alongside the first re
 
 **Stage 4 — Cleanup** (delete `apps/web`, drop the proxy/dual-URL/cors machinery plan #2 built) — not started, and not startable until 2–3 are done.
 
-**Net:** of the ~7 estimated working days in this plan, 0.1, 0.2, and part of 0.3 (design extraction) have landed as of 2026-08-20; Stages 1–4 are still fully unstarted.
+**Net:** of the ~7 estimated working days in this plan, Stage 0 (0.1/0.2/0.3) and Stage 1 have landed as of 2026-08-20 (roughly 2 of the plan's own ~7 days); Stages 2–4 are still fully unstarted.
 
 ---
 
@@ -120,7 +120,8 @@ Not a plan-vs-plan conflict, but a code-vs-source-of-truth one: `CLAUDE.md` and 
 ## Suggested order of attack
 
 1. **Decide the timeline question (Conflict 3) first** — it's cheap (one conversation) and changes how much of the below is worth doing before a cutover date is picked.
-2. ~~**If proceeding with the Next.js migration:** do Stage 0.1/0.2 (scope lint flags, Next 16.3) before touching Stage 1~~ — done 2026-08-20. Next up in Stage 0: write the hierarchical-categories spec (item 3 below), then Stage 1 (shell + proxy reversal).
+2. ~~**If proceeding with the Next.js migration:** do Stage 0.1/0.2 (scope lint flags, Next 16.3) before touching Stage 1~~ — done 2026-08-20.
 3. ~~**Write a one-paragraph spec for hierarchical categories**~~ (open item 7) before Stage 2 gets there, so it's not designed from scratch mid-port — done 2026-08-20.
-4. **Stop polishing `apps/web`'s Docker setup** (Conflict 1) — anything beyond what's already shipped is work plan #3 deletes.
-5. **Revisit `/cms` retirement (open item 2) only after Stage 3 of plan #3 lands** — at that point it's a Next route-group decision, not a proxy one, and Step 8 as written no longer applies cleanly.
+4. ~~**Stage 1 (shell + proxy reversal)**~~ — done 2026-08-20, verified live. Next up: Stage 2 (storefront port — legal pages first, then how-it-works/contact, index, catalog, product, promotions, checkout last), per docs/PLAN-next-migration.md's own page order.
+5. **Stop polishing `apps/web`'s Docker setup** (Conflict 1) — anything beyond what's already shipped is work plan #3 deletes.
+6. **Revisit `/cms` retirement (open item 2) only after Stage 3 of plan #3 lands** — at that point it's a Next route-group decision, not a proxy one, and Step 8 as written no longer applies cleanly.
