@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import type { Promotion } from '../../payload-types'
@@ -16,7 +17,10 @@ export async function getActivePromotions(): Promise<Promotion[]> {
   return result.docs
 }
 
-export async function getPromotionBySlug(slug: string): Promise<Promotion | undefined> {
+// cache(): promotions/[slug]/page.tsx calls this from both generateMetadata()
+// and the page component itself — same reasoning as getCategoryBySlug() in
+// lib/data/categories.ts.
+export const getPromotionBySlug = cache(async (slug: string): Promise<Promotion | undefined> => {
   const payload = await getPayload({ config })
   const result = await payload.find({
     collection: 'promotions',
@@ -25,4 +29,4 @@ export async function getPromotionBySlug(slug: string): Promise<Promotion | unde
     depth: 2,
   })
   return result.docs[0]
-}
+})
