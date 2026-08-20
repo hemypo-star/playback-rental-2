@@ -87,9 +87,10 @@ export async function proxy(request: NextRequest) {
 }
 
 // Excludes what this app already serves natively: (payload)'s /cms, /api,
-// /_next, and the public assets moved into apps/cms/public (favicon,
-// fonts) — proxying those to Astro would just be a slower, wrong-origin
-// round-trip to files/routes that already resolve correctly here.
+// /_next, the public assets moved into apps/cms/public (favicon, fonts),
+// and each (frontend) route as Stage 2 ports it — proxying those to Astro
+// would just be a slower, wrong-origin round-trip to routes/files that
+// already resolve correctly here. Update this list every time a page moves.
 export const config = {
-  matcher: ['/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/).*)'],
+  matcher: ['/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement).*)'],
 }

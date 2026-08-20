@@ -1,17 +1,18 @@
 import type { Metadata } from 'next'
 import type React from 'react'
+import { Suspense } from 'react'
 import '../../styles/global.css'
+import Navbar from '../../components/Navbar'
+import Footer from '../../components/Footer'
+import CartActionsInit from '../../components/CartActionsInit'
 
 // Port of apps/web/src/layouts/Layout.astro (docs/PLAN-next-migration.md
-// Stage 1 — "каркас", the frame only). Deliberately does NOT yet render
-// Navbar/Footer: Footer.astro reads SiteSettings, and Navbar.astro's
-// CartBadge/AdminPanelLink/RentalDatePicker islands depend on stores and a
-// Local API data layer that don't exist in this app until Stage 2 ("Данные"
-// and "Острова"). Nothing under (frontend) has a real page yet either — the
-// Next middleware fallback-proxies every route to apps/web still, so this
-// layout is inert until Stage 2 adds the first page under this group, at
-// which point Navbar/Footer arrive together with what they depend on rather
-// than as a half-working stand-in now.
+// Stage 2). Navbar/Footer now render for real — Footer is an async Server
+// Component reading SiteSettings via the Local API data layer
+// (lib/data/siteSettings.ts); Navbar is 'use client' (needs usePathname()
+// for active-link state, which has no server-render equivalent the way
+// Astro.url.pathname did) and is wrapped in Suspense because it also uses
+// useSearchParams(), which Next requires a Suspense boundary for.
 
 export const metadata: Metadata = {
   title: {
@@ -29,7 +30,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preload" href="/fonts/golos-text-cyrillic.woff2" as="font" type="font/woff2" crossOrigin="" />
       </head>
       <body className="flex min-h-screen flex-col">
+        <Suspense fallback={null}>
+          <Navbar />
+        </Suspense>
         <main className="flex-1">{children}</main>
+        <Footer />
+        <CartActionsInit />
       </body>
     </html>
   )

@@ -267,7 +267,11 @@ function audit() {
   const focuses = (code.match(/focus(-visible)?:/g) ?? []).length
 
   const designKf = new Map(s.keyframes)
-  const codeKf = new Map(countBy([...code.matchAll(/animation:\s*(bn[A-Za-z]+)/g)].map((m) => m[1])))
+  // Optional leading quote: Astro's inline `style="animation:bnX..."` has
+  // none, but a ported React/JSX `style={{ animation: 'bnX...' }}` always
+  // does — without tolerating it here, every animation in ported .tsx code
+  // audits as 0×, which defeats the point of auditing ported code at all.
+  const codeKf = new Map(countBy([...code.matchAll(/animation:\s*['"]?(bn[A-Za-z]+)/g)].map((m) => m[1])))
 
   const L = []
   L.push(`Файлов просмотрено: ${files.length}\n`)

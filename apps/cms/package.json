@@ -16,11 +16,15 @@
     "reconcile:moysklad:daemon": "tsx --env-file-if-exists=.env src/scripts/reconcile-daemon.ts"
   },
   "dependencies": {
+    "@nanostores/persistent": "^1.3.5",
+    "@nanostores/react": "^1.1.0",
     "@payloadcms/db-postgres": "latest",
     "@payloadcms/next": "latest",
     "@payloadcms/richtext-lexical": "latest",
     "@tailwindcss/postcss": "^4.3.3",
+    "date-fns": "^3.6.0",
     "graphql": "^16.9.0",
+    "nanostores": "^1.4.2",
     "next": "^16.3",
     "payload": "latest",
     "react": "^19",
