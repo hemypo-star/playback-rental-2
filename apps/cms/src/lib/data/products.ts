@@ -42,7 +42,12 @@ export async function getProducts(params: GetProductsParams = {}) {
   })
 }
 
-export async function getProductById(id: number): Promise<Product> {
+// disableErrors: true returns null for a missing/invalid id instead of
+// throwing Payload's NotFound — simpler for the product page's redirect-on-
+// missing-product logic than importing and instanceof-checking that error
+// class, which the old REST client's PayloadApiError-based equivalent had
+// to do (a REST 404 has no other way to signal "not found" to the caller).
+export async function getProductById(id: number): Promise<Product | null> {
   const payload = await getPayload({ config })
-  return payload.findByID({ collection: 'products', id, depth: 1 })
+  return payload.findByID({ collection: 'products', id, depth: 1, disableErrors: true })
 }
