@@ -98,5 +98,5 @@ export async function proxy(request: NextRequest) {
 // non-empty literals — matching `/` into the proxy fallback rather than
 // this app's own (frontend)/page.tsx, now that the homepage is ported.
 export const config = {
-  matcher: ['/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact|$).*)'],
+  matcher: ['/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact|catalog|$).*)'],
 }
