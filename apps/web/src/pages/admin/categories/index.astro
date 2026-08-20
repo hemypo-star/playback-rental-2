@@ -2,13 +2,17 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro'
 import { getAdminToken } from '../../../lib/admin/session'
 import { cmsFetch } from '../../../lib/admin/api'
+import { buildCategoryTree, flattenCategoryTree } from '../../../lib/categoryTree'
 import type { PayloadFindResult, Category } from '@playback-rental/shared-types'
 
 const user = Astro.locals.adminUser!
 const token = getAdminToken(Astro.cookies)!
 
+// depth:0 (bare parent id, not a populated Category) is enough — the tree
+// builder only ever needs the id to link a node to its parent's node.
 const result = await cmsFetch<PayloadFindResult<Category>>('/categories?sort=order&limit=200&depth=0', token)
 const categories = result?.docs ?? []
+const orderedCategories = flattenCategoryTree(buildCategoryTree(categories))
 ---
 
 <AdminLayout
@@ -24,12 +28,15 @@ const categories = result?.docs ?? []
       <span>Название</span><span>Slug</span><span>Тег</span><span>Порядок</span>
     </div>
     {
-      categories.map((c) => (
+      orderedCategories.map(({ category: c, depth }) => (
         <a
           href={`/admin/categories/${c.id}`}
           class="grid grid-cols-[2fr_1.2fr_1fr_90px] items-center gap-3.5 rounded-2xl px-2.5 py-3.5 text-[13.5px] transition-colors duration-200 hover:bg-muted"
         >
-          <span class="truncate font-medium">{c.name}</span>
+          <span class="truncate font-medium" style={`padding-left:${depth * 20}px`}>
+            {depth > 0 && <span class="mr-1.5 text-subtle">└</span>}
+            {c.name}
+          </span>
           <span class="truncate text-[12.5px] text-subtle">{c.slug}</span>
           <span class="truncate text-[12.5px] text-subtle">{c.tag ?? '—'}</span>
           <span>{c.order}</span>

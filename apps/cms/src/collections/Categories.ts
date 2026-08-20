@@ -53,6 +53,32 @@ export const Categories: CollectionConfig = {
         description: 'Sort order in the catalog sidebar.',
       },
     },
+    // Admin-organized hierarchy — deliberately never touched by the МойСклад
+    // sync (same treatment as tag/image/order/description above), even
+    // though a sensible default is technically derivable from the folder
+    // tree's pathName: the sync's own established pattern is "never touch
+    // an organizational field past initial creation," and letting admin
+    // freely restructure this (МойСклад's raw folder tree isn't always the
+    // grouping that makes sense on the storefront) without a resync ever
+    // fighting them back is more valuable here than free auto-population.
+    {
+      name: 'parent',
+      type: 'relationship',
+      relationTo: 'categories',
+      admin: {
+        description: 'Родительская категория. Пусто — категория верхнего уровня.',
+      },
+      // A category can't be its own parent — the deeper cycle case (picking
+      // a descendant as parent) is guarded in the admin UI instead, where a
+      // full descendant set can actually be computed against live sibling
+      // data; this field-level check is just the cheap, always-true case.
+      validate: (value: unknown, { id }: { id?: number | string }) => {
+        if (value != null && String(value) === String(id)) {
+          return 'Категория не может быть родителем самой себя'
+        }
+        return true
+      },
+    },
     // Sync bookkeeping: this category mirrors a productfolder under the
     // "PlayBack Rental" subtree in МойСклад (see the Phase 0 folder audit
     // in the project plan — the account is shared with unrelated businesses,

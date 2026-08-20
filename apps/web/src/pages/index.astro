@@ -6,6 +6,7 @@ import ProductCard from '../components/ProductCard.astro'
 import { getCategories, getProducts, getSiteSettings, getActivePromotions, mediaUrl } from '../lib/payload'
 import { formatCurrency } from '../lib/pricing'
 import { pluralizeRu } from '../lib/dateRange'
+import { getSubtreeIds } from '../lib/categoryTree'
 import type { Category } from '@playback-rental/shared-types'
 
 const [categories, featuredResult, allProductsResult, siteSettings, promotions, kitsResult] = await Promise.all([
@@ -18,7 +19,11 @@ const [categories, featuredResult, allProductsResult, siteSettings, promotions, 
 ])
 const kits = kitsResult.docs
 
-const featuredCategories = categories.slice(0, 6)
+// Top-level only — a subcategory tile on the homepage would be a strange
+// entry point (design's own 6-tile grid was always meant as a curated top
+// level, not the full depth), children are reachable from the catalog
+// sidebar and from their parent's own catalog page.
+const featuredCategories = categories.filter((c) => c.parent == null).slice(0, 6)
 const products = featuredResult.docs
 const allProducts = allProductsResult.docs
 const heroImageUrl = mediaUrl(siteSettings.heroBannerImage)
@@ -42,10 +47,23 @@ for (const p of allProducts) {
   }
 }
 function categoryMeta(c: Category): string {
-  const stats = categoryStats.get(c.id)
-  if (!stats) return ''
-  const word = pluralizeRu(stats.count, 'позиция', 'позиции', 'позиций')
-  return `${stats.count} ${word} · от ${formatCurrency(stats.minPrice)}`
+  // Aggregated over the whole subtree, not just this category directly —
+  // a top-level tile like "Аренда оборудования" carries essentially no
+  // products of its own (real listings sit on its leaf subcategories), so
+  // a direct-only count would show empty for exactly the tiles homepage
+  // actually links to.
+  const subtreeIds = getSubtreeIds(c.id, categories)
+  let count = 0
+  let minPrice: number | undefined
+  for (const id of subtreeIds) {
+    const stats = categoryStats.get(id)
+    if (!stats) continue
+    count += stats.count
+    minPrice = minPrice === undefined ? stats.minPrice : Math.min(minPrice, stats.minPrice)
+  }
+  if (count === 0 || minPrice === undefined) return ''
+  const word = pluralizeRu(count, 'позиция', 'позиции', 'позиций')
+  return `${count} ${word} · от ${formatCurrency(minPrice)}`
 }
 
 const promoSlides = promotions.map((p) => ({

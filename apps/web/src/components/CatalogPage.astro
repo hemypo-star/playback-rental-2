@@ -4,6 +4,7 @@ import ProductCard from './ProductCard.astro'
 import RentalDatePicker from './RentalDatePicker'
 import { getCategories, getProducts } from '../lib/payload'
 import { pluralizeRu } from '../lib/dateRange'
+import { getSubtreeIds } from '../lib/categoryTree'
 import type { Category } from '@playback-rental/shared-types'
 
 interface Props {
@@ -21,10 +22,17 @@ const SORT_PARAM: Record<string, string> = {
   desc: '-price',
 }
 
-const [categories, productsResult, allForCounts] = await Promise.all([
-  getCategories(),
+// Categories fetched first — a parent category's own product filter needs
+// its resolved subtree (self + every descendant) before the products query
+// can run, so a parent page shows children's products too, not just
+// whatever's tagged directly on the parent itself (rarely anything, given
+// real listings live on the leaf categories).
+const categories = await getCategories()
+const activeCategoryIds = activeCategory ? getSubtreeIds(activeCategory.id, categories) : undefined
+
+const [productsResult, allForCounts] = await Promise.all([
   getProducts({
-    categoryId: activeCategory?.id,
+    categoryIds: activeCategoryIds,
     search: searchQuery,
     isKit: kitOnly ? true : undefined,
     limit: 100,
@@ -34,11 +42,18 @@ const [categories, productsResult, allForCounts] = await Promise.all([
 ])
 const products = productsResult.docs
 
-const categoryCounts = new Map<number, number>()
+const directCounts = new Map<number, number>()
 for (const p of allForCounts.docs) {
   const catId = typeof p.category === 'object' ? p.category.id : p.category
-  categoryCounts.set(catId, (categoryCounts.get(catId) ?? 0) + 1)
+  directCounts.set(catId, (directCounts.get(catId) ?? 0) + 1)
 }
+// Sidebar count next to a parent category is its whole subtree's count —
+// otherwise every non-leaf category (which real products are essentially
+// never tagged to directly) would show "0" despite genuinely containing
+// products, once children exist under it.
+const categoryCounts = new Map<number, number>(
+  categories.map((c) => [c.id, getSubtreeIds(c.id, categories).reduce((sum, id) => sum + (directCounts.get(id) ?? 0), 0)]),
+)
 
 const basePath = activeCategory ? `/catalog/${activeCategory.slug}` : '/catalog'
 const resultsWord = pluralizeRu(products.length, 'позиция', 'позиции', 'позиций')

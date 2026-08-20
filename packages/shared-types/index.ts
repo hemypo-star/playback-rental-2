@@ -22,6 +22,7 @@ export interface Category {
   tag?: string | null
   image?: Media | number | null
   order: number
+  parent?: Category | number | null
   moySkladFolderId?: string | null
 }
 

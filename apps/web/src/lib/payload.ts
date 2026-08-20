@@ -127,6 +127,11 @@ export async function getCategoryBySlug(slug: string): Promise<Category | undefi
 export interface GetProductsParams {
   categorySlug?: string
   categoryId?: number
+  // A parent category's page shows its own products plus every descendant
+  // category's — pass the whole resolved subtree (see lib/categoryTree.ts's
+  // getSubtreeIds) here instead of categoryId to get that. Wins over
+  // categoryId if both are somehow passed.
+  categoryIds?: number[]
   search?: string
   isKit?: boolean
   limit?: number
@@ -138,7 +143,8 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Paylo
   const where: Record<string, string> = {
     'where[available][equals]': 'true',
   }
-  if (params.categoryId) where['where[category][equals]'] = String(params.categoryId)
+  if (params.categoryIds) where['where[category][in]'] = params.categoryIds.join(',')
+  else if (params.categoryId) where['where[category][equals]'] = String(params.categoryId)
   if (params.search) where['where[title][like]'] = params.search
   if (params.isKit !== undefined) where['where[isKit][equals]'] = String(params.isKit)
 

@@ -3,7 +3,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro'
 import { getAdminToken } from '../../../lib/admin/session'
 import { cmsFetch } from '../../../lib/admin/api'
 import { mediaUrl } from '../../../lib/payload'
-import type { Category } from '@playback-rental/shared-types'
+import { buildCategoryTree, flattenCategoryTree, getSubtreeIds } from '../../../lib/categoryTree'
+import type { Category, PayloadFindResult } from '@playback-rental/shared-types'
 
 const user = Astro.locals.adminUser!
 const token = getAdminToken(Astro.cookies)!
@@ -16,6 +17,14 @@ if (!isNew) {
   category = await cmsFetch<Category>(`/categories/${id}?depth=1`, token)
   if (!category) return Astro.redirect('/admin/categories')
 }
+
+const allCategoriesResult = await cmsFetch<PayloadFindResult<Category>>('/categories?sort=order&limit=200&depth=0', token)
+const allCategories = allCategoriesResult?.docs ?? []
+// A category can't become its own descendant's parent (a cycle) — exclude
+// itself and its whole subtree from the picker entirely, not just itself.
+const excludedIds = category ? new Set(getSubtreeIds(category.id, allCategories)) : new Set<number>()
+const parentOptions = flattenCategoryTree(buildCategoryTree(allCategories)).filter(({ category: c }) => !excludedIds.has(c.id))
+const currentParentId = category?.parent == null ? '' : typeof category.parent === 'object' ? category.parent.id : category.parent
 ---
 
 <AdminLayout
@@ -71,6 +80,20 @@ if (!isNew) {
           value={category?.order ?? 0}
           class="mt-1.5 h-11 w-40 rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
         />
+
+        <label class="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Родительская категория</label>
+        <select
+          id="f-parent"
+          class="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+        >
+          <option value="">— нет (верхний уровень) —</option>
+          {parentOptions.map(({ category: c, depth }) => (
+            <option value={c.id} selected={currentParentId === c.id}>
+              {'— '.repeat(depth)}{c.name}
+            </option>
+          ))}
+        </select>
+        <p class="mt-1.5 text-[11.5px] text-subtle">Определяет вложенность в каталоге и на главной. Пусто — категория верхнего уровня.</p>
       </div>
 
       <div class="rounded-3xl border border-border bg-card p-6">
@@ -158,6 +181,10 @@ if (!isNew) {
         tag: (document.getElementById('f-tag') as HTMLInputElement).value,
         order: Number((document.getElementById('f-order') as HTMLInputElement).value) || 0,
         image: imageId ? Number(imageId) : null,
+        parent: (() => {
+          const v = (document.getElementById('f-parent') as HTMLSelectElement).value
+          return v ? Number(v) : null
+        })(),
       }
 
       const url = isNew ? '/api/categories' : `/api/categories/${categoryId}`
