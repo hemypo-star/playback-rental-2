@@ -271,7 +271,10 @@ function audit() {
   // none, but a ported React/JSX `style={{ animation: 'bnX...' }}` always
   // does — without tolerating it here, every animation in ported .tsx code
   // audits as 0×, which defeats the point of auditing ported code at all.
-  const codeKf = new Map(countBy([...code.matchAll(/animation:\s*['"]?(bn[A-Za-z]+)/g)].map((m) => m[1])))
+  // Backtick included alongside '/" — a keyframe whose duration is a JS
+  // constant rather than a literal (PromoCarousel's `bnBar ${ROTATE_MS}ms...`)
+  // can only be written as a template literal, not a plain string.
+  const codeKf = new Map(countBy([...code.matchAll(/animation:\s*['"`]?(bn[A-Za-z]+)/g)].map((m) => m[1])))
 
   const L = []
   L.push(`Файлов просмотрено: ${files.length}\n`)

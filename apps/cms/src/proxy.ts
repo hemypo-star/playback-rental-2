@@ -91,6 +91,12 @@ export async function proxy(request: NextRequest) {
 // and each (frontend) route as Stage 2 ports it — proxying those to Astro
 // would just be a slower, wrong-origin round-trip to routes/files that
 // already resolve correctly here. Update this list every time a page moves.
+//
+// The trailing `|$` excludes the bare root path itself: for `/`, everything
+// after the leading `/` this pattern matches on is the empty string, which
+// (absent `|$`) trivially satisfies a negative lookahead against a list of
+// non-empty literals — matching `/` into the proxy fallback rather than
+// this app's own (frontend)/page.tsx, now that the homepage is ported.
 export const config = {
-  matcher: ['/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact).*)'],
+  matcher: ['/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact|$).*)'],
 }
