@@ -99,15 +99,19 @@ export async function proxy(request: NextRequest) {
 // non-empty literals — matching `/` into the proxy fallback rather than
 // this app's own (frontend)/page.tsx, now that the homepage is ported.
 //
-// `admin$` (Stage 3): same empty-remainder trick, scoped to just the literal
-// "admin" alternative — needed because `admin/login` and `admin/first-
-// register` are separate, more specific alternatives below it, and every
-// other /admin/* subpath (orders, calendar, ...) must keep falling through
-// to Astro until each is ported in turn. A bare `admin` alternative (no `$`)
-// would incorrectly swallow all of those too, since alternation here tests
-// "does the remainder start with this," not "does it equal this."
+// `admin` (Stage 3, page group 6 of 6): a single prefix alternative now
+// that every /admin/* route is ported — login/first-register/index/
+// orders/calendar/stock/clients/analytics/categories/promotions/products/
+// media/users/settings, all 17 pages the old plan's intro counted. Until
+// this commit this list carried a separate, more specific alternative per
+// ported subpath (`admin\/login`, `admin\/orders`, `admin$`, ...), each one
+// needed because whatever wasn't yet in the list had to keep falling
+// through to Astro. With nothing left unported under /admin, that
+// granularity no longer buys anything — a bare `admin` alternative (no
+// anchor) already satisfies the lookahead for any remainder starting with
+// "admin", covering the bare path and every subpath alike.
 export const config = {
   matcher: [
-    '/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact|catalog|product|promotions|checkout|admin\\/login|admin\\/first-register|admin\\/orders|admin\\/calendar|admin\\/stock|admin\\/clients|admin\\/analytics|admin\\/categories|admin\\/promotions|admin\\/products|admin$|$).*)',
+    '/((?!cms|api|_next|favicon\\.ico|favicon\\.svg|fonts/|privacy-policy|user-agreement|how-it-works|contact|catalog|product|promotions|checkout|admin|$).*)',
   ],
 }

@@ -11,5 +11,8 @@ payload-types.ts
 /AGENTS.md
 /CLAUDE.md
 
-# Synced/uploaded media — re-downloadable via `pnpm sync:moysklad`, not source
-media/
+# Synced/uploaded media — re-downloadable via `pnpm sync:moysklad`, not source.
+# Anchored to this file's own directory (leading /) — an unanchored `media/`
+# also matched src/app/(admin)/admin/media/ (Stage 3 page group 6), silently
+# dropping that route's actions.ts/page.tsx from `git status` entirely.
+/media/
