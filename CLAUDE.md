@@ -499,3 +499,52 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   in earlier parts). All scratch test infra (Postgres, both dev servers, scratch `.env`
   files, seeded test data, seed/cleanup scripts, and the extra `next build` cycle for
   `next-env.d.ts`) torn down before committing.
+  **Page group 5 of 7 (product detail)** done — `product/[id]/page.tsx`, ported from
+  `apps/web/src/pages/product/[id].astro`, `force-dynamic` like every data-driven page
+  group so far. `generateMetadata()` and the page component both need the same product
+  lookup, so both funnel through one `loadProduct()` helper in `page.tsx` — a plain
+  shared async function, not React's `cache()` (unlike part 4's `getCategoryBySlug()`),
+  since there's no risk here of the same lookup firing twice from independent call
+  sites. `getProductById()` (`lib/data/products.ts`) now returns `Product | null` via
+  Payload's `disableErrors: true` on `findByID`, replacing the REST client's
+  throw-and-instanceof-check-`PayloadApiError` pattern the Astro source used — Payload's
+  Local API has a first-class "not found" story, so no error class import was needed.
+  The page still explicitly guards NaN/non-numeric ids before ever calling
+  `getProductById`, matching the Astro source's own validation, since `disableErrors`
+  only suppresses "not found," not a malformed query. `lib/rentalAvailability.ts`
+  (created in part 4 for the catalog's bulk availability check) gained a sibling
+  `getRentalAvailability()` (singular) for this page's live per-product availability
+  panel — same "browser-only, dates are sessionStorage-backed, unknowable at SSR"
+  reasoning as the bulk version. Two new islands: `ProductPurchasePanel.tsx` (price,
+  availability calendar, quantity selector, add-to-cart) and `QuantitySelector.tsx`
+  (tiny, ported verbatim). `ProductPurchasePanel.tsx` hit a new ESLint conflict not seen
+  in parts 1–4: `react-hooks/set-state-in-effect` flagged three `setState` calls. Two
+  were the already-familiar `mounted` hydration-guard pattern (same as
+  `CartBadge.tsx`/`RentalDatePicker.tsx` from part 1, same inline
+  `eslint-disable-next-line` suppression with rationale). The third was new: the
+  availability-fetch effect's synchronous `setChecking(true)` called before the async
+  fetch starts — the effect as a whole otherwise matches the rule's own recommended
+  shape (fetch an external system, `setState` from the callback), so this was
+  suppressed with its own comment explaining why the initial loading flag is a
+  legitimate exception to the "`setState` only in callback" mold. `proxy.ts` matcher
+  extended to exclude `product`. Verified live (real `next build` + `next dev` +
+  `astro dev` against a real local Postgres): build compiles `/product/[id]` as dynamic
+  (ƒ); with a real (temporary, deleted before commit) seeded product + category,
+  curl-verified title/subtitle/description/breadcrumb (Главная / Каталог / category
+  name)/category-badge/in-stock-badge/related-products-section all render; verified
+  price formatting specifically — a naive grep for "5 000 ₽" (regular space) missed it
+  because `Intl.NumberFormat('ru-RU')` uses a non-breaking space, caught via a
+  byte-level Python check (`5\xa0000\xa0₽`) rather than assumed broken; confirmed
+  `ProductPurchasePanel`'s props (including price) are present in the RSC payload sent
+  for client hydration. Both an out-of-range numeric id and a non-numeric id correctly
+  307-redirect to `/catalog`. `/checkout` (still unported) continues to reach Astro
+  through the proxy fallback, confirmed via a real request. Lint clean after the
+  set-state-in-effect fixes (only the same pre-existing `no-img-element`/
+  `no-html-link-for-pages` advisories from earlier parts, plus two `exhaustive-deps`
+  warnings on a deliberate `.getTime()`-based effect dependency array carried over
+  verbatim from the original — avoids re-running the effect on every new-but-value-equal
+  `Date` object). `design-sync` audit showed no new gaps (`duration-300` on the
+  thumbnail-hover transition matched the design spec's own value, not flagged). All
+  scratch test infra (Postgres, both dev servers, scratch `.env` files, seeded test
+  data, seed/cleanup scripts, extra `next build` cycle for `next-env.d.ts`) torn down
+  before committing.
