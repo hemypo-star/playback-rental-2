@@ -1,22 +1,7 @@
 import { randomBytes } from 'crypto'
 import type { CollectionConfig } from 'payload'
-import { pushOrderToMoySklad } from '../lib/moysklad/orders'
-import { sendOrderNotification } from '../lib/notifications/webhook'
-import { calculateRentalDays } from '../lib/rental/pricing'
+import { submitOrder, SubmitOrderError } from '../lib/rental/submitOrder'
 import { secretsMatch } from '../lib/security/timingSafe'
-
-// The rate actually frozen into this line's lineTotal at booking time — not
-// the product's current live price, which may have changed (a МойСклад sync,
-// an admin edit) between when the customer was quoted and when this order is
-// submitted. orderItems doesn't store its own unitPrice, only the computed
-// total, so back-derive it the same way it was computed.
-function frozenUnitPrice(item: { listingType: string; quantity: number; lineTotal: number; startDate?: string; endDate?: string }): number {
-  if (item.quantity <= 0) return 0
-  if (item.listingType === 'sale') return item.lineTotal / item.quantity
-  const days = item.startDate && item.endDate ? calculateRentalDays(new Date(item.startDate), new Date(item.endDate)) : 0
-  if (days <= 0) return 0
-  return item.lineTotal / (item.quantity * days)
-}
 
 export const Orders: CollectionConfig = {
   slug: 'orders',
@@ -157,15 +142,18 @@ export const Orders: CollectionConfig = {
       handler: async (req) => {
         const orderId = Number(req.routeParams?.id)
 
-        const order = await req.payload.findByID({ collection: 'orders', id: orderId, req, overrideAccess: true })
-        if (!order) {
-          return Response.json({ error: 'Order not found' }, { status: 404 })
-        }
-        if (order.submittedAt) {
-          return Response.json({ error: 'Order already submitted' }, { status: 409 })
-        }
-
+        // The submitToken check is specific to this HTTP boundary (stops a
+        // third party from force-submitting an order by guessing/enumerating
+        // sequential ids) — it's not part of submitOrder()'s own business
+        // logic, so it stays here rather than moving into the shared
+        // function the checkout Server Action also calls (that action only
+        // ever submits the order it just created in the same request, with
+        // no separate HTTP boundary to protect).
         if (!req.user) {
+          const order = await req.payload.findByID({ collection: 'orders', id: orderId, req, overrideAccess: true })
+          if (!order) {
+            return Response.json({ error: 'Order not found' }, { status: 404 })
+          }
           const body = await req.json?.().catch(() => null)
           const providedToken = body?.submitToken
           if (!secretsMatch(providedToken, order.submitToken || '')) {
@@ -173,87 +161,15 @@ export const Orders: CollectionConfig = {
           }
         }
 
-        const itemsResult = await req.payload.find({
-          collection: 'orderItems',
-          where: { order: { equals: orderId } },
-          limit: 0,
-          depth: 1,
-          req,
-        })
-        if (itemsResult.docs.length === 0) {
-          return Response.json({ error: 'Order has no items' }, { status: 400 })
-        }
-
-        // depth: 1 above populates the `product` relationship into an object;
-        // itemsResult.docs is typed generically since payload-types.ts is
-        // generated (gitignored), not checked in — this shape is only what
-        // the pushes below actually read from each line.
-        const items = itemsResult.docs as unknown as Array<{
-          product: { moySkladId: string; title: string }
-          listingType: 'rental' | 'sale'
-          quantity: number
-          lineTotal: number
-          startDate?: string
-          endDate?: string
-        }>
-
-        let moySkladOrderId: string | null = null
-        let moySkladError: string | null = null
         try {
-          const pushed = await pushOrderToMoySklad({
-            customerName: order.customerName,
-            customerEmail: order.customerEmail,
-            customerPhone: order.customerPhone,
-            notes: order.notes || undefined,
-            items: items.map((item) => ({
-              moySkladId: item.product.moySkladId,
-              listingType: item.listingType,
-              quantity: item.quantity,
-              unitPrice: frozenUnitPrice(item),
-              startDate: item.startDate,
-              endDate: item.endDate,
-            })),
-          })
-          moySkladOrderId = pushed.id
+          const result = await submitOrder(req.payload, orderId, req)
+          return Response.json(result)
         } catch (error) {
-          // Don't let a МойСклад outage block checkout — log and continue;
-          // moySkladOrderId stays null so this is visible/reconcilable later.
-          moySkladError = error instanceof Error ? error.message : 'Unknown error'
-          req.payload.logger.error({ err: error, orderId }, 'Failed to push order to МойСклад')
+          if (error instanceof SubmitOrderError) {
+            return Response.json({ error: error.message }, { status: error.status })
+          }
+          throw error
         }
-
-        const notification = await sendOrderNotification({
-          orderId,
-          customerName: order.customerName,
-          customerEmail: order.customerEmail,
-          customerPhone: order.customerPhone,
-          totalPrice: order.totalPrice ?? 0,
-          items: items.map((item) => ({
-            title: item.product.title,
-            quantity: item.quantity,
-            listingType: item.listingType,
-            startDate: item.startDate,
-            endDate: item.endDate,
-            lineTotal: item.lineTotal,
-          })),
-        })
-
-        await req.payload.update({
-          collection: 'orders',
-          id: orderId,
-          data: {
-            moySkladOrderId: moySkladOrderId ?? undefined,
-            submittedAt: new Date().toISOString(),
-          },
-          req,
-        })
-
-        return Response.json({
-          success: true,
-          moySkladOrderId,
-          moySkladError,
-          notificationSent: notification.success,
-        })
       },
     },
   ],
