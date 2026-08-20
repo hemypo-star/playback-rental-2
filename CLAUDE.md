@@ -388,3 +388,60 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   extra `next build` at the end specifically to leave `next-env.d.ts` back in its
   committed build-mode state (dev mode rewrites two of its import lines to
   `.next/dev/types/*`, the drift already documented above) before committing.
+- **2026-08-20** — **Stage 2 page group 3 of 7** done: the homepage (`apps/cms/src/app/
+  (frontend)/page.tsx`), ported from `apps/web/src/pages/index.astro` — the largest
+  template in the whole plan (297 lines). Structure and data logic are verbatim; only
+  syntax changed (Astro frontmatter → async Server Component, `class` → `className`,
+  inline animation style strings → style objects). Marked `export const dynamic =
+  'force-dynamic'` since stock/availability/promotions change from admin actions and
+  the МойСклад sync, not from anything Next can see at request time. New Local API
+  data layer, same pattern as part 1's `lib/data/siteSettings.ts`: `lib/data/
+  categories.ts`, `products.ts` (its `GetProductsParams` intentionally drops a
+  `categorySlug` field the REST version declared but never actually read — dead code,
+  not carried over), `promotions.ts`. `lib/mediaUrl.ts` ported too — Local API's
+  populated-relation shape needs no origin resolution at all, unlike the old REST
+  client's `CMS_INTERNAL_URL`/`PUBLIC_PAYLOAD_URL` split (Payload media URLs are
+  already browser-relative here). `lib/categoryTree.ts` duplicated (`getSubtreeIds` is
+  what the homepage's per-category product-count aggregation needs;
+  `buildCategoryTree`/`flattenCategoryTree` came along unused for now — they're for the
+  catalog sidebar, the next page group). Two new components: `ProductCard.tsx`
+  (deliberately *not* `'use client'` — its `[data-add-to-cart]` button relies on the
+  single delegated click listener already wired up by `CartActionsInit.tsx`/`scripts/
+  cart-actions.ts` from part 1, same as the Astro version, so no interactivity of its
+  own is needed) and `PromoCarousel.tsx` (client island, ported verbatim — it was
+  already a React component in `apps/web`, just needed `'use client'` and import-path
+  fixes). `proxy.ts`'s matcher gained `|$` in its negative-lookahead alternation: the
+  existing pattern only excluded non-empty literal path prefixes, and for the bare
+  root `/` the remainder after the leading slash is an empty string, which trivially
+  satisfies a negative lookahead against a list of non-empty alternatives — so `/` kept
+  falling through to the Astro proxy fallback even after the homepage was served
+  natively here, until `$` (end-of-string) was added as an alternative. Also fixed a
+  second gap in `tools/design-sync.mjs`'s keyframe-detection regex (the first, missing-
+  quote-tolerance, was fixed in part 1): it tolerated a leading `'` or `"` but not a
+  backtick, so `PromoCarousel`'s progress-bar animation (written as a template literal
+  — `` `bnBar ${ROTATE_MS}ms...` `` — since its duration comes from a JS constant, not
+  a literal) still silently audited as a false `0×`. Continued the duration-200 →
+  duration-240/`ease-expo` gap-closing from parts 1–2: bumped 4 more instances
+  (`ProductCard`'s add-to-cart button, 3 in `PromoCarousel`'s nav buttons/row) — post-
+  fix audit shows only the one deliberately-left-alone shared `global.css` `.btn`
+  utility still at `duration-200` (same reasoning as before: don't diverge the two
+  still-live `global.css` copies over this).
+  Verified live: local Postgres 16, `next build` — confirms `/` now compiles as `ƒ`
+  (dynamic/server-rendered) rather than static, other four Stage 2 routes stay static
+  `○`; a TypeScript error surfaced during this build (`Record<string, unknown>[]` not
+  assignable to Payload's `Where[]` in `lib/data/products.ts`'s `and` array), fixed by
+  importing and using Payload's own `Where` type instead. Then real concurrent `next
+  dev` (3000) + `astro dev` (4322): curl-verified `/` 200 natively off port 3000 with
+  real hero/CTA copy in the HTML, zero `astro-island` markers in the output (confirms
+  it's genuinely server-rendered by Next now, not still proxied), clean dev-server log
+  with no runtime errors. This session's local dev DB was empty (no synced МойСклад
+  data), so the data-dependent sections (category tiles, kits, marquee, popular
+  products) correctly didn't render — confirmed this was expected empty-data behavior
+  by directly querying `/api/categories` and `/api/products` and getting zero docs,
+  not just assumed from the missing HTML. `/catalog` (still unported) still 200
+  through the Astro proxy fallback, confirming the matcher's `|$` change didn't affect
+  any other route. Lint clean (only the same pre-existing `next/image` advisory
+  warnings every other ported page already has). All scratch test infra (Postgres,
+  both dev servers, scratch `.env` files, and the extra `next build` cycle to leave
+  `next-env.d.ts` in committed build-mode state) torn down and redone before
+  committing.
