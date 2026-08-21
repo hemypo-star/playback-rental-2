@@ -55,7 +55,7 @@ export default async function ProductPage({ params }: Props) {
     <div className="container-page grid-12 pt-3.5 pb-20">
       <div className="flex flex-col gap-3.5 sm:col-span-6 lg:col-span-7">
         <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]" style={{ animation: 'bnClip 900ms cubic-bezier(0.16,1,0.3,1) both' }}>
-          {mainImage && <img src={mainImage} alt={product.title} className="h-full w-full object-cover transition-transform duration-[900ms] hover:scale-[1.04]" />}
+          {mainImage && <img src={mainImage} alt={product.title} className="h-full w-full object-cover transition-transform duration-[900ms] ease-expo hover:scale-[1.04]" />}
           <div className="pointer-events-none absolute left-3.5 top-3.5 flex gap-2">
             {categoryName && (
               <span className="rounded-full bg-[rgba(10,10,10,0.72)] px-3.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-[10px]">{categoryName}</span>
@@ -69,7 +69,7 @@ export default async function ProductPage({ params }: Props) {
         {images.length > 1 && (
           <div className="grid grid-cols-4 gap-2.5">
             {images.slice(1, 5).map((url) => (
-              <div key={url} className="aspect-square overflow-hidden rounded-2xl border border-border transition-transform duration-300 hover:scale-[1.04]">
+              <div key={url} className="aspect-square overflow-hidden rounded-2xl border border-border transition-transform duration-300 ease-expo hover:scale-[1.04]">
                 <img src={url} alt={product.title} className="h-full w-full object-cover" />
               </div>
             ))}
@@ -142,7 +142,7 @@ export default async function ProductPage({ params }: Props) {
                 <a
                   key={p.id}
                   href={`/product/${p.id}`}
-                  className="rounded-[22px] border border-border bg-card p-3 transition-[transform,box-shadow] duration-[420ms] hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
+                  className="rounded-[22px] border border-border bg-card p-3 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
                   style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
                 >
                   <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">

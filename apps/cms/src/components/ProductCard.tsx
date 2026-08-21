@@ -25,7 +25,7 @@ export default function ProductCard({ product, delay = 0 }: Props) {
 
   return (
     <div
-      className="flex flex-col rounded-3xl border border-border bg-card p-3.5 transition-[transform,box-shadow,border-color] duration-[420ms] hover:-translate-y-1 hover:border-[rgba(10,10,10,0.15)] hover:shadow-[var(--shadow-medium)]"
+      className="flex flex-col rounded-3xl border border-border bg-card p-3.5 transition-[transform,box-shadow,border-color] duration-[420ms] ease-expo hover:-translate-y-1 hover:border-[rgba(10,10,10,0.15)] hover:shadow-[var(--shadow-medium)]"
       style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(delay, 400)}ms` }}
       data-product-card
       data-product-id={product.id}

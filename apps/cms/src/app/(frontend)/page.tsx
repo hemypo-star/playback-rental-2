@@ -154,7 +154,7 @@ export default async function HomePage() {
 
           <div className="flex flex-col gap-3.5 sm:col-span-6 lg:col-span-5">
             <div className="relative hidden min-h-[390px] flex-1 overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] md:block" style={{ animation: 'bnClip 900ms cubic-bezier(0.16,1,0.3,1) 120ms both' }}>
-              {heroImageUrl && <img src={heroImageUrl} alt="Playback Rental" className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] hover:scale-[1.04]" />}
+              {heroImageUrl && <img src={heroImageUrl} alt="Playback Rental" className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-expo hover:scale-[1.04]" />}
               <div className="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between rounded-2xl bg-white/[0.82] px-4 py-3 text-[10.5px] font-semibold uppercase tracking-[0.13em] backdrop-blur-[18px]">
                 <span>Sony · Canon · GoPro</span><span className="text-accent">Fig. 01</span>
               </div>
@@ -174,7 +174,7 @@ export default async function HomePage() {
           {stats.map((s, i) => (
             <div
               key={s.label}
-              className="rounded-[22px] border border-border bg-card px-[22px] py-5 transition-[transform,box-shadow] duration-[420ms] hover:-translate-y-1 hover:shadow-[var(--shadow-medium)] sm:col-span-3 lg:col-span-3"
+              className="rounded-[22px] border border-border bg-card px-[22px] py-5 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)] sm:col-span-3 lg:col-span-3"
               style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 70, 400)}ms` }}
             >
               <div className="text-[32px] font-medium tracking-[-0.04em]">{s.value}</div>
@@ -227,7 +227,7 @@ export default async function HomePage() {
                 <a
                   key={c.id}
                   href={`/catalog/${c.slug}`}
-                  className="rounded-[24px] border border-border bg-card p-4 transition-[transform,box-shadow,border-color] duration-[420ms] hover:-translate-y-1 hover:border-[rgba(10,10,10,0.15)] hover:shadow-[var(--shadow-medium)]"
+                  className="rounded-[24px] border border-border bg-card p-4 transition-[transform,box-shadow,border-color] duration-[420ms] ease-expo hover:-translate-y-1 hover:border-[rgba(10,10,10,0.15)] hover:shadow-[var(--shadow-medium)]"
                   style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
                 >
                   <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">

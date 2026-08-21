@@ -80,7 +80,7 @@ export default function PromoCarousel({ promos }: Props) {
           {promos.map((p, i) => (
             <div
               key={p.id}
-              className="absolute inset-0 transition-[opacity,transform] duration-[900ms]"
+              className="absolute inset-0 transition-[opacity,transform] duration-[900ms] ease-expo"
               style={{
                 opacity: i === index ? 1 : 0,
                 transform: i === index ? 'none' : 'scale(1.02)',

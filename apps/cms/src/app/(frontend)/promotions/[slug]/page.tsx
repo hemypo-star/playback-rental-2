@@ -90,7 +90,7 @@ export default async function PromotionPage({ params }: Props) {
                 <a
                   key={c.id}
                   href={`/catalog/${c.slug}`}
-                  className="rounded-[24px] border border-border bg-card p-4 transition-[transform,box-shadow,border-color] duration-[420ms] hover:-translate-y-1 hover:border-[rgba(10,10,10,0.15)] hover:shadow-[var(--shadow-medium)]"
+                  className="rounded-[24px] border border-border bg-card p-4 transition-[transform,box-shadow,border-color] duration-[420ms] ease-expo hover:-translate-y-1 hover:border-[rgba(10,10,10,0.15)] hover:shadow-[var(--shadow-medium)]"
                 >
                   <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">
                     {catImageUrl && <img src={catImageUrl} alt={c.name} className="h-full w-full object-cover" />}

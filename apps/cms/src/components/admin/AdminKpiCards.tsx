@@ -24,7 +24,7 @@ export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
       {cards.map((c, i) => (
         <div
           key={c.label}
-          className="rounded-[22px] border border-border bg-card p-5.5 transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_26px_48px_-32px_rgba(10,10,10,0.42)]"
+          className="rounded-[22px] border border-border bg-card p-5.5 transition-transform duration-300 ease-expo hover:-translate-y-1 hover:shadow-[0_26px_48px_-32px_rgba(10,10,10,0.42)]"
           style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 70, 400)}ms` }}
         >
           <div className="text-[10.5px] font-semibold tracking-[0.13em] text-subtle uppercase">{c.label}</div>

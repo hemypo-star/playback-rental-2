@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={null}>
           <Navbar />
         </Suspense>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1" style={{ animation: 'bnFade 380ms ease both' }}>{children}</main>
         <Footer />
         <CartActionsInit />
       </body>

@@ -251,7 +251,7 @@ export default function CheckoutPage() {
                       <div className="mt-2.5 flex items-center gap-3.5">
                         <div className="flex items-center rounded-full bg-[#EFEEEB] p-[3px]">
                           <button type="button" onClick={() => setItemQuantity(item.productId, item.quantity - 1)} className="flex h-7 w-[30px] items-center justify-center rounded-full text-[15px] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground">−</button>
-                          <span className="min-w-8 text-center text-[13.5px] font-semibold">{item.quantity}</span>
+                          <span key={item.quantity} className="min-w-8 text-center text-[13.5px] font-semibold" style={{ animation: 'bnPop 380ms cubic-bezier(0.16,1,0.3,1) both' }}>{item.quantity}</span>
                           <button type="button" onClick={() => setItemQuantity(item.productId, item.quantity + 1)} className="flex h-7 w-[30px] items-center justify-center rounded-full text-[15px] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground">+</button>
                         </div>
                         <button type="button" onClick={() => removeFromCart(item.productId)} className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-subtle transition-colors duration-240 ease-expo hover:text-accent">
