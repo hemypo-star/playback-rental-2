@@ -1063,3 +1063,109 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   `CMS_INTERNAL_URL`/`PUBLIC_PAYLOAD_URL`, and decide the fate of
   `packages/shared-types` and the `/cms` route now that the custom admin UI
   it was staged behind is fully live in this same process.
+- **2026-08-21** — **Stage 4 (cleanup) done — `docs/PLAN-next-migration.md`
+  is now fully complete**, all four stages landed across 2026-08-20/21.
+  `apps/web` (the Astro storefront/proxy) and `packages/shared-types`
+  (only `apps/web` depended on it — confirmed via grep, including checking
+  the unrelated legacy root Vite app doesn't) are both deleted entirely,
+  along with `apps/cms/src/proxy.ts` (its only job was fallback-proxying to
+  `apps/web`; nothing left to proxy to). `apps/cms` is now the whole
+  application — storefront, custom `/admin` UI, and Payload's own `/cms`
+  admin, one Next.js process. Also removed: the `web` service from
+  `compose.yaml`/`compose.dev.yaml` (and its Dockerfile);
+  `CMS_INTERNAL_URL`/`PUBLIC_PAYLOAD_URL`/`WEB_INTERNAL_URL` from every env
+  file and Dockerfile that referenced them; `minimumReleaseAgeExclude:
+  astro@7.2.1` from `pnpm-workspace.yaml` (no Astro dependency left to need
+  it). `pnpm install` regenerated the lockfile, -227 packages (Astro and its
+  transitive deps, `shared-types`).
+
+  **Deliberately kept, against the plan's own literal wording**: `cors`/
+  `csrf` in `payload.config.ts` and `serverActions.allowedOrigins` in
+  `next.config.mjs`, both still scoped to `WEB_URL`. The plan's Stage 4 line
+  item said to drop these down to nothing now that there's no second origin
+  in the compose stack to allow-list — but they're real CSRF defenses (a
+  production reverse proxy/load balancer/CDN in front of the container can
+  still rewrite Origin/Host), not migration-era leftover config, and losing
+  them would either silently drop that defense or break legitimate requests
+  in confusing ways. **This was asked of the user directly rather than
+  decided unilaterally** — offered "delete exactly as the plan says" vs.
+  "keep them, scoped to `WEB_URL`, as ongoing defense-in-depth"; the user
+  chose the latter. Comments on both rewritten to state the current
+  rationale instead of the two-process history that originally motivated
+  them (that history is still in this dev log).
+
+  Also updated, since they'd otherwise actively mislead the next reader:
+  `README.md` and this file's own "What this is"/"Architecture facts"/
+  "Design system" sections above (the dev log itself is untouched — it's an
+  accurate historical record, not a live reference) now describe the
+  single-app architecture instead of the two-app split. One stale bullet
+  finally caught and fixed in the process: the "known open issue" about the
+  Payload admin UI rendering unstyled — that bug was actually root-caused
+  and fixed on 2026-08-14 (`@payloadcms/next/css` never imported), and the
+  route itself was renamed from `/admin` to `/cms` the same day — but the
+  bullet documenting it as still-open was never updated after the fix
+  shipped, and sat wrong in this file for a week. Replaced with an accurate
+  note about `/cms` vs. this app's own `/admin`. (`apps/cms/.gitignore` was
+  **not** touched in this commit — that fix already landed in Stage 3's last
+  commit, `fb4aaf0`.)
+
+  Three subagents updated to drop stale references to the deleted proxy
+  layer, `apps/web`'s REST client (`mutate()`/`{ doc, message }`), and
+  cross-process admin auth (the old `Authorization: JWT` re-forward hack) —
+  `tester.md`, `code-reviewer.md`, `security-reviewer.md` — replaced with
+  the current single-process reality and the Server-Action-auth-check
+  invariant Stage 3 introduced (every admin-mutating Server Action must call
+  `requireAdmin()` itself, since Next doesn't gate a Server Action behind
+  its page's layout guard). The `frontend-porter` subagent was **deleted
+  entirely**, not just edited — its whole purpose was porting Astro pages to
+  Next, and there's no Astro source left to port from. `tools/design-
+  sync.mjs` and `docs/DESIGN-SYNC.md`'s usage examples updated
+  (`apps/web/src` → `apps/cms/src`); `docs/design-reference/hierarchical-
+  categories.md`'s file-path references updated the same way.
+
+  Followed up on a mystery flagged in the Stage 3 dev log entry: `pnpm why
+  @next/env` confirms the stale `@next/env@15.5.23` duplicate in
+  `node_modules` (the one that crashed standalone `tsx` Local API scripts
+  throughout Stage 3's verification) is `payload@3.88.0`'s own pinned
+  dependency — unrelated to `apps/web`/Astro after all, and not fixable from
+  this repo. Only affects standalone scripts run via `tsx`, not the running
+  app itself. Closing this out as "investigated, root cause understood, no
+  actionable fix" rather than leaving it open indefinitely.
+
+  Verified live: `pnpm lint` and `next build` both clean, 28 routes, and —
+  the concrete confirmation `proxy.ts`'s removal actually took effect — no
+  more "ƒ Proxy (Middleware)" line in the build output. A real Playwright
+  session against the standalone app (dev server running alone, no
+  `apps/web` anywhere) registered an admin, logged in, navigated between the
+  homepage and `/admin/settings`, zero console errors, then the scratch
+  admin was deleted and the DB confirmed back to uninitialized. One
+  incidental hiccup during this verification, unrelated to the commit's own
+  changes: a Turbopack-internal panic ("Restore of All for task ... failed
+  in another thread") crashed the dev server once on a cold compile of
+  `/cms` — Next auto-detected this, cleared its corrupted filesystem cache
+  on the next start, and the retry succeeded cleanly with every route
+  working. Same general class of Turbopack rough edge as the pre-existing
+  `⨯ turbopackServerFastRefresh` experimental warning that's shown up in
+  every build log this whole migration — not caused by anything in this
+  commit, noted here so a future reader who hits the same panic doesn't go
+  looking for a regression that isn't there.
+
+  **`docs/PLAN-next-migration.md` is now fully done — all four stages,
+  started and finished the same day (2026-08-20/21).** This is the largest
+  single body of work this project has tracked end to end: two full-app
+  migrations (Astro→Next storefront, then the custom admin UI) folded into
+  one process, 13 storefront/admin page groups ported across Stages 2–3,
+  and now the cleanup that actually deletes the code the whole effort was
+  working around. `apps/web` and `packages/shared-types` no longer exist in
+  this tree.
+
+  One loose end caught while updating `docs/ROADMAP-2.0.md` for this entry,
+  not by the verification run above: this commit's own message says the
+  two remaining open decisions are "retiring `/cms`, renaming apps/cms...
+  tracked in docs/ROADMAP-2.0.md" — true for retiring `/cms` (already an
+  open item there), but **not actually true** for renaming `apps/cms`
+  (nothing in that file, or anywhere else, wrote that question down before
+  now — `apps/cms` being a misnomer once it's the whole app, not just
+  Payload's runtime shell, was never itself recorded as a decision to make).
+  Added as a new open item in the roadmap rather than left as a claim that
+  only existed in a commit message.
