@@ -1169,3 +1169,106 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   Payload's runtime shell, was never itself recorded as a decision to make).
   Added as a new open item in the roadmap rather than left as a claim that
   only existed in a commit message.
+- **2026-08-21** — Closed the first of the two smaller technical-debt items
+  `docs/ROADMAP-2.0.md` left open after Stage 4: the `: any` suppression
+  (`9a6cd81`). Turned out to be a bigger finding than tracked — the open
+  item said "~28 usages, shielded by `eslint.config.mjs`'s scoped
+  `no-explicit-any: off`," but that scoping was never real: inspecting
+  `eslint-config-next`'s own rule set directly showed it never enables
+  `@typescript-eslint/no-explicit-any` in the first place, so the
+  `legacyAnyPaths` mechanism this file carried since 2026-08-20's Stage 0.1
+  was suppressing a rule that was already off everywhere, including
+  outside the paths it named — `any` had been silently allowed across the
+  whole app the entire time, not just in the four paths that looked
+  deliberately scoped. Enabling the rule explicitly (reusing the
+  `@typescript-eslint` plugin instance `eslint-config-next` already
+  registers, `nextConfig[1].plugins['@typescript-eslint']`, since the
+  package isn't a direct/hoisted dependency here) surfaced 49 real
+  usages, not ~28.
+  24 of the 49 were the entire `apps/cms/src/endpoints/admin/*.ts`
+  directory (kpi, calendar, clients, analytics, orders, orderDetail,
+  stock) — confirmed dead code via a grep for remaining callers of
+  `/api/admin/*` (none): these endpoints existed solely to serve
+  `apps/web`'s REST-based admin UI, and `apps/web` was deleted in Stage 4
+  the day before. Deleted the directory outright, plus its 7 registration
+  lines in `payload.config.ts`, rather than retyping code nothing calls
+  anymore — this is a real, if small, follow-up gap from Stage 4 itself,
+  which deleted `apps/web` and the fallback proxy but didn't chase down
+  every last piece of code that only existed to serve it. The remaining 25
+  were retyped properly: generated Payload types (`OrderItem`, `Where`)
+  replacing bare `any` casts in `rentalAvailability.ts`/
+  `rentalAvailabilityBulk.ts`/`lib/rental/availability.ts`, and non-null
+  assertions with an explanatory comment where `OrderItem.startDate`/
+  `endDate` are schema-nullable only because the field is shared with sale
+  listings (which never populate it) but are always populated in the
+  rental-only code path that reads them here — same precedent
+  `lib/admin/data/calendar.ts` already established for the same field.
+  Confirmed the 5 `components/admin/*.tsx` view components that also had
+  `any` (`AdminKpiWidget`, `AnalyticsView`, `CalendarView`, `ClientsView`,
+  `StockStatusCell`) are *not* dead code like the endpoints were — still
+  wired live into Payload's own `/cms` admin via `payload.config.ts`'s
+  `admin.components` config — so those got retyped in place, not deleted.
+  `docs/ROADMAP-2.0.md` open item 5 updated to reflect all of this rather
+  than just struck through with no detail.
+- **2026-08-21** — Closed the second smaller technical-debt item
+  (`f347e9c`), the design-token gap open item 6: re-ran `node tools/
+  design-sync.mjs audit apps/cms/src`, which showed 14 of 91 transitions
+  with no explicit `ease-*` class (falling back to Tailwind's own default
+  `cubic-bezier(0.4,0,0.2,1)`, absent from the design entirely) plus short
+  `bnFade`/`bnPop`/`bnIn` animation counts. Added `ease-expo` to 9
+  transitions across 8 files, each checked against `docs/design-reference/
+  spec/interactions.css` first to confirm `ease-expo` is genuinely the
+  spec's pairing for their durations (420ms/900ms/300ms), not a convenient
+  guess reused from elsewhere. Fixed the one gap that had been
+  *deliberately* left alone since Stage 1/2's earlier design-sync passes:
+  `global.css`'s shared `.btn` utility was still `duration-200` with no
+  easing, originally left that way specifically to avoid diverging
+  `apps/cms`'s copy from `apps/web`'s own copy of the same file — that
+  copy no longer exists (Stage 4 deleted `apps/web` the day before), so
+  the original justification for leaving it alone is gone. Now
+  `duration-240 ease-expo`, matching the dominant pairing everywhere else.
+  Added the one genuinely-missing `bnPop` instance (design 3×, code was
+  2×): `CheckoutPage`'s cart line-item quantity `<span>` gained
+  `key={item.quantity}` plus the animation style, mirroring the
+  total-price span's already-correct `key={total}` pattern a few lines
+  down — without the `key`, React wouldn't remount the span on quantity
+  change and the animation would never actually replay. Added `bnFade` to
+  `(frontend)/layout.tsx`'s shared `<main>`, matching the pattern
+  `(admin)/admin/layout.tsx` already had — the design mockup is a
+  single-page app with 5 separate `<main>` elements, one per screen, each
+  fading in on screen switch; this app's shared Next layout doesn't
+  remount `<main>` on client-side navigation between sibling routes, so
+  one fade covers all non-admin pages given the real architecture, not one
+  per design screen (this also explains, not just tolerates, part of the
+  residual `bnFade` gap below). Removed three dead CSS utility classes
+  from `global.css` (`.anim-up`/`.anim-in`/`.anim-blur`, referencing
+  `bnIn`/`bnFade`/`bnClip`) — confirmed via grep they were never applied
+  anywhere in the app, just inflating the audit tool's raw-text usage
+  counts without corresponding to any real UI.
+  Residual gaps after these fixes were conclusively diagnosed, not left
+  unexplained: `bnFade` (design 6×, code 3×) — the other 3 are the
+  per-screen `<main>` fades the shared-layout architecture correctly
+  collapses into one, per above. `bnIn` (design 15×, code 13×) — 1
+  instance (homepage kit tiles) is genuinely covered via `ProductCard`
+  reuse that the raw-text audit can't see (its own `bnIn` is already
+  counted once for the catalog grid); the other 2 belong to an off-hours
+  pickup surcharge line item explicitly considered and declined with the
+  owner per the 2026-08-13 dev log entry above — a permanent, intentional
+  gap, no code to add. The 2 remaining "no explicit curve" transitions
+  were already diagnosed in an earlier pass as tool false positives (a
+  comment-text match and a legitimate accessibility override), unchanged
+  by this pass. Verified live: `eslint`/`tsc --noEmit`/`next build` (28
+  routes) all clean; a real Playwright session against `next dev` + local
+  Postgres confirmed `getComputedStyle().animationName` is genuinely
+  `"bnFade"` on `<main>` for both a static page (`/how-it-works`) and the
+  dynamic homepage, and `"bnPop"` on the checkout quantity span — including
+  a before/after DOM-node-identity check confirming the quantity +/-
+  control actually remounts the span (the `key` prop doing its job), not
+  just that the style attribute is present. Zero browser console errors.
+  `docs/ROADMAP-2.0.md` open item 6 updated with the real numbers (9
+  transitions fixed, exact residual-gap breakdown) rather than left as a
+  stale "14 of 91" count.
+  **With both of these closed, `docs/ROADMAP-2.0.md`'s remaining open
+  items are all decisions that need the owner** (cutover timing, retiring
+  `/cms`, renaming `apps/cms`) — no more independently-actionable
+  technical-debt line items left on the list.
