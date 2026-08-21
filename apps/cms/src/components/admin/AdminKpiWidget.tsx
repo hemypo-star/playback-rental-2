@@ -1,5 +1,6 @@
 import React from 'react'
 import type { ServerProps } from 'payload'
+import type { OrderItem } from '../../payload-types'
 
 const RUB = (n: number) => Math.round(n).toLocaleString('ru-RU') + ' ₽'
 
@@ -70,10 +71,10 @@ export const AdminKpiWidget: React.FC<ServerProps> = async ({ payload }) => {
     }),
   ])
 
-  const activeOrderIds = activeOrders.docs.map((o: any) => o.id)
+  const activeOrderIds = activeOrders.docs.map((o) => o.id)
   const activeItems =
     activeOrderIds.length === 0
-      ? { docs: [] as any[] }
+      ? { docs: [] as OrderItem[] }
       : await payload.find({
           collection: 'orderItems',
           where: {
@@ -88,14 +89,14 @@ export const AdminKpiWidget: React.FC<ServerProps> = async ({ payload }) => {
           depth: 0,
         })
 
-  const weeklyRevenue = weeklyOrders.docs.reduce((sum: number, o: any) => sum + (o.totalPrice || 0), 0)
+  const weeklyRevenue = weeklyOrders.docs.reduce((sum, o) => sum + (o.totalPrice || 0), 0)
   const pendingCount = pendingOrders.totalDocs
   const avgOrderValue = submittedOrders.totalDocs
-    ? submittedOrders.docs.reduce((sum: number, o: any) => sum + (o.totalPrice || 0), 0) / submittedOrders.totalDocs
+    ? submittedOrders.docs.reduce((sum, o) => sum + (o.totalPrice || 0), 0) / submittedOrders.totalDocs
     : 0
 
-  const totalRentalStock = rentalProducts.docs.reduce((sum: number, p: any) => sum + (p.quantity || 0), 0)
-  const activeRentalQty = activeItems.docs.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0)
+  const totalRentalStock = rentalProducts.docs.reduce((sum, p) => sum + (p.quantity || 0), 0)
+  const activeRentalQty = activeItems.docs.reduce((sum, i) => sum + (i.quantity || 0), 0)
   const utilization = totalRentalStock > 0 ? Math.round((activeRentalQty / totalRentalStock) * 100) : 0
 
   return (

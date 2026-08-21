@@ -17,13 +17,6 @@ import { moyskladWebhookEndpoint } from './endpoints/moyskladWebhook'
 import { rentalAvailabilityEndpoint } from './endpoints/rentalAvailability'
 import { rentalAvailabilityBulkEndpoint } from './endpoints/rentalAvailabilityBulk'
 import { contactNotificationEndpoint } from './endpoints/contactNotification'
-import { adminKpiEndpoint } from './endpoints/admin/kpi'
-import { adminCalendarEndpoint } from './endpoints/admin/calendar'
-import { adminClientsEndpoint } from './endpoints/admin/clients'
-import { adminAnalyticsEndpoint } from './endpoints/admin/analytics'
-import { adminOrdersEndpoint } from './endpoints/admin/orders'
-import { adminOrderDetailEndpoint } from './endpoints/admin/orderDetail'
-import { adminStockEndpoint } from './endpoints/admin/stock'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -94,19 +87,7 @@ export default buildConfig({
   // payload.auth(), see the 2026-08-20 dev log entry).
   cors: [process.env.WEB_URL || 'http://localhost:3000'],
   csrf: [process.env.WEB_URL || 'http://localhost:3000'],
-  endpoints: [
-    moyskladWebhookEndpoint,
-    rentalAvailabilityEndpoint,
-    rentalAvailabilityBulkEndpoint,
-    contactNotificationEndpoint,
-    adminKpiEndpoint,
-    adminCalendarEndpoint,
-    adminClientsEndpoint,
-    adminAnalyticsEndpoint,
-    adminOrdersEndpoint,
-    adminOrderDetailEndpoint,
-    adminStockEndpoint,
-  ],
+  endpoints: [moyskladWebhookEndpoint, rentalAvailabilityEndpoint, rentalAvailabilityBulkEndpoint, contactNotificationEndpoint],
   editor: lexicalEditor(),
   // Guaranteed set — see the throw above.
   secret: process.env.PAYLOAD_SECRET,

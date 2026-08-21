@@ -1,6 +1,7 @@
 import React from 'react'
 import { DefaultTemplate } from '@payloadcms/next/templates'
 import type { AdminViewServerProps } from 'payload'
+import type { OrderItem } from '../../payload-types'
 
 const DAYS_TO_SHOW = 14
 // Only pending/confirmed orders hold a live reservation against stock —
@@ -58,12 +59,12 @@ export const CalendarView = async (props: AdminViewServerProps) => {
     }),
   ])
 
-  const activeOrderIds = activeOrders.docs.map((o: any) => o.id)
-  const orderStatusById = new Map(activeOrders.docs.map((o: any) => [o.id, o.status]))
+  const activeOrderIds = activeOrders.docs.map((o) => o.id)
+  const orderStatusById = new Map(activeOrders.docs.map((o) => [o.id, o.status]))
 
   const itemsInRange =
     activeOrderIds.length === 0
-      ? { docs: [] as any[] }
+      ? { docs: [] as OrderItem[] }
       : await req.payload.find({
           collection: 'orderItems',
           where: {
@@ -79,15 +80,15 @@ export const CalendarView = async (props: AdminViewServerProps) => {
           req,
         })
 
-  const itemsByProduct = new Map<number, any[]>()
+  const itemsByProduct = new Map<number, OrderItem[]>()
   for (const item of itemsInRange.docs) {
     const productId = typeof item.product === 'object' ? item.product.id : item.product
     if (!itemsByProduct.has(productId)) itemsByProduct.set(productId, [])
     itemsByProduct.get(productId)!.push(item)
   }
 
-  const productsWithBookings = products.docs.filter((p: any) => itemsByProduct.has(p.id))
-  const productsWithoutBookings = products.docs.filter((p: any) => !itemsByProduct.has(p.id))
+  const productsWithBookings = products.docs.filter((p) => itemsByProduct.has(p.id))
+  const productsWithoutBookings = products.docs.filter((p) => !itemsByProduct.has(p.id))
   const orderedProducts = [...productsWithBookings, ...productsWithoutBookings]
 
   return (
@@ -162,7 +163,7 @@ export const CalendarView = async (props: AdminViewServerProps) => {
               </tr>
             </thead>
             <tbody>
-              {orderedProducts.map((product: any) => {
+              {orderedProducts.map((product) => {
                 const items = itemsByProduct.get(product.id) || []
                 return (
                   <tr key={product.id}>
@@ -182,16 +183,24 @@ export const CalendarView = async (props: AdminViewServerProps) => {
                       {product.title}
                     </td>
                     <td colSpan={days.length} style={{ position: 'relative', padding: 0, height: 40, borderTop: '1px solid var(--theme-elevation-50)' }}>
-                      {items.map((item: any) => {
-                        const itemStart = startOfDay(new Date(item.startDate))
-                        const itemEnd = startOfDay(new Date(item.endDate))
+                      {items.map((item) => {
+                        // Rental items always have both dates set (required
+                        // at the OrderItems collection level for
+                        // listingType: 'rental') — nullable in the schema
+                        // only because the field is shared with sale items.
+                        const itemStart = startOfDay(new Date(item.startDate!))
+                        const itemEnd = startOfDay(new Date(item.endDate!))
                         const clippedStart = itemStart < today ? today : itemStart
                         const clippedEnd = itemEnd > addDays(today, DAYS_TO_SHOW - 1) ? addDays(today, DAYS_TO_SHOW - 1) : itemEnd
                         const startOffset = Math.round((clippedStart.getTime() - today.getTime()) / 86400000)
                         const span = Math.max(1, Math.round((clippedEnd.getTime() - clippedStart.getTime()) / 86400000) + 1)
+                        // Always resolves: item.order is always one of the
+                        // activeOrders this query already scoped itemsInRange
+                        // to, and orderStatusById is built from that exact
+                        // same activeOrders list.
                         const orderStatus = orderStatusById.get(
                           typeof item.order === 'object' ? item.order.id : item.order,
-                        )
+                        )!
                         const tone = STATUS_TONE[orderStatus] ?? { background: '#6E6E73', color: '#fff', label: orderStatus }
                         return (
                           <div

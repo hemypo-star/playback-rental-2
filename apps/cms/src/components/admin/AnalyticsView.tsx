@@ -18,7 +18,7 @@ export const AnalyticsView = async (props: AdminViewServerProps) => {
     depth: 0,
     req,
   })
-  const cancelledIds = cancelledOrders.docs.map((o: any) => o.id)
+  const cancelledIds = cancelledOrders.docs.map((o) => o.id)
 
   const items = await req.payload.find({
     collection: 'orderItems',
@@ -29,7 +29,7 @@ export const AnalyticsView = async (props: AdminViewServerProps) => {
   })
 
   const byCategory = new Map<string, number>()
-  for (const item of items.docs as any[]) {
+  for (const item of items.docs) {
     const category = typeof item.product === 'object' ? item.product?.category : undefined
     const name = typeof category === 'object' && category ? category.name : 'Без категории'
     byCategory.set(name, (byCategory.get(name) ?? 0) + (item.lineTotal || 0))

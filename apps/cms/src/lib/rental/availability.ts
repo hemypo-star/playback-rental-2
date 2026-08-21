@@ -60,7 +60,7 @@ export async function getAvailableRentalQuantity(
     req,
   })
 
-  const bookedQty = overlapping.docs.reduce((sum, item: any) => sum + (item.quantity || 1), 0)
+  const bookedQty = overlapping.docs.reduce((sum, item) => sum + (item.quantity || 1), 0)
   return Math.max(0, product.quantity - bookedQty)
 }
 
@@ -112,6 +112,6 @@ export async function getAvailableSaleQuantity(
     req,
   })
 
-  const soldQty = sold.docs.reduce((sum, item: any) => sum + (item.quantity || 1), 0)
+  const soldQty = sold.docs.reduce((sum, item) => sum + (item.quantity || 1), 0)
   return Math.max(0, product.quantity - soldQty)
 }

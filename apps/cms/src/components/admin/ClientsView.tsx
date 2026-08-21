@@ -32,7 +32,7 @@ export const ClientsView = async (props: AdminViewServerProps) => {
     string,
     { name: string; email: string; phone: string; orderCount: number; totalSpent: number; lastOrderAt: string }
   >()
-  for (const o of orders.docs as any[]) {
+  for (const o of orders.docs) {
     const key = o.customerEmail
     const existing = byEmail.get(key)
     if (existing) {

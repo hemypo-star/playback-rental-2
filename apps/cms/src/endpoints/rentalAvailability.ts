@@ -55,9 +55,13 @@ export const rentalAvailabilityEndpoint: Endpoint = {
         depth: 0,
         req,
       })
-      bookedRanges = items.docs.map((item: any) => ({
-        startDate: item.startDate,
-        endDate: item.endDate,
+      bookedRanges = items.docs.map((item) => ({
+        // Rental items always have both dates set (required at the
+        // OrderItems collection level for listingType: 'rental') — the
+        // schema types them nullable only because the field is shared with
+        // sale items, which never populate it.
+        startDate: item.startDate!,
+        endDate: item.endDate!,
         quantity: item.quantity,
       }))
     }

@@ -1,18 +1,20 @@
 import nextConfig from 'eslint-config-next'
 
-// `no-explicit-any` is suppressed only in the paths that already carried
-// `any` usage before this config existed (~190 uses, see next.config.mjs's
-// removed `eslint.ignoreDuringBuilds` comment for the breakdown) — retyping
-// that surface is separate follow-up work, not a blocker for turning lint
-// on. Everything else, including any new (frontend)/(admin) route groups
-// added by the Next.js migration, is linted at full strictness from day one.
-const legacyAnyPaths = [
-  'src/app/(payload)/**',
-  'src/endpoints/**',
-  'src/components/admin/**',
-  'src/lib/rental/**',
-]
-
+// `@typescript-eslint/no-explicit-any` is enabled explicitly — turns out
+// eslint-config-next never enabled it at all (confirmed by inspecting its
+// own rule set), so the `legacyAnyPaths` scoped-off mechanism this file
+// used to carry was a no-op the whole time: `any` was silently allowed
+// everywhere, not just in the paths it named. Needs its own `plugins`
+// entry, reusing the `@typescript-eslint` plugin instance eslint-config-next
+// already registers (nextConfig[1]) rather than importing the package
+// directly — it isn't hoisted as a direct dependency here.
+//
+// Every real `any` usage this surfaced (49, across apps/endpoints/admin
+// view components/rental availability) was fixed or removed — 24 of them by
+// deleting apps/cms/src/endpoints/admin/*.ts outright, which turned out to
+// be dead code: apps/web was their only REST consumer, and apps/web no
+// longer exists (docs/PLAN-next-migration.md Stage 4). No suppression left
+// to carry.
 const eslintConfig = [
   ...nextConfig,
   {
@@ -23,9 +25,10 @@ const eslintConfig = [
     ignores: ['src/payload-types.ts'],
   },
   {
-    files: legacyAnyPaths,
+    files: ['**/*.ts', '**/*.tsx'],
+    plugins: { '@typescript-eslint': nextConfig[1].plugins['@typescript-eslint'] },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
 ]
