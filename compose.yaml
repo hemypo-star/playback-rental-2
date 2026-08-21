@@ -1,9 +1,9 @@
-# Production stack. Only `cms` publishes a port — `db` and `web` are
-# reachable solely over the compose network, matching the single-public-port
-# design in apps/cms/src/proxy.ts (which fallback-proxies everything not
-# yet ported to apps/cms's own (frontend)/(admin) route groups over to the
-# web service — docs/PLAN-next-migration.md Stage 1; before that it was the
-# other way around, apps/web proxying /cms, /api, /_next to cms). Run with:
+# Production stack. Only `cms` publishes a port — `db` is reachable solely
+# over the compose network. `cms` is the whole application now
+# (docs/PLAN-next-migration.md Stage 4) — the storefront and admin that
+# used to live in a separate `web` (Astro) service were folded into this
+# same Next.js app in Stages 1-3, and that service was deleted along with
+# apps/web once nothing needed it anymore. Run with:
 #   docker compose up --build
 # Dev mode (hot reload, bind mounts) overlays compose.dev.yaml on top — see
 # that file's header comment.
@@ -38,13 +38,11 @@ services:
       # Stable forever once set for real — rotating it invalidates every
       # existing session (admin logins, checkout submitToken checks).
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
-      # Public storefront origin — feeds cors/csrf (payload.config.ts) and
-      # Next's serverActions.allowedOrigins (next.config.mjs).
+      # This app's own public origin — feeds cors/csrf (payload.config.ts)
+      # and Next's serverActions.allowedOrigins (next.config.mjs), both kept
+      # as real CSRF defenses (not migration-era cruft) in case a reverse
+      # proxy/load balancer/CDN in front of this container rewrites Origin.
       WEB_URL: ${WEB_URL:?set WEB_URL in .env}
-      # Fallback-proxy target for everything not yet ported to (frontend)/
-      # (admin) — see apps/cms/src/proxy.ts. Always the *internal*
-      # address of the still-live Astro app, never the public one.
-      WEB_INTERNAL_URL: http://web:4321
       MEDIA_STATIC_DIR: /data/media
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
@@ -69,33 +67,12 @@ services:
       retries: 10
       start_period: 20s
 
-  web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    restart: unless-stopped
-    depends_on:
-      cms:
-        condition: service_healthy
-    environment:
-      NODE_ENV: production
-      HOST: 0.0.0.0
-      PORT: '4321'
-      # Server-side (SSR) reaches the CMS over the compose network directly
-      # — never the public URL. This app no longer proxies anything itself
-      # (see apps/cms/src/proxy.ts) — it's the internal service now.
-      CMS_INTERNAL_URL: http://cms:3000
-      # Browser-side stays same-origin — Next is the public origin now, and
-      # /api/* resolves there whether the page came from Next or was
-      # fallback-proxied from this app.
-      PUBLIC_PAYLOAD_URL: ''
-
   # Actually schedules reconcile-moysklad.ts's sync (a review found it was
   # never wired to anything — the only safety net against a missed webhook
   # was a human running `pnpm reconcile:moysklad` by hand). Unlike the
   # one-off jobs below, this has no `profiles:` — it's part of the default
   # `docker compose up` set and stays up under the same `restart:
-  # unless-stopped` policy as db/cms/web, re-syncing on its own interval
+  # unless-stopped` policy as db/cms, re-syncing on its own interval
   # (MOYSKLAD_RECONCILE_INTERVAL_MIN, default 60) for as long as the stack
   # is up. Disabled in dev — see compose.dev.yaml.
   reconcile:

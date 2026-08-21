@@ -1,18 +1,17 @@
 import { withPayload } from '@payloadcms/next/withPayload'
 
-// Before docs/PLAN-next-migration.md Stage 1, apps/web reverse-proxied this
-// app so admin and site shared one public origin — every admin form
-// submission arrived here with Origin/Host rewritten to the storefront's,
-// not this app's own, and Next's Server Actions reject that mismatch by
-// default ("Invalid Server Actions request"). As of Stage 1 this app is the
-// public entry point itself (see src/proxy.ts) and /cms is never proxied
-// into, so the mismatch that originally motivated this can't happen for
-// /cms anymore — kept anyway (not a Stage 1 line item; Stage 4's own
-// cleanup list is where this is meant to go, once apps/web and every
-// dual-origin possibility are actually gone, not just currently unused) in
-// case a production reverse proxy/load balancer in front of this container
-// (outside this repo's compose stack) does similar rewriting. WEB_URL is
-// the same env var payload.config.ts already uses for cors/csrf.
+// Next's Server Actions reject a POST whose Origin header doesn't match an
+// allowed origin ("Invalid Server Actions request") — this app is a single
+// same-origin deployment (docs/PLAN-next-migration.md Stage 4 folded the
+// last separate process, apps/web, into this one), so in the compose stack
+// itself there's never a genuine cross-origin Server Action call. Kept
+// anyway as a real, deliberate CSRF defense: a production reverse proxy,
+// load balancer, or CDN in front of this container (outside this repo's
+// compose stack) can rewrite Origin/Host, and without this allowlist a
+// rewritten Origin would either be silently accepted (no check at all) or
+// break legitimate requests in confusing ways. WEB_URL is the same env var
+// payload.config.ts uses for cors/csrf — one source of truth for "this
+// deployment's real public origin."
 const webUrl = process.env.WEB_URL || 'http://localhost:4322'
 const allowedOrigin = new URL(webUrl).host
 

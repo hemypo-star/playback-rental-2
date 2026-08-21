@@ -3,8 +3,8 @@
 # workflow). Run with:
 #   docker compose -f compose.yaml -f compose.dev.yaml up --build
 #
-# Still publishes only `web` (same as prod) — day-to-day dev should exercise
-# the real single-port proxy path, not a shortcut around it.
+# Still publishes only `cms` (same as prod) — day-to-day dev should exercise
+# the same single-service setup production runs, not a shortcut around it.
 #
 # node_modules anonymous volumes: each bind mount below shadows the app
 # directory with the host's source tree, which would otherwise blow away the
@@ -32,18 +32,5 @@ services:
     healthcheck:
       start_period: 40s
 
-  web:
-    build:
-      target: dev
-    environment:
-      NODE_ENV: development
-    volumes:
-      - ./apps/web:/repo/apps/web
-      - ./packages/shared-types:/repo/packages/shared-types
-      - web_node_modules:/repo/apps/web/node_modules
-      - shared_types_node_modules:/repo/packages/shared-types/node_modules
-
 volumes:
   cms_node_modules:
-  web_node_modules:
-  shared_types_node_modules:

@@ -16,7 +16,7 @@
 // Использование:
 //   node tools/design-sync.mjs extract "Playback Rental - прокат техники.html"
 //   node tools/design-sync.mjs spec
-//   node tools/design-sync.mjs audit apps/web/src
+//   node tools/design-sync.mjs audit apps/cms/src
 //
 // Зависимостей нет — только Node 22+.
 
@@ -252,7 +252,7 @@ function spec() {
 
 function audit() {
   const dirs = process.argv.slice(3).filter((a) => !a.startsWith('--'))
-  if (!dirs.length) die('нужна папка с кодом: design-sync audit apps/web/src')
+  if (!dirs.length) die('нужна папка с кодом: design-sync audit apps/cms/src')
   const s = readSpec(arg('--template', TEMPLATE))
 
   const files = dirs.flatMap((d) => walk(d, ['.astro', '.tsx', '.jsx', '.ts', '.css']))

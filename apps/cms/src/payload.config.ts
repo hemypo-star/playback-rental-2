@@ -65,10 +65,12 @@ export default buildConfig({
     },
   },
   // Payload's own admin UI moves to /cms — it stays reachable as a fallback/
-  // safety net while apps/web grows a custom admin UI at /admin (a separate,
-  // unrelated set of Astro routes; see docs/PLAN-docker-admin.md). Requires
-  // the app/(payload)/admin route folder to be renamed to app/(payload)/cms
-  // to match, and importMap regenerated.
+  // safety net alongside the custom admin UI at /admin (this same app's own
+  // (admin) route group, see docs/PLAN-docker-admin.md and docs/PLAN-next-
+  // migration.md Stage 3). Requires the app/(payload)/admin route folder to
+  // be renamed to app/(payload)/cms to match, and importMap regenerated.
+  // Retiring this fallback (docker-admin Step 8) is a live, not-yet-taken
+  // decision — see docs/ROADMAP-2.0.md's open items.
   routes: {
     admin: '/cms',
   },
@@ -76,19 +78,20 @@ export default buildConfig({
   globals: [SiteSettings],
   // WEB_URL is this app's OWN public origin (see apps/cms/.env.example —
   // named for consistency with the root .env.example/compose.yaml, not
-  // because it's a different app's address). Historically (pre docs/PLAN-
-  // next-migration.md Stage 1) apps/web really was a separate origin
-  // needing a credentialed cross-origin `fetch('/api/users/me', {
-  // credentials: 'include' })` for the Navbar's "Панель управления" link —
-  // that's gone now that this app is the single public entry point, but
-  // `cors`/`csrf` still need the value: Payload's cookie-JWT strategy
-  // checks the request's own Origin (or Sec-Fetch-Site as a fallback, only
-  // reached when Origin is absent) against this allowlist even for
+  // because it's a different app's address; historically, pre docs/PLAN-
+  // next-migration.md Stage 1, it really was apps/web's separate origin).
+  // This is a real, deliberate CSRF defense, not migration-era leftover
+  // config now that apps/web is gone (Stage 4) and every request to this
+  // app is genuinely same-origin within the compose stack: kept in case a
+  // reverse proxy/load balancer/CDN in front of this container rewrites
+  // Origin/Host. The mechanism worth remembering — Payload's cookie-JWT
+  // strategy checks the request's own Origin (falling back to Sec-Fetch-
+  // Site only when Origin is absent) against this allowlist even for
   // same-origin requests, and a Next Server Action's own POST does send an
-  // Origin header — a stale value here silently fails auth on any Server
-  // Action that reads the session (unlike CheckoutPage's submitCheckout()
-  // in Stage 2, which is anonymous; this only surfaced once Stage 3 added
-  // the first Server Action that calls payload.auth()).
+  // Origin header, unlike a plain page navigation — a stale value here
+  // silently fails auth on any Server Action that reads the session (this
+  // exact bug hit the first Stage 3 Server Action that called
+  // payload.auth(), see the 2026-08-20 dev log entry).
   cors: [process.env.WEB_URL || 'http://localhost:3000'],
   csrf: [process.env.WEB_URL || 'http://localhost:3000'],
   endpoints: [

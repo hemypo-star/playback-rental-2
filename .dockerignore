@@ -1,9 +1,9 @@
-# Applies repo-wide (build context is the repo root for both apps/cms and
-# apps/web images). Patterns WITHOUT a leading slash match at every depth —
-# so excluding the legacy root app's own src/server/public this way would
-# ALSO swallow apps/web/src, apps/cms/src, etc. Every legacy-root-only
-# pattern below is anchored with a leading slash for exactly that reason;
-# don't remove the slashes "to simplify."
+# Applies repo-wide (build context is the repo root for the apps/cms
+# image). Patterns WITHOUT a leading slash match at every depth — so
+# excluding the legacy root app's own src/server/public this way would ALSO
+# swallow apps/cms/src, etc. Every legacy-root-only pattern below is
+# anchored with a leading slash for exactly that reason; don't remove the
+# slashes "to simplify."
 
 # node_modules at any depth — always reinstalled fresh via pnpm inside the
 # image; a copied-in host node_modules can carry macOS-built native addons
@@ -18,7 +18,7 @@
 .claude
 .pnpm-store
 
-# Legacy root Vite app (main/prod branch's app, superseded by apps/web on
+# Legacy root Vite app (main/prod branch's app, superseded by apps/cms on
 # this branch) — anchored, see note above.
 /src
 /server

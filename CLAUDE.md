@@ -7,8 +7,18 @@ are in `README.md`; this file is architecture, gotchas, and a running dev log.
 
 A full rewrite of the Playback Rental storefront + admin (camera/video equipment rental,
 Kemerovo). Old app: React/Vite SPA + self-hosted Supabase, on `main`/`prod`, still live.
-New app: Astro storefront (`apps/web`) + Payload CMS admin/backend (`apps/cms`), on this
-branch (`2.0`), cut over once verified end-to-end.
+New app: a single Next.js app, `apps/cms` — storefront, custom `/admin` UI, and Payload
+CMS's own `/cms` admin all in one process — on this branch (`2.0`), cut over once verified
+end-to-end.
+
+`apps/cms` didn't start this way: Phase 2 (see the dev log below) built the storefront as
+a separate Astro app, `apps/web`, talking to Payload over REST — Payload's Local API
+(direct DB access, no HTTP) only works in-process, so a two-app split meant a proxy, a
+REST client, and a `CMS_INTERNAL_URL`/`PUBLIC_PAYLOAD_URL` env-var split. `docs/PLAN-next-
+migration.md` folded `apps/web` into `apps/cms` (Stages 1–3) and then deleted it (Stage 4)
+once nothing needed it — that whole history is in the dev log for the reasoning and real
+bugs it surfaced, but nothing in the current tree depends on `apps/web` or
+`packages/shared-types` (also deleted) anymore.
 
 ## Architecture facts worth not re-deriving
 
@@ -32,7 +42,7 @@ branch (`2.0`), cut over once verified end-to-end.
   checks availability on every save — not duplicated across call sites like the old app.
   `orders.totalPrice` is kept in sync by an `afterChange`/`afterDelete` hook on the same
   collection. Don't add pricing math anywhere else; extend this hook.
-- **Selected rental dates are session-scoped** (`apps/web/src/stores/dates.ts`,
+- **Selected rental dates are session-scoped** (`apps/cms/src/stores/dates.ts`,
   sessionStorage-backed) — resets per new tab/session, same behavior as the old app's
   `BookingDatesContext`. The store's initial value is always `{null, null}` on both
   server and the client's first render, with the persisted value applied a tick later —
@@ -41,12 +51,15 @@ branch (`2.0`), cut over once verified end-to-end.
   date-derived text (`RentalDatePicker`) gate on a post-mount `mounted` flag for the
   same reason — don't remove it.
 - **Payload's REST API wraps single-document create/update responses as `{ doc,
-  message }`**, unlike GET which returns the document directly. `apps/web/src/lib/
-  payload.ts` has a `mutate<T>()` helper that unwraps this — use it (not raw `request`)
-  for any new POST/PATCH call, or the response will silently be the wrong shape (this
-  exact bug made checkout create orders with no items for a while — order creation
-  "succeeded" but `order.id` was `undefined`, so the follow-up orderItem POST silently
-  omitted the `order` field).
+  message }`**, unlike GET which returns the document directly. Not a concern for
+  `apps/cms`'s own code, which uses the Local API (`payload.create()`/`payload.update()`
+  return the document directly, no wrapper) — but worth remembering if any new code ever
+  talks to Payload over REST (e.g. a browser-side `fetch()`), since this exact bug once
+  made checkout create orders with no items: order creation "succeeded" but `order.id`
+  was `undefined` from the unwrapped `{ doc, message }` response, so the follow-up
+  orderItem POST silently omitted the `order` field. `apps/web`'s old REST client had a
+  `mutate<T>()` helper specifically to guard against this — see the 2026-08-20 dev log
+  entries if you need the history.
 - **`position: fixed` modals must portal to `document.body`.** The navbar header uses
   `backdrop-filter` (the frosted-glass look), which establishes a new containing block
   for `position: fixed` descendants — a modal rendered as a normal child anywhere under
@@ -56,18 +69,16 @@ branch (`2.0`), cut over once verified end-to-end.
   changing an `admin.components.*` entry (`payload.config.ts`) or a collection's
   `admin.components.Cell`, run `npx payload generate:importmap` from `apps/cms`, or the
   dev server throws `PayloadComponent not found in importMap` on that route.
-- **Known open issue**: the Payload admin UI (`/admin`) renders with its base styling
-  not fully applied (unstyled-looking inputs/buttons, though CSS custom properties like
-  `--font-body`/`--style-radius-*` do apply). Confirmed not caused by `--turbo` (persists
-  under plain `next dev` too) and not a build error — most likely pre-existing, since it
-  reproduces on components untouched this session. Not yet root-caused; worth a fresh
-  look if it's still there next time.
+- **Payload's own admin UI lives at `/cms`, not `/admin`** — `/admin` is this app's
+  *custom* admin UI (`apps/cms/src/app/(admin)`), a separate, unrelated set of routes.
+  `payload.config.ts`'s `routes.admin: '/cms'` is what moves Payload's default off
+  `/admin` so the two don't collide.
 
 ## Design system (light theme, applied 2026-08-13)
 
 Ported from a delivered design (`Playback Rental - прокат техники.html`, a bundled
 Claude Artifact — not plain HTML; see "extracting the design" below if it needs
-re-reading). Tokens live in `apps/web/src/styles/global.css` as Tailwind v4 `@theme`
+re-reading). Tokens live in `apps/cms/src/styles/global.css` as Tailwind v4 `@theme`
 values:
 
 | Token | Value | Use |
@@ -78,7 +89,7 @@ values:
 | `--color-card` | `#FFFFFF` | card surfaces |
 | `--color-muted` / `--color-muted-well` | `#F4F3F1` / `#F9F8F7` | wells, inputs |
 | `--color-subtle` | `#75736E` | secondary text |
-| `--font-sans` | Golos Text | self-hosted variable font, `apps/web/public/fonts/` |
+| `--font-sans` | Golos Text | self-hosted variable font, `apps/cms/public/fonts/` |
 
 Radii: cards 22–26px, pills fully rounded. Motion: named keyframes (`bnIn`, `bnFade`,
 `bnPop`, `bnRule`, `bnClip`, `bnMark`, `bnBlink`, `bnRise`, `bnBar`) in the same file.

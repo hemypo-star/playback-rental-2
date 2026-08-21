@@ -4,12 +4,13 @@ Hand-authored, not machine-extracted like `spec/tokens.css`/`spec/interactions.c
 The design bundle (`markup.html`/`dc_script.txt`/`template.html`) predates the
 `Categories.parent` field (added `a4c958f`, 2026-08-14) and only ever specified a
 flat, single-level sidebar — there is nothing to extract this from. This document
-is the source of truth for the feature instead, describing the behavior already
-shipped in `apps/web/src/lib/categoryTree.ts` + `CategorySidebar.astro`, so the
-Next.js migration's Stage 2 storefront port has a spec to build against rather
-than reverse-engineering it from the Astro source mid-port. Treat this file the
-same as the generated spec files: edits to the *behavior* happen in code first,
-then this doc is updated to match — it does not drive the code.
+is the source of truth for the feature instead, describing the behavior
+implemented in `apps/cms/src/lib/categoryTree.ts` + `CategorySidebar.tsx`
+(originally written against `apps/web/src/lib/categoryTree.ts` +
+`CategorySidebar.astro`, before `docs/PLAN-next-migration.md` folded that app
+into `apps/cms` and then deleted it). Treat this file the same as the generated
+spec files: edits to the *behavior* happen in code first, then this doc is
+updated to match — it does not drive the code.
 
 ## Behavior
 

@@ -43,7 +43,7 @@ node tools/design-sync.mjs extract "Playback Rental - прокат техник�
 node tools/design-sync.mjs spec
 
 # 3. Сверить код со спекой
-node tools/design-sync.mjs audit apps/web/src
+node tools/design-sync.mjs audit apps/cms/src
 ```
 
 Зависимостей нет, Node 22+ хватает.
