@@ -3,6 +3,7 @@ import type React from 'react'
 import { redirect } from 'next/navigation'
 import '../../../styles/global.css'
 import { getAdminUser } from '../../../lib/admin/auth'
+import { getAdminNavBadges } from '../../../lib/admin/data/navBadges'
 import AdminSidebar from '../../../components/admin/AdminSidebar'
 
 // Root layout for the guarded admin dashboard (docs/PLAN-next-migration.md
@@ -25,6 +26,7 @@ export const metadata: Metadata = {
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getAdminUser()
   if (!user) redirect('/admin/login')
+  const badges = await getAdminNavBadges()
 
   return (
     <html lang="ru">
@@ -34,7 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </head>
       <body className="bg-background text-foreground">
         <main className="grid min-h-screen grid-cols-[246px_1fr] gap-3.5 p-3.5" style={{ animation: 'bnFade 380ms ease both' }}>
-          <AdminSidebar userEmail={user.email} />
+          <AdminSidebar userEmail={user.email} badges={badges} />
           <section className="flex min-w-0 flex-col gap-3.5">{children}</section>
         </main>
       </body>
