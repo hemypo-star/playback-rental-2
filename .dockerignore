@@ -30,9 +30,6 @@
 /bun.lockb
 /ecosystem.config.cjs
 
-# Design reference docs — large, not needed at runtime.
-/docs/design-reference
-
 # Real uploaded media and env files — media comes from a mounted volume at
 # runtime (see compose.yaml), never baked into the image; env files supply
 # secrets via compose's `environment`/`env_file`, never copied into a layer.

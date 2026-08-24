@@ -9,32 +9,36 @@
 // of Stage 3 per the plan.
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import type { AdminNavBadges } from '../../lib/admin/data/navBadges'
 
 interface NavItem {
   id: string
   label: string
   href: string
+  badge?: keyof AdminNavBadges
 }
 
 // Категории/Акции aren't in the delivered mockup (it never designed a
 // catalog-editing screen at all — see docs/PLAN-docker-admin.md Step 6) but
 // need somewhere to live; grouped next to Склад as the other catalog-data
 // tabs, styled identically to the designed items rather than bolted on
-// visually differently.
+// visually differently. Only the three items the mockup itself badged
+// (Заказы/Склад/Клиенты) get one here — see navBadges.ts for what each
+// number means.
 const NAV: NavItem[] = [
-  { id: 'orders', label: 'Заказы', href: '/admin/orders' },
+  { id: 'orders', label: 'Заказы', href: '/admin/orders', badge: 'orders' },
   { id: 'calendar', label: 'Календарь', href: '/admin/calendar' },
-  { id: 'stock', label: 'Склад', href: '/admin/stock' },
+  { id: 'stock', label: 'Склад', href: '/admin/stock', badge: 'stock' },
   { id: 'categories', label: 'Категории', href: '/admin/categories' },
   { id: 'promotions', label: 'Акции', href: '/admin/promotions' },
-  { id: 'clients', label: 'Клиенты', href: '/admin/clients' },
+  { id: 'clients', label: 'Клиенты', href: '/admin/clients', badge: 'clients' },
   { id: 'analytics', label: 'Аналитика', href: '/admin/analytics' },
   { id: 'media', label: 'Медиатека', href: '/admin/media' },
   { id: 'users', label: 'Пользователи', href: '/admin/users' },
   { id: 'settings', label: 'Настройки', href: '/admin/settings' },
 ]
 
-export default function AdminSidebar({ userEmail }: { userEmail: string }) {
+export default function AdminSidebar({ userEmail, badges }: { userEmail: string; badges: AdminNavBadges }) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -57,17 +61,21 @@ export default function AdminSidebar({ userEmail }: { userEmail: string }) {
       </div>
 
       <nav className="flex flex-col gap-0.5">
-        {NAV.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            className={`flex items-center justify-between rounded-[13px] px-3.5 py-3 text-[11.5px] font-semibold tracking-[0.1em] uppercase transition-colors duration-240 ease-expo ${
-              isActive(item.href) ? 'bg-white text-foreground' : 'text-white/60 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            <span>{item.label}</span>
-          </Link>
-        ))}
+        {NAV.map((item) => {
+          const count = item.badge ? badges[item.badge] : undefined
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={`flex items-center justify-between rounded-[13px] px-3.5 py-3 text-[11.5px] font-semibold tracking-[0.1em] uppercase transition-colors duration-240 ease-expo ${
+                isActive(item.href) ? 'bg-white text-foreground' : 'text-white/60 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <span>{item.label}</span>
+              {count ? <span className="text-[11px] opacity-60">{count}</span> : null}
+            </Link>
+          )
+        })}
       </nav>
 
       <div className="mt-auto flex flex-col gap-0.5">

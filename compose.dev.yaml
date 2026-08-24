@@ -29,6 +29,12 @@ services:
     volumes:
       - ./apps/cms:/repo/apps/cms
       - cms_node_modules:/repo/apps/cms/node_modules
+      # global.css imports docs/design-reference/spec/{tokens.css,
+      # interactions.css} from outside apps/cms (Next.js migration Stage 1) —
+      # without this, Turbopack's dev-time CSS resolution 500s on every page
+      # ("Can't resolve '../../../../docs/design-reference/spec/tokens.css'"),
+      # since only apps/cms is otherwise bind-mounted into the container.
+      - ./docs:/repo/docs:ro
     healthcheck:
       start_period: 40s
 
