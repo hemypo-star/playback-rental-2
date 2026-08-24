@@ -109,6 +109,10 @@ export const Products: CollectionConfig = {
       name: 'available',
       type: 'checkbox',
       defaultValue: true,
+      // Every catalog listing query filters on this (lib/data/products.ts's
+      // getProducts()) — confirmed absent, flagged as PERF-004 in
+      // docs/audits/2026-08-24-baseline.md.
+      index: true,
       admin: {
         description: 'Manual override to hide/pause a product for rental regardless of МойСклад stock (e.g. under repair). Not synced.',
       },
