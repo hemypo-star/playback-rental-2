@@ -3,6 +3,13 @@ import type { Metadata } from 'next'
 // Ported from apps/web/src/pages/privacy-policy.astro (docs/PLAN-next-
 // migration.md Stage 2, page 1 of 7 — legal pages, "чистая вёрстка, разогрев
 // на маппинге"). Pure markup, no data fetching beyond the render-time date.
+//
+// force-dynamic: this page itself has no DB read, but the shared layout's
+// Footer does (getSiteSettings()) — a genuine `next build`'s static-
+// generation pass executes it for real, which fails in Docker's build
+// stage (no live DATABASE_URI there — see apps/cms/Dockerfile).
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = { title: 'Политика конфиденциальности' }
 
 export default function PrivacyPolicyPage() {

@@ -5,6 +5,13 @@ import type { Metadata } from 'next'
 // — the steps/pricing/FAQ arrays are hardcoded in the Astro source too, not
 // pulled from SiteSettings (that's the *homepage* howItWorksSteps, a
 // different, shorter list used in a different place — see page group 3).
+//
+// force-dynamic: this page itself has no DB read, but the shared layout's
+// Footer does (getSiteSettings()) — a genuine `next build`'s static-
+// generation pass executes it for real, which fails in Docker's build
+// stage (no live DATABASE_URI there — see apps/cms/Dockerfile).
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = { title: 'Как это работает' }
 
 const steps = [

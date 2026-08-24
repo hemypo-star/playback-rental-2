@@ -5,6 +5,15 @@ import { getSiteSettings } from '../../../lib/data/siteSettings'
 // Ported from apps/web/src/pages/contact.astro (docs/PLAN-next-migration.md
 // Stage 2, page group 2). SiteSettings via the Local API data layer, same
 // pattern as Footer.tsx — no mutate()/REST unwrapping needed.
+//
+// force-dynamic: this page's own getSiteSettings() call is a real DB read
+// (SiteSettings is admin-editable, so a statically-cached copy would go
+// stale) — and even without it, the shared layout's Footer makes the exact
+// same call regardless. A genuine `next build`'s static-generation pass
+// executes both for real, which fails in Docker's build stage (no live
+// DATABASE_URI there — see apps/cms/Dockerfile).
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = { title: 'Контакты' }
 
 export default async function ContactPage() {
