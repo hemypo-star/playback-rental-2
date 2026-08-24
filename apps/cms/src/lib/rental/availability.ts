@@ -1,3 +1,5 @@
+import { sql } from '@payloadcms/db-postgres'
+import type { PostgresAdapter } from '@payloadcms/db-postgres'
 import type { PayloadRequest } from 'payload'
 
 // Ported from the old app's src/utils/availabilityUtils.ts. Status lives only
@@ -13,6 +15,45 @@ import type { PayloadRequest } from 'payload'
 // row wasn't visible to a query made without `req`, since it ran on a
 // separate DB connection outside the parent operation's transaction).
 const ACTIVE_STATUSES = ['pending', 'confirmed']
+
+// Confirmed by live reproduction (docs/audits/2026-08-24-baseline.md,
+// RENTAL-001): getAvailableRentalQuantity/getAvailableSaleQuantity below are
+// a plain read with no row lock — under Postgres's default READ COMMITTED
+// isolation, two concurrent bookings for the same product can both read
+// "available" before either commits, both pass, and both succeed. Two
+// genuinely concurrent `POST /api/orderItems` for a quantity-1 product both
+// returned 201, oversold 2-for-1.
+//
+// pg_advisory_xact_lock serializes the check-then-write per product without
+// needing SELECT ... FOR UPDATE on the products row (which would also
+// contend with unrelated concurrent product edits, e.g. an admin changing
+// price). It auto-releases the moment the current transaction commits or
+// rolls back — no manual unlock, no risk of a forgotten release on an early
+// throw, and critically it blocks a second concurrent request's own check
+// until the first request's write has actually landed (or been abandoned),
+// which a lock acquired-then-released before the hook returns would not:
+// Payload's own write+commit for this operation happens *after*
+// beforeValidate returns, so releasing before that point would still leave
+// the exact race window open between "hook returned" and "transaction
+// committed."
+//
+// Call this only from the write path (OrderItems.ts's beforeValidate) —
+// never from the public, read-only availability-display endpoints
+// (rentalAvailability(Bulk).ts). Those are just showing booked-out dates to
+// a visitor; serializing a read against real bookings would only add
+// contention with no correctness benefit.
+//
+// `sessions`/`drizzle` are real fields on PostgresAdapter (@payloadcms/
+// db-postgres, a direct dependency) — the cast just asserts the concrete
+// adapter type this app always uses, since `payload.db`'s own declared type
+// doesn't carry it through automatically. This mirrors @payloadcms/drizzle's
+// internal getTransaction() utility logic without importing an unexported
+// path from a package that isn't even a direct dependency of this app.
+export async function lockProductForBooking(req: PayloadRequest, productId: number): Promise<void> {
+  const adapter = req.payload.db as unknown as PostgresAdapter
+  const db = req.transactionID ? (adapter.sessions?.[String(await req.transactionID)]?.db ?? adapter.drizzle) : adapter.drizzle
+  await db.execute(sql`SELECT pg_advisory_xact_lock(${productId})`)
+}
 
 async function activeOrderIds(req: PayloadRequest): Promise<number[]> {
   const orders = await req.payload.find({
