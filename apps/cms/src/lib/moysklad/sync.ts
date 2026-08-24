@@ -367,6 +367,67 @@ async function buildStockLookup(): Promise<Map<string, { stock: number; image?: 
 }
 
 /**
+ * Handles a МойСклад DELETE webhook event (SEC-006, docs/audits/
+ * 2026-08-24-baseline.md — previously not handled at all: a deleted
+ * МойСклад item stayed bookable in Payload indefinitely until the next full
+ * `reconcile:moysklad` run, since that's the only other thing that would
+ * notice it's gone). Marks the corresponding local product `available:
+ * false` rather than deleting it — a real order may still reference it as a
+ * line item, and `available` is already a synced field (not one of the
+ * admin-only fields sync.ts's other upserts are careful never to touch), so
+ * this is consistent with the rest of this module's partial-update
+ * discipline, not a special case.
+ *
+ * Two ways a deletion maps onto a local product:
+ * - Direct: the deleted entity's own id is a listing's `moySkladId` (a
+ *   rental service, or a sale-tree product).
+ * - Indirect: the deleted entity is a `product` in the accounting tree that
+ *   backs a rental service's stock/image (see syncProducts' own docblock on
+ *   the accounting-tree match) — found via `moySkladInventoryProductId`.
+ *   The service listing itself wasn't deleted, but its physical stock item
+ *   was, so it's no longer real inventory either.
+ *
+ * `productfolder` deletions aren't handled here — a deleted category
+ * doesn't create a false-availability booking risk the way a deleted
+ * product/service does, and category deletion has its own separate
+ * questions (what happens to products still under it) out of scope for
+ * this fix.
+ */
+export async function handleEntityDeleted(
+  payload: Payload,
+  entityType: string,
+  entityId: string,
+): Promise<{ handled: boolean; reason?: string }> {
+  if (entityType !== 'service' && entityType !== 'product') {
+    return { handled: false, reason: `DELETE not handled for entity type: ${entityType}` }
+  }
+
+  const direct = await payload.find({
+    collection: 'products',
+    where: { moySkladId: { equals: entityId } },
+    limit: 1,
+  })
+  if (direct.docs.length) {
+    await payload.update({ collection: 'products', id: direct.docs[0].id, data: { available: false } })
+    return { handled: true }
+  }
+
+  if (entityType === 'product') {
+    const viaInventory = await payload.find({
+      collection: 'products',
+      where: { moySkladInventoryProductId: { equals: entityId } },
+      limit: 1,
+    })
+    if (viaInventory.docs.length) {
+      await payload.update({ collection: 'products', id: viaInventory.docs[0].id, data: { available: false } })
+      return { handled: true }
+    }
+  }
+
+  return { handled: false, reason: 'No matching local product found (outside scope, or already gone)' }
+}
+
+/**
  * Resyncs a single МойСклад entity, for the webhook receiver — a targeted
  * version of syncProducts/syncCategories for one changed item instead of
  * the whole catalog. Reuses the exact same upsert helpers as the bulk sync

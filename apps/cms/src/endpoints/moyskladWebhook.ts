@@ -1,5 +1,5 @@
 import type { Endpoint } from 'payload'
-import { parseEntityHref, syncSingleEntity } from '../lib/moysklad/sync'
+import { parseEntityHref, syncSingleEntity, handleEntityDeleted } from '../lib/moysklad/sync'
 import { secretsMatch } from '../lib/security/timingSafe'
 
 // МойСклад webhook payload shape: { events: [{ meta: { href, type }, action, accountId }] }
@@ -49,11 +49,23 @@ export const moyskladWebhookEndpoint: Endpoint = {
         if (!parsed) return { href, synced: false, reason: 'Could not parse entity type/id from href' }
 
         if (event.action === 'DELETE') {
-          // Out of scope for Phase 1: a deleted МойСклад item should
-          // probably mark the local product unavailable rather than
-          // deleting it outright (an order might still reference it).
-          // Flagged here rather than silently ignored.
-          return { href, synced: false, reason: 'DELETE events not yet handled — flagged for follow-up' }
+          // SEC-006 (docs/audits/2026-08-24-baseline.md) — previously
+          // ignored outright ("flagged for follow-up"), leaving a deleted
+          // МойСклад item bookable indefinitely. handleEntityDeleted marks
+          // the corresponding local product unavailable rather than
+          // deleting it (an order might still reference it).
+          try {
+            const result = await handleEntityDeleted(req.payload, parsed.type, parsed.id)
+            return { href, synced: result.handled, reason: result.reason }
+          } catch (error) {
+            req.payload.logger.error({ err: error, href }, 'МойСклад webhook: failed to handle DELETE event')
+            return {
+              href,
+              synced: false,
+              failed: true,
+              reason: error instanceof Error ? error.message : 'Unknown error',
+            }
+          }
         }
 
         try {
@@ -65,9 +77,9 @@ export const moyskladWebhookEndpoint: Endpoint = {
             href,
             synced: false,
             // Distinct from the structural "not applicable" reasons above
-            // (no href, unparseable, DELETE) — this one is a genuine,
-            // possibly-transient failure, and the only kind worth telling
-            // МойСклад to retry over.
+            // (no href, unparseable) — this one is a genuine, possibly-
+            // transient failure, and the only kind worth telling МойСклад
+            // to retry over.
             failed: true,
             reason: error instanceof Error ? error.message : 'Unknown error',
           }
