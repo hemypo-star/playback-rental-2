@@ -65,4 +65,11 @@ COPY --from=build /repo /repo
 EXPOSE 3000
 # Migrations run before every start, including restarts of an already-
 # migrated container — payload migrate is a no-op when nothing's pending.
-CMD ["sh", "-c", "pnpm payload migrate && pnpm start"]
+# check:migration-drift runs first: if this database ever had `pnpm dev`'s
+# push:true schema sync run against it, `payload migrate` drops into an
+# interactive confirm prompt that a container with no attached stdin can
+# never answer — confirmed live to hang forever, not fail, even with stdin
+# redirected from /dev/null (docs/audits/2026-08-24-baseline.md, DEPLOY-001).
+# The check runs the same underlying query migrate's own CLI does and fails
+# fast with a real exit code and an explanation instead.
+CMD ["sh", "-c", "pnpm check:migration-drift && pnpm payload migrate && pnpm start"]

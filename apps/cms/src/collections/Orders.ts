@@ -49,6 +49,10 @@ export const Orders: CollectionConfig = {
       type: 'select',
       required: true,
       defaultValue: 'pending',
+      // Every availability check (lib/rental/availability.ts's
+      // activeOrderIds()) filters on this to find active orders — confirmed
+      // absent, flagged as PERF-004 in docs/audits/2026-08-24-baseline.md.
+      index: true,
       options: [
         { label: 'Pending', value: 'pending' },
         { label: 'Confirmed', value: 'confirmed' },

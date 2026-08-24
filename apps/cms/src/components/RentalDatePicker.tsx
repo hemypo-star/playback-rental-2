@@ -6,7 +6,7 @@
 // apps/web keeps its own live copy until Stage 4 deletes that app entirely;
 // keep both in sync until then. The `mounted` hydration-mismatch guard below
 // is still required — the server still has no sessionStorage.
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '@nanostores/react'
 import {
@@ -69,8 +69,19 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
   const [draftTo, setDraftTo] = useState<Date | null>(dates.endDate)
   const [startHour, setStartHour] = useState(dates.startDate ? String(dates.startDate.getHours()) : '10')
   const [endHour, setEndHour] = useState(dates.endDate ? String(dates.endDate.getHours()) : '10')
+  // ACC-001 (docs/audits/2026-08-24-baseline.md): this modal had no dialog
+  // semantics, no Escape handling, and no focus trap — confirmed via a
+  // code-level a11y pass, no Lighthouse/screen-reader session available at
+  // audit time. modalRef anchors the focus trap + initial focus-on-open;
+  // previouslyFocusedRef restores focus to whichever of the 4 variant
+  // trigger buttons actually opened it, without threading a ref through
+  // each one individually.
+  const modalRef = useRef<HTMLDivElement>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+  const titleId = 'rental-date-picker-title'
 
   const openPicker = (tab: 'from' | 'to' = 'from') => {
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setDraftFrom(dates.startDate)
     setDraftTo(dates.endDate)
     setStartHour(dates.startDate ? String(dates.startDate.getHours()) : '10')
@@ -79,6 +90,48 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
     setMonth(startOfMonth(dates.startDate ?? new Date()))
     setOpen(true)
   }
+
+  const closePicker = useCallback(() => {
+    setOpen(false)
+    previouslyFocusedRef.current?.focus()
+  }, [])
+
+  // Focus the dialog on open (modalRef has tabIndex={-1} — programmatically
+  // focusable without joining the page's normal tab order on its own), and
+  // trap Tab/Shift+Tab within it while it's open so keyboard focus can't
+  // silently escape to the page behind the backdrop. Escape closes it, same
+  // as the existing backdrop-click and ✕-button affordances.
+  useEffect(() => {
+    if (!open) return
+    modalRef.current?.focus()
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        closePicker()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const modal = modalRef.current
+      if (!modal) return
+      const focusable = modal.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [open, closePicker])
 
   const pickDay = (day: Date) => {
     if (activeTab === 'from') {
@@ -94,11 +147,11 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
 
   const apply = () => {
     if (!draftFrom || !draftTo) {
-      setOpen(false)
+      closePicker()
       return
     }
     setSelectedDates(withTime(draftFrom, startHour)!, withTime(draftTo, endHour)!)
-    setOpen(false)
+    closePicker()
     onApply?.()
   }
 
@@ -206,21 +259,27 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
         // otherwise confine this overlay to the navbar's own box instead of
         // the viewport.
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-5" style={{ animation: 'bnFade 240ms ease both' }}>
-          <div className="absolute inset-0 bg-[rgba(10,10,10,0.42)] backdrop-blur-[6px]" onClick={() => setOpen(false)} />
+          <div className="absolute inset-0 bg-[rgba(10,10,10,0.42)] backdrop-blur-[6px]" onClick={closePicker} />
           <div
-            className="relative max-h-[90vh] w-full max-w-[780px] overflow-y-auto rounded-[26px] bg-card shadow-[var(--shadow-lifted)]"
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
+            className="relative max-h-[90vh] w-full max-w-[780px] overflow-y-auto rounded-[26px] bg-card shadow-[var(--shadow-lifted)] outline-none"
             style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both' }}
           >
             <div className="flex items-start justify-between gap-4 p-6 pb-0">
               <div>
                 <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Период аренды</div>
-                <div className="mt-1.5 text-[22px] font-medium tracking-[-0.03em]">
+                <div id={titleId} className="mt-1.5 text-[22px] font-medium tracking-[-0.03em]">
                   {activeTab === 'to' ? 'День и время возврата' : 'День и время выдачи'}
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={closePicker}
+                aria-label="Закрыть"
                 className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-muted text-[14px] transition-[background-color,color,transform] duration-240 ease-expo hover:rotate-90 hover:bg-primary hover:text-primary-foreground"
               >
                 ✕

@@ -1,7 +1,7 @@
 import type { CollectionConfig, PayloadRequest } from 'payload'
 import { APIError } from 'payload'
 import { calculateLineTotal } from '../lib/rental/pricing'
-import { isRentalQuantityAvailable, getAvailableSaleQuantity } from '../lib/rental/availability'
+import { isRentalQuantityAvailable, getAvailableSaleQuantity, lockProductForBooking } from '../lib/rental/availability'
 
 // Hooks receive relationship fields populated to Payload's default depth
 // (an object), not a plain id — normalize before using it as a query value
@@ -161,6 +161,12 @@ export const OrderItems: CollectionConfig = {
         data.listingType = product.listingType
         const quantity = data.quantity ?? 1
         const excludeId = originalDoc?.id as number | undefined
+
+        // Serializes concurrent availability checks for this product within
+        // the current transaction — see lockProductForBooking's own comment
+        // for why this closes RENTAL-001 (docs/audits/2026-08-24-baseline.md)
+        // and why a plain read here isn't safe under concurrent bookings.
+        await lockProductForBooking(req, product.id)
 
         if (product.listingType === 'rental') {
           if (!data.startDate || !data.endDate) {
