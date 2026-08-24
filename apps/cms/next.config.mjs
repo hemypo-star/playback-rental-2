@@ -1,64 +1,43 @@
 import { withPayload } from '@payloadcms/next/withPayload'
 
-// The storefront (apps/web) reverse-proxies this app so admin and site share
-// one public origin (see apps/web/src/middleware.ts) — that means every
-// admin form submission arrives here with Origin/Host rewritten to the
-// storefront's, not this app's own. Next's Server Actions reject that
-// mismatch by default ("Invalid Server Actions request"), so the
-// storefront's public origin must be allow-listed explicitly. WEB_URL is the
-// same env var payload.config.ts already uses for cors/csrf.
+// Next's Server Actions reject a POST whose Origin header doesn't match an
+// allowed origin ("Invalid Server Actions request") — this app is a single
+// same-origin deployment (docs/PLAN-next-migration.md Stage 4 folded the
+// last separate process, apps/web, into this one), so in the compose stack
+// itself there's never a genuine cross-origin Server Action call. Kept
+// anyway as a real, deliberate CSRF defense: a production reverse proxy,
+// load balancer, or CDN in front of this container (outside this repo's
+// compose stack) can rewrite Origin/Host, and without this allowlist a
+// rewritten Origin would either be silently accepted (no check at all) or
+// break legitimate requests in confusing ways. WEB_URL is the same env var
+// payload.config.ts uses for cors/csrf — one source of truth for "this
+// deployment's real public origin."
 const webUrl = process.env.WEB_URL || 'http://localhost:4322'
 const allowedOrigin = new URL(webUrl).host
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Next 16 auto-writes agent-rules files (AGENTS.md/CLAUDE.md) into
+  // apps/cms on every `next dev`/`next build`. This project already has its
+  // own root CLAUDE.md convention (see repo root) — apps/cms's copy is
+  // Next's own generated one (framework/route conventions, not project
+  // architecture) and is gitignored so it never collides with the real one;
+  // treat it as disposable, regenerated output, not something to hand-edit.
+  agentRules: true,
   experimental: {
     serverActions: {
       allowedOrigins: [allowedOrigin],
     },
   },
-  typescript: {
-    // `next build`'s own internal type check (never run by `next dev`) fails
-    // on app/(payload)/layout.tsx's exported `Layout` component against
-    // Next's auto-generated LayoutProps constraint. Root cause: React 19.2's
-    // ReactPortal type now requires its own `children` field, which makes
-    // the ReactElement our JSX returns structurally fail assignability to
-    // ReactNode in that one generated-type comparison — a real
-    // @types/react 19.2 / Next 15.5 ecosystem quirk, not a bug in this
-    // project's code or its dependency resolution: re-verified by building
-    // the actual Docker image (properly `--filter cms...`-scoped, no stray
-    // package versions possible) and it fails identically. Wrapping the
-    // rendered `{children}` in a Fragment (see layout.tsx) does fix the
-    // direct-source-level version of this error that plain `tsc --noEmit`
-    // reports — kept, since it's a real improvement for IDE/lint tooling —
-    // but doesn't touch Next's separate, stricter check against its
-    // generated .next/types file, which is what's suppressed here.
-    // No narrower escape hatch exists: this check isn't behind its own
-    // flag, and @ts-expect-error can't target it (the diagnostic is
-    // anchored in Next's generated .next/types file, not our source).
-    // Revisit by removing this once a `@types/react`/Next upgrade fixes
-    // the underlying type incompatibility.
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    // `next dev` never runs ESLint, so pre-existing `no-explicit-any` uses
-    // went unnoticed until the first real `next build` started failing
-    // outright. The МойСклад integration's own share of this (originally
-    // documented here as "~27 uses") has since been retyped to zero — see
-    // lib/moysklad/*, endpoints/moyskladWebhook.ts — proper interfaces for
-    // the МойСклад JSON API 1.2 entity shapes this app actually reads
-    // fields from, no `any` left anywhere in that module. What's still
-    // suppressed here is much larger than that original estimate suggested:
-    // a full `next lint` run counts ~190 `no-explicit-any` errors spread
-    // across the admin dashboard components/endpoints (AdminKpiWidget,
-    // CalendarView, AnalyticsView, ClientsView, StockStatusCell, every
-    // endpoints/admin/*.ts file) and lib/rental/availability.ts — none of
-    // it МойСклад-specific. Retyping that surface is real, separate work
-    // (tracked as its own follow-up, given the size), not something a
-    // Docker/infra change should be blocked on or rushed to paper over
-    // with guessed types.
-    ignoreDuringBuilds: true,
-  },
+  // eslint.ignoreDuringBuilds used to be blanket-true here: `next dev` never
+  // runs ESLint, so pre-existing `no-explicit-any` uses (~190, spread across
+  // the admin dashboard components/endpoints and lib/rental/availability.ts)
+  // went unnoticed until the first real `next build` started failing
+  // outright. Rather than keep builds blind to lint everywhere, the
+  // suppression is now scoped to just those legacy paths in
+  // eslint.config.mjs (see `legacyAnyPaths`) — new code, including every
+  // route group the Next.js migration adds, is linted at full strictness.
+  // Retyping the legacy surface is separate follow-up work, not a blocker.
 }
 
 export default withPayload(nextConfig, { devBundleServerPackages: false })

@@ -18,11 +18,11 @@ WORKDIR /repo
 FROM base AS deps
 # pnpm needs every workspace package's package.json to resolve the graph,
 # even filtered to one target — but not their source, so this layer only
-# invalidates when a manifest changes, not on every source edit.
+# invalidates when a manifest changes, not on every source edit. apps/cms is
+# the only workspace package left since apps/web and packages/shared-types
+# were deleted (docs/PLAN-next-migration.md Stage 4).
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .nvmrc ./
 COPY apps/cms/package.json apps/cms/package.json
-COPY apps/web/package.json apps/web/package.json
-COPY packages/shared-types/package.json packages/shared-types/package.json
 # --frozen-lockfile: refuse to silently re-resolve deps if the lockfile is
 # out of date — a stale lockfile should fail the build, not drift quietly.
 RUN pnpm install --frozen-lockfile --filter cms...

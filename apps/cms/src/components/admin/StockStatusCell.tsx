@@ -8,8 +8,8 @@ import type { DefaultCellComponentProps } from 'payload'
 // search/sort/filter/pagination stay intact rather than being reimplemented
 // in a bespoke static view.
 export const StockStatusCell: React.FC<DefaultCellComponentProps> = ({ rowData }) => {
-  const available = Boolean((rowData as any)?.available)
-  const quantity = (rowData as any)?.quantity ?? 0
+  const available = Boolean(rowData?.available)
+  const quantity = (rowData?.quantity as number | undefined) ?? 0
 
   let tone: { bg: string; color: string; label: string }
   if (!available || quantity === 0) {

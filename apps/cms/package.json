@@ -7,6 +7,7 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
+    "lint": "eslint .",
     "payload": "payload",
     "generate:types": "payload generate:types",
     "sync:moysklad": "tsx --env-file-if-exists=.env src/scripts/sync-moysklad.ts",
@@ -15,20 +16,28 @@
     "reconcile:moysklad:daemon": "tsx --env-file-if-exists=.env src/scripts/reconcile-daemon.ts"
   },
   "dependencies": {
+    "@nanostores/persistent": "^1.3.5",
+    "@nanostores/react": "^1.1.0",
     "@payloadcms/db-postgres": "latest",
     "@payloadcms/next": "latest",
     "@payloadcms/richtext-lexical": "latest",
+    "@tailwindcss/postcss": "^4.3.3",
+    "date-fns": "^3.6.0",
     "graphql": "^16.9.0",
-    "next": "^15",
+    "nanostores": "^1.4.2",
+    "next": "^16.3",
     "payload": "latest",
     "react": "^19",
     "react-dom": "^19",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.1",
     "tsx": "^4.23.12",
     "typescript": "^5.7"
   }

@@ -5,5 +5,14 @@ node_modules
 payload-types.ts
 *.tsbuildinfo
 
-# Synced/uploaded media — re-downloadable via `pnpm sync:moysklad`, not source
-media/
+# Next 16's agentRules: true (next.config.mjs) regenerates these on every
+# `next dev`/`next build` — Next's own generated framework/route-convention
+# notes for AI agents, not this project's real CLAUDE.md (repo root).
+/AGENTS.md
+/CLAUDE.md
+
+# Synced/uploaded media — re-downloadable via `pnpm sync:moysklad`, not source.
+# Anchored to this file's own directory (leading /) — an unanchored `media/`
+# also matched src/app/(admin)/admin/media/ (Stage 3 page group 6), silently
+# dropping that route's actions.ts/page.tsx from `git status` entirely.
+/media/

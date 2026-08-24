@@ -1,4 +1,4 @@
-import type { Endpoint } from 'payload'
+import type { Endpoint, Where } from 'payload'
 
 const ACTIVE_STATUSES = ['pending', 'confirmed']
 
@@ -52,7 +52,7 @@ export const rentalAvailabilityBulkEndpoint: Endpoint = {
     // every booking ever made regardless of when it falls.
     const bookedByProduct = new Map<number, number>()
     if (orderIds.length > 0 && start && end) {
-      const where: any = {
+      const where: Where = {
         and: [
           { product: { in: productIds } },
           { order: { in: orderIds } },
@@ -81,14 +81,14 @@ export const rentalAvailabilityBulkEndpoint: Endpoint = {
         depth: 0,
         req,
       })
-      for (const item of items.docs as any[]) {
+      for (const item of items.docs) {
         const productId = typeof item.product === 'object' ? item.product.id : item.product
         bookedByProduct.set(productId, (bookedByProduct.get(productId) || 0) + (item.quantity || 0))
       }
     }
 
     const result: Record<number, number> = {}
-    for (const product of products.docs as any[]) {
+    for (const product of products.docs) {
       if (!product.available) {
         result[product.id] = 0
         continue

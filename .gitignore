@@ -29,8 +29,12 @@ dist-ssr
 .env.*
 !.env.example
 
-# Claude Code local session/tooling state - machine-specific, not project source
-.claude/
+# Claude Code local session/tooling state - machine-specific, not project source.
+# Project-scoped subagents are the exception - shared, checked-in source, like
+# .vscode/extensions.json above.
+.claude/*
+!.claude/agents/
+!.claude/agents/*.md
 
 # pnpm content-addressable store, if ever created locally under the repo root
 .pnpm-store/

@@ -36,12 +36,15 @@ const Layout = ({ children }: Args) => (
   </RootLayout>
 )
 
-// Next's build-time layout checker rejects this against its generated
-// LayoutProps (see next.config.mjs's typescript.ignoreBuildErrors comment
-// for why that's suppressed at the config level instead of here — a
-// per-line suppression comment doesn't work: the diagnostic is anchored in
-// Next's generated .next/types file, not this one, so it can't be
-// suppressed from this source file at all. Also: don't start a line in
-// this comment with the literal directive text, or tsc parses it as a real
-// (and then "unused") suppression pragma — this note is why.)
+// The bare `{children}` form fails Next's build-time check against its
+// generated LayoutProps: @types/react 19.2's ReactPortal now requires its
+// own `children` field, which makes the plain ReactElement `children`
+// resolves to here structurally fail assignability to ReactNode in that one
+// generated-type comparison — a real @types/react 19.2 ecosystem quirk, not
+// a bug in this component. Wrapping in a Fragment sidesteps it. Previously
+// this alone wasn't enough and the whole check was suppressed via
+// `typescript.ignoreBuildErrors` in next.config.mjs; upgrading to Next 16.3
+// (see docs/PLAN-next-migration.md §0.2) made the Fragment-wrapped form
+// pass the generated-type check too, so that flag was removed — don't
+// revert this Fragment wrap without re-verifying `next build` still passes.
 export default Layout

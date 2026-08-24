@@ -16,7 +16,7 @@
 // Использование:
 //   node tools/design-sync.mjs extract "Playback Rental - прокат техники.html"
 //   node tools/design-sync.mjs spec
-//   node tools/design-sync.mjs audit apps/web/src
+//   node tools/design-sync.mjs audit apps/cms/src
 //
 // Зависимостей нет — только Node 22+.
 
@@ -252,7 +252,7 @@ function spec() {
 
 function audit() {
   const dirs = process.argv.slice(3).filter((a) => !a.startsWith('--'))
-  if (!dirs.length) die('нужна папка с кодом: design-sync audit apps/web/src')
+  if (!dirs.length) die('нужна папка с кодом: design-sync audit apps/cms/src')
   const s = readSpec(arg('--template', TEMPLATE))
 
   const files = dirs.flatMap((d) => walk(d, ['.astro', '.tsx', '.jsx', '.ts', '.css']))
@@ -267,7 +267,14 @@ function audit() {
   const focuses = (code.match(/focus(-visible)?:/g) ?? []).length
 
   const designKf = new Map(s.keyframes)
-  const codeKf = new Map(countBy([...code.matchAll(/animation:\s*(bn[A-Za-z]+)/g)].map((m) => m[1])))
+  // Optional leading quote: Astro's inline `style="animation:bnX..."` has
+  // none, but a ported React/JSX `style={{ animation: 'bnX...' }}` always
+  // does — without tolerating it here, every animation in ported .tsx code
+  // audits as 0×, which defeats the point of auditing ported code at all.
+  // Backtick included alongside '/" — a keyframe whose duration is a JS
+  // constant rather than a literal (PromoCarousel's `bnBar ${ROTATE_MS}ms...`)
+  // can only be written as a template literal, not a plain string.
+  const codeKf = new Map(countBy([...code.matchAll(/animation:\s*['"`]?(bn[A-Za-z]+)/g)].map((m) => m[1])))
 
   const L = []
   L.push(`Файлов просмотрено: ${files.length}\n`)
