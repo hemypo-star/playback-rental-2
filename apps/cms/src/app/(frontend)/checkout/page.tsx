@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import CheckoutPage from '../../../components/CheckoutPage'
+import { buildMetadata } from '../../../lib/seo'
 
 // Ported from apps/web/src/pages/checkout.astro (docs/PLAN-next-migration.md
 // Stage 2, page group 7 — the last one). The cart itself is entirely
@@ -17,7 +18,7 @@ import CheckoutPage from '../../../components/CheckoutPage'
 // statically-cached Footer would go stale after any such edit anyway.
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = { title: 'Оформление заказа' }
+export const metadata: Metadata = buildMetadata({ title: 'Оформление заказа', path: '/checkout' })
 
 export default function CheckoutRoutePage() {
   return (

@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import CatalogPage from '../../../components/CatalogPage'
+import { buildMetadata } from '../../../lib/seo'
 
 // Ported from apps/web/src/pages/catalog/index.astro (docs/PLAN-next-
 // migration.md Stage 2). searchParams is a Promise in the App Router
 // (Next 15+) — unlike Astro.url.searchParams, which was synchronous.
-export const metadata: Metadata = { title: 'Каталог техники' }
+export const metadata: Metadata = buildMetadata({ title: 'Каталог техники', path: '/catalog' })
 
 // Search/sort/kit-filter results depend entirely on the query string, which
 // Next can't know ahead of time — same reasoning as the homepage's

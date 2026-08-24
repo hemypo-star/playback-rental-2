@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { buildMetadata } from '../../../lib/seo'
 
 // Ported from apps/web/src/pages/how-it-works.astro (docs/PLAN-next-
 // migration.md Stage 2, page group 2). Pure static markup, no data fetching
@@ -12,7 +13,7 @@ import type { Metadata } from 'next'
 // stage (no live DATABASE_URI there — see apps/cms/Dockerfile).
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = { title: 'Как это работает' }
+export const metadata: Metadata = buildMetadata({ title: 'Как это работает', path: '/how-it-works' })
 
 const steps = [
   { title: 'Просмотрите каталог', body: 'Ознакомьтесь с ассортиментом техники. Отфильтруйте по категориям или найдите конкретную позицию поиском.' },

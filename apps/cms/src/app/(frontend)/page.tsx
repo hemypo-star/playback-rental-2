@@ -11,13 +11,14 @@ import { mediaUrl } from '../../lib/mediaUrl'
 import { formatCurrency } from '../../lib/pricing'
 import { pluralizeRu } from '../../lib/dateRange'
 import { getSubtreeIds } from '../../lib/categoryTree'
+import { buildMetadata } from '../../lib/seo'
 
 // Ported from apps/web/src/pages/index.astro (docs/PLAN-next-migration.md
 // Stage 2, page group 3 — the largest template, 297 lines). Structure and
 // data logic are verbatim; only the syntax changes (Astro frontmatter ->
 // async Server Component, class -> className, inline animation style
 // strings -> style objects).
-export const metadata: Metadata = { title: 'Прокат фото- и видеотехники' }
+export const metadata: Metadata = buildMetadata({ title: 'Прокат фото- и видеотехники', path: '/' })
 
 // Homepage cache freshness: stock/availability/promotions change from admin
 // actions and the МойСклад sync, not from anything Next can see at request

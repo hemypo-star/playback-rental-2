@@ -5,6 +5,7 @@ import '../../styles/global.css'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import CartActionsInit from '../../components/CartActionsInit'
+import { SITE_NAME, siteOrigin } from '../../lib/seo'
 
 // Port of apps/web/src/layouts/Layout.astro (docs/PLAN-next-migration.md
 // Stage 2). Navbar/Footer now render for real — Footer is an async Server
@@ -14,12 +15,25 @@ import CartActionsInit from '../../components/CartActionsInit'
 // Astro.url.pathname did) and is wrapped in Suspense because it also uses
 // useSearchParams(), which Next requires a Suspense boundary for.
 
+// metadataBase lets every page's lib/seo.ts-built `alternates.canonical`/
+// `openGraph.url`/image URLs resolve correctly instead of Next silently
+// falling back to a localhost default (and warning about it) — those are
+// already built as absolute URLs via siteOrigin(), so this is a safety net
+// for any metadata that doesn't go through buildMetadata(), not the only
+// thing making canonical URLs correct.
 export const metadata: Metadata = {
+  metadataBase: new URL(siteOrigin()),
   title: {
-    template: '%s · Playback Rental',
-    default: 'Playback Rental',
+    template: `%s · ${SITE_NAME}`,
+    default: SITE_NAME,
   },
   description: 'Прокат фото- и видеотехники в Кемерове.',
+  openGraph: {
+    siteName: SITE_NAME,
+    type: 'website',
+    locale: 'ru_RU',
+  },
+  twitter: { card: 'summary' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

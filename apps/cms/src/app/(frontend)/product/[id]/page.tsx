@@ -4,6 +4,7 @@ import ProductPurchasePanel from '../../../../components/ProductPurchasePanel'
 import { getProductById, getProducts } from '../../../../lib/data/products'
 import { mediaUrl } from '../../../../lib/mediaUrl'
 import { formatCurrency } from '../../../../lib/pricing'
+import { buildMetadata, siteOrigin } from '../../../../lib/seo'
 
 // Ported from apps/web/src/pages/product/[id].astro (docs/PLAN-next-
 // migration.md Stage 2). Astro.redirect() -> next/navigation's redirect();
@@ -26,7 +27,13 @@ async function loadProduct(idParam: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const product = await loadProduct(id)
-  return { title: product.title, description: product.description ?? undefined }
+  const mainImage = mediaUrl((product.images ?? [])[0])
+  return buildMetadata({
+    title: product.title,
+    description: product.description ?? undefined,
+    path: `/product/${product.id}`,
+    image: mainImage,
+  })
 }
 
 export default async function ProductPage({ params }: Props) {
@@ -51,119 +58,147 @@ export default async function ProductPage({ params }: Props) {
 
   const kitContents = product.isKit ? (product.kitItems ?? []) : []
 
+  // Product/Offer structured data — makes the page eligible for a price/
+  // availability rich snippet in search. businessFunction: LeaseOut is
+  // schema.org's own vocabulary for "this offer is a rental, not a sale" —
+  // there's no separate rental-specific Product type to reach for instead.
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.title,
+    description: product.description ?? product.subtitle ?? undefined,
+    image: images.length ? images : undefined,
+    offers: {
+      '@type': 'Offer',
+      price: product.price,
+      priceCurrency: 'RUB',
+      availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      url: new URL(`/product/${product.id}`, siteOrigin()).toString(),
+      businessFunction: product.listingType === 'rental' ? 'https://schema.org/LeaseOut' : 'https://schema.org/Sell',
+    },
+  }
+  // Embedded as raw <script> text via dangerouslySetInnerHTML (not parsed as
+  // HTML), so the one real risk is a `</script>` substring in admin-authored
+  // title/description breaking out of the tag early — neutralized the
+  // standard way, by escaping `<` so the sequence can never form.
+  const productJsonLdSafe = JSON.stringify(productJsonLd).replace(/</g, '\\u003c')
+
   return (
-    <div className="container-page grid-12 pt-3.5 pb-20">
-      <div className="flex flex-col gap-3.5 sm:col-span-6 lg:col-span-7">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]" style={{ animation: 'bnClip 900ms cubic-bezier(0.16,1,0.3,1) both' }}>
-          {mainImage && <img src={mainImage} alt={product.title} className="h-full w-full object-cover transition-transform duration-[900ms] ease-expo hover:scale-[1.04]" />}
-          <div className="pointer-events-none absolute left-3.5 top-3.5 flex gap-2">
-            {categoryName && (
-              <span className="rounded-full bg-[rgba(10,10,10,0.72)] px-3.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-[10px]">{categoryName}</span>
-            )}
-            <span className={`rounded-full px-3.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.1em] backdrop-blur-[10px] ${inStock ? 'bg-white/[0.86] text-foreground' : 'bg-white/[0.86] text-accent'}`}>
-              {inStock ? 'В наличии' : 'Нет в наличии'}
-            </span>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: productJsonLdSafe }} />
+      <div className="container-page grid-12 pt-3.5 pb-20">
+        <div className="flex flex-col gap-3.5 sm:col-span-6 lg:col-span-7">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]" style={{ animation: 'bnClip 900ms cubic-bezier(0.16,1,0.3,1) both' }}>
+            {mainImage && <img src={mainImage} alt={product.title} className="h-full w-full object-cover transition-transform duration-[900ms] ease-expo hover:scale-[1.04]" />}
+            <div className="pointer-events-none absolute left-3.5 top-3.5 flex gap-2">
+              {categoryName && (
+                <span className="rounded-full bg-[rgba(10,10,10,0.72)] px-3.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-[10px]">{categoryName}</span>
+              )}
+              <span className={`rounded-full px-3.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.1em] backdrop-blur-[10px] ${inStock ? 'bg-white/[0.86] text-foreground' : 'bg-white/[0.86] text-accent'}`}>
+                {inStock ? 'В наличии' : 'Нет в наличии'}
+              </span>
+            </div>
           </div>
-        </div>
 
-        {images.length > 1 && (
-          <div className="grid grid-cols-4 gap-2.5">
-            {images.slice(1, 5).map((url) => (
-              <div key={url} className="aspect-square overflow-hidden rounded-2xl border border-border transition-transform duration-300 ease-expo hover:scale-[1.04]">
-                <img src={url} alt={product.title} className="h-full w-full object-cover" />
+          {images.length > 1 && (
+            <div className="grid grid-cols-4 gap-2.5">
+              {images.slice(1, 5).map((url) => (
+                <div key={url} className="aspect-square overflow-hidden rounded-2xl border border-border transition-transform duration-300 ease-expo hover:scale-[1.04]">
+                  <img src={url} alt={product.title} className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="rounded-3xl border border-border bg-card p-[30px_30px_26px]">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-subtle">
+              <a href="/" className="border-none transition-colors duration-240 ease-expo hover:text-accent">Главная</a> /{' '}
+              <a href="/catalog" className="border-none transition-colors duration-240 ease-expo hover:text-accent">Каталог</a>
+              {categoryName && categorySlug && (
+                <>
+                  {' '}/ <a href={`/catalog/${categorySlug}`} className="border-none transition-colors duration-240 ease-expo hover:text-accent">{categoryName}</a>
+                </>
+              )}
+            </div>
+            <h1 className="mt-3.5 text-[clamp(28px,3.6vw,50px)] font-medium leading-none tracking-[-0.045em]">{product.title}</h1>
+            {product.subtitle && <div className="mt-2.5 text-[14px] text-subtle">{product.subtitle}</div>}
+            {product.description && <p className="mt-5 max-w-[560px] text-[16.5px] leading-[1.5] text-[#2A2925]">{product.description}</p>}
+          </div>
+
+          {kitContents.length > 0 && (
+            <div className="rounded-3xl border border-border bg-card p-6.5">
+              <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Что в комплекте</div>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {kitContents.map((item, i) => (
+                  <div key={item.id ?? i} className="flex items-center gap-3 rounded-2xl bg-muted p-[12px_14px] transition-[background-color,transform] duration-240 ease-expo hover:translate-x-[3px] hover:bg-[#EAE8E4]">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[10.5px] font-bold text-accent">{i + 1}</span>
+                    <span className="text-[14px]">{item.label}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-
-        <div className="rounded-3xl border border-border bg-card p-[30px_30px_26px]">
-          <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-subtle">
-            <a href="/" className="border-none transition-colors duration-240 ease-expo hover:text-accent">Главная</a> /{' '}
-            <a href="/catalog" className="border-none transition-colors duration-240 ease-expo hover:text-accent">Каталог</a>
-            {categoryName && categorySlug && (
-              <>
-                {' '}/ <a href={`/catalog/${categorySlug}`} className="border-none transition-colors duration-240 ease-expo hover:text-accent">{categoryName}</a>
-              </>
-            )}
-          </div>
-          <h1 className="mt-3.5 text-[clamp(28px,3.6vw,50px)] font-medium leading-none tracking-[-0.045em]">{product.title}</h1>
-          {product.subtitle && <div className="mt-2.5 text-[14px] text-subtle">{product.subtitle}</div>}
-          {product.description && <p className="mt-5 max-w-[560px] text-[16.5px] leading-[1.5] text-[#2A2925]">{product.description}</p>}
-        </div>
-
-        {kitContents.length > 0 && (
-          <div className="rounded-3xl border border-border bg-card p-6.5">
-            <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Что в комплекте</div>
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {kitContents.map((item, i) => (
-                <div key={item.id ?? i} className="flex items-center gap-3 rounded-2xl bg-muted p-[12px_14px] transition-[background-color,transform] duration-240 ease-expo hover:translate-x-[3px] hover:bg-[#EAE8E4]">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[10.5px] font-bold text-accent">{i + 1}</span>
-                  <span className="text-[14px]">{item.label}</span>
-                </div>
-              ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {accessories.length > 0 && (
-          <div className="rounded-3xl border border-border bg-card p-6.5">
-            <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Совместимые аксессуары</div>
-            <div className="mt-2.5">
-              {accessories.map((a) => (
-                <div key={a.id} className="mx-[-14px] flex items-center justify-between gap-4 rounded-2xl px-3.5 py-3.5 transition-colors duration-240 ease-expo hover:bg-muted">
-                  <div>
-                    <div className="text-[15.5px] font-medium tracking-[-0.02em]">{a.title}</div>
-                    <div className="mt-1 text-[12.5px] text-subtle">{formatCurrency(a.price)}{a.listingType === 'rental' ? ' / сутки' : ''}</div>
+          {accessories.length > 0 && (
+            <div className="rounded-3xl border border-border bg-card p-6.5">
+              <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Совместимые аксессуары</div>
+              <div className="mt-2.5">
+                {accessories.map((a) => (
+                  <div key={a.id} className="mx-[-14px] flex items-center justify-between gap-4 rounded-2xl px-3.5 py-3.5 transition-colors duration-240 ease-expo hover:bg-muted">
+                    <div>
+                      <div className="text-[15.5px] font-medium tracking-[-0.02em]">{a.title}</div>
+                      <div className="mt-1 text-[12.5px] text-subtle">{formatCurrency(a.price)}{a.listingType === 'rental' ? ' / сутки' : ''}</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="h-9 shrink-0 whitespace-nowrap rounded-full bg-muted px-4 text-[10.5px] font-semibold uppercase tracking-[0.12em] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground"
+                      data-add-to-cart
+                      data-product-id={a.id}
+                      data-title={a.title}
+                      data-price={a.price}
+                      data-listing-type={a.listingType}
+                      data-image={mediaUrl(Array.isArray(a.images) ? a.images[0] : undefined) ?? ''}
+                      data-unit={a.listingType === 'rental' ? 'сутки' : 'шт.'}
+                    >
+                      Добавить
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className="h-9 shrink-0 whitespace-nowrap rounded-full bg-muted px-4 text-[10.5px] font-semibold uppercase tracking-[0.12em] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground"
-                    data-add-to-cart
-                    data-product-id={a.id}
-                    data-title={a.title}
-                    data-price={a.price}
-                    data-listing-type={a.listingType}
-                    data-image={mediaUrl(Array.isArray(a.images) ? a.images[0] : undefined) ?? ''}
-                    data-unit={a.listingType === 'rental' ? 'сутки' : 'шт.'}
+                ))}
+              </div>
+            </div>
+          )}
+
+          {related.length > 0 && (
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+              {related.map((p, i) => {
+                const relImg = mediaUrl(Array.isArray(p.images) ? p.images[0] : undefined)
+                return (
+                  <a
+                    key={p.id}
+                    href={`/product/${p.id}`}
+                    className="rounded-[22px] border border-border bg-card p-3 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
+                    style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
                   >
-                    Добавить
-                  </button>
-                </div>
-              ))}
+                    <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">
+                      {relImg && <img src={relImg} alt={p.title} className="h-full w-full object-cover" />}
+                    </div>
+                    <div className="p-[14px_4px_4px]">
+                      <div className="text-[14.5px] font-medium leading-[1.25] tracking-[-0.02em]">{p.title}</div>
+                      <div className="mt-1 text-[12px] text-subtle">{formatCurrency(p.price)}{p.listingType === 'rental' ? ' / сутки' : ''}</div>
+                    </div>
+                  </a>
+                )
+              })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {related.length > 0 && (
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-            {related.map((p, i) => {
-              const relImg = mediaUrl(Array.isArray(p.images) ? p.images[0] : undefined)
-              return (
-                <a
-                  key={p.id}
-                  href={`/product/${p.id}`}
-                  className="rounded-[22px] border border-border bg-card p-3 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
-                  style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
-                >
-                  <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">
-                    {relImg && <img src={relImg} alt={p.title} className="h-full w-full object-cover" />}
-                  </div>
-                  <div className="p-[14px_4px_4px]">
-                    <div className="text-[14.5px] font-medium leading-[1.25] tracking-[-0.02em]">{p.title}</div>
-                    <div className="mt-1 text-[12px] text-subtle">{formatCurrency(p.price)}{p.listingType === 'rental' ? ' / сутки' : ''}</div>
-                  </div>
-                </a>
-              )
-            })}
+        <div className="sm:col-span-6 lg:col-span-5">
+          <div className="sticky top-[96px]">
+            <ProductPurchasePanel product={product} imageUrl={mainImage} />
           </div>
-        )}
-      </div>
-
-      <div className="sm:col-span-6 lg:col-span-5">
-        <div className="sticky top-[96px]">
-          <ProductPurchasePanel product={product} imageUrl={mainImage} />
         </div>
       </div>
-    </div>
+    </>
   )
 }

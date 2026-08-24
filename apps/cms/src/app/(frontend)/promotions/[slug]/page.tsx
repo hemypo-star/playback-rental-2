@@ -4,6 +4,7 @@ import ProductCard from '../../../../components/ProductCard'
 import PromoCarousel from '../../../../components/PromoCarousel'
 import { getPromotionBySlug, getActivePromotions } from '../../../../lib/data/promotions'
 import { mediaUrl } from '../../../../lib/mediaUrl'
+import { buildMetadata } from '../../../../lib/seo'
 import type { Product, Category } from '../../../../payload-types'
 
 // Ported from apps/web/src/pages/promotions/[slug].astro (docs/PLAN-next-
@@ -26,7 +27,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const promo = await getPromotionBySlug(slug)
   if (!promo) return {}
-  return { title: promo.title, description: promo.text ?? undefined }
+  return buildMetadata({
+    title: promo.title,
+    description: promo.text ?? undefined,
+    path: `/promotions/${slug}`,
+    image: mediaUrl(promo.image),
+  })
 }
 
 export default async function PromotionPage({ params }: Props) {

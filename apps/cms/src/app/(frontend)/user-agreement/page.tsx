@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { buildMetadata } from '../../../lib/seo'
 
 // Ported from apps/web/src/pages/user-agreement.astro (docs/PLAN-next-
 // migration.md Stage 2, page 1 of 7 — legal pages, "чистая вёрстка, разогрев
@@ -10,7 +11,7 @@ import type { Metadata } from 'next'
 // stage (no live DATABASE_URI there — see apps/cms/Dockerfile).
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = { title: 'Пользовательское соглашение' }
+export const metadata: Metadata = buildMetadata({ title: 'Пользовательское соглашение', path: '/user-agreement' })
 
 export default function UserAgreementPage() {
   return (

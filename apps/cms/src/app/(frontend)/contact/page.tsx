@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import ContactForm from '../../../components/ContactForm'
 import { getSiteSettings } from '../../../lib/data/siteSettings'
+import { buildMetadata } from '../../../lib/seo'
 
 // Ported from apps/web/src/pages/contact.astro (docs/PLAN-next-migration.md
 // Stage 2, page group 2). SiteSettings via the Local API data layer, same
@@ -14,7 +15,7 @@ import { getSiteSettings } from '../../../lib/data/siteSettings'
 // DATABASE_URI there — see apps/cms/Dockerfile).
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = { title: 'Контакты' }
+export const metadata: Metadata = buildMetadata({ title: 'Контакты', path: '/contact' })
 
 export default async function ContactPage() {
   const s = await getSiteSettings()
