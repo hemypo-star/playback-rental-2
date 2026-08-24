@@ -12,7 +12,13 @@ import { withPayload } from '@payloadcms/next/withPayload'
 // break legitimate requests in confusing ways. WEB_URL is the same env var
 // payload.config.ts uses for cors/csrf — one source of truth for "this
 // deployment's real public origin."
-const webUrl = process.env.WEB_URL || 'http://localhost:4322'
+// Fallback was 'http://localhost:4322' (apps/web's old port, pre-Next.js-
+// migration) until 2026-08-24 — stale since Stage 4 (2026-08-21) made this
+// app the single public entry point on 3000; only ever mattered if WEB_URL
+// were genuinely unset, but every other fallback in the codebase
+// (.env.example, payload.config.ts) already used 3000. SEC-004,
+// docs/audits/2026-08-24-baseline.md.
+const webUrl = process.env.WEB_URL || 'http://localhost:3000'
 const allowedOrigin = new URL(webUrl).host
 
 /** @type {import('next').NextConfig} */
@@ -38,6 +44,31 @@ const nextConfig = {
   // eslint.config.mjs (see `legacyAnyPaths`) — new code, including every
   // route group the Next.js migration adds, is linted at full strictness.
   // Retyping the legacy surface is separate follow-up work, not a blocker.
+  //
+  // SEC-002 (docs/audits/2026-08-24-baseline.md): confirmed live via
+  // `curl -sD -` that no security response headers were set anywhere in
+  // this app. SAMEORIGIN rather than DENY on X-Frame-Options — nothing in
+  // this app currently relies on being iframed cross-origin, but Payload's
+  // own admin UI (/cms) may use same-origin iframes internally for some
+  // panels, so SAMEORIGIN is the safer default that still blocks the actual
+  // threat (third-party clickjacking) without risking breaking that.
+  // Strict-Transport-Security is a no-op over plain HTTP (browsers ignore
+  // it unless the response was actually served over HTTPS) — harmless to
+  // set now, and it's the header a reverse proxy/CDN terminating real TLS
+  // in front of this container would need forwarded through anyway.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ]
+  },
 }
 
 export default withPayload(nextConfig, { devBundleServerPackages: false })
