@@ -274,6 +274,16 @@ export default function CheckoutPage() {
   // back from stores afterward (clearCart() empties $cart immediately
   // after, and this survives regardless of what the stores do next).
   const [success, setSuccess] = useState<{ orderId: number; startDate: Date | null; endDate: Date | null } | null>(null)
+  // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes). appliedPromo is only
+  // ever set from a *successful* /api/promo-codes/validate response — the
+  // client never invents a discount, it only previews one the server has
+  // already confirmed. The server re-resolves the code again at submit
+  // time regardless (checkout/actions.ts) — this state is display-only,
+  // never sent as a discount value, only the code string is.
+  const [promoCodeInput, setPromoCodeInput] = useState('')
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountType: 'percent' | 'fixed'; discountValue: number } | null>(null)
+  const [promoChecking, setPromoChecking] = useState(false)
+  const [promoError, setPromoError] = useState<string | null>(null)
   const [availability, setAvailability] = useState<Record<number, number>>({})
   const [availabilityLoading, setAvailabilityLoading] = useState(false)
   // True once a bulk fetch has actually completed successfully for the
@@ -512,6 +522,52 @@ export default function CheckoutPage() {
   // `hasRentalItems` specifically rather than `cart.length > 0`.
   const canComputeTotal = !hasRentalItems || hasDates
 
+  // Preview only — matches recalcOrderTotal's (OrderItems.ts) own clamping
+  // exactly: Math.round for percent, Math.min(value, gross) for fixed, and
+  // Math.max(0, ...) so a fixed discount larger than the order shows 0 here
+  // too, never a negative "К оплате". Same reasoning as `total` itself
+  // above: this is the one and only place the *previewed* discount is
+  // computed, so what the customer sees here can never disagree with what
+  // recalcOrderTotal actually stores once the order exists — both apply the
+  // same two-branch formula to the same clamped inputs, they just run in
+  // different processes at different times.
+  const promoDiscount =
+    mounted && appliedPromo && canComputeTotal
+      ? Math.min(
+          appliedPromo.discountType === 'percent' ? Math.round((total * appliedPromo.discountValue) / 100) : appliedPromo.discountValue,
+          total,
+        )
+      : 0
+  const totalAfterDiscount = Math.max(0, total - promoDiscount)
+
+  const handleApplyPromo = async () => {
+    const code = promoCodeInput.trim()
+    if (!code) return
+    setPromoError(null)
+    setPromoChecking(true)
+    try {
+      const res = await fetch(`/api/promo-codes/validate?code=${encodeURIComponent(code)}`)
+      const data = (await res.json().catch(() => null)) as { valid?: boolean; discountType?: 'percent' | 'fixed'; discountValue?: number } | null
+      if (!data?.valid || !data.discountType || !data.discountValue) {
+        setAppliedPromo(null)
+        setPromoError('Промокод не найден или больше не действует.')
+        return
+      }
+      setAppliedPromo({ code, discountType: data.discountType, discountValue: data.discountValue })
+    } catch {
+      setAppliedPromo(null)
+      setPromoError('Не удалось проверить промокод. Попробуйте ещё раз.')
+    } finally {
+      setPromoChecking(false)
+    }
+  }
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null)
+    setPromoCodeInput('')
+    setPromoError(null)
+  }
+
   if (success) {
     // E2 (design_handoff_swiss_bento/08-instruction.md, S4): "не toast, а
     // замена панели на карточку с номером заявки, датами и P2 «В каталог»"
@@ -653,6 +709,11 @@ export default function CheckoutPage() {
           startDate: item.listingType === 'rental' ? (dates.startDate?.toISOString() ?? undefined) : undefined,
           endDate: item.listingType === 'rental' ? (dates.endDate?.toISOString() ?? undefined) : undefined,
         })),
+        // Only the code string — never appliedPromo.discountType/Value. The
+        // server re-resolves it from scratch (checkout/actions.ts) and
+        // silently drops it (full price, no error) if it's since expired
+        // or been deactivated, so there's nothing to keep in sync here.
+        promoCode: appliedPromo?.code,
       })
 
       if (!result.success || result.orderId === undefined) {
@@ -971,6 +1032,49 @@ export default function CheckoutPage() {
         <div className="lg:col-span-5">
           <div className="sticky top-[96px] rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Итог</div>
+
+            {/* Backlog item 5 (docs/ROADMAP-2.0.md, promo codes). Disabled
+                once applied — "Убрать" clears it rather than allowing a
+                second code to stack, matching the one-promo-per-order shape
+                orders.promoCode itself stores (a single text field, not a
+                list). */}
+            <div className="mt-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoCodeInput}
+                  onChange={(e) => {
+                    setPromoCodeInput(e.target.value)
+                    setPromoError(null)
+                  }}
+                  disabled={Boolean(appliedPromo)}
+                  placeholder="Промокод"
+                  className="h-11 min-w-0 flex-1 rounded-[14px] border border-input bg-muted-well px-4 text-[13.5px] uppercase outline-none transition-[border-color,background-color] duration-240 ease-expo focus:border-foreground focus:bg-white disabled:opacity-60"
+                />
+                {appliedPromo ? (
+                  <button type="button" onClick={handleRemovePromo} className="btn-outline h-11 shrink-0 px-4 text-[11px]">
+                    Убрать
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void handleApplyPromo()}
+                    disabled={promoChecking || !promoCodeInput.trim()}
+                    className="btn-outline h-11 shrink-0 px-4 text-[11px]"
+                  >
+                    {promoChecking ? '…' : 'Применить'}
+                  </button>
+                )}
+              </div>
+              {promoError && <p className="mt-1.5 text-[12px] text-destructive">{promoError}</p>}
+              {appliedPromo && !promoError && (
+                <p className="mt-1.5 text-[12px] text-subtle">
+                  ✓ Промокод «{appliedPromo.code}» применён —{' '}
+                  {appliedPromo.discountType === 'percent' ? `скидка ${appliedPromo.discountValue}%` : `скидка ${formatCurrency(appliedPromo.discountValue)}`}.
+                </p>
+              )}
+            </div>
+
             <div className="mt-2.5">
               {/* B3 order (design_handoff_swiss_bento/08-instruction.md,
                   audit N3): Ставка за смену → Срок → Позиций → К оплате —
@@ -1004,11 +1108,26 @@ export default function CheckoutPage() {
               )}
               {hasSaleItems && <div className="flex items-baseline justify-between py-2.5 text-[13.5px]"><span className="text-subtle">Покупка</span><span className="font-semibold">{formatCurrency(saleTotal)}</span></div>}
               <div className="flex items-baseline justify-between py-2.5 text-[13.5px]"><span className="text-subtle">Позиций</span><span>{cart.reduce((s, i) => s + getDisplayQuantity(i), 0)} поз.</span></div>
+              {/* Backlog item 5 (docs/ROADMAP-2.0.md, promo codes) — only
+                  shown once a code is both applied and the total is
+                  actually computable (canComputeTotal — see promoDiscount's
+                  own definition above for why it's gated the same way). A
+                  0-value discount (e.g. a fixed code larger than the order,
+                  clamped) still renders the row rather than hiding it — the
+                  customer applied a real code, it just didn't reduce this
+                  particular total, which is worth showing rather than
+                  silently disappearing. */}
+              {appliedPromo && canComputeTotal && (
+                <div className="flex items-baseline justify-between py-2.5 text-[13.5px]">
+                  <span className="text-subtle">Скидка</span>
+                  <span className="font-semibold text-accent">{formatCurrency(-promoDiscount)}</span>
+                </div>
+              )}
               <div className="mt-2.5 flex items-baseline justify-between rounded-[18px] bg-muted px-[18px] py-4.5">
                 {canComputeTotal ? (
                   <>
                     <span className="text-[11px] font-semibold uppercase tracking-[0.13em]">К оплате</span>
-                    <span key={total} className="text-[32px] font-semibold tracking-[-0.04em]" style={{ animation: 'bnPop 380ms var(--ease-expo) both' }}>{formatCurrency(total)}</span>
+                    <span key={totalAfterDiscount} className="text-[32px] font-semibold tracking-[-0.04em]" style={{ animation: 'bnPop 380ms var(--ease-expo) both' }}>{formatCurrency(totalAfterDiscount)}</span>
                   </>
                 ) : (
                   // B2 (N4): no dates yet, so the payable total is genuinely

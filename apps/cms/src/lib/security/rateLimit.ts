@@ -33,6 +33,16 @@ export type RateLimitBucket =
   | 'forgot_password_account'
   | 'unlock_ip'
   | 'unlock_account'
+  // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes) — GET /api/promo-codes/
+  // validate (endpoints/promoCodeValidate.ts) is a public oracle over a
+  // secret code space (PromoCodes.ts is deliberately admin-only-readable),
+  // so it needs the same protection every other public write/lookup path
+  // gets. IP-only, no second dimension (unlike checkout/contact, which pair
+  // IP with phone/email): this is a bare GET with no other caller-supplied
+  // identity to key on, and inventing one (e.g. keying on the attempted
+  // code itself) would let an attacker exhaust it per-code instead of
+  // per-attacker, defeating the point.
+  | 'promo_validate_ip'
 
 export interface RateLimitConfig {
   /** Sliding window size in milliseconds. */
@@ -113,6 +123,15 @@ export function getRateLimitConfig(bucket: RateLimitBucket): RateLimitConfig {
       return {
         max: envInt('RATE_LIMIT_UNLOCK_ACCOUNT_MAX', 5),
         windowMs: envInt('RATE_LIMIT_UNLOCK_ACCOUNT_WINDOW_MS', HOUR_MS),
+      }
+    case 'promo_validate_ip':
+      // Generous default, biased toward never blocking a real customer who
+      // mistypes a code a few times — 30/hour comfortably covers that while
+      // still bounding a brute-force script to well under one guess per
+      // minute.
+      return {
+        max: envInt('RATE_LIMIT_PROMO_VALIDATE_IP_MAX', 30),
+        windowMs: envInt('RATE_LIMIT_PROMO_VALIDATE_IP_WINDOW_MS', HOUR_MS),
       }
   }
 }

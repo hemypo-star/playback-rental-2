@@ -18,19 +18,20 @@ interface NavItem {
   badge?: keyof AdminNavBadges
 }
 
-// Категории/Акции aren't in the delivered mockup (it never designed a
-// catalog-editing screen at all — see docs/PLAN-docker-admin.md Step 6) but
-// need somewhere to live; grouped next to Склад as the other catalog-data
-// tabs, styled identically to the designed items rather than bolted on
-// visually differently. Only the three items the mockup itself badged
-// (Заказы/Склад/Клиенты) get one here — see navBadges.ts for what each
-// number means.
+// Категории/Акции/Промокоды aren't in the delivered mockup (it never
+// designed a catalog-editing screen at all — see docs/PLAN-docker-admin.md
+// Step 6) but need somewhere to live; grouped next to Склад as the other
+// catalog-data tabs, styled identically to the designed items rather than
+// bolted on visually differently. Only the three items the mockup itself
+// badged (Заказы/Склад/Клиенты) get one here — see navBadges.ts for what
+// each number means.
 const NAV: NavItem[] = [
   { id: 'orders', label: 'Заказы', href: '/admin/orders', badge: 'orders' },
   { id: 'calendar', label: 'Календарь', href: '/admin/calendar' },
   { id: 'stock', label: 'Склад', href: '/admin/stock', badge: 'stock' },
   { id: 'categories', label: 'Категории', href: '/admin/categories' },
   { id: 'promotions', label: 'Акции', href: '/admin/promotions' },
+  { id: 'promo-codes', label: 'Промокоды', href: '/admin/promo-codes' },
   { id: 'clients', label: 'Клиенты', href: '/admin/clients', badge: 'clients' },
   { id: 'analytics', label: 'Аналитика', href: '/admin/analytics' },
   { id: 'media', label: 'Медиатека', href: '/admin/media' },

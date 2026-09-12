@@ -12,11 +12,13 @@ import { Products } from './collections/Products'
 import { Orders } from './collections/Orders'
 import { OrderItems } from './collections/OrderItems'
 import { Promotions } from './collections/Promotions'
+import { PromoCodes } from './collections/PromoCodes'
 import { SiteSettings } from './globals/SiteSettings'
 import { moyskladWebhookEndpoint } from './endpoints/moyskladWebhook'
 import { rentalAvailabilityEndpoint } from './endpoints/rentalAvailability'
 import { rentalAvailabilityBulkEndpoint } from './endpoints/rentalAvailabilityBulk'
 import { contactNotificationEndpoint } from './endpoints/contactNotification'
+import { promoCodeValidateEndpoint } from './endpoints/promoCodeValidate'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -67,7 +69,7 @@ export default buildConfig({
   routes: {
     admin: '/cms',
   },
-  collections: [Users, Media, Categories, Products, Orders, OrderItems, Promotions],
+  collections: [Users, Media, Categories, Products, Orders, OrderItems, Promotions, PromoCodes],
   globals: [SiteSettings],
   // WEB_URL is this app's OWN public origin (see apps/cms/.env.example —
   // named for consistency with the root .env.example/compose.yaml, not
@@ -87,7 +89,7 @@ export default buildConfig({
   // payload.auth(), see the 2026-08-20 dev log entry).
   cors: [process.env.WEB_URL || 'http://localhost:3000'],
   csrf: [process.env.WEB_URL || 'http://localhost:3000'],
-  endpoints: [moyskladWebhookEndpoint, rentalAvailabilityEndpoint, rentalAvailabilityBulkEndpoint, contactNotificationEndpoint],
+  endpoints: [moyskladWebhookEndpoint, rentalAvailabilityEndpoint, rentalAvailabilityBulkEndpoint, contactNotificationEndpoint, promoCodeValidateEndpoint],
   editor: lexicalEditor(),
   // Guaranteed set — see the throw above.
   secret: process.env.PAYLOAD_SECRET,

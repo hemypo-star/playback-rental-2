@@ -88,6 +88,35 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
     endDate?: string
   }>
 
+  // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes). frozenUnitPrice()
+  // back-derives a per-position price from lineTotal, which OrderItems.ts's
+  // beforeValidate hook always stores GROSS (undiscounted) — the discount
+  // itself is applied at the order level, by recalcOrderTotal, not per
+  // line (see that file's own comment for why). Left alone, МойСклад would
+  // therefore record every position at its full, undiscounted price — a
+  // higher total than the customer actually pays, a silent divergence in
+  // the owner's real inventory/accounting system. Scale every pushed
+  // unitPrice by the order's actual discount factor instead, so the sum
+  // МойСклад sees matches order.totalPrice (net of the discount), not the
+  // gross sum of lineTotal. gross === 0 guard: an order can only reach here
+  // with items (checked above), and lineTotal is never negative, so gross
+  // is 0 only in the degenerate all-free-lines case — factor stays 1
+  // (no scaling) rather than dividing by zero.
+  const gross = items.reduce((sum, item) => sum + item.lineTotal, 0)
+  const promoDiscount = order.promoDiscount ?? 0
+  const discountFactor = gross > 0 ? 1 - promoDiscount / gross : 1
+
+  // МойСклад's own customerorder positions have a per-position `discount`
+  // field that would render this far more legibly in their UI (a visible
+  // "10% off" line, not just a quietly lower price) — not used here because
+  // pushing a new field to a live third-party API can't be verified in this
+  // environment under the standing no-live-МойСклад-credentials rule for
+  // this task. Scaling unitPrice is the deliberate choice instead: it's
+  // exactly how a percentage discount already reached МойСклад before this
+  // change (frozenUnitPrice always derived from a post-discount lineTotal
+  // when the old, percent-only, per-line design applied it inside
+  // beforeValidate), so this preserves existing behavior for percent codes
+  // and extends the same mechanism to fixed-amount ones.
   let moySkladOrderId: string | null = null
   let moySkladError: string | null = null
   try {
@@ -100,7 +129,7 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
         moySkladId: item.product.moySkladId,
         listingType: item.listingType,
         quantity: item.quantity,
-        unitPrice: frozenUnitPrice(item),
+        unitPrice: frozenUnitPrice(item) * discountFactor,
         startDate: item.startDate,
         endDate: item.endDate,
       })),
@@ -119,6 +148,15 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
     customerEmail: order.customerEmail,
     customerPhone: order.customerPhone,
     totalPrice: order.totalPrice ?? 0,
+    // Additive — promoCode/promoDiscount are new keys, every existing key
+    // is unchanged, so an n8n workflow built against the pre-existing
+    // payload shape keeps working untouched. Included so the owner's
+    // workflow isn't shown a totalPrice it can't explain (order.totalPrice
+    // is already net of the discount; without these two fields there'd be
+    // no way to tell "this total is low because of a promo" from "this
+    // total is just what these items cost").
+    promoCode: order.promoCode || null,
+    promoDiscount,
     items: items.map((item) => ({
       title: item.product.title,
       quantity: item.quantity,

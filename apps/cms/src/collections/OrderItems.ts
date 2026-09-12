@@ -3,6 +3,7 @@ import { APIError } from 'payload'
 import { differenceInCalendarDays } from 'date-fns'
 import { calculateLineTotal } from '../lib/rental/pricing'
 import { getAvailableRentalQuantity, getAvailableSaleQuantity, lockProductForBooking } from '../lib/rental/availability'
+import { resolveActivePromoCode } from '../lib/promo/promoCodes'
 
 // Hooks receive relationship fields populated to Payload's default depth
 // (an object), not a plain id — normalize before using it as a query value
@@ -17,21 +18,64 @@ function toId(value: unknown): number {
 // the update silently computes against stale data (caught in Phase 1 testing:
 // totalPrice stayed 0 after creating a line item, even though the item's own
 // lineTotal was correct).
+// Promo-code discount (backlog item 5, docs/ROADMAP-2.0.md) is applied
+// HERE, at the order level — not in OrderItems' beforeValidate hook, where
+// commit ffbcf40's percent-only version applied it per line. That worked
+// for a percentage by coincidence of the maths (applying X% per line and
+// summing equals applying X% to the sum), but the owner's actual
+// requirement is percent OR a fixed rouble amount, and a fixed amount does
+// not decompose into lines: any pro-rata share computed inside
+// beforeValidate would be computed against an incomplete order (line 1
+// saves before line 2 exists), so it would be wrong for every multi-line
+// order. recalcOrderTotal already owns orders.totalPrice and already loads
+// every sibling line, so it's the one place the real gross total exists —
+// extending it is not a violation of "pricing math lives in exactly one
+// place," it's that same rule pointing at the collection that was already
+// the right owner. lineTotal itself stays GROSS (undiscounted) and keeps
+// meaning "the real price of this line" — the discount only ever shows up
+// in orders.totalPrice/promoDiscount, never in an individual line.
 async function recalcOrderTotal(req: PayloadRequest, orderRef: unknown): Promise<void> {
   const orderId = toId(orderRef)
-  const siblings = await req.payload.find({
-    collection: 'orderItems',
-    where: { order: { equals: orderId } },
-    limit: 0,
-    depth: 0,
-    req,
-  })
-  const total = siblings.docs.reduce((sum, item: { lineTotal?: number | null }) => sum + (item.lineTotal || 0), 0)
+  const [siblings, order] = await Promise.all([
+    req.payload.find({
+      collection: 'orderItems',
+      where: { order: { equals: orderId } },
+      limit: 0,
+      depth: 0,
+      req,
+    }),
+    // depth: 0 — only need the raw promoCode string, not a populated
+    // relationship. disableErrors: an order can theoretically be deleted
+    // out from under a still-in-flight sibling-item hook (e.g. an admin
+    // deleting the order while its own afterDelete cascade is still
+    // running) — treat that as "no order to discount" rather than throwing.
+    req.payload.findByID({ collection: 'orders', id: orderId, depth: 0, req, disableErrors: true }),
+  ])
+  const gross = siblings.docs.reduce((sum, item: { lineTotal?: number | null }) => sum + (item.lineTotal || 0), 0)
+
+  // Re-resolved server-side on every recalc — never trusted from a stored
+  // "discount already computed" value — so an order's discount always
+  // reflects the promo code's *current* state (still active, not expired)
+  // and the order's *current* gross (a later admin edit to quantity/dates
+  // reapplies against the new gross, not a stale one).
+  const promo = order ? await resolveActivePromoCode(req.payload, order.promoCode, req) : null
+  const discount = promo
+    ? promo.discountType === 'percent'
+      ? Math.round((gross * promo.discountValue) / 100)
+      : Math.min(promo.discountValue, gross)
+    : 0
+  // Math.max(0, ...) is a safety net, not the normal path: a percent
+  // discount is validated to 1–100 (PromoCodes.ts) so it can never exceed
+  // gross on its own, and a fixed discount is already clamped to gross via
+  // Math.min above. Both branches are written so a discount larger than
+  // the order zeroes totalPrice rather than going negative — deliberate;
+  // no minimum-order threshold exists, and none should be invented here.
+  const totalPrice = Math.max(0, gross - discount)
 
   await req.payload.update({
     collection: 'orders',
     id: orderId,
-    data: { totalPrice: total },
+    data: { totalPrice, promoDiscount: discount },
     req,
   })
 }

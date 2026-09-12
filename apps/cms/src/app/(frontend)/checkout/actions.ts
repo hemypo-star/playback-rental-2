@@ -23,6 +23,7 @@ import { checkoutErrorInfoFromUnknown, type CheckoutErrorCode, type CheckoutErro
 import { checkRateLimits, type RateLimitCheck } from '../../../lib/security/rateLimit'
 import { getClientIp } from '../../../lib/security/clientIp'
 import { normalizePhoneForRateLimit } from '../../../lib/text/phone'
+import { resolveActivePromoCode } from '../../../lib/promo/promoCodes'
 
 export interface CheckoutItem {
   productId: number
@@ -37,6 +38,13 @@ export interface CheckoutInput {
   customerPhone: string
   notes?: string
   items: CheckoutItem[]
+  // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes) — the code as typed
+  // (and client-validated) by the customer. Never trusted as-is: re-
+  // resolved server-side below via the exact same resolveActivePromoCode()
+  // recalcOrderTotal (OrderItems.ts) uses, so the client's own claimed
+  // discountType/discountValue never reaches the server at all, only the
+  // code string itself.
+  promoCode?: string
 }
 
 export interface CheckoutResult {
@@ -94,6 +102,19 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
       return { success: false, errorCode: 'RATE_LIMITED' }
     }
 
+    // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes) — re-resolved here,
+    // server-side, via the exact same function recalcOrderTotal
+    // (OrderItems.ts) will call again once line items exist. An invalid,
+    // expired, or since-deactivated code at submit time must NOT fail the
+    // checkout: store no code at all, so the order goes through at full
+    // price rather than surfacing an error for something the customer
+    // isn't trying to fix right now (they're submitting a booking, not
+    // redeeming a coupon). This is also why the client's own claimed
+    // discountType/discountValue (from the validate endpoint's earlier,
+    // separate check) is never read here — only the code string, re-
+    // verified against the database's current state.
+    const promo = await resolveActivePromoCode(payload, input.promoCode, undefined)
+
     // overrideAccess: false (Local API defaults to true, i.e. bypassing
     // access control) — this is a genuinely public, anonymous checkout, so
     // it should be evaluated under the same collection access rules a real
@@ -114,6 +135,13 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
         // create() overload.
         status: 'pending',
         ...(input.notes ? { notes: input.notes } : {}),
+        // promo.code, not input.promoCode verbatim: normalizes case/
+        // whitespace to exactly what resolveActivePromoCode() will match
+        // again later (recalcOrderTotal re-resolves by this stored value,
+        // not by remembering the promo's id). Omitted entirely for an
+        // invalid/expired code — no code stored means no discount applied,
+        // per the "never fail checkout over this" rule above.
+        ...(promo ? { promoCode: promo.code } : {}),
       },
       overrideAccess: false,
     })

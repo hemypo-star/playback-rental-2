@@ -79,6 +79,41 @@ export const Orders: CollectionConfig = {
       type: 'textarea',
     },
     {
+      // Set once at checkout (order creation), never changed afterward —
+      // orders are admin-only to update, so a public client has no way to
+      // attach a code after the fact anyway. The discount itself is applied
+      // at the order level by OrderItems.ts's recalcOrderTotal, not per
+      // line (see that file's own comment for why a fixed-amount discount
+      // can't be prorated per line) — this is just the record of which
+      // code (if any) this order used. readOnly, not just documented as
+      // such: changing it here wouldn't retroactively recompute
+      // totalPrice/promoDiscount anyway (that only happens when an
+      // orderItem is created/updated/deleted), so editing it in place
+      // would be misleading rather than harmless.
+      name: 'promoCode',
+      type: 'text',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'Промокод, применённый при оформлении (если был).',
+      },
+    },
+    {
+      // Roubles actually deducted from the gross line-item total —
+      // recomputed by recalcOrderTotal every time a sibling orderItem
+      // changes, never set directly. Kept alongside promoCode so the admin
+      // order view can show "скидка N ₽" without re-resolving the promo
+      // code and re-deriving the math themselves.
+      name: 'promoDiscount',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'Скидка, фактически применённая к заказу (₽) — считается автоматически.',
+      },
+    },
+    {
       // Shows this order's line items inline on its edit page — the
       // "grouped order" view the old app needed a bespoke
       // GroupedBookingRow/BookingDetailsTable component tree for. Editing

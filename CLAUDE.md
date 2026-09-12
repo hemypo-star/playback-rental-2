@@ -1593,3 +1593,98 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   logged-in-as-admin, across the homepage/catalog/a product page: zero
   overflow, date picker and cart both still fully functional on mobile,
   desktop 1440px pixel-identical to before for both auth states.
+- **2026-09-12** — **Backlog item 5 (промокоды)** done, on branch
+  `claude/promo-codes`. Real requirement was wider than `ffbcf40`'s old
+  attempt (which this branch does not port — its migration doesn't apply to
+  the current schema at all, and its per-line discount approach is
+  deliberately not reused): a code can be a **percentage or a fixed rouble
+  amount**. A percentage happens to decompose per line (applying X% per
+  line and summing equals applying X% to the sum); a fixed amount does not
+  (line 1 saves in `OrderItems`' `beforeValidate` before line 2 exists, so
+  any pro-rata share computed there would be wrong for a multi-line order).
+  So the discount is applied exactly once, at the order level, inside the
+  same `recalcOrderTotal` that already owns `orders.totalPrice` and already
+  loads every sibling line — not a second home for pricing math, the same
+  one pointed at the right owner. `lineTotal` stays gross (undiscounted);
+  new `orders.promoCode`/`promoDiscount` sidebar fields carry the applied
+  code and the actual rouble amount deducted, both re-derived from scratch
+  on every `recalcOrderTotal` run (an admin editing a line's quantity
+  afterward reapplies the discount to the new gross, not a stale one).
+  New `PromoCodes` collection (admin-only access, `code`/`discountType`/
+  `discountValue`/`active`/`validUntil`/`description`, a field-level
+  `validate` capping `discountValue` at 100 for `percent` on every write
+  path — Local API, REST, admin UI alike, not just the form).
+  `lib/promo/promoCodes.ts`'s `resolveActivePromoCode()` is the one place a
+  code's validity is decided (existence, `active`, `validUntil`), shared by
+  `GET /api/promo-codes/validate` (public, returns only `{valid,
+  discountType, discountValue}` — never id/description, since the
+  collection is deliberately not publicly listable) and `recalcOrderTotal`.
+  The validate endpoint is rate-limited (new `promo_validate_ip` bucket,
+  `RATE_LIMIT_PROMO_VALIDATE_IP_MAX`/`_WINDOW_MS`, default 30/hour) — it's a
+  public oracle over a secret code space, so it needed the same throttling
+  every other public write/lookup path already gets; confirmed
+  `rate_limit_hits.bucket` is `varchar(64)`, not an enum, so no migration
+  was needed for the new bucket value, only the env-var docs. Checkout
+  (`checkout/actions.ts`) re-resolves the client's claimed code itself
+  before ever storing it — an invalid/expired/deactivated code at submit
+  time does not fail the order, it just applies no discount, since the
+  customer is submitting a booking, not redeeming a coupon.
+  `lib/rental/submitOrder.ts`'s МойСклад push scales every pushed
+  `unitPrice` by the order's discount factor (`1 - promoDiscount/gross`) —
+  left alone, `frozenUnitPrice()` would have back-derived the *gross* price
+  from `lineTotal` (now deliberately undiscounted) and pushed a higher total
+  than the customer actually pays; noted in a comment that МойСклад's own
+  per-position `discount` field would render this more legibly, but
+  pushing a new field to the live API can't be verified under this
+  project's standing no-live-credentials rule, so scaling (which is how a
+  percentage discount already reached МойСклад under the old design) was
+  the deliberate choice instead. `sendOrderNotification`'s payload gained
+  `promoCode`/`promoDiscount`, additively, so the owner's n8n workflow can
+  explain a `totalAmount` it couldn't otherwise account for.
+  **The admin screen deviated from the original plan mid-task, on an
+  explicit owner correction**: `/admin/promo-codes` was first built
+  following the categories/promotions list+`[id]`-detail pattern this app
+  otherwise uses for catalog CRUD, then rebuilt as a single page with
+  inline per-row controls (`PromoCodesPanel.tsx`, modeled on
+  `UsersPanel.tsx` — this repo's own precedent for "manage a short
+  admin-only list on one page") once the owner said no per-code detail page
+  was wanted. Numeric-value edits commit on blur with client-side rejection
+  of non-integer/`<1`/percent->100 values (block D1's own established
+  pattern, reused here) rather than firing a Server Action per keystroke.
+  Switching `discountType` is the one edit that can't be validated against
+  its own old value in isolation — a 500₽ code switched to "%" would be an
+  invalid document — so `discountType` and `discountValue` are always
+  committed together in one write, and a switch that would produce an
+  invalid combination is rejected outright (revert the select, explain why
+  inline) rather than silently rescaling the operator's own number.
+  Migration `20260912_090000_add_promo_codes.ts` was not guessed: verified
+  by standing up a scratch Postgres, letting `next dev`'s push-mode schema
+  sync generate the real DDL for the new collection/fields, `pg_dump`-ing
+  it, and hand-writing the migration to reproduce that dump byte-for-byte
+  (confirmed via `psql \d`/`\dT+` on a second, separately migrated
+  database) — then round-tripped `up` → `down` → `up` on that second
+  database to confirm clean removal and idempotency.
+  Verified live end-to-end against a real Postgres + `next dev` + real
+  Playwright/Chromium sessions (seeded via authenticated REST/JWT, the
+  standing workaround for the unresolved `tsx`/`@next/env` crash): a
+  percent code and a fixed-amount code on real multi-line orders (both
+  matched the exact expected `lineTotal`/`totalPrice`/`promoDiscount` via a
+  direct API query afterward, not just the UI); a fixed amount larger than
+  the order clamped `totalPrice` to 0 without going negative; an expired
+  code and an inactive code were both rejected by the validate endpoint
+  and by a real checkout submission at full price with no code stored; a
+  no-code order priced correctly with `promoDiscount` 0; editing a
+  submitted order's line quantity in `/admin` correctly recomputed both
+  `lineTotal` and the discount against the new gross; the rate limiter
+  genuinely 429'd a 6th request within an hour from one IP (with
+  `TRUST_PROXY_HEADERS`/`X-Real-IP` set for the test) while a different IP
+  sailed through; the full `/admin/promo-codes` create/inline-edit/type-
+  switch-rejection/toggle/delete flow was exercised and confirmed via
+  direct API reads after each step, not trusted from the UI. Zero browser
+  console errors throughout. `eslint`/`tsc --noEmit`/`next build` all
+  clean; `design-sync audit` unchanged from the pre-existing baseline (no
+  new gaps). Not exercised, per the standing rule: real МойСклад credentials
+  (the discount-factor scaling math never threw across all three tested
+  discount shapes, including the `discountFactor === 0` fully-discounted
+  case, but the actual outbound payload to a real МойСклад endpoint was
+  never inspected).

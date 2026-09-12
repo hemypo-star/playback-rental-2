@@ -53,6 +53,14 @@ export async function sendOrderNotification(params: {
   customerPhone: string
   items: OrderNotificationItem[]
   totalPrice: number
+  // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes) — additive fields,
+  // optional so no existing caller/test has to change. totalAmount below
+  // is already net of promoDiscount (order.totalPrice, per recalcOrderTotal
+  // in OrderItems.ts); these two are included so the owner's n8n workflow
+  // can explain *why* totalAmount is lower than the items' face value,
+  // rather than seeing an unexplained total.
+  promoCode?: string | null
+  promoDiscount?: number
 }): Promise<WebhookResult> {
   return postToWebhook({
     event: 'order.created',
@@ -71,6 +79,8 @@ export async function sendOrderNotification(params: {
     })),
     totalAmount: params.totalPrice,
     currency: 'RUB',
+    promoCode: params.promoCode ?? null,
+    promoDiscount: params.promoDiscount ?? 0,
   })
 }
 
