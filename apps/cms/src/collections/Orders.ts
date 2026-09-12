@@ -99,6 +99,44 @@ export const Orders: CollectionConfig = {
       },
     },
     {
+      // Review finding A (fix round on claude/promo-codes): a SNAPSHOT of
+      // the promo's terms at the moment this order was created, not a live
+      // pointer back to the promoCodes table. Written once, alongside
+      // promoCode, by the checkout Server Action — from the exact same
+      // server-resolved promo object that produced promoCode, so there is
+      // no second lookup to disagree with the first. recalcOrderTotal
+      // (OrderItems.ts) reads ONLY these two snapshot fields — never
+      // resolveActivePromoCode() — specifically so that deactivating,
+      // deleting, or editing a promo code afterward cannot retroactively
+      // reprice an order that already used it. A code's current state
+      // governs new orders only.
+      name: 'promoDiscountType',
+      type: 'select',
+      options: [
+        { label: 'Процент', value: 'percent' },
+        { label: 'Фиксированная сумма (₽)', value: 'fixed' },
+      ],
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'Тип скидки на момент оформления заказа (снимок, не меняется при редактировании промокода).',
+      },
+    },
+    {
+      // The promo's discountValue at the moment of checkout — again a
+      // snapshot, not re-read from promoCodes. Paired with
+      // promoDiscountType above; recalcOrderTotal applies the same
+      // percent/fixed math OrderItems.ts always did, just against these
+      // frozen terms instead of a live lookup.
+      name: 'promoDiscountValue',
+      type: 'number',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'Значение скидки на момент оформления заказа (снимок, не меняется при редактировании промокода).',
+      },
+    },
+    {
       // Roubles actually deducted from the gross line-item total —
       // recomputed by recalcOrderTotal every time a sibling orderItem
       // changes, never set directly. Kept alongside promoCode so the admin

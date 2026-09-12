@@ -111,12 +111,34 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
   // "10% off" line, not just a quietly lower price) — not used here because
   // pushing a new field to a live third-party API can't be verified in this
   // environment under the standing no-live-МойСклад-credentials rule for
-  // this task. Scaling unitPrice is the deliberate choice instead: it's
-  // exactly how a percentage discount already reached МойСклад before this
-  // change (frozenUnitPrice always derived from a post-discount lineTotal
-  // when the old, percent-only, per-line design applied it inside
-  // beforeValidate), so this preserves existing behavior for percent codes
-  // and extends the same mechanism to fixed-amount ones.
+  // this task. Scaling unitPrice is the deliberate choice instead: it's the
+  // same mechanism a percentage discount already reached МойСклад through
+  // before this change (frozenUnitPrice always derived from a post-discount
+  // lineTotal when the old, percent-only, per-line design applied it inside
+  // beforeValidate) — extended here to fixed-amount codes too. Review
+  // finding F (fix round on claude/promo-codes) corrected the claim this
+  // comment used to make, that this "preserves existing behavior" for
+  // percent codes: it doesn't preserve it EXACTLY, it shares the same class
+  // of pre-existing rounding drift, which this scaling amplifies rather
+  // than introduces — see below.
+  //
+  // Known, bounded rounding drift (not fixed here — not worth restructuring
+  // this push over): frozenUnitPrice() back-derives a fractional per-unit-
+  // day rate from lineTotal (already an integer rouble amount, per
+  // calculateLineTotal), and pushOrderToMoySklad rounds each position's
+  // price back to kopecks independently. Those two roundings don't cancel,
+  // so Σ(pushed position totals) is not always exactly order.totalPrice —
+  // a real measured case: 3 rental lines, gross 26550 ₽, a fixed ₽900
+  // discount, МойСклад sum 25649.92 ₽ vs totalPrice 25650 ₽ (drift −0.08 ₽).
+  // The discount factor above doesn't create this drift — frozenUnitPrice's
+  // own division already lost sub-kopeck precision before this feature
+  // existed — it amplifies it slightly, since discountFactor is one more
+  // fractional multiplier feeding the same per-position rounding. Bound is
+  // roughly half a kopeck per unit-day across the order, i.e.
+  // 0.005 × Σ(quantity × days); direction (over- or under-counted) depends
+  // on which way each position's fractional kopeck rounds. Left here as a
+  // comment, not a fix, so whoever reconciles МойСклад totals against this
+  // site later finds the explanation instead of hunting a phantom bug.
   let moySkladOrderId: string | null = null
   let moySkladError: string | null = null
   try {

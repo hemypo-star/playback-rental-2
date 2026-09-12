@@ -3,7 +3,6 @@ import { APIError } from 'payload'
 import { differenceInCalendarDays } from 'date-fns'
 import { calculateLineTotal } from '../lib/rental/pricing'
 import { getAvailableRentalQuantity, getAvailableSaleQuantity, lockProductForBooking } from '../lib/rental/availability'
-import { resolveActivePromoCode } from '../lib/promo/promoCodes'
 
 // Hooks receive relationship fields populated to Payload's default depth
 // (an object), not a plain id — normalize before using it as a query value
@@ -34,6 +33,25 @@ function toId(value: unknown): number {
 // the right owner. lineTotal itself stays GROSS (undiscounted) and keeps
 // meaning "the real price of this line" — the discount only ever shows up
 // in orders.totalPrice/promoDiscount, never in an individual line.
+//
+// Review finding A (fix round on claude/promo-codes): this used to
+// re-resolve the promo code from the promoCodes table on every recalc, by
+// the code string stored on the order — meaning a code going inactive,
+// expiring, or being deleted/edited would silently reprice every past
+// order that used it, the next time anything touched that order (an admin
+// editing a quantity, e.g.). Fixed by reading ONLY the snapshot columns
+// (promoDiscountType/promoDiscountValue, written once at checkout — see
+// Orders.ts) instead of calling resolveActivePromoCode() at all. A promo
+// code's current state now governs new orders only; an existing order's
+// discount is fixed at whatever terms applied when it was placed. An order
+// with no snapshot (created before this change, or by any path that never
+// set one) has promoDiscountValue null/undefined, which the ?? below reads
+// as "no discount" rather than crashing or falling back to a live lookup.
+// The reviewer explicitly considered and rejected gating this on
+// submittedAt instead: that ties "price is locked" to a technical event
+// (submission happens to be synchronous with checkout today) rather than
+// the commercial one (the code's terms at the time of booking), and does
+// nothing at all once a code is deleted.
 async function recalcOrderTotal(req: PayloadRequest, orderRef: unknown): Promise<void> {
   const orderId = toId(orderRef)
   const [siblings, order] = await Promise.all([
@@ -44,26 +62,30 @@ async function recalcOrderTotal(req: PayloadRequest, orderRef: unknown): Promise
       depth: 0,
       req,
     }),
-    // depth: 0 — only need the raw promoCode string, not a populated
-    // relationship. disableErrors: an order can theoretically be deleted
-    // out from under a still-in-flight sibling-item hook (e.g. an admin
-    // deleting the order while its own afterDelete cascade is still
-    // running) — treat that as "no order to discount" rather than throwing.
+    // depth: 0 — only need the raw snapshot columns, not a populated
+    // relationship (there is none — promoDiscountType/Value are plain
+    // fields on the order itself, not a link back to promoCodes).
+    // disableErrors: an order can theoretically be deleted out from under a
+    // still-in-flight sibling-item hook (e.g. an admin deleting the order
+    // while its own afterDelete cascade is still running) — treat that as
+    // "no order to discount" rather than throwing.
     req.payload.findByID({ collection: 'orders', id: orderId, depth: 0, req, disableErrors: true }),
   ])
   const gross = siblings.docs.reduce((sum, item: { lineTotal?: number | null }) => sum + (item.lineTotal || 0), 0)
 
-  // Re-resolved server-side on every recalc — never trusted from a stored
-  // "discount already computed" value — so an order's discount always
-  // reflects the promo code's *current* state (still active, not expired)
-  // and the order's *current* gross (a later admin edit to quantity/dates
-  // reapplies against the new gross, not a stale one).
-  const promo = order ? await resolveActivePromoCode(req.payload, order.promoCode, req) : null
-  const discount = promo
-    ? promo.discountType === 'percent'
-      ? Math.round((gross * promo.discountValue) / 100)
-      : Math.min(promo.discountValue, gross)
-    : 0
+  // Purely a function of this order's own frozen snapshot and its
+  // *current* gross (a later admin edit to quantity/dates reapplies the
+  // same frozen discount terms against the new gross, not a stale total) —
+  // never a fresh lookup against promoCodes. No snapshot (value null/
+  // undefined, or no order at all) means no discount, not an error.
+  const discountValue = order?.promoDiscountValue
+  const discountType = order?.promoDiscountType
+  const discount =
+    typeof discountValue === 'number'
+      ? discountType === 'percent'
+        ? Math.round((gross * discountValue) / 100)
+        : Math.min(discountValue, gross)
+      : 0
   // Math.max(0, ...) is a safety net, not the normal path: a percent
   // discount is validated to 1–100 (PromoCodes.ts) so it can never exceed
   // gross on its own, and a fixed discount is already clamped to gross via

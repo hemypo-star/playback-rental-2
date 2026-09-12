@@ -20,10 +20,22 @@ export const promoCodeValidateEndpoint: Endpoint = {
     // null (not a fallback 'unknown' bucket) when the IP can't be trusted
     // (TRUST_PROXY_HEADERS off) — same reasoning as every other IP-only
     // dimension in this app: skip the check rather than throttle every
-    // visitor through one shared bucket. On rejection, return exactly the
-    // same { valid: false } shape a genuinely invalid code gets, so a
-    // rate-limited caller can't distinguish "this code doesn't exist" from
-    // "you've been throttled" and use that to narrow a search.
+    // visitor through one shared bucket, but note this bucket has no
+    // second dimension the way checkout/contact do (no phone/email to fall
+    // back to) — so in a deployment without trusted proxy headers, "skip
+    // when IP unknown" means this endpoint is not throttled at all, not
+    // "throttled on a different key".
+    //
+    // On rejection this returns 429, not the same { valid: false } shape a
+    // genuinely invalid code gets — trivially distinguishable by status
+    // code, and deliberately so: 429 is the correct HTTP semantics and lets
+    // a legitimate client back off instead of silently retrying into a
+    // black hole. This isn't a meaningful leak either way — at 30/hour per
+    // IP (RATE_LIMIT_PROMO_VALIDATE_IP_MAX), enumerating the code space is
+    // impractical regardless of whether 429 is distinguishable from a plain
+    // miss, and an attacker being throttled is already directly observable
+    // by counting their own requests, not something a shared response
+    // shape could hide.
     const ip = getClientIp(req.headers)
     if (ip) {
       const allowed = await checkRateLimit(req.payload, 'promo_validate_ip', ip)

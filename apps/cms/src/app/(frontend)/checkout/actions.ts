@@ -104,15 +104,22 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
 
     // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes) — re-resolved here,
     // server-side, via the exact same function recalcOrderTotal
-    // (OrderItems.ts) will call again once line items exist. An invalid,
-    // expired, or since-deactivated code at submit time must NOT fail the
-    // checkout: store no code at all, so the order goes through at full
-    // price rather than surfacing an error for something the customer
+    // (OrderItems.ts) used to call again once line items existed. An
+    // invalid, expired, or since-deactivated code at submit time must NOT
+    // fail the checkout: store no code at all, so the order goes through at
+    // full price rather than surfacing an error for something the customer
     // isn't trying to fix right now (they're submitting a booking, not
     // redeeming a coupon). This is also why the client's own claimed
     // discountType/discountValue (from the validate endpoint's earlier,
     // separate check) is never read here — only the code string, re-
     // verified against the database's current state.
+    //
+    // Review finding A (fix round on claude/promo-codes): this resolved
+    // promo is now also the SOURCE of the snapshot written onto the order
+    // below (promoDiscountType/promoDiscountValue) — the one and only place
+    // those terms are captured. recalcOrderTotal no longer re-resolves the
+    // code itself, so if this lookup weren't the snapshot's source, the
+    // order's discount would never get set at all.
     const promo = await resolveActivePromoCode(payload, input.promoCode, undefined)
 
     // overrideAccess: false (Local API defaults to true, i.e. bypassing
@@ -136,12 +143,15 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
         status: 'pending',
         ...(input.notes ? { notes: input.notes } : {}),
         // promo.code, not input.promoCode verbatim: normalizes case/
-        // whitespace to exactly what resolveActivePromoCode() will match
-        // again later (recalcOrderTotal re-resolves by this stored value,
-        // not by remembering the promo's id). Omitted entirely for an
-        // invalid/expired code — no code stored means no discount applied,
-        // per the "never fail checkout over this" rule above.
-        ...(promo ? { promoCode: promo.code } : {}),
+        // whitespace to what the admin order view displays. promoDiscount
+        // Type/Value are the snapshot recalcOrderTotal will read from now
+        // on — written once, here, from this same resolved promo object,
+        // never re-derived later. Omitted entirely for an invalid/expired
+        // code — no snapshot stored means no discount applied, per the
+        // "never fail checkout over this" rule above.
+        ...(promo
+          ? { promoCode: promo.code, promoDiscountType: promo.discountType, promoDiscountValue: promo.discountValue }
+          : {}),
       },
       overrideAccess: false,
     })

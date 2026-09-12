@@ -129,9 +129,15 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
   // quantity field.
   const handleDiscountValueBlur = async (promo: PromoCode, raw: string) => {
     const value = Number(raw)
-    const current = committed(promo.id)
-    const currentType = current?.discountType ?? promo.discountType
-    const revert = () => setPromoCodes((prev) => prev.map((p) => (p.id === promo.id ? { ...p, discountValue: current?.discountValue ?? promo.discountValue } : p)))
+    const currentType = committed(promo.id)?.discountType ?? promo.discountType
+    // Review finding B (fix round on claude/promo-codes): committed(promo.id)
+    // is called LAZILY inside this closure, at rollback time, not captured
+    // once up front the way this used to read — same reasoning and same
+    // fix as OrderDetailForm.tsx's own commitItemField rollback. Reading it
+    // eagerly here would revert to a snapshot from before either of two
+    // fast, overlapping edits landed, even after the first had already
+    // committed a newer value server-side.
+    const revert = () => setPromoCodes((prev) => prev.map((p) => (p.id === promo.id ? { ...p, discountValue: committed(promo.id)?.discountValue ?? promo.discountValue } : p)))
     if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
       setRowError(promo.id, 'Целое число, не меньше 1')
       revert()
@@ -172,7 +178,10 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
     const result = await updatePromoCode(promo.id, { discountType: nextType, discountValue: current.discountValue })
     if (!result.success) {
       setRowError(promo.id, result.error || 'Не удалось сохранить')
-      setPromoCodes((prev) => prev.map((p) => (p.id === promo.id ? { ...p, discountType: current.discountType } : p)))
+      // Review finding B: read the rollback target fresh from committed(),
+      // not the `current` snapshot captured before the await — same fix as
+      // handleDiscountValueBlur above.
+      setPromoCodes((prev) => prev.map((p) => (p.id === promo.id ? { ...p, discountType: committed(promo.id)?.discountType ?? promo.discountType } : p)))
     }
   }
 

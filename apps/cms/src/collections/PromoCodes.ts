@@ -58,6 +58,14 @@ export const PromoCodes: CollectionConfig = {
       },
       validate: (value: number | null | undefined, { siblingData }: { siblingData: { discountType?: string } }) => {
         if (value === null || value === undefined) return 'Обязательное поле'
+        // Review finding E (fix round on claude/promo-codes): the admin
+        // panel already rejects a fraction client-side (Number.isInteger),
+        // but that check only guards PromoCodesPanel.tsx itself — any other
+        // write path (raw REST, /cms's own default admin UI) reached this
+        // hook with no such guard and could persist "10.5" percent or
+        // "500.75" ₽. Checked here too, so no write path can create a
+        // fractional discount.
+        if (!Number.isInteger(value)) return 'Значение должно быть целым числом'
         if (siblingData?.discountType === 'percent' && (value < 1 || value > 100)) {
           return 'Для процентной скидки значение должно быть от 1 до 100'
         }
