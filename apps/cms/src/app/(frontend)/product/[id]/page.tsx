@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import ProductPurchasePanel from '../../../../components/ProductPurchasePanel'
-import { getProductById, getProducts } from '../../../../lib/data/products'
+import { getAccessoryProducts, getProductById, getProducts } from '../../../../lib/data/products'
 import { mediaUrl } from '../../../../lib/mediaUrl'
 import { formatCurrency } from '../../../../lib/pricing'
 import { buildMetadata, siteOrigin } from '../../../../lib/seo'
@@ -64,14 +64,17 @@ export default async function ProductPage({ params }: Props) {
   const categorySlug = typeof product.category === 'object' ? product.category.slug : undefined
   const inStock = Boolean(product.available) && product.quantity > 0
 
-  const [relatedResult, cheapResult] = await Promise.all([
+  // Backlog item 10 (docs/ROADMAP-2.0.md): the accessories strip used to
+  // fetch 500 price-sorted documents and keep the first three under this
+  // ceiling. Same ceiling, same ordering, as a real query — the flat 1200 ₽
+  // floor inside that Math.max is what keeps a cheap product's strip usable
+  // instead of only recommending things under 40% of its own (already
+  // small) price.
+  const [relatedResult, accessories] = await Promise.all([
     getProducts({ categoryId, limit: 4 }),
-    getProducts({ limit: 500, sort: 'price' }),
+    getAccessoryProducts({ excludeId: product.id, maxPrice: Math.max(1200, product.price * 0.4), limit: 3 }),
   ])
   const related = relatedResult.docs.filter((p) => p.id !== product.id).slice(0, 3)
-  const accessories = cheapResult.docs
-    .filter((p) => p.id !== product.id && p.price > 0 && p.price <= Math.max(1200, product.price * 0.4))
-    .slice(0, 3)
 
   const kitContents = product.isKit ? (product.kitItems ?? []) : []
 

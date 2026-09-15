@@ -1688,3 +1688,94 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   discount shapes, including the `discountFactor === 0` fully-discounted
   case, but the actual outbound payload to a real МойСклад endpoint was
   never inspected).
+- **2026-09-15** — **Backlog item 10 (`docs/ROADMAP-2.0.md`) done — wave 1 is
+  now fully closed**, and three of its other items turned out to have been
+  finished already without that file being updated, so this entry corrects
+  the roadmap as much as it adds to it.
+
+  **The item itself**: the last two `limit: 500` fetches on the storefront.
+  Block C5 had already closed the catalog sidebar's (audit finding N9, in
+  `07-audit-apps-cms.md`); the homepage and the product page still each
+  pulled up to 500 full product documents at `depth: 1` per render to
+  compute something small in JS afterwards. Both are now targeted queries.
+  Note for a future reader: the audit's own **N10 is a different finding
+  entirely** ("заявку можно отправить на занятое оборудование", closed by
+  A4) — this is backlog item 10, and an early draft of these code comments
+  cited N10 by mistake before it was caught against `07-audit-apps-cms.md`.
+  The audit number for this class of waste is N9, and it covers only the
+  sidebar.
+
+  **Product page** was the self-contained half. `cheapResult` is
+  misleadingly named — it isn't a cheapest-price read, it builds the
+  "Совместимые аксессуары" strip, keeping the first three products under
+  `max(1200, product.price * 0.4)`. That ceiling is a plain range
+  comparison, so the whole filter became one query
+  (`getAccessoryProducts()`): same ceiling, same price-ascending order,
+  three rows instead of five hundred. `depth` stays 1 here, unlike the new
+  aggregate helpers, because the strip renders each accessory's first image
+  through `mediaUrl()` and so genuinely needs the upload relation
+  populated.
+
+  **Homepage** was the five-consumer rewrite the roadmap warned it was.
+  `allProductsResult` fed `fromPrice` (min over rental prices),
+  `freeNowCount`, `categoryStats` (a JS loop building per-category count +
+  min price), `marqueeNames` and `totalDocs` — which is exactly why the
+  roadmap's own earlier "just make it `limit: 1`" framing would have
+  silently broken four of them, a correction that entry already carried and
+  that held up. Each consumer is its own query now: `getProductTotals()`
+  (two `payload.count()`s), `getLowestRentalPrice()`, and a
+  `getProducts({ limit: 10, sort: 'price', depth: 0 })` for the ticker.
+  `getProducts()` gained an optional `depth` so a caller that reads only
+  scalar columns stops paying for relation population.
+
+  `getCategoryProductStats()` is deliberately a **sibling** of C5's
+  `getCategoryProductCounts()`, not a replacement: the sidebar renders a
+  count and nothing else, so it stays a plain `COUNT(*)`; the homepage tile
+  renders "N позиций · от X ₽", and one `find({ limit: 1, sort: 'price',
+  select: { price: true } })` per category returns both numbers in a single
+  round trip (`totalDocs` is the count, `docs[0]` the cheapest row) at the
+  cost of an `ORDER BY ... LIMIT 1` the sidebar has no use for. It's asked
+  only about the subtrees of the six tiles actually rendered, and it's the
+  one query on the page that can't join the `Promise.all` — which
+  categories to aggregate isn't known until `getCategories()` resolves. A
+  category with no available products is left out of the returned Map
+  entirely, which is what lets `categoryMeta()` keep rendering an empty
+  meta line instead of "0 позиций · от 0 ₽" — the old JS tally got that
+  distinction for free by never adding such a category, and it would have
+  been easy to lose here.
+
+  **Verified by parity rather than by inspection**, since every one of
+  these is a behaviour-preserving rewrite and "looks equivalent" is exactly
+  the claim that needed evidence. A scratch script recomputed the
+  *pre-change* algorithm from raw REST data and asserted the live rendered
+  pages show exactly those values, over a deliberately awkward seeded
+  catalog: a 0 ₽ rental (so `fromPrice` is a falsy-but-real 0 — the case a
+  `||` would have eaten), a zero-quantity product, an `available: false`
+  product that must stay excluded, sale-vs-rental mixed, a category with no
+  products at all, and a two-level category tree so the subtree summation
+  is actually exercised. All five homepage consumers matched, as did the
+  accessories strip for all nine products (each with its own ceiling,
+  including the boundary case where a product's price equals the ceiling
+  and the case where fewer than three candidates exist). Postgres statement
+  logging confirmed the queries that actually run — five per-category
+  `ORDER BY price LIMIT` plus their counts, one cheapest-rental lookup,
+  `count(*)` for the totals, and no unbounded document fetch anywhere —
+  and an empty catalog still renders (0/0 stats, the "от N ₽" hero line
+  correctly absent). `eslint` (same 5 pre-existing warnings, 0 errors),
+  `tsc --noEmit`, `next build` (34 routes), `node --test` (20 pass, 2
+  skipped) and `design-sync audit` (unchanged baseline) all clean.
+
+  **The roadmap corrections.** Re-checking wave 1 against the code before
+  starting found that items **4-remainder** (admin orders pagination),
+  **6** (cart quantity cap + per-line checkout error attribution) and **8**
+  (product search over `description`/`tag`) are all done in the tree while
+  `docs/ROADMAP-2.0.md` still described each as open, some with a
+  "confirmed absent" that no longer holds. Their entries now describe what
+  the code actually does — including two details worth not rediscovering:
+  `lib/checkoutErrors.ts` enforces "every error code has Russian text" at
+  compile time via an exhaustive `switch` with a `never` assignment, and
+  `getProducts()`'s multi-field search still ANDs per word *within* one
+  field, so a query spanning two fields won't match (documented at the call
+  site, deliberate). With item 10 landed, **wave 1 and wave 2 are both
+  closed; wave 3 (error monitoring, then caching) is next**, and wave 4's
+  "only if 10-lite leaves a gap" clause is moot — item 10 was done in full.

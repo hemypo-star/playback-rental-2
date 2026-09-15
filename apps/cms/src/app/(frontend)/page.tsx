@@ -6,7 +6,7 @@ import RentalDatePicker from '../../components/RentalDatePicker'
 import PromoCarousel from '../../components/PromoCarousel'
 import ProductCard from '../../components/ProductCard'
 import { getCategories } from '../../lib/data/categories'
-import { getProducts } from '../../lib/data/products'
+import { getCategoryProductStats, getLowestRentalPrice, getProductTotals, getProducts } from '../../lib/data/products'
 import { getSiteSettings } from '../../lib/data/siteSettings'
 import { getActivePromotions } from '../../lib/data/promotions'
 import { mediaUrl } from '../../lib/mediaUrl'
@@ -41,10 +41,23 @@ const CATEGORY_TILE_SIZES = '(min-width: 1520px) 425px, (min-width: 640px) 28vw,
 const KITS_GRID_SIZES = '(min-width: 1520px) 429px, (min-width: 1024px) 28vw, (min-width: 640px) 30vw, 45vw'
 
 export default async function HomePage() {
-  const [categories, featuredResult, allProductsResult, siteSettings, promotions, kitsResult] = await Promise.all([
+  // Backlog item 10 (docs/ROADMAP-2.0.md): the five values this page used to
+  // derive in JS from one getProducts({ limit: 500, sort: 'price' }) fetch
+  // — two headline stats, a "от N ₽" hero line, a name ticker and
+  // per-category tile aggregates — are each their own targeted query now
+  // (lib/data/products.ts). They were never the "read one cheapest price"
+  // case an earlier roadmap pass assumed, which is exactly why a `limit: 1`
+  // tweak would have silently broken four of them; each one keeps its own
+  // semantics here instead.
+  const [categories, featuredResult, totals, fromPrice, marqueeResult, siteSettings, promotions, kitsResult] = await Promise.all([
     getCategories(),
     getProducts({ limit: 8, sort: '-lastSyncedAt' }),
-    getProducts({ limit: 500, sort: 'price' }),
+    getProductTotals(),
+    getLowestRentalPrice(),
+    // Ticker names only — the ten cheapest, same rows .slice(0, 10) took off
+    // the price-sorted fetch before. depth: 0 because nothing but `title` is
+    // read from these.
+    getProducts({ limit: 10, sort: 'price', depth: 0 }),
     getSiteSettings(),
     getActivePromotions(),
     getProducts({ isKit: true, limit: 6 }),
@@ -57,27 +70,18 @@ export default async function HomePage() {
   // sidebar and from their parent's own catalog page.
   const featuredCategories = categories.filter((c) => c.parent == null).slice(0, 6)
   const products = featuredResult.docs
-  const allProducts = allProductsResult.docs
   const heroImageUrl = mediaUrl(siteSettings.heroBannerImage)
   const heroImageMobileUrl = mediaUrl(siteSettings.heroBannerImageMobile) ?? heroImageUrl
-
-  const rentalPrices = allProducts.filter((p) => p.listingType === 'rental').map((p) => p.price)
-  const fromPrice = rentalPrices.length ? Math.min(...rentalPrices) : undefined
-  const freeNowCount = allProducts.filter((p) => p.available && p.quantity > 0).length
 
   // Real per-category aggregates (count + cheapest price) for the category
   // tile "meta" line — no invented category taxonomy/tags, just what the
   // catalog actually has.
-  const categoryStats = new Map<number, { count: number; minPrice: number }>()
-  for (const p of allProducts) {
-    const catId = typeof p.category === 'object' ? p.category.id : p.category
-    const existing = categoryStats.get(catId)
-    if (!existing) categoryStats.set(catId, { count: 1, minPrice: p.price })
-    else {
-      existing.count += 1
-      existing.minPrice = Math.min(existing.minPrice, p.price)
-    }
-  }
+  // This one query can't join the Promise.all above: which categories to
+  // aggregate is only known once `categories` has resolved. It asks about
+  // the rendered tiles' own subtrees rather than every category in the tree,
+  // since categoryMeta() below never looks up anything else.
+  const statCategoryIds = Array.from(new Set(featuredCategories.flatMap((c) => getSubtreeIds(c.id, categories))))
+  const categoryStats = await getCategoryProductStats(statCategoryIds)
   function categoryMeta(c: Category): string {
     // Aggregated over the whole subtree, not just this category directly —
     // a top-level tile like "Аренда оборудования" carries essentially no
@@ -111,14 +115,14 @@ export default async function HomePage() {
 
   // Real product names for the ticker — never the design reference's fictional
   // demo camera list.
-  const marqueeNames = allProducts.slice(0, 10).map((p) => p.title)
+  const marqueeNames = marqueeResult.docs.map((p) => p.title)
 
   const popular = products.slice(0, 4)
   const currentMonthLabel = new Date().toLocaleDateString('ru-RU', { month: 'long' }).replace(/^./, (c) => c.toUpperCase())
 
   const stats = [
-    { value: `${allProductsResult.totalDocs}`, label: 'Позиций в парке' },
-    { value: `${freeNowCount}`, label: 'Свободны сегодня' },
+    { value: `${totals.total}`, label: 'Позиций в парке' },
+    { value: `${totals.inStock}`, label: 'Свободны сегодня' },
     { value: siteSettings.depositLabel || '0 ₽', label: siteSettings.depositCaption || 'Залог' },
     { value: siteSettings.pickupTimeLabel || '10 мин', label: siteSettings.pickupTimeCaption || 'Выдача по паспорту' },
   ]

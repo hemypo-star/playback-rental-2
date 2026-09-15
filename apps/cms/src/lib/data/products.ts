@@ -21,6 +21,11 @@ export interface GetProductsParams {
   limit?: number
   page?: number
   sort?: string
+  // Relation-population depth, passed straight through to payload.find().
+  // Defaults to 1 (category + images populated) because every card-rendering
+  // caller needs those; a caller that only reads scalar columns off the
+  // result passes 0 rather than paying for the joins.
+  depth?: number
 }
 
 // Every product query on the storefront is scoped to available:true —
@@ -54,7 +59,7 @@ export async function getProducts(params: GetProductsParams = {}) {
     limit: params.limit ?? 100,
     page: params.page ?? 1,
     sort: params.sort ?? '-lastSyncedAt',
-    depth: 1,
+    depth: params.depth ?? 1,
   })
 }
 
@@ -93,6 +98,137 @@ export async function getCategoryProductCounts(categoryIds: number[]): Promise<M
     }),
   )
   return new Map(entries)
+}
+
+export interface CategoryProductStats {
+  count: number
+  minPrice: number
+}
+
+// Backlog item 10 (docs/ROADMAP-2.0.md), the homepage half: (frontend)/
+// page.tsx used to fetch getProducts({ limit: 500 }) and tally per-category
+// count + cheapest price from those documents in JS — the same waste C5
+// removed from the catalog sidebar, one page over.
+// (Numbering trap for a future reader: the audit's own id for this class of
+// waste is N9, just above, and it names the sidebar specifically. Audit
+// finding N10 is something else entirely — "заявку можно отправить на
+// занятое оборудование", closed by A4. The 10 here is the roadmap backlog's
+// numbering, not the audit's.)
+//
+// Same treatment as C5, one difference: the sidebar renders a count and
+// nothing else, so getCategoryProductCounts above stays a plain COUNT(*);
+// the homepage tile renders "N позиций · от X ₽", a count *and* a price. A
+// find() with limit: 1 sorted by price returns both in a single round trip
+// (totalDocs is the count, docs[0] is the cheapest row), so this is a
+// sibling of that function rather than a replacement for it — it buys the
+// price at the cost of an ORDER BY ... LIMIT 1 the sidebar has no use for.
+// `select` keeps the returned row to the one column actually read.
+//
+// A category with no available products is left out of the Map entirely,
+// preserving the distinction the old JS tally had for free (a category
+// nothing landed in was simply never added) and which categoryMeta() still
+// relies on to render an empty meta line instead of "0 позиций · от 0 ₽".
+//
+// Same per-category-round-trip scale note as getCategoryProductCounts
+// applies here, and more so — see that function's comment.
+export async function getCategoryProductStats(categoryIds: number[]): Promise<Map<number, CategoryProductStats>> {
+  const payload = await getPayload({ config })
+  const entries = await Promise.all(
+    categoryIds.map(async (id): Promise<[number, CategoryProductStats] | null> => {
+      const { docs, totalDocs } = await payload.find({
+        collection: 'products',
+        where: buildProductWhere([{ category: { equals: id } }]),
+        sort: 'price',
+        limit: 1,
+        depth: 0,
+        select: { price: true },
+      })
+      const cheapest = docs[0]
+      if (!cheapest) return null
+      return [id, { count: totalDocs, minPrice: cheapest.price }]
+    }),
+  )
+  return new Map(entries.filter((entry): entry is [number, CategoryProductStats] => entry !== null))
+}
+
+// Backlog item 10: the homepage's two headline stats, previously derived by
+// fetching 500 documents and calling .length on two filtered copies of
+// them. `total` is
+// every available product ("Позиций в парке"), `inStock` those that also have
+// stock on hand ("Свободны сегодня") — note buildProductWhere() already
+// constrains both to available: true, which is why the second one only has
+// to add the quantity clause.
+export interface ProductTotals {
+  total: number
+  inStock: number
+}
+
+export async function getProductTotals(): Promise<ProductTotals> {
+  const payload = await getPayload({ config })
+  const [all, inStock] = await Promise.all([
+    payload.count({ collection: 'products', where: buildProductWhere() }),
+    payload.count({ collection: 'products', where: buildProductWhere([{ quantity: { greater_than: 0 } }]) }),
+  ])
+  return { total: all.totalDocs, inStock: inStock.totalDocs }
+}
+
+// Backlog item 10: the homepage hero's "от N ₽". Undefined only when the
+// catalog holds no available rental listing at all, which is what hides the
+// hero line — same as the old `rentalPrices.length ? Math.min(...) :
+// undefined` guard. A real 0 ₽ rental still returns 0 and still renders
+// "от 0 ₽", so the caller has to test for undefined rather than falsiness,
+// exactly as it did before.
+// pagination: false skips the count query Payload would otherwise run
+// alongside this, since nothing here reads totalDocs.
+export async function getLowestRentalPrice(): Promise<number | undefined> {
+  const payload = await getPayload({ config })
+  const { docs } = await payload.find({
+    collection: 'products',
+    where: buildProductWhere([{ listingType: { equals: 'rental' } }]),
+    sort: 'price',
+    limit: 1,
+    depth: 0,
+    pagination: false,
+    select: { price: true },
+  })
+  return docs[0]?.price
+}
+
+// Backlog item 10, the self-contained half: product/[id]/page.tsx's "Совместимые
+// аксессуары" strip, which used to fetch 500 price-sorted documents and keep
+// the first three that cleared a price ceiling. The ceiling is a plain range
+// query, so the database can do the whole thing — the rows this returns are
+// byte-for-byte the ones that JS filter kept, since both read the same
+// price-ascending order.
+// depth stays 1 (unlike the aggregate helpers above): the strip renders each
+// accessory's first image through mediaUrl(), which needs the upload relation
+// populated. Three documents, not five hundred.
+export interface GetAccessoryProductsParams {
+  // The product being viewed, which must not recommend itself.
+  excludeId: number
+  // Inclusive ceiling — an accessory has to be meaningfully cheaper than the
+  // thing it accessorises for the strip to make sense.
+  maxPrice: number
+  limit?: number
+}
+
+export async function getAccessoryProducts({ excludeId, maxPrice, limit = 3 }: GetAccessoryProductsParams): Promise<Product[]> {
+  const payload = await getPayload({ config })
+  const { docs } = await payload.find({
+    collection: 'products',
+    where: buildProductWhere([
+      { id: { not_equals: excludeId } },
+      // price > 0 excludes listings with no price set — a free line in the
+      // accessories strip reads as a bug, not an offer.
+      { price: { greater_than: 0 } },
+      { price: { less_than_equal: maxPrice } },
+    ]),
+    sort: 'price',
+    limit,
+    depth: 1,
+    pagination: false,
+  })
+  return docs
 }
 
 // disableErrors: true returns null for a missing/invalid id instead of
