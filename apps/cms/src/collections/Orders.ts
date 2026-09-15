@@ -137,6 +137,25 @@ export const Orders: CollectionConfig = {
       },
     },
     {
+      // Backlog item 5 follow-up (docs/ROADMAP-2.0.md, minimum order
+      // threshold). A SNAPSHOT, same reasoning and same review finding A as
+      // promoDiscountType/promoDiscountValue above: written once at
+      // checkout from the same server-resolved promo object, never
+      // re-read from promoCodes. recalcOrderTotal (OrderItems.ts) reads
+      // only this column — never PromoCodes.minOrderAmount directly — so
+      // an operator raising or lowering a code's threshold afterward
+      // cannot retroactively change whether an already-placed order
+      // qualifies for its discount.
+      name: 'promoMinOrderAmount',
+      type: 'number',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description:
+          'Минимальная сумма заказа для скидки на момент оформления (снимок). Пусто или 0 — без ограничения.',
+      },
+    },
+    {
       // Roubles actually deducted from the gross line-item total —
       // recomputed by recalcOrderTotal every time a sibling orderItem
       // changes, never set directly. Kept alongside promoCode so the admin

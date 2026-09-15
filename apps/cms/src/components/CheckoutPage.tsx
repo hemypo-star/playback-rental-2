@@ -281,7 +281,7 @@ export default function CheckoutPage() {
   // time regardless (checkout/actions.ts) — this state is display-only,
   // never sent as a discount value, only the code string is.
   const [promoCodeInput, setPromoCodeInput] = useState('')
-  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountType: 'percent' | 'fixed'; discountValue: number } | null>(null)
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountType: 'percent' | 'fixed'; discountValue: number; minOrderAmount: number } | null>(null)
   const [promoChecking, setPromoChecking] = useState(false)
   const [promoError, setPromoError] = useState<string | null>(null)
   const [availability, setAvailability] = useState<Record<number, number>>({})
@@ -522,6 +522,17 @@ export default function CheckoutPage() {
   // `hasRentalItems` specifically rather than `cart.length > 0`.
   const canComputeTotal = !hasRentalItems || hasDates
 
+  // Backlog item 5 follow-up (docs/ROADMAP-2.0.md, minimum order
+  // threshold) — same `<`/gross-vs-threshold check as recalcOrderTotal
+  // (OrderItems.ts), against this preview's own `total` instead of a
+  // stored gross. Recomputed on every render, not just at the moment
+  // "Применить" was clicked: if the cart changes afterward (a line's
+  // quantity, or dates that change day count) and crosses the threshold
+  // either way, this preview must track it live — exactly like
+  // recalcOrderTotal re-checks the CURRENT gross on every recalc, not the
+  // gross at the moment the code was applied.
+  const promoMeetsThreshold = !appliedPromo?.minOrderAmount || total >= appliedPromo.minOrderAmount
+
   // Preview only — matches recalcOrderTotal's (OrderItems.ts) own clamping
   // exactly: Math.round for percent, Math.min(value, gross) for fixed, and
   // Math.max(0, ...) so a fixed discount larger than the order shows 0 here
@@ -530,9 +541,10 @@ export default function CheckoutPage() {
   // computed, so what the customer sees here can never disagree with what
   // recalcOrderTotal actually stores once the order exists — both apply the
   // same two-branch formula to the same clamped inputs, they just run in
-  // different processes at different times.
+  // different processes at different times. promoMeetsThreshold gates it
+  // the same way meetsThreshold gates recalcOrderTotal's own discount.
   const promoDiscount =
-    mounted && appliedPromo && canComputeTotal
+    mounted && appliedPromo && canComputeTotal && promoMeetsThreshold
       ? Math.min(
           appliedPromo.discountType === 'percent' ? Math.round((total * appliedPromo.discountValue) / 100) : appliedPromo.discountValue,
           total,
@@ -547,13 +559,23 @@ export default function CheckoutPage() {
     setPromoChecking(true)
     try {
       const res = await fetch(`/api/promo-codes/validate?code=${encodeURIComponent(code)}`)
-      const data = (await res.json().catch(() => null)) as { valid?: boolean; discountType?: 'percent' | 'fixed'; discountValue?: number } | null
+      const data = (await res.json().catch(() => null)) as
+        | { valid?: boolean; discountType?: 'percent' | 'fixed'; discountValue?: number; minOrderAmount?: number }
+        | null
       if (!data?.valid || !data.discountType || !data.discountValue) {
         setAppliedPromo(null)
         setPromoError('Промокод не найден или больше не действует.')
         return
       }
-      setAppliedPromo({ code, discountType: data.discountType, discountValue: data.discountValue })
+      // Applying always succeeds for a code the server confirms is valid —
+      // a threshold the current cart doesn't meet isn't treated as a
+      // rejection (a generic "код недействителен" would be actively wrong:
+      // the code IS valid, it just isn't reducing this total yet). It's
+      // surfaced instead as a live, specific message below (see
+      // promoMeetsThreshold), with the actual threshold amount, and it
+      // resolves itself automatically if the cart grows past the
+      // threshold afterward — no need to re-apply.
+      setAppliedPromo({ code, discountType: data.discountType, discountValue: data.discountValue, minOrderAmount: data.minOrderAmount ?? 0 })
     } catch {
       setAppliedPromo(null)
       setPromoError('Не удалось проверить промокод. Попробуйте ещё раз.')
@@ -1067,10 +1089,20 @@ export default function CheckoutPage() {
                 )}
               </div>
               {promoError && <p className="mt-1.5 text-[12px] text-destructive">{promoError}</p>}
+              {/* Backlog item 5 follow-up (minimum order threshold) — only
+                  render the threshold-not-met message once the total is
+                  actually known (canComputeTotal); before dates are picked
+                  there's no real cart sum to compare against yet, so the
+                  code just shows as applied, same as before this field
+                  existed. Once it is known: a code below its own threshold
+                  says so, by name and by the actual amount required — not
+                  the generic "код недействителен" (that's reserved for a
+                  code that doesn't resolve at all, above). */}
               {appliedPromo && !promoError && (
-                <p className="mt-1.5 text-[12px] text-subtle">
-                  ✓ Промокод «{appliedPromo.code}» применён —{' '}
-                  {appliedPromo.discountType === 'percent' ? `скидка ${appliedPromo.discountValue}%` : `скидка ${formatCurrency(appliedPromo.discountValue)}`}.
+                <p className={`mt-1.5 text-[12px] ${canComputeTotal && !promoMeetsThreshold ? 'text-destructive' : 'text-subtle'}`}>
+                  {canComputeTotal && !promoMeetsThreshold
+                    ? `Промокод «${appliedPromo.code}» действует при заказе от ${formatCurrency(appliedPromo.minOrderAmount)} — сейчас в заказе ${formatCurrency(total)}.`
+                    : `✓ Промокод «${appliedPromo.code}» применён — ${appliedPromo.discountType === 'percent' ? `скидка ${appliedPromo.discountValue}%` : `скидка ${formatCurrency(appliedPromo.discountValue)}`}.`}
                 </p>
               )}
             </div>
@@ -1112,12 +1144,17 @@ export default function CheckoutPage() {
                   shown once a code is both applied and the total is
                   actually computable (canComputeTotal — see promoDiscount's
                   own definition above for why it's gated the same way). A
-                  0-value discount (e.g. a fixed code larger than the order,
-                  clamped) still renders the row rather than hiding it — the
-                  customer applied a real code, it just didn't reduce this
-                  particular total, which is worth showing rather than
-                  silently disappearing. */}
-              {appliedPromo && canComputeTotal && (
+                  0-value discount from a FIXED code larger than the order
+                  (clamped by Math.min against total) still renders this row
+                  — the customer applied a real code, it just didn't reduce
+                  this particular total, worth showing rather than silently
+                  disappearing. A 0 from the code's own minimum-order
+                  threshold not being met is a different case, gated out via
+                  promoMeetsThreshold: that's not "applied but clamped to
+                  0," it's "not applicable yet," already explained by its
+                  own message above — showing "Скидка −0 ₽" here too would
+                  just repeat the same fact in a more confusing shape. */}
+              {appliedPromo && canComputeTotal && promoMeetsThreshold && (
                 <div className="flex items-baseline justify-between py-2.5 text-[13.5px]">
                   <span className="text-subtle">Скидка</span>
                   <span className="font-semibold text-accent">{formatCurrency(-promoDiscount)}</span>

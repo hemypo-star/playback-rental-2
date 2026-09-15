@@ -80,8 +80,28 @@ async function recalcOrderTotal(req: PayloadRequest, orderRef: unknown): Promise
   // undefined, or no order at all) means no discount, not an error.
   const discountValue = order?.promoDiscountValue
   const discountType = order?.promoDiscountType
+  // Backlog item 5 follow-up (docs/ROADMAP-2.0.md, minimum order
+  // threshold): also a frozen snapshot (promoMinOrderAmount, Orders.ts) —
+  // never a live read of PromoCodes.minOrderAmount, same reasoning as
+  // discountValue/discountType above. Falsy (null/undefined/0) means "no
+  // threshold," matching what the field's own admin description promises
+  // for 0 specifically. Checked against gross with `<`, not `<=`: an order
+  // sitting exactly AT the threshold qualifies — "минимальная сумма ...
+  // при которой скидка начинает действовать" reads as inclusive of that
+  // exact sum, not exclusive.
+  //
+  // Deliberate consequence, not a bug: because this compares the
+  // threshold against the order's CURRENT gross (not the gross at
+  // checkout), an admin who edits items down until the order falls below
+  // the threshold correctly loses the discount on the next recalc — the
+  // order no longer qualifies for it. Editing back up above the threshold
+  // correctly restores it. Same "recompute from current state, not a
+  // frozen result" principle the surrounding comment already applies to
+  // gross itself.
+  const minOrderAmount = order?.promoMinOrderAmount
+  const meetsThreshold = !minOrderAmount || gross >= minOrderAmount
   const discount =
-    typeof discountValue === 'number'
+    typeof discountValue === 'number' && meetsThreshold
       ? discountType === 'percent'
         ? Math.round((gross * discountValue) / 100)
         : Math.min(discountValue, gross)
@@ -90,8 +110,11 @@ async function recalcOrderTotal(req: PayloadRequest, orderRef: unknown): Promise
   // discount is validated to 1–100 (PromoCodes.ts) so it can never exceed
   // gross on its own, and a fixed discount is already clamped to gross via
   // Math.min above. Both branches are written so a discount larger than
-  // the order zeroes totalPrice rather than going negative — deliberate;
-  // no minimum-order threshold exists, and none should be invented here.
+  // the order zeroes totalPrice rather than going negative — deliberate.
+  // (A fixed discount exceeding gross used to be the only way to a free
+  // rental; minOrderAmount above is the owner's actual fix for that, not a
+  // reason to remove this clamp — it's still the last-resort guarantee
+  // totalPrice never goes negative, regardless of threshold.)
   const totalPrice = Math.max(0, gross - discount)
 
   await req.payload.update({

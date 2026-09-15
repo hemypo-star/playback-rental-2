@@ -39,6 +39,13 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
   const [newCode, setNewCode] = useState('')
   const [newDiscountType, setNewDiscountType] = useState<DiscountType>('percent')
   const [newDiscountValue, setNewDiscountValue] = useState('10')
+  // Backlog item 5 follow-up (minimum order threshold) — blank by design:
+  // an empty string here means "let the server default it to discountValue"
+  // (PromoCodes.ts's beforeValidate hook), not 0. Only a value the operator
+  // actually typed is parsed and sent; leaving it blank sends nothing at
+  // all, same distinction createPromoCode's own `!== undefined` check
+  // relies on.
+  const [newMinOrderAmount, setNewMinOrderAmount] = useState('')
   const [newValidUntil, setNewValidUntil] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [creating, setCreating] = useState(false)
@@ -84,11 +91,25 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
       setError('Процентная скидка не может быть больше 100')
       return
     }
+    // Backlog item 5 follow-up (minimum order threshold) — blank stays
+    // `undefined` (server defaults it to discountValue); anything typed is
+    // validated the same way as the row's own onBlur check below, before
+    // the round trip, not after.
+    let minOrderAmount: number | undefined
+    if (newMinOrderAmount.trim() !== '') {
+      const parsedMin = Number(newMinOrderAmount)
+      if (!Number.isFinite(parsedMin) || !Number.isInteger(parsedMin) || parsedMin < 0) {
+        setError('Минимальная сумма заказа должна быть целым числом не меньше 0')
+        return
+      }
+      minOrderAmount = parsedMin
+    }
     setCreating(true)
     const result = await createPromoCode({
       code,
       discountType: newDiscountType,
       discountValue: value,
+      minOrderAmount,
       validUntil: newValidUntil ? new Date(newValidUntil).toISOString() : null,
       description: newDescription.trim(),
     })
@@ -103,6 +124,9 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
         code: code.toUpperCase(),
         discountType: newDiscountType,
         discountValue: value,
+        // Mirrors the server's own default (PromoCodes.ts's beforeValidate
+        // hook): a blank threshold ends up equal to discountValue, not 0.
+        minOrderAmount: minOrderAmount ?? value,
         active: true,
         validUntil: newValidUntil ? new Date(newValidUntil).toISOString() : null,
         description: newDescription.trim() || null,
@@ -114,6 +138,7 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
     setNewCode('')
     setNewDiscountValue('10')
     setNewDiscountType('percent')
+    setNewMinOrderAmount('')
     setNewValidUntil('')
     setNewDescription('')
     setSuccess(`Промокод «${code.toUpperCase()}» создан.`)
@@ -151,6 +176,31 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
     setRowError(promo.id, null)
     setPromoCodes((prev) => prev.map((p) => (p.id === promo.id ? { ...p, discountValue: value } : p)))
     const result = await updatePromoCode(promo.id, { discountValue: value })
+    if (!result.success) {
+      setRowError(promo.id, result.error || 'Не удалось сохранить')
+      revert()
+    }
+  }
+
+  // Backlog item 5 follow-up (minimum order threshold) — same onBlur-commit
+  // shape as handleDiscountValueBlur above, and the same lazily-read
+  // revert() (review finding B): committed(promo.id) is called INSIDE the
+  // closure, at rollback time, not captured up front, for the identical
+  // fast-double-edit reason. No percent-vs-fixed coupling to check here
+  // (unlike discountType/discountValue) — 0 is a valid, meaningful value
+  // ("no threshold"), so the floor is 0, not 1.
+  const handleMinOrderAmountBlur = async (promo: PromoCode, raw: string) => {
+    const value = Number(raw)
+    const revert = () =>
+      setPromoCodes((prev) => prev.map((p) => (p.id === promo.id ? { ...p, minOrderAmount: committed(promo.id)?.minOrderAmount ?? promo.minOrderAmount } : p)))
+    if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
+      setRowError(promo.id, 'Целое число, не меньше 0')
+      revert()
+      return
+    }
+    setRowError(promo.id, null)
+    setPromoCodes((prev) => prev.map((p) => (p.id === promo.id ? { ...p, minOrderAmount: value } : p)))
+    const result = await updatePromoCode(promo.id, { minOrderAmount: value })
     if (!result.success) {
       setRowError(promo.id, result.error || 'Не удалось сохранить')
       revert()
@@ -250,6 +300,26 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
                     </select>
                   </div>
 
+                  {/* Backlog item 5 follow-up (minimum order threshold) —
+                      same onBlur-commit input as the discount value above,
+                      just its own field/handler. 0 is shown as a literal
+                      "0" (not blank): after PromoCodes.ts's beforeValidate
+                      hook runs, a row's minOrderAmount is never genuinely
+                      unset, so there is no "blank" state left to represent
+                      here — only "0 = no threshold" vs a real amount. */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11.5px] text-subtle">от</span>
+                    <input
+                      type="number"
+                      min={0}
+                      defaultValue={promo.minOrderAmount ?? 0}
+                      onBlur={(e) => void handleMinOrderAmountBlur(promo, e.target.value)}
+                      aria-label={`Минимальная сумма заказа для промокода ${promo.code}`}
+                      className="h-9 w-[86px] rounded-lg border border-input bg-white px-2 text-[13px] outline-none focus:border-foreground"
+                    />
+                    <span className="text-[11.5px] text-subtle">₽</span>
+                  </div>
+
                   <span className="text-[11.5px] text-subtle">{formatValidUntil(promo.validUntil)}</span>
 
                   <div className="ml-auto flex items-center gap-1">
@@ -321,6 +391,16 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
               </select>
             </div>
           </div>
+
+          <label className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Мин. сумма заказа, ₽ (необязательно)</label>
+          <input
+            type="number"
+            min={0}
+            value={newMinOrderAmount}
+            onChange={(e) => setNewMinOrderAmount(e.target.value)}
+            placeholder={`по умолчанию — ${newDiscountValue || '0'}`}
+            className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+          />
 
           <label className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Действует до (необязательно)</label>
           <input

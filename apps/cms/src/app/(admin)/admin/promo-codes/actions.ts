@@ -34,6 +34,12 @@ export interface CreatePromoCodeInput {
   code: string
   discountType: 'percent' | 'fixed'
   discountValue: number
+  // Backlog item 5 follow-up (minimum order threshold) — undefined, not 0,
+  // means "left blank": PromoCodes.ts's own beforeValidate hook fills that
+  // case in with discountValue. An explicit 0 (the panel's own "no
+  // threshold" input) must reach payload.create() as a real 0, so it's
+  // spread in conditionally below on `!== undefined`, not on truthiness.
+  minOrderAmount?: number
   validUntil: string | null
   description: string
 }
@@ -49,6 +55,7 @@ export async function createPromoCode(data: CreatePromoCodeInput): Promise<Actio
         discountType: data.discountType,
         discountValue: data.discountValue,
         active: true,
+        ...(data.minOrderAmount !== undefined ? { minOrderAmount: data.minOrderAmount } : {}),
         ...(data.validUntil ? { validUntil: data.validUntil } : {}),
         ...(data.description ? { description: data.description } : {}),
       },
@@ -73,6 +80,12 @@ export async function createPromoCode(data: CreatePromoCodeInput): Promise<Actio
 export interface UpdatePromoCodeInput {
   discountType?: 'percent' | 'fixed'
   discountValue?: number
+  // Independent of discountType/discountValue — unlike that pair,
+  // minOrderAmount has no cross-field constraint with them (PromoCodes.ts's
+  // validate only checks it in isolation), so it commits on its own blur,
+  // same pattern as a lone discountValue-only edit would if that field
+  // didn't have the percent/fixed coupling.
+  minOrderAmount?: number
   active?: boolean
 }
 

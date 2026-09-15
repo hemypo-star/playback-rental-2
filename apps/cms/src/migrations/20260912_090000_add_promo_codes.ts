@@ -3,30 +3,44 @@ import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
 // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes). New `PromoCodes`
 // collection (a real Payload collection, unlike rate_limit_hits — so it
 // goes through the normal push/introspection path, not `tablesFilter`) plus
-// four new sidebar fields on `orders`: promoCode/promoDiscount (the applied
-// code and the actual rouble amount deducted, recomputed on every
-// recalcOrderTotal run) and promoDiscountType/promoDiscountValue (a
-// SNAPSHOT of the promo's own terms at checkout time — see
-// collections/Orders.ts and OrderItems.ts's recalcOrderTotal). This file
-// originally shipped with only promoCode/promoDiscount; promoDiscountType/
-// promoDiscountValue were added in a fix round (review finding A) before
-// this migration had ever run in production, so this file was edited in
-// place rather than stacking a second migration on top of it — there is
-// still only one migration for the whole promo-codes feature.
+// six new fields: promoCode/promoDiscount (sidebar fields on `orders` — the
+// applied code and the actual rouble amount deducted, recomputed on every
+// recalcOrderTotal run), promoDiscountType/promoDiscountValue (a SNAPSHOT
+// of the promo's own discount terms at checkout time), promoMinOrderAmount
+// (a matching snapshot of the promo's minimum-order threshold, same
+// reasoning), and `promoCodes.minOrderAmount` itself — see
+// collections/Orders.ts, collections/PromoCodes.ts, and
+// OrderItems.ts's recalcOrderTotal. This file originally shipped with only
+// promoCode/promoDiscount; promoDiscountType/promoDiscountValue were added
+// in a fix round (review finding A), and minOrderAmount/
+// promoMinOrderAmount (the minimum-order-threshold follow-up) in a second
+// round after that — both before this migration had ever run in
+// production, so this file was edited in place both times rather than
+// stacking further migrations on top of it: there is still only one
+// migration for the whole promo-codes feature.
 //
 // DDL below is not guessed — verified by bringing up a scratch Postgres,
 // letting `next dev`'s push-mode schema sync create the schema from this
 // exact set of collection/field changes, and dumping the resulting table/
 // enum/index/constraint definitions with `pg_dump --schema-only`. This
 // migration reproduces that dump byte-for-byte (column types/defaults,
-// index names, FK names/ON DELETE behavior). Separately migration-tested on
-// a second, clean scratch database: `up` (matches the same shape, confirmed
-// via psql \d orders / \dT+ that promo_discount_type is
+// index names, FK names/ON DELETE behavior) — re-confirmed after the
+// minOrderAmount/promoMinOrderAmount round specifically: both are plain
+// nullable `numeric` columns with no default (`promo_codes.
+// min_order_amount`, `orders.promo_min_order_amount`), matching that
+// neither field declares a Payload-level `defaultValue` (the "blank
+// defaults to discountValue" behavior is a beforeValidate hook, not a
+// column default — a column default would apply on every insert
+// unconditionally, including one that legitimately wants NULL, which never
+// happens here, but the hook is what actually reproduces "blank only,
+// explicit 0 stays 0"). Separately migration-tested on a second, clean
+// scratch database: `up` (matches the same shape, confirmed via psql
+// \d orders / \d promo_codes / \dT+ that promo_discount_type is
 // enum_orders_promo_discount_type('percent','fixed'), nullable, no
 // default — Orders.ts's promoDiscountType field has no defaultValue,
 // unlike PromoCodes.ts's own discountType field, which does), `down`
 // (clean removal, confirmed via psql \d/\dT+ that promo_codes, both new
-// enums, and all four orders columns are gone and
+// enums, and all five orders columns are gone and
 // payload_locked_documents_rels lost its promo_codes_id column), `up`
 // again (idempotent — see the IF [NOT] EXISTS guards below, same
 // convention as every migration since 20260910_120000_rate_limit_hits for
@@ -54,6 +68,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   	"code" varchar NOT NULL,
   	"discount_type" "enum_promo_codes_discount_type" DEFAULT 'percent' NOT NULL,
   	"discount_value" numeric NOT NULL,
+  	"min_order_amount" numeric,
   	"active" boolean DEFAULT true,
   	"valid_until" timestamp(3) with time zone,
   	"description" varchar,
@@ -65,6 +80,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "promo_code" varchar;
   ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "promo_discount_type" "enum_orders_promo_discount_type";
   ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "promo_discount_value" numeric;
+  ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "promo_min_order_amount" numeric;
   ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "promo_discount" numeric DEFAULT 0;
 
   DO $$ BEGIN
@@ -87,6 +103,7 @@ export async function down({ db, payload, req }: MigrateDownArgs): Promise<void>
   ALTER TABLE "orders" DROP COLUMN IF EXISTS "promo_code";
   ALTER TABLE "orders" DROP COLUMN IF EXISTS "promo_discount_type";
   ALTER TABLE "orders" DROP COLUMN IF EXISTS "promo_discount_value";
+  ALTER TABLE "orders" DROP COLUMN IF EXISTS "promo_min_order_amount";
   ALTER TABLE "orders" DROP COLUMN IF EXISTS "promo_discount";
   DROP TABLE IF EXISTS "promo_codes" CASCADE;
   DROP TYPE IF EXISTS "public"."enum_promo_codes_discount_type";

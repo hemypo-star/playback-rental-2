@@ -7,9 +7,14 @@ import { getClientIp } from '../lib/security/clientIp'
 // the order (the actual discount is re-resolved and applied server-side
 // again at submit time, in OrderItems.ts's recalcOrderTotal; this endpoint
 // never authorizes a discount on its own). Deliberately returns only
-// { valid, discountType, discountValue }, never the promo's own id/
-// description/etc., since PromoCodes itself is admin-only-readable
-// specifically so the full code list isn't enumerable.
+// { valid, discountType, discountValue, minOrderAmount }, never the promo's
+// own id/description/etc., since PromoCodes itself is admin-only-readable
+// specifically so the full code list isn't enumerable. minOrderAmount
+// (backlog item 5 follow-up) doesn't widen that posture: it's a term of
+// the exact code the caller already named and got a `valid: true` for, not
+// a new way to learn something about a code that doesn't exist or isn't
+// theirs — the anti-enumeration guarantee this endpoint exists to keep is
+// about the code SPACE, not about what a resolved code's own terms are.
 export const promoCodeValidateEndpoint: Endpoint = {
   path: '/promo-codes/validate',
   method: 'get',
@@ -51,6 +56,11 @@ export const promoCodeValidateEndpoint: Endpoint = {
     if (!promo) {
       return Response.json({ valid: false })
     }
-    return Response.json({ valid: true, discountType: promo.discountType, discountValue: promo.discountValue })
+    return Response.json({
+      valid: true,
+      discountType: promo.discountType,
+      discountValue: promo.discountValue,
+      minOrderAmount: promo.minOrderAmount ?? 0,
+    })
   },
 }

@@ -23,7 +23,7 @@ export const PromoCodes: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'code',
-    defaultColumns: ['code', 'discountType', 'discountValue', 'active', 'validUntil'],
+    defaultColumns: ['code', 'discountType', 'discountValue', 'minOrderAmount', 'active', 'validUntil'],
   },
   fields: [
     {
@@ -74,6 +74,35 @@ export const PromoCodes: CollectionConfig = {
       },
     },
     {
+      // Backlog item 5 follow-up (docs/ROADMAP-2.0.md): a fixed-amount
+      // discount larger than the order used to clamp totalPrice to 0 (a
+      // free rental) with no way to stop it — the owner's fix is a manual,
+      // per-code minimum order sum below which the code simply doesn't
+      // apply. Optional and defaulted, not required: the beforeValidate
+      // hook below fills it in with discountValue when an operator leaves
+      // it blank (so a 500₽-off code defaults to "applies from 500₽" —
+      // roughly the threshold that stops it giving away a rental for
+      // free), but an operator who types a different number — higher OR
+      // lower — has that value respected, and 0 is a real, distinct value
+      // meaning "no threshold," not "unset."
+      name: 'minOrderAmount',
+      type: 'number',
+      min: 0,
+      admin: {
+        description:
+          'Сумма заказа (₽), ниже которой скидка не применяется. Пусто при создании — подставится значение скидки выше. 0 — без ограничения (скидка действует всегда, как раньше).',
+      },
+      validate: (value: number | null | undefined) => {
+        if (value === null || value === undefined) return true
+        // Same integer discipline as discountValue's own validate — every
+        // write path (Local API, REST, /cms's default admin UI), not just
+        // PromoCodesPanel.tsx's own client-side check.
+        if (!Number.isInteger(value)) return 'Значение должно быть целым числом'
+        if (value < 0) return 'Значение не может быть отрицательным'
+        return true
+      },
+    },
+    {
       name: 'active',
       type: 'checkbox',
       defaultValue: true,
@@ -97,6 +126,23 @@ export const PromoCodes: CollectionConfig = {
     beforeValidate: [
       ({ data }) => {
         if (data?.code) data.code = data.code.trim().toUpperCase()
+        return data
+      },
+      // Default minOrderAmount to discountValue when an operator leaves it
+      // blank. Runs after field-level beforeValidate has already merged
+      // originalDoc data into `data` (Payload's own documented order —
+      // "merge original document data into incoming data" happens before
+      // collection hooks run), so on a partial update `data.minOrderAmount`
+      // already reflects whatever's actually stored — null/undefined here
+      // only ever means "genuinely never set" (a fresh create left blank,
+      // or a pre-this-feature row), never "just wasn't part of this
+      // request." Checked strictly against null/undefined, not falsiness:
+      // an explicit 0 must reach the DB as 0 ("no threshold"), not be
+      // silently promoted back to discountValue.
+      ({ data }) => {
+        if (data && (data.minOrderAmount === null || data.minOrderAmount === undefined) && typeof data.discountValue === 'number') {
+          data.minOrderAmount = data.discountValue
+        }
         return data
       },
     ],

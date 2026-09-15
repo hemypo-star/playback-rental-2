@@ -149,8 +149,21 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
         // never re-derived later. Omitted entirely for an invalid/expired
         // code — no snapshot stored means no discount applied, per the
         // "never fail checkout over this" rule above.
+        // promoMinOrderAmount is part of the same snapshot, from the same
+        // resolved promo object — never re-read from promoCodes later (see
+        // Orders.ts/OrderItems.ts's recalcOrderTotal for why: re-reading it
+        // live would reintroduce the exact retroactive-repricing bug the
+        // snapshot design exists to prevent). `?? 0` normalizes a
+        // never-set minOrderAmount (a promo row written before this field
+        // existed) to 0 — "no threshold" — matching what omitting the key
+        // entirely already means to recalcOrderTotal.
         ...(promo
-          ? { promoCode: promo.code, promoDiscountType: promo.discountType, promoDiscountValue: promo.discountValue }
+          ? {
+              promoCode: promo.code,
+              promoDiscountType: promo.discountType,
+              promoDiscountValue: promo.discountValue,
+              promoMinOrderAmount: promo.minOrderAmount ?? 0,
+            }
           : {}),
       },
       overrideAccess: false,
