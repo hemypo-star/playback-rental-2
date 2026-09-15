@@ -2,6 +2,7 @@ import type { Payload, PayloadRequest } from 'payload'
 import { pushOrderToMoySklad } from '../moysklad/orders'
 import { sendOrderNotification } from '../notifications/webhook'
 import { calculateRentalDays } from './pricing'
+import type { CheckoutErrorCode } from '../checkoutErrors'
 
 // Extracted from the /:id/submit endpoint's handler (collections/Orders.ts)
 // so the new checkout Server Action (docs/PLAN-next-migration.md Stage 2,
@@ -28,6 +29,13 @@ export class SubmitOrderError extends Error {
   constructor(
     message: string,
     public status: number,
+    // Machine-readable code for lib/checkoutErrors.ts to translate to
+    // Russian (A3, design_handoff_swiss_bento/08-instruction.md) — the
+    // /:id/submit REST endpoint (collections/Orders.ts) and the admin
+    // "submit to МойСклад" action still read `.message` directly for their
+    // own (non-customer-facing) error surfaces, so this stays optional
+    // rather than forcing every existing catch site to change.
+    public code: CheckoutErrorCode = 'UNKNOWN',
   ) {
     super(message)
     this.name = 'SubmitOrderError'
@@ -49,10 +57,10 @@ export interface SubmitOrderResult {
 export async function submitOrder(payload: Payload, orderId: number, req?: PayloadRequest): Promise<SubmitOrderResult> {
   const order = await payload.findByID({ collection: 'orders', id: orderId, req, overrideAccess: true })
   if (!order) {
-    throw new SubmitOrderError('Order not found', 404)
+    throw new SubmitOrderError('Order not found', 404, 'ORDER_NOT_FOUND')
   }
   if (order.submittedAt) {
-    throw new SubmitOrderError('Order already submitted', 409)
+    throw new SubmitOrderError('Order already submitted', 409, 'ORDER_ALREADY_SUBMITTED')
   }
 
   const itemsResult = await payload.find({
@@ -64,7 +72,7 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
     overrideAccess: true,
   })
   if (itemsResult.docs.length === 0) {
-    throw new SubmitOrderError('Order has no items', 400)
+    throw new SubmitOrderError('Order has no items', 400, 'ORDER_HAS_NO_ITEMS')
   }
 
   // depth: 1 above populates the `product` relationship into an object;

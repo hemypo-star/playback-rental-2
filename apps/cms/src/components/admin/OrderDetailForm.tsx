@@ -7,11 +7,10 @@
 // REST endpoints directly.
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AdminOrderDetail, AdminOrderDetailItem } from '../../lib/admin/data/orders'
 import { rub } from '../../lib/admin/format'
 import {
-  deleteOrder,
   deleteOrderItem,
   submitOrderToMoySklad,
   updateOrderItem,
@@ -45,17 +44,33 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
   const [status, setStatus] = useState(order.status)
   const [notes, setNotes] = useState(order.notes ?? '')
   const [items, setItems] = useState(initialItems)
+  const [totalPrice, setTotalPrice] = useState(order.totalPrice)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitResult, setSubmitResult] = useState<string | null>(null)
   const [submittedAt, setSubmittedAt] = useState(order.submittedAt)
   const [moySkladOrderId, setMoySkladOrderId] = useState(order.moySkladOrderId)
 
+  // Rollback targets must read the *current* committed value, not one
+  // captured in an onBlur closure at the time a field was edited — with two
+  // in-flight edits to the same field (e.g. a fast double-correction), the
+  // second request's closure would otherwise capture a value from before
+  // either request landed, rolling back to a stale number even after the
+  // first request has already committed a newer one server-side.
+  const itemsRef = useRef(items)
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
+  const committedItem = (itemId: number) => itemsRef.current.find((it) => it.id === itemId)
+
   const handleStatusChange = async (value: AdminOrderDetail['status']) => {
-    setStatus(value)
     setError(null)
     const result = await updateOrderStatus(order.id, value)
-    if (!result.success) setError(result.error || 'Не удалось сохранить изменения')
+    if (result.success) {
+      setStatus(value)
+    } else {
+      setError(result.error || 'Не удалось сохранить изменения')
+    }
   }
 
   const handleNotesBlur = async () => {
@@ -64,15 +79,28 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
     if (!result.success) setError(result.error || 'Не удалось сохранить изменения')
   }
 
-  const handleItemFieldChange = async (itemId: number, field: 'quantity' | 'startDate' | 'endDate', rawValue: string) => {
+  // Success-path state updater only — the server call + failure rollback
+  // live in commitItemField below, called from each field's onBlur handler.
+  const handleItemFieldChange = (itemId: number, field: 'quantity' | 'startDate' | 'endDate', value: number | string, lineTotal?: number) => {
+    setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, [field]: value, lineTotal: lineTotal ?? it.lineTotal } : it)))
+  }
+
+  const commitItemField = async (
+    itemId: number,
+    field: 'quantity' | 'startDate' | 'endDate',
+    rawValue: string,
+    rollback: () => void,
+  ) => {
     setError(null)
     const value = field === 'quantity' ? Number(rawValue) : new Date(rawValue).toISOString()
     const result = await updateOrderItem(order.id, itemId, { [field]: value })
     if (!result.success) {
       setError(result.error || 'Не удалось сохранить позицию')
+      rollback()
       return
     }
-    setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, [field]: value, lineTotal: result.lineTotal ?? it.lineTotal } : it)))
+    handleItemFieldChange(itemId, field, value, result.lineTotal)
+    if (typeof result.orderTotalPrice === 'number') setTotalPrice(result.orderTotalPrice)
   }
 
   const handleRemoveItem = async (itemId: number) => {
@@ -84,17 +112,19 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
       return
     }
     setItems((prev) => prev.filter((it) => it.id !== itemId))
+    if (typeof result.orderTotalPrice === 'number') setTotalPrice(result.orderTotalPrice)
   }
 
-  const handleDeleteOrder = async () => {
-    if (!confirm('Удалить заказ вместе со всеми позициями? Это необратимо.')) return
-    setError(null)
-    const result = await deleteOrder(order.id)
-    if (result.success) {
-      router.push('/admin/orders')
-    } else {
-      setError(result.error || 'Не удалось удалить заказ')
-    }
+  const handleCancelOrder = async () => {
+    // Cancel, not delete — a cancelled order already drops out of active-
+    // availability accounting and revenue analytics (see CLAUDE.md), the
+    // same practical effect a hard delete had, but reversibly: the status
+    // dropdown can just be set back. Still confirm()-guarded despite being
+    // reversible — it's a one-click change with a real operational effect
+    // (order stops counting as active) that an operator should not trigger
+    // by an accidental click on this destructive-looking button.
+    if (!confirm('Отменить этот заказ? Позиции и история останутся — статус можно будет вернуть обратно.')) return
+    await handleStatusChange('cancelled')
   }
 
   const handleSubmitOrder = async () => {
@@ -116,13 +146,21 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
     <>
       <div className="flex items-center justify-between">
         <Link href="/admin/orders" className="text-[12.5px] font-semibold text-subtle hover:text-foreground">← Все заказы</Link>
-        <button
-          type="button"
-          onClick={handleDeleteOrder}
-          className="rounded-full bg-transparent px-4 py-2 text-[11px] font-semibold tracking-[0.1em] text-accent uppercase transition-colors duration-240 ease-expo hover:bg-accent hover:text-white"
-        >
-          Удалить заказ
-        </button>
+        {status !== 'cancelled' && (
+          <button
+            type="button"
+            onClick={handleCancelOrder}
+            // btn-outline, not the accent fill this button carried when it
+            // meant permanent deletion: cancelling is reversible, while the
+            // per-item ✕ right below it is not — leaving the accent fill here
+            // would make the reversible action read as the more severe of the
+            // two. Same h-*/text-* override shape every other btn-outline in
+            // the app uses (CatalogPage, ProductPurchasePanel).
+            className="btn-outline h-9 px-4 text-[11px]"
+          >
+            Отменить заказ
+          </button>
+        )}
       </div>
 
       {error && <p className="rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]">{error}</p>}
@@ -139,14 +177,31 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
                     type="number"
                     min={1}
                     defaultValue={item.quantity}
-                    onChange={(e) => handleItemFieldChange(item.id, 'quantity', e.target.value)}
+                    onBlur={(e) => {
+                      const n = Number(e.target.value)
+                      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) {
+                        e.target.value = String(committedItem(item.id)?.quantity ?? item.quantity)
+                        return
+                      }
+                      void commitItemField(item.id, 'quantity', e.target.value, () => {
+                        e.target.value = String(committedItem(item.id)?.quantity ?? item.quantity)
+                      })
+                    }}
                     className="h-9 w-full rounded-lg border border-input bg-white px-2 text-[13px] outline-none focus:border-foreground"
                   />
                   {item.listingType === 'rental' ? (
                     <input
                       type="datetime-local"
                       defaultValue={toLocalInput(item.startDate)}
-                      onChange={(e) => handleItemFieldChange(item.id, 'startDate', e.target.value)}
+                      onBlur={(e) => {
+                        if (isNaN(new Date(e.target.value).getTime())) {
+                          e.target.value = toLocalInput(committedItem(item.id)?.startDate ?? item.startDate)
+                          return
+                        }
+                        void commitItemField(item.id, 'startDate', e.target.value, () => {
+                          e.target.value = toLocalInput(committedItem(item.id)?.startDate ?? item.startDate)
+                        })
+                      }}
                       className="h-9 w-full rounded-lg border border-input bg-white px-2 text-[12px] outline-none focus:border-foreground"
                     />
                   ) : (
@@ -156,7 +211,15 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
                     <input
                       type="datetime-local"
                       defaultValue={toLocalInput(item.endDate)}
-                      onChange={(e) => handleItemFieldChange(item.id, 'endDate', e.target.value)}
+                      onBlur={(e) => {
+                        if (isNaN(new Date(e.target.value).getTime())) {
+                          e.target.value = toLocalInput(committedItem(item.id)?.endDate ?? item.endDate)
+                          return
+                        }
+                        void commitItemField(item.id, 'endDate', e.target.value, () => {
+                          e.target.value = toLocalInput(committedItem(item.id)?.endDate ?? item.endDate)
+                        })
+                      }}
                       className="h-9 w-full rounded-lg border border-input bg-white px-2 text-[12px] outline-none focus:border-foreground"
                     />
                   ) : (
@@ -201,7 +264,7 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
             </select>
 
             <div className="mt-5 text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Сумма</div>
-            <div className="mt-2 text-[24px] font-medium tracking-[-0.03em]">{rub(order.totalPrice)}</div>
+            <div className="mt-2 text-[24px] font-medium tracking-[-0.03em]">{rub(totalPrice)}</div>
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-6">

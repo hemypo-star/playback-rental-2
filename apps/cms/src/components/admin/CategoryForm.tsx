@@ -6,6 +6,7 @@
 // instead of fetch()-ing Payload's REST endpoints directly.
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import Image from 'next/image'
 import type { Category } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
@@ -139,7 +140,15 @@ export default function CategoryForm({ category, parentOptions, currentParentId 
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Изображение</div>
             <div className="mt-3 flex items-center gap-4">
-              {imagePreview ? <img src={imagePreview} className="h-20 w-20 rounded-xl bg-muted object-cover" alt="" /> : null}
+              {/* C4 (design_handoff_swiss_bento/08-instruction.md, G3):
+                  admin thumbnail, fixed 80x80 at every breakpoint — width/
+                  height, not fill/sizes, same reasoning as the checkout
+                  cart thumbnail. imagePreview is always either the existing
+                  Media doc's own URL or a freshly-uploaded one from
+                  uploadMedia() (see handleImageChange below) — a real
+                  server-persisted /api/media/file/... path, never a
+                  client-only blob: URL next/image couldn't optimize. */}
+              {imagePreview ? <Image src={imagePreview} width={80} height={80} className="rounded-xl bg-muted object-cover" alt="" /> : null}
               <input type="file" accept="image/*" onChange={handleImageChange} className="text-[13px]" />
             </div>
           </div>

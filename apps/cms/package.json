@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "node --import tsx --test src/lib/**/*.test.ts",
     "payload": "payload",
     "generate:types": "payload generate:types",
     "sync:moysklad": "tsx --env-file-if-exists=.env src/scripts/sync-moysklad.ts",

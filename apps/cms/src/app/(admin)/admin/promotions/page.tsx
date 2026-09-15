@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import { Fragment } from 'react'
 import Link from 'next/link'
 import AdminPageHeader from '../../../../components/admin/AdminPageHeader'
+import AdminMobileCard from '../../../../components/admin/AdminMobileCard'
 import { getAdminPromotions } from '../../../../lib/admin/data/promotions'
 
 // Ported from apps/web/src/pages/admin/promotions/index.astro (docs/PLAN-
@@ -17,26 +19,43 @@ export default async function AdminPromotionsPage() {
       <AdminPageHeader title="Акции" subtitle={`${promotions.length} акций`} actionLabel="Новая акция" actionHref="/admin/promotions/new" />
 
       <div className="rounded-3xl border border-border bg-card p-6">
-        <div className="grid grid-cols-[2.2fr_1fr_90px_100px] gap-3.5 px-2.5 pb-3 text-[10px] font-semibold tracking-[0.13em] text-subtle uppercase">
+        <div className="hidden grid-cols-[2.2fr_1fr_90px_100px] gap-3.5 px-2.5 pb-3 text-[10px] font-semibold tracking-[0.13em] text-subtle uppercase lg:grid">
           <span>Название</span><span>Slug</span><span>Порядок</span><span>Статус</span>
         </div>
-        {promotions.map((p) => (
-          <Link
-            key={p.id}
-            href={`/admin/promotions/${p.id}`}
-            className="grid grid-cols-[2.2fr_1fr_90px_100px] items-center gap-3.5 rounded-2xl px-2.5 py-3.5 text-[13.5px] transition-colors duration-240 ease-expo hover:bg-muted"
-          >
-            <span className="truncate font-medium">{p.title}</span>
-            <span className="truncate text-[12.5px] text-subtle">{p.slug ?? '—'}</span>
-            <span>{p.order}</span>
-            <span
-              className="justify-self-start rounded-full px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase"
-              style={{ background: p.active ? '#E4F6E9' : '#F0EFEC', color: p.active ? '#0B6B32' : '#75736E' }}
-            >
-              {p.active ? 'Активна' : 'Скрыта'}
-            </span>
-          </Link>
-        ))}
+        <div className="flex flex-col gap-2.5 lg:contents">
+          {promotions.map((p) => {
+            const badge = (
+              <span
+                className="justify-self-start rounded-full px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase"
+                style={{ background: p.active ? '#E4F6E9' : '#F0EFEC', color: p.active ? '#0B6B32' : '#75736E' }}
+              >
+                {p.active ? 'Активна' : 'Скрыта'}
+              </span>
+            )
+            return (
+              <Fragment key={p.id}>
+                <Link
+                  href={`/admin/promotions/${p.id}`}
+                  className="hidden grid-cols-[2.2fr_1fr_90px_100px] items-center gap-3.5 rounded-2xl px-2.5 py-3.5 text-[13.5px] transition-colors duration-240 ease-expo hover:bg-muted lg:grid"
+                >
+                  <span className="truncate font-medium">{p.title}</span>
+                  <span className="truncate text-[12.5px] text-subtle">{p.slug ?? '—'}</span>
+                  <span>{p.order}</span>
+                  {badge}
+                </Link>
+                <AdminMobileCard
+                  href={`/admin/promotions/${p.id}`}
+                  title={p.title}
+                  badge={badge}
+                  fields={[
+                    { label: 'Slug', value: p.slug ?? '—' },
+                    { label: 'Порядок', value: p.order },
+                  ]}
+                />
+              </Fragment>
+            )
+          })}
+        </div>
         {promotions.length === 0 ? <div className="px-2.5 py-8 text-center text-[13.5px] text-subtle">Пока нет акций</div> : null}
       </div>
     </>

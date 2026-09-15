@@ -6,8 +6,22 @@
 // Astro's plain onchange="..." string attribute can't express in JSX —
 // everything else here is static, server-fetchable data passed down as
 // props from CatalogPage.tsx.
+//
+// C1 (design_handoff_swiss_bento/08-instruction.md, G2): the category/sort/
+// reset <a> tags below are deliberately NOT next/link, considered and
+// rejected during C1. They can navigate to a URL that resolves to the
+// *same* page.tsx (a sort/query change on /catalog, or /catalog itself from
+// a different /catalog/[slug]) — Next reconciles that as a re-render of the
+// already-mounted page, not a fresh mount, so CatalogAvailabilityInit's
+// effect (`useEffect(() => initCatalogAvailability(), [])`, see that file)
+// would not re-run and its one-time DOM snapshot of the product grid would
+// go stale against the newly server-rendered cards. A hard navigation avoids
+// that by construction. Making the effect itself survive a same-route
+// client-side navigation is a catalog-refresh change (adjacent to C2/C5),
+// not part of C1.
 import type { Category } from '../payload-types'
 import { buildCategoryTree, flattenCategoryTree } from '../lib/categoryTree'
+import { buildCatalogUrl } from '../lib/catalogQuery'
 
 interface Props {
   categories: Category[]
@@ -16,14 +30,17 @@ interface Props {
   activeSlug?: string
   searchQuery?: string
   sort: string
-}
-
-function withQuery(searchQuery: string | undefined, href: string, extra: Record<string, string | undefined> = {}): string {
-  const params = new URLSearchParams()
-  if (searchQuery) params.set('q', searchQuery)
-  for (const [k, v] of Object.entries(extra)) if (v) params.set(k, v)
-  const qs = params.toString()
-  return qs ? `${href}?${qs}` : href
+  // C6 (design_handoff_swiss_bento/08-instruction.md, N8): only the sort
+  // links need this — a category link always navigates to /catalog or
+  // /catalog/[slug], and [slug]'s own route never reads `type=kit` (see its
+  // page.tsx), so kit mode is only ever reachable from bare /catalog in the
+  // first place. Picking a category is deliberately a different facet from
+  // "Наборы", not a combination of the two — that's an existing routing
+  // decision, not something this fix changes. A sort link, though, is meant
+  // to keep the visitor on the exact same view they're already looking at
+  // (still /catalog?type=kit) and just re-order it, so it has to carry kit
+  // forward the same way the search form now does.
+  kitOnly?: boolean
 }
 
 const SORTS: { id: string; label: string }[] = [
@@ -32,7 +49,7 @@ const SORTS: { id: string; label: string }[] = [
   { id: 'desc', label: 'Сначала дороже' },
 ]
 
-export default function CategorySidebar({ categories, categoryCounts, totalCount, activeSlug, searchQuery, sort }: Props) {
+export default function CategorySidebar({ categories, categoryCounts, totalCount, activeSlug, searchQuery, sort, kitOnly = false }: Props) {
   const orderedCategories = flattenCategoryTree(buildCategoryTree(categories))
 
   return (
@@ -40,14 +57,14 @@ export default function CategorySidebar({ categories, categoryCounts, totalCount
       <div className="col-span-full lg:hidden">
         <select
           className="w-full rounded-2xl border border-border bg-card px-3.5 py-2.5 text-[14px] font-medium"
-          defaultValue={activeSlug ? withQuery(searchQuery, `/catalog/${activeSlug}`, { sort }) : withQuery(searchQuery, '/catalog', { sort })}
+          defaultValue={activeSlug ? buildCatalogUrl(`/catalog/${activeSlug}`, { q: searchQuery, sort }) : buildCatalogUrl('/catalog', { q: searchQuery, sort })}
           onChange={(e) => {
             if (e.target.value) window.location.href = e.target.value
           }}
         >
-          <option value={withQuery(searchQuery, '/catalog', { sort })}>Все категории ({totalCount})</option>
+          <option value={buildCatalogUrl('/catalog', { q: searchQuery, sort })}>Все категории ({totalCount})</option>
           {orderedCategories.map(({ category: c, depth }) => (
-            <option key={c.id} value={withQuery(searchQuery, `/catalog/${c.slug}`, { sort })}>
+            <option key={c.id} value={buildCatalogUrl(`/catalog/${c.slug}`, { q: searchQuery, sort })}>
               {'  '.repeat(depth)}
               {depth > 0 ? '— ' : ''}
               {c.name} ({categoryCounts.get(c.id) ?? 0})
@@ -61,7 +78,7 @@ export default function CategorySidebar({ categories, categoryCounts, totalCount
           <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Категория</div>
           <div className="mt-2.5 flex flex-col gap-0.5">
             <a
-              href={withQuery(searchQuery, '/catalog', { sort })}
+              href={buildCatalogUrl('/catalog', { q: searchQuery, sort })}
               className={`flex items-center justify-between rounded-xl border-none px-3.5 py-[11px] text-[13.5px] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground ${!activeSlug ? 'bg-primary text-primary-foreground' : 'bg-transparent'}`}
             >
               <span>Все позиции</span>
@@ -70,7 +87,7 @@ export default function CategorySidebar({ categories, categoryCounts, totalCount
             {orderedCategories.map(({ category: c, depth }) => (
               <a
                 key={c.id}
-                href={withQuery(searchQuery, `/catalog/${c.slug}`, { sort })}
+                href={buildCatalogUrl(`/catalog/${c.slug}`, { q: searchQuery, sort })}
                 style={{ paddingLeft: `${14 + depth * 14}px` }}
                 className={`flex items-center justify-between rounded-xl border-none py-[11px] pr-3.5 text-[13.5px] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground ${activeSlug === c.slug ? 'bg-primary text-primary-foreground' : depth > 0 ? 'bg-transparent text-subtle' : 'bg-transparent'}`}
               >
@@ -85,7 +102,7 @@ export default function CategorySidebar({ categories, categoryCounts, totalCount
             {SORTS.map((s) => (
               <a
                 key={s.id}
-                href={withQuery(searchQuery, activeSlug ? `/catalog/${activeSlug}` : '/catalog', { sort: s.id })}
+                href={buildCatalogUrl(activeSlug ? `/catalog/${activeSlug}` : '/catalog', { q: searchQuery, sort: s.id, kit: kitOnly })}
                 className={`rounded-xl border-none px-3.5 py-[11px] text-[13.5px] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground ${sort === s.id ? 'bg-primary text-primary-foreground' : 'bg-transparent'}`}
               >
                 {s.label}
@@ -101,7 +118,14 @@ export default function CategorySidebar({ categories, categoryCounts, totalCount
           >
             <span className="text-[12px] font-semibold uppercase tracking-[0.08em]">Только свободные</span>
             <span data-only-free-track className="flex h-6 w-[42px] shrink-0 rounded-full bg-[rgba(10,10,10,0.12)] p-[3px] transition-colors duration-240 ease-expo">
-              <span data-only-free-knob className="h-[18px] w-[18px] translate-x-0 rounded-full bg-white transition-transform duration-[320ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"></span>
+              {/* Eyeball pass: the previous ease-[...]/duration-[320ms]
+                  arbitrary values spelled out the same overshoot curve
+                  --ease-overshoot/--duration-320 already hold — no visual
+                  change, just routed through the generated Tailwind
+                  utilities instead of bypassing them (same category of fix
+                  as the ease-expo literals elsewhere in this screen
+                  group). */}
+              <span data-only-free-knob className="h-[18px] w-[18px] translate-x-0 rounded-full bg-white transition-transform duration-320 ease-overshoot"></span>
             </span>
           </button>
 

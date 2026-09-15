@@ -105,24 +105,6 @@ export async function getAvailableRentalQuantity(
   return Math.max(0, product.quantity - bookedQty)
 }
 
-export async function isRentalQuantityAvailable(
-  req: PayloadRequest,
-  productId: number,
-  requestedQuantity: number,
-  startDate?: Date,
-  endDate?: Date,
-  excludeOrderItemId?: number,
-): Promise<boolean> {
-  const available = await getAvailableRentalQuantity(
-    req,
-    productId,
-    startDate,
-    endDate,
-    excludeOrderItemId,
-  )
-  return available >= requestedQuantity
-}
-
 /**
  * Available quantity for a sale product: total stock minus quantity already
  * committed to non-cancelled orders (no date dimension — ownership transfers

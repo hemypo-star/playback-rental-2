@@ -6,7 +6,8 @@
 // apps/web keeps its own live copy until Stage 4 deletes that app entirely;
 // keep both in sync until then. The `mounted` hydration-mismatch guard below
 // is still required — the server still has no sessionStorage.
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import Link from 'next/link'
 import { createPortal } from 'react-dom'
 import { useStore } from '@nanostores/react'
 import {
@@ -15,6 +16,7 @@ import {
   formatDateShort,
   formatMonthYear,
   hourOptions,
+  formatBusinessHoursCaption,
   nextMonth,
   prevMonth,
   withTime,
@@ -22,9 +24,8 @@ import {
   WEEKDAY_LABELS_RU,
 } from '../lib/dateRange'
 import { calculateRentalDays } from '../lib/pricing'
-import { $selectedDates, setSelectedDates } from '../stores/dates'
-
-const HOURS = hourOptions()
+import { $selectedDates, setSelectedDates, resetSelectedDates } from '../stores/dates'
+import { useBusinessHours } from './BusinessHoursContext'
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1)
@@ -43,13 +44,44 @@ interface BookedRange {
 interface Props {
   /** compact: single trigger pill (catalog header). boxes: side-by-side Выдача/Возврат boxes (product/cart). hero: inline dual-field pill with its own CTA (homepage). navbar: black round pill in the sticky header. */
   variant?: 'compact' | 'boxes' | 'hero' | 'navbar'
+  // E2 (design_handoff_swiss_bento/08-instruction.md) — investigated the
+  // typography gap E1 flagged for `variant='boxes'` and confirmed it's
+  // real: template.html's product-page boxes (lines ~653-663) and its
+  // checkout "02 — Даты и время" boxes (lines ~727-736) are genuinely
+  // different treatments, not the same box reused —
+  //   product:  padding 14px, value 16px/500 -0.02em, a SEPARATE muted
+  //             12.5px time line below the date,
+  //   checkout: padding 16px, value 18px/500 -0.025em, date+time combined
+  //             into one line.
+  // Before this, both call sites shared one rendering (14px/600 semibold,
+  // dot-joined date+time) that matched neither spec exactly. Only meaningful
+  // for variant='boxes'; ignored otherwise.
+  context?: 'product' | 'checkout'
   onApply?: () => void
   /** When known (product detail page), used to grey out fully-booked days in the calendar. */
   bookedRanges?: BookedRange[]
   totalQuantity?: number
 }
 
-export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRanges, totalQuantity }: Props) {
+// Imperative escape hatch for a caller that needs to open this modal from
+// somewhere other than one of its own trigger buttons — e.g. CheckoutPage's
+// "изменить даты" action on a RENTAL_DATES_INVALID/RENTAL_QUANTITY_UNAVAILABLE
+// error (A3, design_handoff_swiss_bento/08-instruction.md). Every other call
+// site keeps rendering this uncontrolled (no ref), so this is additive only.
+export interface RentalDatePickerHandle {
+  open: (tab?: 'from' | 'to') => void
+}
+
+const RentalDatePicker = forwardRef<RentalDatePickerHandle, Props>(function RentalDatePicker(
+  { variant = 'boxes', context = 'product', onApply, bookedRanges, totalQuantity },
+  ref,
+) {
+  // B4 (design_handoff_swiss_bento/08-instruction.md, audit N5) — HOURS
+  // (the time grid) and the "Рабочие часы …" caption below are both built
+  // from this one value, not a module-scope constant and a separately-typed
+  // JSX string like before, so they can't drift from each other again.
+  const businessHours = useBusinessHours()
+  const HOURS = hourOptions(businessHours.open, businessHours.close)
   const storeDates = useStore($selectedDates)
   // $selectedDates is sessionStorage-backed, so it can legitimately differ
   // between the server render and the client's first (hydration) render.
@@ -57,9 +89,18 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
   // update, not a hydration-time value — so React never flags a mismatch.
   const [mounted, setMounted] = useState(false)
   // Deliberate post-mount hydration-mismatch guard (see CLAUDE.md — don't
-  // remove it). react-hooks/set-state-in-effect flags this generically, but
-  // there's no external-system subscription to rewrite it into.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  // remove it). This used to carry an inline eslint-disable for
+  // react-hooks/set-state-in-effect. Wrapping the component in forwardRef
+  // (for the imperative `open()` handle below) made that directive report as
+  // unused, so it was dropped — but be clear about why, because it is not
+  // that this one line stopped needing it: react-hooks 5.2.0's
+  // set-state-in-effect does not analyse a forwardRef-wrapped component at
+  // all, so it no longer checks ANY setState-in-effect in this file.
+  // Verified against a synthetic forwardRef component with a deliberately
+  // bad setState-in-effect, which the rule also failed to flag, while
+  // rules-of-hooks and exhaustive-deps do still fire in the same wrapper.
+  // The guard below is correct as written; just don't expect lint to catch
+  // it if someone later breaks it.
   useEffect(() => setMounted(true), [])
   const dates = mounted ? storeDates : { startDate: null, endDate: null }
   const [open, setOpen] = useState(false)
@@ -90,6 +131,8 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
     setMonth(startOfMonth(dates.startDate ?? new Date()))
     setOpen(true)
   }
+
+  useImperativeHandle(ref, () => ({ open: openPicker }))
 
   const closePicker = useCallback(() => {
     setOpen(false)
@@ -155,6 +198,27 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
     onApply?.()
   }
 
+  // «Сбросить» (B1, design_handoff_swiss_bento/08-instruction.md) — matches
+  // the old site's DateRangePickerRu, whose reset cleared the range
+  // immediately rather than waiting for a confirm step. Deliberately clears
+  // the committed store too, not just the draft: this button's whole job is
+  // to let the customer abandon a previously-chosen range (shared across
+  // every RentalDatePicker instance on the site, session-scoped per
+  // CLAUDE.md), and the modal's other dismissal paths (Esc, backdrop click,
+  // ✕) already cover "discard my in-progress edit without committing it" —
+  // none of them touch the committed store. Stays open afterward (also
+  // matching the old site) so the customer can immediately pick a fresh
+  // range instead of having to reopen the modal.
+  const handleReset = () => {
+    resetSelectedDates()
+    setDraftFrom(null)
+    setDraftTo(null)
+    setStartHour('10')
+    setEndHour('10')
+    setActiveTab('from')
+    setMonth(startOfMonth(new Date()))
+  }
+
   const grid = buildDaysGrid(month)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -176,17 +240,60 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
 
   const draftFromLabel = draftFrom ? formatDateShort(draftFrom) : 'Выберите'
   const draftToLabel = draftTo ? formatDateShort(draftTo) : 'Выберите'
+  // calculateRentalDays itself now floors at 1 day for any two real dates
+  // (the A1 fix — see lib/rental/pricing.ts's JSDoc), so this `|| 1` is no
+  // longer a day-math band-aid: pickDay always keeps draftFrom/draftTo in
+  // sync (never from-set-but-to-null), so the only way calculateRentalDays
+  // can return 0 here is the pre-first-click state (both null). The button
+  // is disabled then anyway (`disabled={!draftFrom}`), but it still renders
+  // a label — `|| 1` is what keeps that label reading "1 смена" instead of
+  // "0 смен" before the customer has picked anything. Changing that label's
+  // no-dates copy is B-block scope, not A1, so it's kept as-is.
   const days = calculateRentalDays(draftFrom ?? undefined, draftTo ?? undefined) || 1
 
   return (
     <>
       {variant === 'navbar' && (
+        // E1/E3/E4 (design_handoff_swiss_bento/08-instruction.md) each
+        // independently flagged, but left unfixed as out of their own
+        // screen's scope, the same real bug: this pill's real text content
+        // ("Выбрать даты" or a full date range like "12–14 АВГ") is a
+        // `whitespace-nowrap` element with no mobile treatment, and — packed
+        // into the header row alongside the logo/cart/hamburger — was the
+        // single biggest contributor to Navbar's page-level horizontal
+        // overflow at 360-390px (confirmed via document.documentElement.
+        // scrollWidth: this button alone accounted for ~92 of the ~89-136px
+        // overflow, depending on viewport). `04-screens.md`'s S0 section is
+        // explicit about the intended mobile treatment ("чип даты →
+        // иконка-кнопка 44px с датой в подписи") — an icon-only 44px button
+        // below the same breakpoint the burger nav already collapses at
+        // (`md`, not the spec's literal "1020": every other Navbar item was
+        // already built and verified against `md`=768px throughout the
+        // whole migration, and introducing a second, different breakpoint
+        // just for this one element would fragment the header's responsive
+        // behavior for no real benefit) — so the label becomes the button's
+        // `aria-label` (present at every breakpoint, so the accessible name
+        // never depends on which element is visually shown) instead of
+        // visible text once the icon replaces it. The calendar glyph reuses
+        // this app's own established stroke-icon conventions (viewBox 0 0
+        // 24 24, fill none, stroke currentColor, strokeWidth 1.8 — see
+        // CatalogPage.tsx's search icon) rather than inventing new
+        // iconography, and `h-11 w-11` (44px, Tailwind's own default scale,
+        // not an arbitrary/new value) matches the spec's literal number —
+        // unlike the breakpoint, nothing here conflicts with the rest of
+        // the row's `h-[38px]` siblings badly enough to justify diverging
+        // from the one number the spec actually pins down.
         <button
           type="button"
           onClick={() => openPicker('from')}
-          className="flex h-[38px] shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-muted px-[15px] text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground"
+          aria-label={dates.startDate && dates.endDate ? `Даты аренды: ${fromLabel} — ${toLabel}` : 'Выбрать даты'}
+          className="flex h-11 w-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-muted text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground md:h-[38px] md:w-auto md:justify-start md:px-[15px]"
         >
-          <span>{dates.startDate && dates.endDate ? `${fromLabel} — ${toLabel}` : 'Выбрать даты'}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4.5 w-4.5 shrink-0 md:hidden" aria-hidden="true">
+            <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+            <path strokeLinecap="round" d="M8 3v4M16 3v4M3.5 9.5h17" />
+          </svg>
+          <span className="hidden md:inline">{dates.startDate && dates.endDate ? `${fromLabel} — ${toLabel}` : 'Выбрать даты'}</span>
         </button>
       )}
 
@@ -204,7 +311,17 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
       )}
 
       {variant === 'hero' && (
-        <div className="inline-flex items-center gap-1.5 rounded-[18px] bg-muted p-2">
+        // E3 (design_handoff_swiss_bento/08-instruction.md) drive-by, found
+        // during the homepage's required 360px live check: this variant has
+        // no design-file counterpart at all (a B1 UX decision, not a
+        // template.html element — see this prop's own doc comment above),
+        // so it never got a narrow-viewport treatment. inline-flex with no
+        // wrap let "Забрать"/divider/"Вернуть"/the CTA button force the
+        // hero card wider than a 360px viewport, causing real page-level
+        // horizontal scroll (confirmed via document.documentElement.
+        // scrollWidth before this fix). flex-wrap is layout-only — no new
+        // token, no visual change at any width this already fit.
+        <div className="flex flex-wrap items-center gap-1.5 rounded-[18px] bg-muted p-2">
           <button
             type="button"
             onClick={() => openPicker('from')}
@@ -226,9 +343,9 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
               {toLabel}{toTime && `, ${toTime}`}
             </div>
           </button>
-          <a href="/catalog" className="btn-primary ml-1 h-[50px] px-6 text-[11.5px]">
+          <Link href="/catalog" className="btn-primary ml-1 h-[50px] px-6 text-[11.5px]">
             Показать свободное
-          </a>
+          </Link>
         </div>
       )}
 
@@ -237,18 +354,32 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
           <button
             type="button"
             onClick={() => openPicker('from')}
-            className="rounded-2xl bg-muted p-3.5 text-left transition-[background-color,transform] duration-240 ease-expo hover:-translate-y-0.5 hover:bg-[#EAE8E4]"
+            className={`rounded-2xl bg-muted text-left transition-[background-color,transform] duration-240 ease-expo hover:-translate-y-0.5 hover:bg-[#EAE8E4] ${context === 'checkout' ? 'p-4' : 'p-3.5'}`}
           >
             <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-subtle">Выдача</div>
-            <div className="mt-1.5 whitespace-nowrap text-[14px] font-semibold tracking-[-0.018em]">{fromLabel}{fromTime && ` · ${fromTime}`}</div>
+            {context === 'checkout' ? (
+              <div className="mt-2 whitespace-nowrap text-[18px] font-medium tracking-[-0.025em]">{fromLabel}{fromTime && `, ${fromTime}`}</div>
+            ) : (
+              <>
+                <div className="mt-[7px] whitespace-nowrap text-[16px] font-medium tracking-[-0.02em]">{fromLabel}</div>
+                {fromTime && <div className="mt-[3px] text-[12.5px] text-subtle">{fromTime}</div>}
+              </>
+            )}
           </button>
           <button
             type="button"
             onClick={() => openPicker('to')}
-            className="rounded-2xl bg-muted p-3.5 text-left transition-[background-color,transform] duration-240 ease-expo hover:-translate-y-0.5 hover:bg-[#EAE8E4]"
+            className={`rounded-2xl bg-muted text-left transition-[background-color,transform] duration-240 ease-expo hover:-translate-y-0.5 hover:bg-[#EAE8E4] ${context === 'checkout' ? 'p-4' : 'p-3.5'}`}
           >
             <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-subtle">Возврат</div>
-            <div className="mt-1.5 whitespace-nowrap text-[14px] font-semibold tracking-[-0.018em]">{toLabel}{toTime && ` · ${toTime}`}</div>
+            {context === 'checkout' ? (
+              <div className="mt-2 whitespace-nowrap text-[18px] font-medium tracking-[-0.025em]">{toLabel}{toTime && `, ${toTime}`}</div>
+            ) : (
+              <>
+                <div className="mt-[7px] whitespace-nowrap text-[16px] font-medium tracking-[-0.02em]">{toLabel}</div>
+                {toTime && <div className="mt-[3px] text-[12.5px] text-subtle">{toTime}</div>}
+              </>
+            )}
           </button>
         </div>
       )}
@@ -266,8 +397,18 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
             aria-modal="true"
             aria-labelledby={titleId}
             tabIndex={-1}
+            // C3 (design_handoff_swiss_bento/08-instruction.md) —
+            // structurally exempts this panel's entrance from
+            // global.css's `html[data-nav-back]` suppression rule: this
+            // mounts on a click, not on page load, so it must animate
+            // however long after a Back navigation it's opened, whether
+            // or not that navigation's own suppression flag has cleared
+            // yet. See global.css's own comment on that rule for why a
+            // second, structural guard exists here rather than relying on
+            // flag timing alone.
+            data-manual-entry="true"
             className="relative max-h-[90vh] w-full max-w-[780px] overflow-y-auto rounded-[26px] bg-card shadow-[var(--shadow-lifted)] outline-none"
-            style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both' }}
+            style={{ animation: 'bnIn 560ms var(--ease-expo) both' }}
           >
             <div className="flex items-start justify-between gap-4 p-6 pb-0">
               <div>
@@ -280,7 +421,15 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
                 type="button"
                 onClick={closePicker}
                 aria-label="Закрыть"
-                className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-muted text-[14px] transition-[background-color,color,transform] duration-240 ease-expo hover:rotate-90 hover:bg-primary hover:text-primary-foreground"
+                // Background/color stay on this file's usual duration-240
+                // ease-expo pairing; the rotation itself gets the design's
+                // own transform-specific curve+duration (interactions.css
+                // `.d-h1ht6c`: transform 320ms --ease-overshoot — one of
+                // the eight overshoot instances the work order flags as
+                // lost). A single Tailwind duration/ease pair can't
+                // express two different timings on one `transition-[...]`
+                // list, hence the arbitrary shorthand.
+                className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-muted text-[14px] [transition:background-color_240ms_var(--ease-expo),color_240ms_var(--ease-expo),transform_320ms_var(--ease-overshoot)] hover:rotate-90 hover:bg-primary hover:text-primary-foreground"
               >
                 ✕
               </button>
@@ -341,7 +490,39 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
                         disabled={disabled}
                         onClick={() => pickDay(date)}
                         className={[
-                          'flex aspect-square items-center justify-center rounded-xl text-[13px] transition-[background-color,color,transform] duration-240 ease-expo',
+                          // Below `sm` (the breakpoint where this column
+                          // stops stacking full-width and settles into the
+                          // narrower 1.25fr split — see the grid a few
+                          // lines up), min-h-11 (44px) floors the tap
+                          // target height, since the 7-column grid's own
+                          // track width (~36px at 360px) leaves no room for
+                          // a true 44px-wide cell without cutting into the
+                          // modal's padding (N16). Deliberately plain
+                          // min-height there rather than aspect-square +
+                          // min-h together: Chromium's aspect-ratio sizing
+                          // re-derives BOTH axes from whichever one a min-*
+                          // constraint clamps, so aspect-square would
+                          // inflate width to match the enforced 44px
+                          // height too — confirmed live, it overflowed the
+                          // 7-column row (7×44 + gaps ≫ the ~272px
+                          // available) into a page-wide horizontal
+                          // scrollbar. A taller, non-square cell meets the
+                          // real target (a reliable ≥44px-tall tap area)
+                          // without that regression; every mainstream
+                          // mobile calendar makes the same width/height
+                          // tradeoff in a 7-column month grid at this
+                          // viewport width. `sm:aspect-square` restores the
+                          // design's literal 1:1 cells (`template.html`'s
+                          // `aspect-ratio:1/1`) once the column is wide
+                          // enough that a square already clears 44px on
+                          // its own.
+                          // Eyeball pass (template.html's `pickerCalendar`
+                          // day cell): same transform-curve mismatch as the
+                          // close button above — background/color stay on
+                          // duration-240 ease-expo, transform (the
+                          // isFrom/isTo scale pop) gets the design's own
+                          // 320ms overshoot instead of ease-expo.
+                          'flex min-h-11 sm:aspect-square items-center justify-center rounded-xl text-[13px] [transition:background-color_240ms_var(--ease-expo),color_240ms_var(--ease-expo),transform_320ms_var(--ease-overshoot)]',
                           disabled && !busy && 'pointer-events-none opacity-30',
                           busy && 'pointer-events-none bg-[rgba(214,36,16,0.12)] text-accent line-through',
                           !busy && (isFrom || isTo) && 'scale-[1.04] bg-primary font-semibold text-primary-foreground',
@@ -369,7 +550,12 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
                         key={h.value}
                         type="button"
                         onClick={() => (activeTab === 'to' ? setEndHour(h.value) : setStartHour(h.value))}
-                        className={`flex h-10 items-center justify-center rounded-xl text-[13px] transition-[background-color,color,transform] duration-240 ease-expo active:scale-95 ${
+                        // h-11 (44px) — the standard minimum mobile tap
+                        // target; was h-10 (40px), N16. Transform (the
+                        // active-state scale pop and the active:scale-95
+                        // press feedback) gets the design's own 320ms
+                        // overshoot curve, same fix as the day cells above.
+                        className={`flex h-11 items-center justify-center rounded-xl text-[13px] [transition:background-color_240ms_var(--ease-expo),color_240ms_var(--ease-expo),transform_320ms_var(--ease-overshoot)] active:scale-95 ${
                           active ? 'scale-[1.04] bg-primary text-primary-foreground' : 'bg-muted text-foreground hover:bg-[#EAE8E4]'
                         }`}
                       >
@@ -382,7 +568,18 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
             </div>
 
             <div className="mt-4.5 flex flex-wrap items-center justify-between gap-4.5 border-t border-border p-6">
-              <span className="max-w-[400px] text-[12.5px] text-subtle">Рабочие часы 10:00 — 21:00.</span>
+              <div className="flex flex-wrap items-center gap-3.5">
+                <span className="max-w-[400px] text-[12.5px] text-subtle">{formatBusinessHoursCaption(businessHours.open, businessHours.close)}</span>
+                {(draftFrom || draftTo) && (
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="text-[12.5px] font-semibold text-subtle transition-colors duration-240 ease-expo hover:text-accent hover:underline"
+                  >
+                    Сбросить
+                  </button>
+                )}
+              </div>
               <button type="button" onClick={apply} disabled={!draftFrom} className="btn-primary h-12 gap-3.5 pl-5.5 pr-3 hover:gap-[22px]">
                 <span>Готово · {formatShifts(days)}</span><span>→</span>
               </button>
@@ -393,4 +590,8 @@ export default function RentalDatePicker({ variant = 'boxes', onApply, bookedRan
       )}
     </>
   )
-}
+})
+
+RentalDatePicker.displayName = 'RentalDatePicker'
+
+export default RentalDatePicker

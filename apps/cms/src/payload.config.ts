@@ -99,5 +99,52 @@ export default buildConfig({
     pool: {
       connectionString: process.env.DATABASE_URI || '',
     },
+    // Every local `pnpm dev` startup (any non-production run without
+    // PAYLOAD_MIGRATING=true) runs drizzle-kit's dev-mode schema push
+    // (@payloadcms/db-postgres's connect.js -> @payloadcms/drizzle's
+    // pushDevSchema), which introspects the *whole* database and diffs it
+    // against Payload's Drizzle-generated schema — dropping any table that
+    // isn't part of a Payload collection/global. `rate_limit_hits`
+    // (migrations 20260910_120000_rate_limit_hits /
+    // 20260910_130000_rate_limit_hits_prune_idx, backing
+    // lib/security/rateLimit.ts) is exactly such a table: hand-authored,
+    // never declared as a collection, so it's invisible to the push's
+    // "desired" schema and gets silently DROPped from the "actual" one —
+    // taking down checkout/contact/admin-login rate limiting with it, and
+    // (once payload_migrations' dev-push batch=-1 sentinel is planted) also
+    // causing the DEPLOY-001 hang check-migration-drift.ts documents.
+    // `tablesFilter` is passed straight through to drizzle-kit's
+    // `pushSchema` (@payloadcms/drizzle's pushDevSchema.js), which builds
+    // one `Minimatch` glob matcher per entry and applies it while
+    // *introspecting* the database — a table that doesn't match is treated
+    // as though it doesn't exist in the DB at all, so the diff never
+    // generates a DROP for it (verified against the installed
+    // drizzle-kit@0.31.7 by reading pgPushIntrospect's filter logic and the
+    // resolved minimatch@3.1.5's actual negate semantics: `'!x'` matches
+    // every table name except `x`). This does NOT disable the push or its
+    // usefulness for real Payload tables — only this bare exclusion list
+    // must be kept in sync by hand: if you add another non-Payload table
+    // the same way rate_limit_hits was added, add its name here too (and
+    // say so in that migration's own comment, the way the two migrations
+    // above do). Do not delete this thinking it's redundant with
+    // migrations/`payload migrate` — this filter is what stops *push mode*
+    // specifically from dropping tables migrate itself would never touch.
+    //
+    // Gotcha for the next table added here (confirmed live while fixing
+    // this): filtering a table out of the push stops its columns/indexes
+    // from being diffed, but a `serial`/`GENERATED ... AS IDENTITY` column
+    // still owns a separate Postgres sequence object that drizzle-kit's
+    // introspection lists *unconditionally* (never consulting
+    // `tablesFilter`) and only ever "claims" (removes from its drop
+    // candidates) by visiting the owning column — which a filtered-out
+    // table never gets. The result is the sequence gets scheduled for
+    // `DROP SEQUENCE` anyway, which then hard-fails the push (and crashes
+    // `next dev`) once the filter is protecting the table it belongs to.
+    // `rate_limit_hits` sidesteps this entirely by not owning one — see
+    // migration 20260911_090000_rate_limit_hits_uuid_pk, which moved its
+    // `id` off a `serial` sequence onto a plain `uuid default
+    // gen_random_uuid()`. Give any future excluded table the same
+    // treatment (no owned sequence) rather than rediscovering this.
+    tablesFilter: ['!rate_limit_hits'],
   }),
 })

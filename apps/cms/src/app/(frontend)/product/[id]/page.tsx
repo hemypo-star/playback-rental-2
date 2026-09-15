@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import ProductPurchasePanel from '../../../../components/ProductPurchasePanel'
 import { getProductById, getProducts } from '../../../../lib/data/products'
@@ -11,6 +13,21 @@ import { buildMetadata, siteOrigin } from '../../../../lib/seo'
 // the REST client's PayloadApiError/404 instanceof check becomes
 // getProductById()'s disableErrors:true → null (see lib/data/products.ts).
 export const dynamic = 'force-dynamic'
+
+// C4 (design_handoff_swiss_bento/08-instruction.md, G3): real rendered
+// slots, measured from this page's own grid-12 column spans
+// (`sm:col-span-6 lg:col-span-7` for the gallery column — full width below
+// lg/1024px, 7/12 of container-page's capped-1460px width from there up).
+// Not `priority` per the instruction ("приоритет только у обложки героя") —
+// the homepage hero cover is the one image that gets it; this page's own
+// main photo, real as its LCP candidacy is, stays lazy like every other
+// non-hero slot.
+const GALLERY_MAIN_SIZES = '(min-width: 1520px) 811px, (min-width: 1024px) 54vw, 92vw'
+// 4-col thumbnail strip nested inside the same gallery column, gap-2.5.
+const GALLERY_THUMB_SIZES = '(min-width: 1520px) 195px, (min-width: 1024px) 13vw, 23vw'
+// Related-products grid (grid-cols-1 sm:grid-cols-3) nested in the same
+// column — 1 col (near-full width) below sm, 3 cols from sm up.
+const RELATED_SIZES = '(min-width: 1520px) 237px, (min-width: 1024px) 15vw, (min-width: 640px) 28vw, 85vw'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -88,8 +105,16 @@ export default async function ProductPage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: productJsonLdSafe }} />
       <div className="container-page grid-12 pt-3.5 pb-20">
         <div className="flex flex-col gap-3.5 sm:col-span-6 lg:col-span-7">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]" style={{ animation: 'bnClip 900ms cubic-bezier(0.16,1,0.3,1) both' }}>
-            {mainImage && <img src={mainImage} alt={product.title} className="h-full w-full object-cover transition-transform duration-[900ms] ease-expo hover:scale-[1.04]" />}
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]" style={{ animation: 'bnClip 900ms var(--ease-expo) both' }}>
+            {mainImage && (
+              <Image
+                src={mainImage}
+                alt={product.title}
+                fill
+                sizes={GALLERY_MAIN_SIZES}
+                className="object-cover transition-transform duration-[900ms] ease-expo hover:scale-[1.04]"
+              />
+            )}
             <div className="pointer-events-none absolute left-3.5 top-3.5 flex gap-2">
               {categoryName && (
                 <span className="rounded-full bg-[rgba(10,10,10,0.72)] px-3.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-[10px]">{categoryName}</span>
@@ -103,8 +128,8 @@ export default async function ProductPage({ params }: Props) {
           {images.length > 1 && (
             <div className="grid grid-cols-4 gap-2.5">
               {images.slice(1, 5).map((url) => (
-                <div key={url} className="aspect-square overflow-hidden rounded-2xl border border-border transition-transform duration-300 ease-expo hover:scale-[1.04]">
-                  <img src={url} alt={product.title} className="h-full w-full object-cover" />
+                <div key={url} className="relative aspect-square overflow-hidden rounded-2xl border border-border transition-transform duration-300 ease-expo hover:scale-[1.04]">
+                  <Image src={url} alt={product.title} fill sizes={GALLERY_THUMB_SIZES} className="object-cover" />
                 </div>
               ))}
             </div>
@@ -112,11 +137,11 @@ export default async function ProductPage({ params }: Props) {
 
           <div className="rounded-3xl border border-border bg-card p-[30px_30px_26px]">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-subtle">
-              <a href="/" className="border-none transition-colors duration-240 ease-expo hover:text-accent">Главная</a> /{' '}
-              <a href="/catalog" className="border-none transition-colors duration-240 ease-expo hover:text-accent">Каталог</a>
+              <Link href="/" className="border-none transition-colors duration-240 ease-expo hover:text-accent">Главная</Link> /{' '}
+              <Link href="/catalog" className="border-none transition-colors duration-240 ease-expo hover:text-accent">Каталог</Link>
               {categoryName && categorySlug && (
                 <>
-                  {' '}/ <a href={`/catalog/${categorySlug}`} className="border-none transition-colors duration-240 ease-expo hover:text-accent">{categoryName}</a>
+                  {' '}/ <Link href={`/catalog/${categorySlug}`} className="border-none transition-colors duration-240 ease-expo hover:text-accent">{categoryName}</Link>
                 </>
               )}
             </div>
@@ -173,20 +198,20 @@ export default async function ProductPage({ params }: Props) {
               {related.map((p, i) => {
                 const relImg = mediaUrl(Array.isArray(p.images) ? p.images[0] : undefined)
                 return (
-                  <a
+                  <Link
                     key={p.id}
                     href={`/product/${p.id}`}
                     className="rounded-[22px] border border-border bg-card p-3 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
-                    style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
+                    style={{ animation: 'bnIn 560ms var(--ease-expo) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
                   >
-                    <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">
-                      {relImg && <img src={relImg} alt={p.title} className="h-full w-full object-cover" />}
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">
+                      {relImg && <Image src={relImg} alt={p.title} fill sizes={RELATED_SIZES} className="object-cover" />}
                     </div>
                     <div className="p-[14px_4px_4px]">
                       <div className="text-[14.5px] font-medium leading-[1.25] tracking-[-0.02em]">{p.title}</div>
                       <div className="mt-1 text-[12px] text-subtle">{formatCurrency(p.price)}{p.listingType === 'rental' ? ' / сутки' : ''}</div>
                     </div>
-                  </a>
+                  </Link>
                 )
               })}
             </div>

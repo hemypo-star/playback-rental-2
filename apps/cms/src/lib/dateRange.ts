@@ -1,7 +1,15 @@
-// Duplicated from apps/web/src/lib/dateRange.ts (docs/PLAN-next-migration.md
-// Stage 2) — apps/web keeps its own live copy until Stage 4 deletes that app
-// entirely; keep both in sync until then. Framework-agnostic grid/selection
-// math, originally ported from the old app's src/hooks/useDateRangeCalendar.ts.
+// Framework-agnostic grid/selection math, originally ported from the old
+// app's src/hooks/useDateRangeCalendar.ts, then from apps/web/src/lib/
+// dateRange.ts (docs/PLAN-next-migration.md Stage 2; apps/web itself was
+// deleted on 2026-08-21).
+//
+// Nothing here counts days for money — `lib/rental/pricing.ts` is the single
+// source of truth for that (see its JSDoc for the calendar-days-inclusive
+// convention). `isInSelection` is inclusive of both endpoints via
+// `isWithinInterval`, which does agree with that convention, but note it has
+// no callers: `RentalDatePicker` renders its highlight from its own inline
+// exclusive comparison plus separate `isFrom`/`isTo` boundary styling, so
+// changing this function will not move what the calendar shows.
 import { addMonths, isBefore, isSameDay, isWithinInterval, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
@@ -50,14 +58,49 @@ export function withTime(date: Date | null, hour: string): Date | null {
   return d
 }
 
-export const BUSINESS_HOURS = { open: 9, close: 21 }
+// B4 (design_handoff_swiss_bento/08-instruction.md, audit N5) — this used to
+// be a hardcoded `BUSINESS_HOURS = { open: 9, close: 21 }` constant here,
+// disagreeing with a separate hardcoded "Рабочие часы 10:00 — 21:00." string
+// in RentalDatePicker.tsx's JSX (09:00 was offered in the grid; the caption
+// under the same grid claimed the business was closed until 10:00). Both
+// numbers now come from SiteSettings (`businessHoursOpen`/
+// `businessHoursClose`, apps/cms/src/globals/SiteSettings.ts) via
+// components/BusinessHoursContext.tsx, so the grid and the caption can no
+// longer drift from each other — see that file for how the value reaches
+// this client component tree. DEFAULT_BUSINESS_HOURS is only the context's
+// fallback for the (practically unreachable, since the field has a
+// `defaultValue`) case where SiteSettings has no value yet; it intentionally
+// matches that `defaultValue`, not the old, wrong `9`.
+export const DEFAULT_BUSINESS_HOURS = { open: 10, close: 21 }
 
-export function hourOptions(): { value: string; label: string }[] {
+export function hourOptions(open: number, close: number): { value: string; label: string }[] {
   const options = []
-  for (let h = BUSINESS_HOURS.open; h <= BUSINESS_HOURS.close; h++) {
+  for (let h = open; h <= close; h++) {
     options.push({ value: String(h), label: `${String(h).padStart(2, '0')}:00` })
   }
   return options
+}
+
+function formatHour(hour: number): string {
+  return `${String(hour).padStart(2, '0')}:00`
+}
+
+// "10:00—21:00" — Navbar's own always-visible label (a third hardcoded
+// "10:00—21:00" found while fixing N5's original pair, in RentalDatePicker's
+// grid/caption). Bare em-dash, no spaces, matching Navbar's existing markup.
+export function formatBusinessHoursRange(open: number, close: number): string {
+  return `${formatHour(open)}—${formatHour(close)}`
+}
+
+// Builds the exact caption RentalDatePicker renders under the time grid, from
+// the same two numbers hourOptions() just built the grid from — the N5 fix
+// is specifically that these can no longer be a separately-typed JSX string.
+// Its "HH:MM — HH:MM" spacing differs from formatBusinessHoursRange's bare
+// "HH:MM—HH:MM" (Navbar's copy), so this builds its own string from
+// formatHour rather than reformatting that one — both still derive from the
+// same two open/close numbers, which is the actual N5 fix.
+export function formatBusinessHoursCaption(open: number, close: number): string {
+  return `Рабочие часы ${formatHour(open)} — ${formatHour(close)}.`
 }
 
 export function formatDayLabel(date: Date): string {

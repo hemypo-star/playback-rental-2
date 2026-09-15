@@ -8,14 +8,21 @@
 // /api/contact-notification directly — the same endpoint
 // (apps/cms/src/endpoints/contactNotification.ts), no wrapper needed.
 import { useState } from 'react'
+// A2 (design_handoff_swiss_bento/08-instruction.md) — the rate-limit Russian
+// text is reused from the single checkout translation point rather than
+// re-derived here, even though this form isn't part of checkout: one place
+// owns that wording so it can't drift between the two surfaces that show it.
+import { translateCheckoutError } from '../lib/checkoutErrors'
 
 const NAME_RE = /^[A-Za-zА-Яа-яЁё\s-]+$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const RATE_LIMITED_MESSAGE = translateCheckoutError({ code: 'RATE_LIMITED' }).message
 
 export default function ContactForm() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
+  const [rateLimited, setRateLimited] = useState(false)
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -37,17 +44,19 @@ export default function ContactForm() {
     if (!validate()) return
 
     setStatus('sending')
+    setRateLimited(false)
     try {
       const res = await fetch('/api/contact-notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      const result = (await res.json()) as { success: boolean }
+      const result = (await res.json()) as { success: boolean; code?: string }
       if (result.success) {
         setStatus('sent')
         setForm({ name: '', email: '', phone: '', subject: '', message: '' })
       } else {
+        setRateLimited(result.code === 'RATE_LIMITED')
         setStatus('failed')
       }
     } catch {
@@ -66,7 +75,7 @@ export default function ContactForm() {
       )}
       {status === 'failed' && (
         <div className="mt-4 rounded-xl bg-danger-bg px-4 py-3 text-[13.5px] text-destructive">
-          Не удалось отправить сообщение. Попробуйте ещё раз или напишите на почту.
+          {rateLimited ? RATE_LIMITED_MESSAGE : 'Не удалось отправить сообщение. Попробуйте ещё раз или напишите на почту.'}
         </div>
       )}
 

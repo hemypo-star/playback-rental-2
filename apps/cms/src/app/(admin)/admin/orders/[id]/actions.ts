@@ -30,6 +30,11 @@ import { submitOrder, SubmitOrderError } from '../../../../../lib/rental/submitO
 export interface ActionResult {
   success: boolean
   error?: string
+  // Set by mutations that touch orderItems — orders.totalPrice is kept in
+  // sync by an afterChange/afterDelete hook on OrderItems (see CLAUDE.md),
+  // so callers read the fresh total back here instead of recomputing it
+  // client-side from lineTotals.
+  orderTotalPrice?: number
 }
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -82,9 +87,12 @@ export async function updateOrderItem(orderId: number, itemId: number, data: Upd
     await requireAdmin()
     const payload = await getPayload({ config })
     const updated = await payload.update({ collection: 'orderItems', id: itemId, data, overrideAccess: true })
+    // OrderItems' afterChange hook has already recomputed orders.totalPrice
+    // synchronously by the time payload.update() above resolves.
+    const order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0, overrideAccess: true })
     revalidatePath(`/admin/orders/${orderId}`)
     revalidatePath('/admin/orders')
-    return { success: true, lineTotal: updated.lineTotal ?? 0 }
+    return { success: true, lineTotal: updated.lineTotal ?? 0, orderTotalPrice: order.totalPrice ?? 0 }
   } catch (error) {
     return { success: false, error: errorMessage(error, 'Не удалось сохранить позицию') }
   }
@@ -95,27 +103,14 @@ export async function deleteOrderItem(orderId: number, itemId: number): Promise<
     await requireAdmin()
     const payload = await getPayload({ config })
     await payload.delete({ collection: 'orderItems', id: itemId, overrideAccess: true })
+    // OrderItems' afterDelete hook has already recomputed orders.totalPrice
+    // synchronously by the time payload.delete() above resolves.
+    const order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0, overrideAccess: true })
     revalidatePath(`/admin/orders/${orderId}`)
     revalidatePath('/admin/orders')
-    return { success: true }
+    return { success: true, orderTotalPrice: order.totalPrice ?? 0 }
   } catch {
     return { success: false, error: 'Не удалось удалить позицию' }
-  }
-}
-
-export async function deleteOrder(orderId: number): Promise<ActionResult> {
-  try {
-    await requireAdmin()
-    const payload = await getPayload({ config })
-    const items = await payload.find({ collection: 'orderItems', where: { order: { equals: orderId } }, limit: 0, depth: 0, overrideAccess: true })
-    for (const item of items.docs) {
-      await payload.delete({ collection: 'orderItems', id: item.id, overrideAccess: true })
-    }
-    await payload.delete({ collection: 'orders', id: orderId, overrideAccess: true })
-    revalidatePath('/admin/orders')
-    return { success: true }
-  } catch {
-    return { success: false, error: 'Не удалось удалить заказ' }
   }
 }
 

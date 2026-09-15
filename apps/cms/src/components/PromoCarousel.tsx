@@ -3,6 +3,16 @@
 // Ported from apps/web/src/components/PromoCarousel.tsx (docs/PLAN-next-
 // migration.md Stage 2) — verbatim, already a React island there.
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
+
+// C4 (design_handoff_swiss_bento/08-instruction.md, G3): real rendered slot
+// — `lg:col-span-8` of `grid-cols-1 lg:grid-cols-12` inside container-page,
+// full width below lg/1024px, 8/12 of the capped-1400px content from there
+// up (~929px cap). Not `priority`: this carousel appears on the homepage
+// below the hero+marquee and again on promotion detail pages below that
+// page's own hero — neither is the page's designated hero-cover slot per
+// the instruction, so it stays lazy like every other non-hero image.
+const CAROUSEL_SIZES = '(min-width: 1520px) 929px, (min-width: 1024px) 62vw, 92vw'
 
 export interface PromoSlide {
   id: number
@@ -60,11 +70,19 @@ export default function PromoCarousel({ promos }: Props) {
             >
               ←
             </button>
+            {/* Real bug, independent of any curve/duration question: this
+                only transitioned `transform`, so hover:bg-primary-hover
+                snapped instantly with no easing at all. Added
+                background-color to the property list, at the same
+                duration-240 ease-expo pairing the ← button (and every other
+                combined background+transform hover in the app — see
+                RentalDatePicker's date boxes, the product page's kit-item
+                pills) already uses. */}
             <button
               type="button"
               onClick={next}
               aria-label="Следующая акция"
-              className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform duration-240 ease-expo hover:translate-x-0.5 hover:bg-primary-hover"
+              className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-primary text-primary-foreground transition-[background-color,transform] duration-240 ease-expo hover:translate-x-0.5 hover:bg-primary-hover"
             >
               →
             </button>
@@ -73,21 +91,42 @@ export default function PromoCarousel({ promos }: Props) {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-3.5 lg:grid-cols-12" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+        {/* C1 (design_handoff_swiss_bento/08-instruction.md, G2): left as a
+            plain <a>, deliberately not next/link — linkUrl is the same
+            free-text admin field promotions/[slug]/page.tsx's own "Подробнее"
+            button reads (see its comment); it can be an off-site URL, so a
+            fixed Link here would be wrong for that case. */}
+        {/* template.html's [data-promo] rule sets a literal 620px height at
+            <=760px and the default 470px above it — not a Tailwind stock
+            breakpoint (640/768), so this needs the arbitrary max-[760px]
+            variant rather than sm:/md: to land on the exact same threshold.
+            The previous 380px/sm:470px pair had both the value AND the
+            direction backwards (shorter on mobile instead of taller). */}
         <a
           href={active.linkUrl || '#'}
-          className="relative block h-[380px] overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] sm:h-[470px] lg:col-span-8"
+          className="relative block h-[470px] max-[760px]:h-[620px] overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] lg:col-span-8"
         >
           {promos.map((p, i) => (
+            // 03-motion.md's own curve table reserves a fourth curve —
+            // `promo`, wired as the `--ease-inout` token (tokens.css) —
+            // "только слайдер акций": the one place in the whole design that
+            // isn't expo/spring/color-ease. It had zero usages anywhere in
+            // the app before this fix (confirmed via `design-sync audit`) —
+            // this cross-fade is the one and only place it belongs. Also
+            // splits duration per template.html:
+            // opacity 900ms, the background's own translate 1200ms (the
+            // "параллакс" entry in 03-motion.md's duration table) — both had
+            // been collapsed onto one shared 900ms ease-expo.
             <div
               key={p.id}
-              className="absolute inset-0 transition-[opacity,transform] duration-[900ms] ease-expo"
+              className="absolute inset-0 [transition:opacity_900ms_var(--ease-inout),transform_1200ms_var(--ease-inout)]"
               style={{
                 opacity: i === index ? 1 : 0,
                 transform: i === index ? 'none' : 'scale(1.02)',
                 zIndex: i === index ? 2 : 1,
               }}
             >
-              {p.imageUrl && <img src={p.imageUrl} alt={p.title} className="h-full w-full object-cover" />}
+              {p.imageUrl && <Image src={p.imageUrl} alt={p.title} fill sizes={CAROUSEL_SIZES} className="object-cover" />}
             </div>
           ))}
           <div
@@ -96,16 +135,16 @@ export default function PromoCarousel({ promos }: Props) {
           />
           <div key={active.id} className="pointer-events-none absolute inset-0 flex flex-col justify-between p-[30px] text-white">
             {active.kicker && (
-              <span className="self-start rounded-full bg-white/[0.16] px-3.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.16em] backdrop-blur-[10px]" style={{ animation: 'bnRise 560ms cubic-bezier(0.16,1,0.3,1) both' }}>
+              <span className="self-start rounded-full bg-white/[0.16] px-3.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.16em] backdrop-blur-[10px]" style={{ animation: 'bnRise 560ms var(--ease-expo) both' }}>
                 {active.kicker}
               </span>
             )}
             <div>
-              <div className="max-w-[13ch] text-[clamp(28px,3.4vw,48px)] font-medium leading-[1.02] tracking-[-0.04em]" style={{ animation: 'bnRise 620ms cubic-bezier(0.16,1,0.3,1) 60ms both' }}>
+              <div className="max-w-[13ch] text-[clamp(28px,3.4vw,48px)] font-medium leading-[1.02] tracking-[-0.04em]" style={{ animation: 'bnRise 620ms var(--ease-expo) 60ms both' }}>
                 {active.title}
               </div>
               {active.text && (
-                <div className="mt-3.5 max-w-[380px] text-[14px] leading-[1.5] text-white/78" style={{ animation: 'bnRise 620ms cubic-bezier(0.16,1,0.3,1) 120ms both' }}>
+                <div className="mt-3.5 max-w-[380px] text-[14px] leading-[1.5] text-white/78" style={{ animation: 'bnRise 620ms var(--ease-expo) 120ms both' }}>
                   {active.text}
                 </div>
               )}

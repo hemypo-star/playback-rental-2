@@ -7,10 +7,12 @@
 // the Astro source itself already made, per the 2026-08-14 dev log's Step 7
 // entry — "simpler to build reliably, still fully functional").
 import { useState } from 'react'
+import Image from 'next/image'
 import type { SiteSetting } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
 import { saveSiteSettings } from '../../app/(admin)/admin/settings/actions'
+import { DEFAULT_BUSINESS_HOURS } from '../../lib/dateRange'
 
 interface Step {
   title: string
@@ -45,6 +47,14 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
   const [contactVkUrl, setContactVkUrl] = useState(settings.contactVkUrl ?? '')
   const [contactAddress, setContactAddress] = useState(settings.contactAddress ?? '')
   const [contactHours, setContactHours] = useState(settings.contactHours ?? '')
+  // B4 (design_handoff_swiss_bento/08-instruction.md, audit N5) — numeric,
+  // separate from the free-text contactHours above (that one is prose for
+  // display, e.g. could read "Пн–Вс 10:00–21:00"; these two feed the rental
+  // date/time picker's actual grid and can't be parsed out of prose safely).
+  // Falls back to DEFAULT_BUSINESS_HOURS only for a genuinely-missing value
+  // (the schema's own defaultValue means that's normally unreachable).
+  const [businessHoursOpen, setBusinessHoursOpen] = useState(settings.businessHoursOpen ?? DEFAULT_BUSINESS_HOURS.open)
+  const [businessHoursClose, setBusinessHoursClose] = useState(settings.businessHoursClose ?? DEFAULT_BUSINESS_HOURS.close)
   const [yandexMapsUrl, setYandexMapsUrl] = useState(settings.yandexMapsUrl ?? '')
   const [twoGisUrl, setTwoGisUrl] = useState(settings.twoGisUrl ?? '')
 
@@ -95,6 +105,8 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
       contactVkUrl,
       contactAddress,
       contactHours,
+      businessHoursOpen,
+      businessHoursClose,
       yandexMapsUrl,
       twoGisUrl,
     })
@@ -123,12 +135,15 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
             <div className="mt-3 flex gap-4">
               <div>
                 <div className="text-[11px] text-subtle">Десктоп</div>
-                {heroDesktopPreview ? <img src={heroDesktopPreview} className="mt-1 h-24 w-20 rounded-xl bg-muted object-cover" alt="" /> : null}
+                {/* C4 (design_handoff_swiss_bento/08-instruction.md, G3):
+                    fixed 80x96 admin thumbnails — same reasoning as
+                    CategoryForm/PromotionForm's own previews. */}
+                {heroDesktopPreview ? <Image src={heroDesktopPreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
                 <input type="file" accept="image/*" onChange={(e) => handleHeroUpload(e, 'desktop')} className="mt-1.5 block text-[12px]" />
               </div>
               <div>
                 <div className="text-[11px] text-subtle">Мобильный</div>
-                {heroMobilePreview ? <img src={heroMobilePreview} className="mt-1 h-24 w-20 rounded-xl bg-muted object-cover" alt="" /> : null}
+                {heroMobilePreview ? <Image src={heroMobilePreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
                 <input type="file" accept="image/*" onChange={(e) => handleHeroUpload(e, 'mobile')} className="mt-1.5 block text-[12px]" />
               </div>
             </div>
@@ -245,8 +260,35 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
                 <input value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Часы работы</label>
+                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Часы работы (текст на сайте)</label>
                 <input value={contactHours} onChange={(e) => setContactHours(e.target.value)} className={inputClass} />
+              </div>
+              <div className="col-span-2 grid grid-cols-2 gap-3.5 rounded-2xl border border-border bg-muted-well p-3.5">
+                <div className="col-span-2 text-[11.5px] leading-snug text-subtle">
+                  Часы для календаря выбора дат аренды (число 0–23) — отдельно от текста выше, им нельзя пользоваться для расчётов. Держите оба поля согласованными: разошедшиеся значения — та же ошибка, которую эти два поля чинят.
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Открытие (час)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={businessHoursOpen}
+                    onChange={(e) => setBusinessHoursOpen(Number(e.target.value))}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Закрытие (час)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={businessHoursClose}
+                    onChange={(e) => setBusinessHoursClose(Number(e.target.value))}
+                    className={inputClass}
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Яндекс.Карты (ссылка)</label>

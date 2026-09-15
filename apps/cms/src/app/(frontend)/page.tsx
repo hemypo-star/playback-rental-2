@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import Image from 'next/image'
 import type { Category } from '../../payload-types'
 import RentalDatePicker from '../../components/RentalDatePicker'
 import PromoCarousel from '../../components/PromoCarousel'
@@ -25,6 +27,18 @@ export const metadata: Metadata = buildMetadata({ title: 'Прокат фото-
 // time — this must re-fetch on every request rather than serve a stale
 // build-time snapshot.
 export const dynamic = 'force-dynamic'
+
+// C4 (design_handoff_swiss_bento/08-instruction.md, G3): real rendered
+// slots, measured from this page's own grid classes (both are `grid-cols-2
+// sm:grid-cols-3` inside a plain container-page, no sidebar competing for
+// width the way CatalogPage's grid has from lg/1024px up).
+// Category tiles: aspect-[4/3] image inside a p-4 card — caps around 425px
+// once container-page's 1460px max-width kicks in.
+const CATEGORY_TILE_SIZES = '(min-width: 1520px) 425px, (min-width: 640px) 28vw, 42vw'
+// Kits grid reuses ProductCard, whose own DEFAULT_SIZES assumes
+// CatalogPage's sidebar-narrowed width — this grid is genuinely wider
+// (~429px cap vs. ~312px), so it needs its own override.
+const KITS_GRID_SIZES = '(min-width: 1520px) 429px, (min-width: 1024px) 28vw, (min-width: 640px) 30vw, 45vw'
 
 export default async function HomePage() {
   const [categories, featuredResult, allProductsResult, siteSettings, promotions, kitsResult] = await Promise.all([
@@ -131,7 +145,7 @@ export default async function HomePage() {
     <>
       <section className="container-page pt-3.5">
         <div className="grid-12">
-          <div className="flex flex-col rounded-[26px] border border-border bg-card px-9 pt-[38px] pb-[34px] sm:col-span-6 lg:col-span-7" style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both' }}>
+          <div className="flex flex-col rounded-[26px] border border-border bg-card px-9 pt-[38px] pb-[34px] sm:col-span-6 lg:col-span-7" style={{ animation: 'bnIn 560ms var(--ease-expo) both' }}>
             <div className="flex items-center justify-between gap-4 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">
               <span>{siteSettings.heroKicker || 'Прокат съёмочной техники'}</span>
               <span className="rounded-full bg-muted px-[11px] py-1.5">{siteSettings.heroCity || 'Кемерово'}</span>
@@ -139,32 +153,57 @@ export default async function HomePage() {
             <h1 className="mt-6 text-[clamp(42px,5.4vw,84px)] font-medium leading-[0.94] tracking-[-0.045em] text-wrap-balance">
               {siteSettings.heroHeadline || 'Техника для съёмки без залога'}
             </h1>
-            <div className="mt-6.5 h-px origin-left bg-[rgba(10,10,10,0.12)]" style={{ animation: 'bnRule 900ms cubic-bezier(0.16,1,0.3,1) 300ms both' }}></div>
+            <div className="mt-6.5 h-px origin-left bg-[rgba(10,10,10,0.12)]" style={{ animation: 'bnRule 900ms var(--ease-expo) 300ms both' }}></div>
             <p className="mt-[22px] max-w-[460px] text-[16px] leading-[1.5] text-muted-foreground text-wrap-pretty">
               {siteSettings.heroSubtext || 'Камеры Sony и Canon, объективы, свет, стедикамы, дроны, звук и аксессуары — весь парк для съёмочной группы любого масштаба, в Кемерове.'}
             </p>
             <div className="min-h-[26px] flex-1"></div>
             <div className="flex flex-wrap gap-2.5">
-              <a href="/catalog" className="btn-primary h-[54px] gap-5 pl-6 pr-3 hover:gap-[30px]">
+              <Link href="/catalog" className="btn-primary h-[54px] gap-5 pl-6 pr-3 hover:gap-[30px]">
                 <span>Смотреть каталог</span>
                 <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-white/15">→</span>
-              </a>
-              <a href="/catalog?type=kit" className="btn-ghost h-[54px] px-6">Готовые наборы</a>
+              </Link>
+              <Link href="/catalog?type=kit" className="btn-ghost h-[54px] px-6">Готовые наборы</Link>
             </div>
           </div>
 
           <div className="flex flex-col gap-3.5 sm:col-span-6 lg:col-span-5">
-            <div className="relative hidden min-h-[390px] flex-1 overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] md:block" style={{ animation: 'bnClip 900ms cubic-bezier(0.16,1,0.3,1) 120ms both' }}>
-              {heroImageUrl && <img src={heroImageUrl} alt="Playback Rental" className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-expo hover:scale-[1.04]" />}
+            {/* C4 (design_handoff_swiss_bento/08-instruction.md, G3): the
+                homepage hero cover — the one slot the instruction singles
+                out for `priority`. Both the desktop and mobile variants
+                below are always in the DOM (CSS `hidden md:block` /
+                `md:hidden` just toggles which one is visible), so both get
+                `priority`: whichever one the viewport actually shows is a
+                same-page LCP candidate, and eagerly preloading the other
+                (invisible) variant too is a deliberate, bounded trade for a
+                single hero image, not a general pattern used elsewhere on
+                this page. `fill` replaces the old `absolute inset-0 h-full
+                w-full` by itself (Next sets that positioning), so those
+                classes are dropped from className; the crop/hover-zoom
+                classes (object-cover, the hover-zoom transform/duration/
+                ease/scale set) are kept verbatim on the same element. */}
+            <div className="relative hidden min-h-[390px] flex-1 overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] md:block" style={{ animation: 'bnClip 900ms var(--ease-expo) 120ms both' }}>
+              {heroImageUrl && (
+                <Image
+                  src={heroImageUrl}
+                  alt="Playback Rental"
+                  fill
+                  priority
+                  sizes="(min-width: 1520px) 575px, (min-width: 1024px) 38vw, 92vw"
+                  className="object-cover transition-transform duration-[900ms] ease-expo hover:scale-[1.04]"
+                />
+              )}
               <div className="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between rounded-2xl bg-white/[0.82] px-4 py-3 text-[10.5px] font-semibold uppercase tracking-[0.13em] backdrop-blur-[18px]">
                 <span>Sony · Canon · GoPro</span><span className="text-accent">Fig. 01</span>
               </div>
             </div>
             <div className="relative h-[340px] overflow-hidden rounded-[22px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] md:hidden">
-              {heroImageMobileUrl && <img src={heroImageMobileUrl} alt="Playback Rental" className="h-full w-full object-cover" />}
+              {heroImageMobileUrl && (
+                <Image src={heroImageMobileUrl} alt="Playback Rental" fill priority sizes="100vw" className="object-cover" />
+              )}
             </div>
 
-            <div className="rounded-[26px] border border-border bg-card p-[22px_24px]" style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) 120ms both' }}>
+            <div className="rounded-[26px] border border-border bg-card p-[22px_24px]" style={{ animation: 'bnIn 560ms var(--ease-expo) 120ms both' }}>
               <RentalDatePicker variant="hero" />
               {fromPrice !== undefined && (
                 <div className="mt-2.5 text-[12.5px] text-subtle">{featuredResult.totalDocs}+ позиций от {formatCurrency(fromPrice)} · {categories.length} категорий</div>
@@ -176,7 +215,7 @@ export default async function HomePage() {
             <div
               key={s.label}
               className="rounded-[22px] border border-border bg-card px-[22px] py-5 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)] sm:col-span-3 lg:col-span-3"
-              style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 70, 400)}ms` }}
+              style={{ animation: 'bnIn 560ms var(--ease-expo) both', animationDelay: `${Math.min(i * 70, 400)}ms` }}
             >
               <div className="text-[32px] font-medium tracking-[-0.04em]">{s.value}</div>
               <div className="mt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-subtle">{s.label}</div>
@@ -216,23 +255,30 @@ export default async function HomePage() {
               <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Категории</div>
               <h2 className="mt-2.5 text-[clamp(26px,3vw,40px)] font-medium tracking-[-0.04em]">Выберите, чем снимать</h2>
             </div>
-            <a href="/catalog" className="flex h-[42px] items-center gap-3 rounded-full border border-border bg-card px-[18px] text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,gap] duration-240 ease-expo hover:gap-5 hover:bg-primary hover:text-primary-foreground">
+            <Link href="/catalog" className="flex h-[42px] items-center gap-3 rounded-full border border-border bg-card px-[18px] text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,gap] duration-240 ease-expo hover:gap-5 hover:bg-primary hover:text-primary-foreground">
               <span>Весь каталог</span><span>→</span>
-            </a>
+            </Link>
           </div>
           <div className="mt-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3">
             {featuredCategories.map((c, i) => {
               const imageUrl = mediaUrl(c.image)
               const meta = categoryMeta(c)
               return (
-                <a
+                <Link
                   key={c.id}
                   href={`/catalog/${c.slug}`}
-                  className="rounded-[24px] border border-border bg-card p-4 transition-[transform,box-shadow,border-color] duration-[420ms] ease-expo hover:-translate-y-1 hover:border-[rgba(10,10,10,0.15)] hover:shadow-[var(--shadow-medium)]"
-                  style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
+                  className="group rounded-[24px] border border-border bg-card p-4 transition-[transform,box-shadow,border-color] duration-[420ms] ease-expo hover:-translate-y-1 hover:border-[rgba(10,10,10,0.15)] hover:shadow-[var(--shadow-medium)]"
+                  style={{ animation: 'bnIn 560ms var(--ease-expo) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
                 >
                   <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]">
-                    {imageUrl && <img src={imageUrl} alt={c.name} className="h-full w-full object-cover" />}
+                    {imageUrl && (
+                      <Image src={imageUrl} alt={c.name} fill sizes={CATEGORY_TILE_SIZES} className="object-cover transition-transform duration-[900ms] ease-expo group-hover:scale-[1.04]" />
+                    )}
+                    {c.tag && (
+                      <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-[rgba(10,10,10,0.72)] px-[11px] py-1.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-[10px]">
+                        {c.tag}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-4 flex items-start justify-between gap-3 px-1 pb-1">
                     <div>
@@ -241,7 +287,7 @@ export default async function HomePage() {
                     </div>
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-[14px] transition-colors duration-240 ease-expo">→</span>
                   </div>
-                </a>
+                </Link>
               )
             })}
           </div>
@@ -259,7 +305,10 @@ export default async function HomePage() {
           </div>
           <div className="mt-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3">
             {kits.map((k, i) => (
-              <ProductCard key={k.id} product={k} delay={i * 60} />
+              // C4: no sidebar competes with this grid's width (unlike
+              // CatalogPage's), so its real card is wider than ProductCard's
+              // own default sizes — see KITS_GRID_SIZES.
+              <ProductCard key={k.id} product={k} delay={i * 60} sizes={KITS_GRID_SIZES} variant="kit" />
             ))}
           </div>
         </section>
@@ -277,7 +326,7 @@ export default async function HomePage() {
                 {popular.map((p, i) => {
                   const categoryName = typeof p.category === 'object' ? p.category.name : undefined
                   return (
-                    <a
+                    <Link
                       key={p.id}
                       href={`/product/${p.id}`}
                       className="grid grid-cols-[34px_1fr_auto_28px] items-center gap-3.5 rounded-2xl border-none px-2.5 py-[15px] transition-[background-color,padding-left] duration-240 ease-expo hover:bg-muted hover:pl-4.5 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-border"
@@ -289,7 +338,7 @@ export default async function HomePage() {
                       </div>
                       <span className="text-[16px] font-semibold tracking-[-0.02em]">{formatCurrency(p.price)}</span>
                       <span className="text-right text-[14px] text-accent">→</span>
-                    </a>
+                    </Link>
                   )
                 })}
               </div>
@@ -317,10 +366,10 @@ export default async function HomePage() {
                 <p className="mt-4 max-w-[420px] text-[14.5px] leading-[1.55] text-white/62">
                   {siteSettings.ctaSubtext || 'Опишите задачу — соберём комплект под неё и посчитаем стоимость на ваши даты.'}
                 </p>
-                <a href="/contact" className="mt-7 inline-flex h-[54px] items-center gap-4.5 rounded-full bg-white pl-6 pr-2.5 text-[11.5px] font-semibold uppercase tracking-[0.13em] text-foreground transition-[gap,background-color] duration-240 ease-expo hover:gap-7 hover:bg-white/90">
+                <Link href="/contact" className="mt-7 inline-flex h-[54px] items-center gap-4.5 rounded-full bg-white pl-6 pr-2.5 text-[11.5px] font-semibold uppercase tracking-[0.13em] text-foreground transition-[gap,background-color] duration-240 ease-expo hover:gap-7 hover:bg-white/90">
                   <span>Написать нам</span>
                   <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[rgba(10,10,10,0.1)]">→</span>
-                </a>
+                </Link>
               </div>
               <div className="flex flex-col justify-end gap-2">
                 {[

@@ -16,6 +16,21 @@
 // underlying check migrate.js does internally, run first, with a real exit
 // code and an explanation of what to actually do about it.
 //
+// That same dev-mode push is also the mechanism behind a separate, earlier
+// symptom (not this script's concern to detect, since it manifests on the
+// `pnpm dev` side, before the sentinel it plants would ever reach this
+// production-only check): the push introspects the *entire* database and
+// drops any table absent from Payload's Drizzle-generated schema, which
+// includes `rate_limit_hits` — a bare, hand-authored table (migrations
+// 20260910_120000_rate_limit_hits / _prune_idx) that was never declared as
+// a Payload collection. Left unfiltered, an ordinary `pnpm payload migrate`
+// then `pnpm dev` would silently drop it and disable rate limiting on
+// checkout/contact/admin-login. Fixed via `postgresAdapter`'s
+// `tablesFilter` in payload.config.ts (see its comment for the mechanism)
+// — noted here because it's the same push this script exists to guard
+// against the *other* consequence of, not because this script does
+// anything about it itself.
+//
 // PAYLOAD_MIGRATING=true must be set *before* `payload`/`@payload-config`
 // are ever evaluated, not just before getPayload() is called — db-postgres's
 // connect.js pushes schema whenever `NODE_ENV !== 'production' &&

@@ -1272,3 +1272,324 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   items are all decisions that need the owner** (cutover timing, retiring
   `/cms`, renaming `apps/cms`) — no more independently-actionable
   technical-debt line items left on the list.
+- **2026-09-11** — **Block D of `design_handoff_swiss_bento/08-instruction.md`
+  (admin operator screens) done** — D6 landed first via PR #17 (merge
+  `cf17071`), D1–D5 via PR #18 (merge `75356dd`). This design-handoff tree is
+  its own initiative, separate from `docs/ROADMAP-2.0.md`/`docs/PLAN-next-
+  migration.md` (checked — no cross-references either direction), so nothing
+  there needed updating for this entry.
+
+  **D6**: `Категории`/`Акции`/`Медиатека`/`Пользователи`/`Настройки` — the
+  five admin screens `AdminSidebar.tsx` has always built without a design
+  source (2026-08-20's Stage 3 dev log entries call this out screen by
+  screen as it happened). Asked the owner directly (D6, audit N22) whether
+  to formalize the as-built structure into `04-screens.md` or leave it
+  undocumented; owner chose "describe it" over "leave as-is." Added as a new
+  `04-screens.md` section, S7.1 — table/columns/mobile behavior for each
+  screen as actually built, not a redesign. Its Настройки row specifically
+  re-flags the partial-POST risk on `SiteSettings` this log has already
+  called out twice (2026-08-14, 2026-08-21) — the form still always sends
+  the whole object.
+
+  **D1–D3** (`OrderDetailForm.tsx` + `(admin)/admin/orders/[id]/actions.ts`,
+  landed as four commits on `claude/d1-d3-order-form`, reviewed and fixed
+  again before merge). D1 (🔴, the flagged-severe item): the quantity/
+  startDate/endDate inputs fired their Server Action on every `onChange`,
+  not just on blur — typing "12" into quantity called `updateOrderItem`
+  twice (once with `quantity: 1`), and clearing the field sent
+  `Number('') = 0` straight through as a real, persisted zero-quantity
+  line, each call also re-triggering `OrderItems`' full `beforeValidate`
+  price recompute. Switched all three inputs to `onBlur`, rejecting
+  non-finite/non-integer/`<1` quantity and unparseable dates client-side
+  without a server round-trip. D2: `handleStatusChange` called `setStatus`
+  before the Server Action resolved and never rolled back on failure, so a
+  rejected write could leave the `<select>` showing "Подтверждён" while the
+  DB still held "pending" — the only visible sign of trouble an easily-
+  missed error banner. Reordered so `setStatus` only runs after success;
+  item-field edits got the equivalent rollback for their (deliberately
+  uncontrolled) inputs, resetting the displayed value on failure. D3: the
+  "Сумма" card printed the static server-rendered `order.totalPrice` prop,
+  so it never reflected an item edit until a full page reload, even though
+  the per-line total updated live. Per this repo's own rule that pricing
+  math lives in exactly one place (`OrderItems`' hook, not duplicated
+  client-side), `updateOrderItem`/`deleteOrderItem` now re-read the order's
+  already-hook-recomputed `totalPrice` from the DB after the mutation and
+  thread it back as `orderTotalPrice` on `ActionResult`, rendered from new
+  client state instead of the static prop.
+  **A pre-merge review found a real follow-up race in D1's rollback**: each
+  field's `onBlur` rollback closure captured `item.quantity`/`startDate`/
+  `endDate` from the render in effect when that field was blurred, not read
+  fresh at rollback time — a fast double-edit of the same field (correcting
+  a typo before the first request resolves) could roll back to a value from
+  before *either* request landed, even after the first had already
+  committed a newer value server-side, leaving the input showing a value
+  matching neither what was typed nor what's actually persisted. Fixed by
+  reading the rollback target from a ref that always mirrors the latest
+  committed `items` state, looked up by item id, instead of the stale
+  per-render closure value. Same review also tightened quantity validation
+  to reject non-integer input (`Number.isInteger`) — a fractional quantity
+  like "1.5" was previously accepted and would have been persisted and used
+  in `lineTotal` math.
+
+  **D4** (`claude/d4-calendar-consolidation`, review + fix before merge):
+  the two admin occupancy calendars — `(admin)/admin/calendar` (this app's
+  Tailwind `/admin`) and `CalendarView.tsx` (a custom view inside Payload's
+  own `/cms` admin) — had duplicated the same Gantt-bar layout logic, with
+  the same two real bugs in both copies: overlapping bookings stacked
+  directly on top of each other (hiding the one an operator most needs to
+  see), and nothing ever compared booked quantity against a product's
+  actual stock; neither screen could page past a fixed 14-day window.
+  Consolidated into one shared algorithm module, `lib/admin/
+  calendarLayout.ts` (pure functions, no React/Payload/Next import) — lane
+  assignment via greedy interval partitioning (sort by start offset, ties
+  broken by longer span first; place in the lowest-numbered lane whose last
+  item ends strictly before this one starts, else open a new lane — the
+  standard optimal algorithm, so bars never overlap and never use more
+  lanes than the true max overlap) — and one shared presentational
+  component, `components/admin/CalendarGrid.tsx`, theme-agnostic via a
+  `theme` prop of literal CSS values (a hex on the `/admin` side, `var(
+  --theme-elevation-*)`/`var(--theme-error-*)` references into Payload's
+  own shipped theme on the `/cms` side) so one component renders correctly
+  in both admin shells without a plain port reintroducing the same
+  duplicated-and-buggy logic. `getAdminCalendar()` gained `offsetDays`
+  (clamped ≥0 — an occupancy tool, not a history log) and each product row
+  now carries `quantity` for deficit detection. Bars link to `/admin/
+  orders/[id]` via `next/link` — works from inside `/cms` too, same
+  Next.js process.
+  **Review found a real bug in the deficit calculation specifically**: the
+  first pass summed booked quantity into per-day buckets by checking
+  whether each booking's day-truncated range touched that calendar day —
+  this double-counts a same-day handover (one rental ending the morning of
+  day N, a different one starting that afternoon), since both individually
+  "touch" day N even though they never coexist, and this exact pairing is
+  what `OrderItems`' own availability hook (`lib/rental/availability.ts`,
+  strict `startDate < endDate && endDate > startDate` interval overlap)
+  already approves as non-conflicting. Fixed by replacing the per-day
+  bucket sum with a proper sweep line over each item's real (untruncated)
+  timestamps — end-events ordered before start-events at an identical
+  instant so a same-instant handover produces no spurious peak — verified
+  against the same-day-handover case (no false positive), a genuine-overlap
+  case (still flagged), and a 3-item chained-overlap case at two capacity
+  levels, all matching manual interval math, then confirmed live in a real
+  browser against both `/admin/calendar` and `/cms/calendar` with real
+  seeded overlapping and non-overlapping bookings. The bars' own rendered
+  spans stayed day-truncated (correct for a day-column Gantt) — only the
+  deficit math needed the finer-grained check.
+
+  **D5** (`claude/d5-admin-search-filters`): `/admin/orders` (status
+  dropdown + phone/name search) and `/admin/stock` (title search + category
+  dropdown) were both unfilterable once there's real volume — orders capped
+  at the 50 most recent with no search at all, stock a flat unfiltered
+  table. Added plain zero-JS `<form method="GET">`s reading `searchParams`
+  on both pages — no client island needed, since both were already
+  `force-dynamic` and a real GET round trip per filter change is fine for
+  an internal admin tool. Free-text search uses Payload's `contains`
+  operator (single case-insensitive substring match), not `like` (the
+  operator `getProducts()` already uses for title search, which ANDs a
+  LIKE-per-space-separated-word — built for multi-word title matching, and
+  wrong for a partial phone number or a bare first name). The unfiltered
+  default view keeps its existing 50-most-recent cap on orders; the moment
+  a filter is active the query goes unbounded (`limit: 0`, same convention
+  `getAdminStock()`/`calendar.ts` already use), since a real match further
+  back than 50 is exactly what search exists to find.
+
+  **Verification**: D1–D3, D4, D5 were merged into an integration branch
+  (`claude/block-d-integration`) before landing on `2.0`; `eslint`/
+  `tsc --noEmit`/`node tools/design-sync.mjs audit` all came back clean
+  (same pre-existing baseline as block C, no new gaps introduced), and a
+  live Playwright smoke test against a real seeded Postgres confirmed all
+  three areas working end-to-end together: one Server Action fire per
+  blur (not per keystroke) with correct invalid-quantity rollback, the
+  order total updating live without a reload, both calendars showing
+  separated overlapping bars with a deficit indicator on the correct days
+  and none on a genuine same-day handover, bar-click navigation to the
+  right order, and both filter forms narrowing results correctly — before
+  the integration branch was merged into `2.0` as PR #18.
+- **2026-09-12** — **Block E of `design_handoff_swiss_bento/08-instruction.md`
+  ("Вёрстка экранов" — per-screen visual/layout reconciliation against the
+  delivered design) done**, five PRs, one per screen group, merged in the
+  work order's own specified order: E1 catalog+product (PR #19, `b4bbb34`),
+  E2 cart+checkout (PR #20, `3fbd652`), E3 homepage (PR #21, `650235d`), E4
+  legal pages+contact (PR #22, `06da1f0`), E5 admin (PR #23, `7d742b5`). The
+  block's own acceptance criteria: page-by-page against `docs/design-
+  reference/template.html`, zero ⚠ from `design-sync audit` on the
+  storefront, `prefers-reduced-motion` respected. Like blocks C/D, this is
+  its own initiative — checked, `docs/ROADMAP-2.0.md` has no cross-
+  references either direction and needed no update.
+
+  **Recurring theme across all five groups**: several components had
+  `cubic-bezier(0.16,1,0.3,1)` (the design's dominant curve) hardcoded as a
+  literal string instead of the `--ease-expo` token `docs/design-reference/
+  spec/tokens.css` already defines (Tailwind v4's `@theme` auto-generates a
+  matching utility class from it) — same numeric value either way, but a
+  literal can't be told apart from an actually-wrong curve by grepping for
+  the token, which is exactly how this class of gap kept slipping past
+  earlier design-sync passes. Closed file-by-file across all five groups;
+  by E5 the literal-curve count in `design-sync audit`'s output was down to
+  0 for the first time this migration.
+
+  **E1** (catalog + product): the curve-literal fix landed in
+  `CatalogPage.tsx`/`ProductCard.tsx`/`RentalDatePicker.tsx`/`product/[id]/
+  page.tsx` (the last two weren't even on the work order's own known-
+  findings list — found by grepping for the literal directly rather than
+  trusting the list). `RentalDatePicker`'s close-icon rotation was on
+  `ease-expo` where the design's `interactions.css` specifies the separate
+  `--ease-overshoot` curve for that one rule — one of eight "overshoot"
+  instances the work order calls out as lost elsewhere in the app; split so
+  only the icon's `transform` uses the overshoot curve, background/color
+  stay on `duration-240`/`ease-expo`. Mobile tap targets in the date-picker
+  modal raised from 40px/~38px to 44px — day cells needed `min-h-11` below
+  `sm` with `sm:aspect-square` above it, since a plain `aspect-square +
+  min-h-11` combo (tried first) made Chromium re-derive cell width from the
+  enforced min-height and overflow the 7-column grid into a page-wide
+  horizontal scrollbar — confirmed live before landing on the two-
+  breakpoint fix (44px cells below `sm`, real squares restored above it
+  where the wider column already clears 44px on its own). One claimed
+  finding — a color mismatch between `RentalDatePicker` and
+  `ProductPurchasePanel`'s "занято" badges — was checked directly
+  (`rgba(214,36,16,0.14)`/`0.12` in both) and found already correct, not
+  fixed, since it wasn't broken.
+
+  **E2** (cart + checkout): same curve-literal fix in `CheckoutPage.tsx`.
+  Investigated whether `RentalDatePicker`'s shared `variant="boxes"`
+  (product page's Выдача/Возврат pills, reused as-is on checkout) needed
+  differentiating between the two contexts — compared `template.html`'s
+  two contexts directly rather than assuming parity, and found they're
+  genuinely different treatments (product: 14px padding, 16px value with a
+  separate time line below; checkout: 16px padding, 18px value with
+  date+time combined) that the old shared rendering matched neither of.
+  Added a `context?: 'product' | 'checkout'` prop defaulting to `'product'`
+  so the existing product-page caller needed no changes. Fixed the
+  checkout success state to match `04-screens.md`'s S4 spec ("не toast, а
+  замена панели на карточку с номером заявки, датами и P2 «В каталог»") —
+  the panel-replacement shape was already right, but the card showed
+  neither order number nor dates, and its CTA used the primary (P1) button
+  style where the spec calls for the quiet P2 (`.btn-ghost`); `submit
+  Checkout` now returns `orderId` so the client has something real to
+  render.
+
+  **E3** (homepage — still the largest template in the app, 297 lines):
+  same curve-literal fix (6 in `page.tsx`, 3 in `PromoCarousel.tsx`, plus a
+  drive-by fix in the shared `CartBadge.tsx`). Real structural gaps found
+  against `template.html`, not just curve bugs: the homepage's kit tiles
+  were reusing the catalog `ProductCard` unchanged, but the design's kit
+  tile is a genuinely distinct treatment (3/2 media not 4/3, 22px name,
+  23px price with a divider + caps unit label, both `subtitle` and
+  `description` shown rather than one falling back to the other) — added a
+  `variant='catalog' | 'kit'` prop, default `'catalog'` so both existing
+  callers (`CatalogPage`, promotions' linked products) needed no changes.
+  The promo carousel's slide height had both the wrong value and the wrong
+  responsive direction (design: 470px→620px, taller on mobile; code:
+  380px→470px, shorter on mobile — backwards). The carousel's background
+  cross-fade wasn't using `--ease-inout`, the one curve `03-motion.md`
+  reserves exclusively for this element ("только слайдер акций") — that
+  token had zero usages anywhere in the app before this fix. Also fixed:
+  category tiles were missing the `Categories.tag` badge overlay (a real
+  field, never rendered) and a hover photo-zoom; `RentalDatePicker`'s
+  homepage-only `hero` variant overflowed a 360px viewport (fixed with
+  `flex-wrap`, confirmed via `scrollWidth` before/after).
+
+  **E4** (legal pages + contact — the group needing the most judgment): the
+  work order was explicit and concrete for the legal pages ("одна общая
+  раскладка, колонка 680px, 17/1.65, липкое оглавление на ≥1024px, никаких
+  карточек вокруг абзацев") — confirmed real deviations on all counts
+  except the last (column was 760px, body text was 14.5px, no sticky TOC
+  existed at all; "no cards around paragraphs" was already correct). Built
+  one shared `LegalPageLayout.tsx` for both `privacy-policy` and `user-
+  agreement` (IntersectionObserver-driven active-section highlight, sticky
+  at `lg:top-[96px]`, hidden below 1024px) — confirmed via a line-by-line
+  diff that no legal text itself was touched, only the wrapping structure.
+  **The judgment call**: `04-screens.md`'s S5 describes Contacts as one
+  card (address+phone+hours) plus a static map image, but the live page has
+  three separate cards plus a real working `ContactForm` posting to
+  `/api/contact-notification`. Rather than trust the prose summary,
+  investigated `docs/design-reference/template.html` directly and found the
+  decoded prototype's screen state machine only ever supports
+  `home|catalog|product|cart|admin` — there is no Contacts screen in the
+  actual extracted design data at all, so S5's description isn't extracted
+  markup, it's authored text with nothing backing it. Concluded the live
+  three-card-plus-working-form layout is a deliberate, reasonable superset
+  built after that old summary was written, not a deviation from a real
+  source — tearing out working lead-generation functionality to match a
+  screenshot-less prose paragraph would have been the wrong call, so the
+  page was left unchanged.
+
+  **E5** (admin, the last group — also the one with the most substantial
+  new code): closed the remaining curve literals (5 files with the
+  `ease-expo` literal, plus the calendar Gantt-bar's hover curve, which had
+  the *correct* value already but as a hardcoded
+  `cubic-bezier(0.34,1.56,0.64,1)`/`320ms` literal rather than the
+  `ease-overshoot`/`duration-320` tokens — re-verified correct after block
+  D's D4 calendar-consolidation rewrite, not just assumed from the old dev-
+  log note). Found a real deviation in the KPI/client cards: hover was
+  `duration-300`/transform-only with a hardcoded shadow literal, where
+  `template.html` specifies `transform 420ms` + `box-shadow 420ms` — fixed,
+  and the hardcoded shadow was swapped for the existing `--shadow-medium`
+  token (confirmed byte-identical to the literal it replaced). **The
+  substantial fix**: mobile admin had no responsive treatment at all — no
+  breakpoint anywhere in the shell, so the 246px sidebar and every table's
+  fixed-pixel grid columns would overflow a phone viewport, violating S7's
+  own explicit mobile spec ("сайдбар → горизонтальный скролл-таб-бар 44px;
+  таблица → список карточек... не оставлять горизонтальный скролл"). Added:
+  a `lg:hidden` horizontal-scroll tab bar in `AdminSidebar.tsx` (44px tabs,
+  sharing the same `usePathname()`/badge/logout logic as the existing
+  desktop sidebar, rendered from one component instance via a Fragment so
+  both live in the DOM and Tailwind's responsive classes pick one per
+  viewport), `(admin)/admin/layout.tsx`'s grid changed to `grid-cols-1
+  lg:grid-cols-[246px_1fr]`, and a new shared `AdminMobileCard.tsx` wired
+  into Orders/Stock/Categories/Promotions (each row rendered twice — once
+  as the existing desktop grid, `hidden lg:grid`, once as a mobile card,
+  `lg:hidden` — verified field-by-field that no data differs between the
+  two renderings). Analytics' fixed-width 3-column revenue row was
+  overflowing 390px; switched to `lg:contents` to let it stack as a plain
+  flex row on mobile (checked this specific usage has no accessibility/
+  `:nth-child` pitfall, since the wrapped content is just a bar div and a
+  span with no semantic role). Confirmed `prefers-reduced-motion` was
+  already correctly handled admin-wide via the same sitewide `global.css`
+  rule the storefront uses — no admin-specific gap existed. One clarifying
+  finding, no code change: S7's own prose says the sidebar nav transition
+  is "260ms ease," but `template.html`'s actual literal markup says 240ms —
+  the live code already matched the template, not the prose, and the
+  template (not the summary describing it) is this block's own stated
+  source of truth.
+
+  **Verification pattern across all five**: each PR ran `eslint`/
+  `tsc --noEmit`/`node tools/design-sync.mjs audit` clean, then a live
+  Playwright pass at both desktop and mobile viewports with real seeded
+  data (working around the still-unresolved `tsx`/`@next/env` version-skew
+  crash via direct authenticated REST/JWT calls, same workaround
+  established back in Stage 3) confirming actual rendered behavior, not
+  just that the code compiled. E5's mobile-shell diff (the largest and
+  riskiest of the five) also got an independent code-review pass before
+  merging, checking specifically for the most common bug class in
+  "duplicate markup for a responsive variant" diffs (content/data dropped
+  from one rendering but not the other) — none found.
+
+  **One recurring bug found by three separate passes (E1, E3, E4) and left
+  out of scope each time**, since it's shared chrome (S0) rather than any
+  one screen group: the shared `Navbar.tsx` caused a page-level horizontal
+  overflow of roughly 90px at 360–390px viewports, on every page. Root
+  cause confirmed live (`document.documentElement.scrollWidth`, not just
+  inspected): below `md`, the nav and business-hours block correctly hide,
+  but the `RentalDatePicker` `navbar` variant's date-chip text ("Выбрать
+  даты" or a full range like "12–14 АВГ"), the cart pill, and — for a
+  logged-in admin — `AdminPanelLink`'s "Панель управления" pill are all
+  `shrink-0`/`whitespace-nowrap` with no mobile treatment; the date chip
+  alone accounted for most of the overflow. Fixed same-day, PR #24
+  (`claude/navbar-mobile-overflow`, merge `9efb096`): per `04-screens.md`'s
+  S0 spec ("чип даты → иконка-кнопка 44px с датой в подписи"), the navbar
+  date chip collapses to an icon-only 44px button below `md` (not the
+  spec's literal "1020" — every other Navbar item was already built and
+  verified against `md`=768px throughout the migration, so a second
+  breakpoint just for this one element would only fragment the header's
+  responsive behavior), with the date text moved to `aria-label` so the
+  accessible name never depends on which element is visually shown; the
+  calendar glyph reuses this app's existing stroke-icon convention
+  (`CatalogPage.tsx`'s search icon) rather than inventing new iconography.
+  `AdminPanelLink` got the same treatment (hidden below `md`, split into
+  an exported `useAdminAuthed()` hook so Navbar's own mobile dropdown menu
+  can render an equivalent "Панель управления" item, keeping `/admin`
+  reachable on mobile). Verified live at 360px and 390px, logged-out and
+  logged-in-as-admin, across the homepage/catalog/a product page: zero
+  overflow, date picker and cart both still fully functional on mobile,
+  desktop 1440px pixel-identical to before for both auth states.

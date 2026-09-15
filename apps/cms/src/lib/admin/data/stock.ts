@@ -1,4 +1,5 @@
 import { getPayload } from 'payload'
+import type { Where } from 'payload'
 import config from '@payload-config'
 
 // Ported from apps/cms/src/endpoints/admin/stock.ts (docs/PLAN-next-
@@ -17,10 +18,30 @@ export interface AdminStockRow {
   status: 'out' | 'low' | 'ok'
 }
 
-export async function getAdminStock(): Promise<AdminStockRow[]> {
+export interface AdminStockFilters {
+  q?: string
+  category?: number
+}
+
+export async function getAdminStock(filters: AdminStockFilters = {}): Promise<AdminStockRow[]> {
   const payload = await getPayload({ config })
 
-  const products = await payload.find({ collection: 'products', sort: 'title', limit: 0, depth: 1 })
+  const and: Where[] = []
+  const q = filters.q?.trim()
+  // `contains` — plain case-insensitive substring match (ILIKE %q%), same
+  // reasoning as lib/admin/data/orders.ts's phone/name search: this is a
+  // free-text partial-title query, not `like`'s word-by-word AND (built for
+  // getProducts()'s multi-word title search in lib/data/products.ts).
+  if (q) and.push({ title: { contains: q } })
+  if (filters.category !== undefined) and.push({ category: { equals: filters.category } })
+
+  const products = await payload.find({
+    collection: 'products',
+    where: and.length > 0 ? { and } : undefined,
+    sort: 'title',
+    limit: 0,
+    depth: 1,
+  })
 
   return products.docs.map((p) => {
     let status: AdminStockRow['status']

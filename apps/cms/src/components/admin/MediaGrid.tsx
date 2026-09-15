@@ -4,9 +4,21 @@
 // (docs/PLAN-next-migration.md Stage 3.4/3.5) — same per-item alt-text
 // save + delete behavior, as React state instead of raw DOM manipulation.
 import { useState } from 'react'
+import Image from 'next/image'
 import type { Media } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { updateMediaAlt, deleteMedia } from '../../app/(admin)/admin/media/actions'
+
+// C4 (design_handoff_swiss_bento/08-instruction.md, G3): admin is
+// explicitly lower priority than the storefront per the instruction — this
+// is a rough-but-real estimate (the admin shell's 246px sticky sidebar +
+// gap + padding eaten from the viewport, then this grid's own 2/4/6-column
+// breakpoints), not pixel-measured against every admin viewport the way the
+// storefront slots above are. Good enough to stop serving full-size
+// originals into a 6-up thumbnail grid without over-engineering a screen
+// the design doesn't cover at all (AdminSidebar's own comment already flags
+// this whole page as undesigned).
+const MEDIA_GRID_SIZES = '(min-width: 1024px) 12vw, (min-width: 640px) 14vw, 30vw'
 
 export default function MediaGrid({ items: initialItems }: { items: Media[] }) {
   const [items, setItems] = useState(initialItems)
@@ -37,7 +49,9 @@ export default function MediaGrid({ items: initialItems }: { items: Media[] }) {
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4 lg:grid-cols-6">
         {items.map((m) => (
           <div key={m.id} className="rounded-xl border border-border p-2">
-            <img src={mediaUrl(m) ?? ''} className="aspect-square w-full rounded-lg bg-muted object-cover" alt="" />
+            <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
+              {mediaUrl(m) && <Image src={mediaUrl(m) as string} alt="" fill sizes={MEDIA_GRID_SIZES} className="object-cover" />}
+            </div>
             <input
               type="text"
               value={alts[m.id] ?? ''}

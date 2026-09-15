@@ -5,13 +5,14 @@
 // (payload-types' Product instead of shared-types', lib/rentalAvailability's
 // RentalAvailability/getRentalAvailability instead of lib/payload's REST
 // equivalents).
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useStore } from '@nanostores/react'
 import type { Product } from '../payload-types'
 import { getRentalAvailability, type RentalAvailability } from '../lib/rentalAvailability'
 import { calculateRentalDays, calculateRentalPrice, formatCurrency } from '../lib/pricing'
 import { formatShifts, buildDaysGrid, WEEKDAY_LABELS_RU } from '../lib/dateRange'
-import RentalDatePicker from './RentalDatePicker'
+import RentalDatePicker, { type RentalDatePickerHandle } from './RentalDatePicker'
 import QuantitySelector from './QuantitySelector'
 import { $selectedDates, setSelectedDates } from '../stores/dates'
 import { addToCart } from '../stores/cart'
@@ -86,7 +87,13 @@ function AvailabilityCalendar({ bookedRanges }: { bookedRanges?: RentalAvailabil
               type="button"
               disabled={busy}
               onClick={() => pick(day)}
-              className={`flex aspect-square items-center justify-center rounded-[11px] text-[12.5px] transition-[background-color,color,transform] duration-240 ease-expo ${style}`}
+              // Eyeball pass (S3, template.html's `Занятость · август` day
+              // cell): background/color keep this file's usual duration-240
+              // ease-expo; transform (the isFrom/isTo scale pop) gets the
+              // design's own transform-specific curve+duration — one of
+              // the eight overshoot instances the work order flags as
+              // lost, same fix as RentalDatePicker's close-icon rotation.
+              className={`flex aspect-square items-center justify-center rounded-[11px] text-[12.5px] [transition:background-color_240ms_var(--ease-expo),color_240ms_var(--ease-expo),transform_320ms_var(--ease-overshoot)] ${style}`}
             >
               {day.getDate()}
             </button>
@@ -120,6 +127,11 @@ export default function ProductPurchasePanel({ product, imageUrl }: Props) {
   const isRental = product.listingType === 'rental'
   const hasDates = Boolean(dates.startDate && dates.endDate)
   const days = calculateRentalDays(dates.startDate ?? undefined, dates.endDate ?? undefined)
+  // B1 (design_handoff_swiss_bento/08-instruction.md) — imperative handle so
+  // the add-to-cart button below can open this same modal instead of doing
+  // nothing when no dates are selected yet (G4's "main drop-off point": that
+  // state is the next step, not an input error).
+  const datePickerRef = useRef<RentalDatePickerHandle>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -153,8 +165,19 @@ export default function ProductPurchasePanel({ product, imageUrl }: Props) {
     : product.price * quantity
 
   const canAdd = isRental ? hasDates && available > 0 && !checking : available > 0
+  // Distinct from canAdd: whether the button should be clickable at all to
+  // *open the picker* (no dates yet) rather than to add to the cart. Still
+  // gated on `available > 0` — a product the availability check already
+  // knows is fully out of stock (product.available/quantity) shouldn't
+  // invite opening a date picker that can't help; the "Нет в наличии"/
+  // "Забронировано" pills above already say so.
+  const canOpenDatePicker = isRental && !hasDates && available > 0
 
   const handleAdd = () => {
+    if (canOpenDatePicker) {
+      datePickerRef.current?.open('from')
+      return
+    }
     if (!canAdd) return
     addToCart(
       {
@@ -189,7 +212,7 @@ export default function ProductPurchasePanel({ product, imageUrl }: Props) {
 
       <div className="mt-5">
         {isRental ? (
-          <RentalDatePicker variant="boxes" bookedRanges={bookedRanges} totalQuantity={product.quantity} />
+          <RentalDatePicker ref={datePickerRef} variant="boxes" context="product" bookedRanges={bookedRanges} totalQuantity={product.quantity} />
         ) : null}
       </div>
 
@@ -235,13 +258,13 @@ export default function ProductPurchasePanel({ product, imageUrl }: Props) {
         </div>
       )}
 
-      <button type="button" onClick={handleAdd} disabled={!canAdd} className="btn-primary mt-4 h-14 w-full gap-4.5 text-[11.5px] hover:gap-[30px]">
+      <button type="button" onClick={handleAdd} disabled={!canAdd && !canOpenDatePicker} className="btn-primary mt-4 h-14 w-full gap-4.5 text-[11.5px] hover:gap-[30px]">
         {added ? '✓ Добавлено в корзину' : isRental && !hasDates ? 'Выберите даты' : 'В корзину'}
         {!added && <span>→</span>}
       </button>
-      <a href="/checkout" className="btn-outline mt-2.5 flex h-12 w-full items-center justify-center text-[11px]">
+      <Link href="/checkout" className="btn-outline mt-2.5 flex h-12 w-full items-center justify-center text-[11px]">
         Перейти в корзину
-      </a>
+      </Link>
       <p className="mt-3 text-center text-[12px] leading-[1.5] text-subtle">
         Без залога. Бронь держим 2 часа после подтверждения.
       </p>

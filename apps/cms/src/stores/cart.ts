@@ -12,6 +12,13 @@ import { $selectedDates } from './dates'
 
 export type ListingType = 'rental' | 'sale'
 
+// Absolute sanity cap on cart line quantity. Client-side store has no knowledge
+// of stock (CartItem carries no quantity-available field) — real stock validation
+// happens on the product page (max={available}), checkout availability check, and
+// authoritatively in the OrderItems beforeValidate hook. This cap only stops
+// runaway/absurd values.
+export const MAX_CART_ITEM_QUANTITY = 99
+
 // Rental dates live only on $selectedDates (one shared date range for the
 // whole cart, matching the design's single "Даты и время" box on the
 // cart screen) — a cart line never carries its own dates.
@@ -32,10 +39,10 @@ export function addToCart(item: Omit<CartItem, 'quantity'>, quantity = 1): void 
   const existing = items.find((i) => i.productId === item.productId)
   if (existing) {
     $cart.set(
-      items.map((i) => (i.productId === item.productId ? { ...i, quantity: i.quantity + quantity } : i)),
+      items.map((i) => (i.productId === item.productId ? { ...i, quantity: Math.min(i.quantity + quantity, MAX_CART_ITEM_QUANTITY) } : i)),
     )
   } else {
-    $cart.set([...items, { ...item, quantity }])
+    $cart.set([...items, { ...item, quantity: Math.min(quantity, MAX_CART_ITEM_QUANTITY) }])
   }
 }
 
@@ -44,7 +51,8 @@ export function setItemQuantity(productId: number, quantity: number): void {
     removeFromCart(productId)
     return
   }
-  $cart.set($cart.get().map((i) => (i.productId === productId ? { ...i, quantity } : i)))
+  const clamped = Math.min(quantity, MAX_CART_ITEM_QUANTITY)
+  $cart.set($cart.get().map((i) => (i.productId === productId ? { ...i, quantity: clamped } : i)))
 }
 
 export function removeFromCart(productId: number): void {

@@ -1,6 +1,7 @@
 // Ported from apps/web/src/components/Footer.astro (docs/PLAN-next-migration.md
 // Stage 2) — a plain async Server Component here (no interactivity of its
 // own), reading SiteSettings via the Local API data layer instead of REST.
+import Link from 'next/link'
 import { getSiteSettings } from '../lib/data/siteSettings'
 
 export default async function Footer() {
@@ -47,10 +48,10 @@ export default async function Footer() {
         <div>
           <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Документы</h3>
           <div className="mt-4 flex flex-col gap-2 text-[14.5px] text-muted-foreground">
-            <a className="border-none hover:text-accent" href="/privacy-policy">Политика конфиденциальности</a>
-            <a className="border-none hover:text-accent" href="/user-agreement">Пользовательское соглашение</a>
-            <a className="border-none hover:text-accent" href="/how-it-works">Как это работает</a>
-            <a className="border-none hover:text-accent" href="/contact">Контакты</a>
+            <Link className="border-none hover:text-accent" href="/privacy-policy">Политика конфиденциальности</Link>
+            <Link className="border-none hover:text-accent" href="/user-agreement">Пользовательское соглашение</Link>
+            <Link className="border-none hover:text-accent" href="/how-it-works">Как это работает</Link>
+            <Link className="border-none hover:text-accent" href="/contact">Контакты</Link>
           </div>
         </div>
       </div>

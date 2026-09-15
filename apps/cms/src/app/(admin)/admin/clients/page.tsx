@@ -26,8 +26,8 @@ export default async function AdminClientsPage() {
         {clients.map((c, i) => (
           <div
             key={c.email}
-            className="flex items-center gap-4 rounded-[22px] border border-border bg-card p-5 transition-transform duration-300 ease-expo hover:-translate-y-1 hover:shadow-[0_26px_48px_-32px_rgba(10,10,10,0.42)]"
-            style={{ animation: 'bnIn 560ms cubic-bezier(0.16,1,0.3,1) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
+            className="flex items-center gap-4 rounded-[22px] border border-border bg-card p-5 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
+            style={{ animation: 'bnIn 560ms var(--ease-expo) both', animationDelay: `${Math.min(i * 60, 400)}ms` }}
           >
             <span className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full bg-primary text-[13px] font-semibold text-primary-foreground">
               {initials(c.name)}

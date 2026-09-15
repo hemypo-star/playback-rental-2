@@ -1,4 +1,5 @@
 import { getPayload } from 'payload'
+import type { Where } from 'payload'
 import config from '@payload-config'
 import type { OrderItem } from '../../../payload-types'
 
@@ -8,9 +9,10 @@ import type { OrderItem } from '../../../payload-types'
 // the (admin)/admin/layout.tsx guard now covers once for every page under
 // it. Both endpoints stay as-is for apps/web's REST-based admin.
 
-// Step 4 scope carried over verbatim: most-recent orders only, no
-// search/filter — that's a later admin page group if ever needed.
-const RECENT_LIMIT = 50
+// Pagination: uses a fixed PAGE_SIZE for all queries, whether filtered or
+// unfiltered. Payload's find() method handles pagination via limit + page
+// parameters and returns totalDocs/totalPages for rendering controls.
+const PAGE_SIZE = 50
 
 export interface AdminOrderRow {
   id: number
@@ -25,10 +27,45 @@ export interface AdminOrderRow {
   createdAt: string
 }
 
-export async function getAdminOrders(): Promise<AdminOrderRow[]> {
+export interface AdminOrdersFilters {
+  status?: AdminOrderRow['status']
+  q?: string
+  page?: number
+}
+
+export interface AdminOrdersResult {
+  docs: AdminOrderRow[]
+  totalDocs: number
+  totalPages: number
+}
+
+export async function getAdminOrders(filters: AdminOrdersFilters = {}): Promise<AdminOrdersResult> {
   const payload = await getPayload({ config })
 
-  const orders = await payload.find({ collection: 'orders', sort: '-createdAt', limit: RECENT_LIMIT, depth: 0 })
+  const and: Where[] = []
+  if (filters.status) and.push({ status: { equals: filters.status } })
+  const q = filters.q?.trim()
+  if (q) {
+    // `contains` (not `like`): a plain case-insensitive substring match
+    // (SQL ILIKE %q%) against the whole field value. `like` (used for
+    // getProducts()'s title search in lib/data/products.ts) instead splits
+    // the query on spaces and ANDs a LIKE %word% per word — built for
+    // multi-word title search, wrong here since a partial phone number or
+    // a first-name-only query isn't a set of independent "words" to match
+    // separately.
+    and.push({ or: [{ customerPhone: { contains: q } }, { customerName: { contains: q } }] })
+  }
+
+  const page = Math.max(1, filters.page || 1)
+
+  const orders = await payload.find({
+    collection: 'orders',
+    where: and.length > 0 ? { and } : undefined,
+    sort: '-createdAt',
+    limit: PAGE_SIZE,
+    page,
+    depth: 0,
+  })
 
   const orderIds = orders.docs.map((o) => o.id)
   const items =
@@ -43,7 +80,7 @@ export async function getAdminOrders(): Promise<AdminOrderRow[]> {
     itemsByOrder.get(orderId)!.push(item)
   }
 
-  return orders.docs.map((o) => {
+  const docs = orders.docs.map((o) => {
     const orderItems = itemsByOrder.get(o.id) || []
     const itemsSummary = orderItems
       .map((item) => `${typeof item.product === 'object' ? item.product?.title : '—'} ×${item.quantity}`)
@@ -73,6 +110,12 @@ export async function getAdminOrders(): Promise<AdminOrderRow[]> {
       createdAt: o.createdAt,
     }
   })
+
+  return {
+    docs,
+    totalDocs: orders.totalDocs,
+    totalPages: orders.totalPages,
+  }
 }
 
 export interface AdminOrderDetail {

@@ -4,6 +4,7 @@ import CatalogPage from '../../../../components/CatalogPage'
 import { getCategoryBySlug } from '../../../../lib/data/categories'
 import { mediaUrl } from '../../../../lib/mediaUrl'
 import { buildMetadata } from '../../../../lib/seo'
+import { parsePageParam } from '../../../../lib/catalogQuery'
 
 // Ported from apps/web/src/pages/catalog/[slug].astro (docs/PLAN-next-
 // migration.md Stage 2). Astro.redirect() -> next/navigation's redirect().
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 
 interface Props {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ q?: string; sort?: string }>
+  searchParams: Promise<{ q?: string; sort?: string; page?: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -34,7 +35,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     redirect('/catalog')
   }
 
-  const { q, sort } = await searchParams
+  const { q, sort, page } = await searchParams
 
-  return <CatalogPage activeCategory={category} searchQuery={q} sort={sort} />
+  return <CatalogPage activeCategory={category} searchQuery={q} sort={sort} page={parsePageParam(page)} />
 }

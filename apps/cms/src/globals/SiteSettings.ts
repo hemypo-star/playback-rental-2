@@ -96,6 +96,27 @@ export const SiteSettings: GlobalConfig = {
             { name: 'contactVkUrl', type: 'text', defaultValue: 'https://vk.com/playbackrental' },
             { name: 'contactAddress', type: 'text', defaultValue: 'г. Кемерово, ул. Демьяна Бедного, 6' },
             { name: 'contactHours', type: 'text', defaultValue: '10:00 — 21:00' },
+            {
+              name: 'businessHoursOpen',
+              type: 'number',
+              min: 0,
+              max: 23,
+              defaultValue: 10,
+              admin: {
+                description:
+                  'Час открытия (0–23) для сетки времени в модалке выбора дат аренды (RentalDatePicker) — определяет и список времени, и подпись под ним. Не то же самое, что «Часы работы» выше: то поле — свободный текст для отображения на сайте, это — число для расчётов. Меняя одно, проверьте другое: разошедшиеся значения — тот же баг (N5), что эти поля и чинят.',
+              },
+            },
+            {
+              name: 'businessHoursClose',
+              type: 'number',
+              min: 0,
+              max: 23,
+              defaultValue: 21,
+              admin: {
+                description: 'Час закрытия (0–23), см. описание «часа открытия» выше.',
+              },
+            },
             { name: 'yandexMapsUrl', type: 'text', defaultValue: 'https://yandex.ru/maps/-/CHvDmII7' },
             { name: 'twoGisUrl', type: 'text', defaultValue: 'https://go.2gis.com/2y9MJ' },
           ],

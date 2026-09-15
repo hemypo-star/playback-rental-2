@@ -10,6 +10,7 @@
 // than a DOM-diffing exercise.
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import type { Media, Product } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
@@ -150,7 +151,12 @@ export default function ProductForm({ product, categoryName }: Props) {
             <div className="mt-3 flex flex-wrap gap-3">
               {images.map((img, i) => (
                 <div key={img.id} className="relative w-24 rounded-xl border border-border p-1.5">
-                  <img src={img.url} className="aspect-square w-full rounded-lg object-cover" alt="" />
+                  {/* C4 (design_handoff_swiss_bento/08-instruction.md, G3):
+                      fixed 84x84 (w-24 card minus p-1.5 padding on both
+                      sides) — real, server-persisted URLs from
+                      uploadMedia()/mediaUrl(), same as the other admin
+                      previews. */}
+                  {img.url && <Image src={img.url} width={84} height={84} className="aspect-square w-full rounded-lg object-cover" alt="" />}
                   <div className="mt-1 flex items-center justify-between">
                     <button type="button" onClick={() => moveImage(i, -1)} disabled={i === 0} className="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">←</button>
                     <button type="button" onClick={() => removeImage(i)} className="text-[11px] text-accent hover:text-[#B03017]">✕</button>

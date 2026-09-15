@@ -1,7 +1,8 @@
 import type { CollectionConfig, PayloadRequest } from 'payload'
 import { APIError } from 'payload'
+import { differenceInCalendarDays } from 'date-fns'
 import { calculateLineTotal } from '../lib/rental/pricing'
-import { isRentalQuantityAvailable, getAvailableSaleQuantity, lockProductForBooking } from '../lib/rental/availability'
+import { getAvailableRentalQuantity, getAvailableSaleQuantity, lockProductForBooking } from '../lib/rental/availability'
 
 // Hooks receive relationship fields populated to Payload's default depth
 // (an object), not a plain id — normalize before using it as a query value
@@ -170,27 +171,59 @@ export const OrderItems: CollectionConfig = {
 
         if (product.listingType === 'rental') {
           if (!data.startDate || !data.endDate) {
-            throw new APIError('startDate and endDate are required for rental line items', 400, undefined, true)
+            // Russian text for this code (and the one below) lives in
+            // lib/checkoutErrors.ts, keyed by `data.reason` — see A3
+            // (design_handoff_swiss_bento/08-instruction.md) for why the
+            // client never reads this English `message` for display.
+            throw new APIError(
+              'startDate and endDate are required for rental line items',
+              400,
+              { code: 'RENTAL_DATES_INVALID', reason: 'missing', productTitle: product.title },
+              true,
+            )
           }
-          // calculateRentalDays treats a non-positive duration as 0 days,
-          // which calculateLineTotal below turns into a silent 0 lineTotal —
-          // a free rental — rather than an error. Reject it here instead.
-          if (new Date(data.endDate) <= new Date(data.startDate)) {
-            throw new APIError('endDate must be after startDate', 400, undefined, true)
+          // calculateRentalDays (lib/rental/pricing.ts) floors at 1 day for
+          // *any* range — including a genuinely backwards one, where
+          // differenceInCalendarDays would otherwise go negative. Reject a
+          // backwards range here instead of letting it silently price as one
+          // full day. This compares calendar days, not raw timestamps: an
+          // equal-or-same-calendar-day range (e.g. pick up 10:00, return
+          // 18:00 the same day) is a legitimate same-day rental under the
+          // A1 convention — one full day at full rate, not an error — so it
+          // must fall through to calculateLineTotal below, not be rejected
+          // here the way it used to be.
+          if (differenceInCalendarDays(new Date(data.endDate), new Date(data.startDate)) < 0) {
+            // Message text updated post-A1: A1 narrowed this guard from
+            // `endDate <= startDate` to `< 0`, so a same-calendar-day
+            // rental is now valid — what's actually rejected here is a
+            // return date *earlier* than the pickup date, not merely "not
+            // after" it. The old "must be after" wording stopped being
+            // accurate the moment A1 landed; corrected here rather than
+            // carried forward into the new code's English log text too.
+            throw new APIError(
+              'endDate is earlier than startDate',
+              400,
+              { code: 'RENTAL_DATES_INVALID', reason: 'backwards', productTitle: product.title },
+              true,
+            )
           }
-          const available = await isRentalQuantityAvailable(
+          // Read the number, not a boolean, so the error below can tell the
+          // customer *how many* are actually free. This used to call an
+          // isRentalQuantityAvailable() wrapper that did nothing but call
+          // this same function and compare — so this costs no extra DB round
+          // trip, and that wrapper, left with no callers, was removed.
+          const available = await getAvailableRentalQuantity(
             req,
             product.id,
-            quantity,
             new Date(data.startDate),
             new Date(data.endDate),
             excludeId,
           )
-          if (!available) {
+          if (available < quantity) {
             throw new APIError(
               `Only a limited quantity of "${product.title}" is available for these dates (requested ${quantity})`,
               400,
-              undefined,
+              { code: 'RENTAL_QUANTITY_UNAVAILABLE', productTitle: product.title, requested: quantity, available },
               true,
             )
           }
@@ -200,7 +233,7 @@ export const OrderItems: CollectionConfig = {
             throw new APIError(
               `Only ${available} unit(s) of "${product.title}" available for sale (requested ${quantity})`,
               400,
-              undefined,
+              { code: 'SALE_QUANTITY_UNAVAILABLE', productTitle: product.title, requested: quantity, available },
               true,
             )
           }

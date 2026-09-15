@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { buildMetadata } from '../../../lib/seo'
 
 // Ported from apps/web/src/pages/how-it-works.astro (docs/PLAN-next-
@@ -100,9 +101,9 @@ export default function HowItWorksPage() {
       <section className="bg-primary py-16 text-center text-primary-foreground">
         <div className="container-page">
           <h2 className="text-[28px] font-bold tracking-[-0.03em]">Готовы арендовать оборудование?</h2>
-          <a href="/catalog" className="btn-primary mt-6 inline-flex h-12 bg-white px-7 text-[14.5px] text-primary hover:bg-white/90">
+          <Link href="/catalog" className="btn-primary mt-6 inline-flex h-12 bg-white px-7 text-[14.5px] text-primary hover:bg-white/90">
             Смотреть каталог
-          </a>
+          </Link>
         </div>
       </section>
     </>

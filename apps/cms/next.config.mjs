@@ -23,6 +23,19 @@ const allowedOrigin = new URL(webUrl).host
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // C4 (design_handoff_swiss_bento/08-instruction.md, G3): no `images.
+  // remotePatterns` here, deliberately — checked, not assumed. mediaUrl()
+  // (lib/mediaUrl.ts) only ever returns a Media doc's own `url`, and
+  // Media's `upload` config (collections/Media.ts) has no cloud-storage
+  // adapter — Payload writes to local disk and serves every image, synced
+  // or admin-uploaded alike, from this app's own `/api/media/file/...`
+  // route. МойСклад's own image URLs never reach next/image or the
+  // browser: sync.ts's uploadImageOnce() downloads each product/category
+  // photo from МойСклад and re-uploads it into this same Media collection
+  // at sync time, so by the time a page renders, every image src is a
+  // same-origin relative path — "local" to next/image's optimizer, no
+  // remotePatterns entry needed for any domain.
+  //
   // Next 16 auto-writes agent-rules files (AGENTS.md/CLAUDE.md) into
   // apps/cms on every `next dev`/`next build`. This project already has its
   // own root CLAUDE.md convention (see repo root) — apps/cms's copy is

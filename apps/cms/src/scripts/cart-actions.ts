@@ -10,7 +10,7 @@
 // (see components/CartActionsInit.tsx) since it needs a real DOM/useEffect,
 // unlike an Astro <script> tag.
 import { $cart, addToCart, isInCart } from '../stores/cart'
-import { $selectedDates } from '../stores/dates'
+import { $selectedDates, requestDatePickerOpen } from '../stores/dates'
 
 const IN_CART_CLASSES = ['bg-success-bg', 'text-success']
 const DEFAULT_CLASSES = ['bg-primary', 'text-primary-foreground']
@@ -44,11 +44,10 @@ export function initCartActions(): void {
 
     const listingType = button.dataset.listingType as 'rental' | 'sale'
     if (listingType === 'rental' && !$selectedDates.get().startDate) {
-      const original = button.textContent
-      button.textContent = 'Выберите даты'
-      window.setTimeout(() => {
-        button.textContent = original
-      }, 1600)
+      // B1 (design_handoff_swiss_bento/08-instruction.md) — no dates picked
+      // is the next step, not an input error: open the picker instead of
+      // flashing a message and doing nothing (G4's "main drop-off point").
+      requestDatePickerOpen()
       return
     }
 

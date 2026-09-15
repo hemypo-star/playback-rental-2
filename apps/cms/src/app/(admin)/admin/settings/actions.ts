@@ -50,6 +50,8 @@ export interface SiteSettingsInput {
   contactVkUrl: string
   contactAddress: string
   contactHours: string
+  businessHoursOpen: number
+  businessHoursClose: number
   yandexMapsUrl: string
   twoGisUrl: string
 }
@@ -60,8 +62,15 @@ export async function saveSiteSettings(data: SiteSettingsInput): Promise<ActionR
     const payload = await getPayload({ config })
     await payload.updateGlobal({ slug: 'site-settings', data, overrideAccess: true })
     revalidatePath('/admin/settings')
-    revalidatePath('/')
-    revalidatePath('/contact')
+    // B4 (design_handoff_swiss_bento/08-instruction.md, audit N5) — SiteSettings
+    // (including businessHoursOpen/Close) now also feeds (frontend)/layout.tsx
+    // itself (Navbar's hours label, and every RentalDatePicker instance via
+    // BusinessHoursContext), not just the individual pages that already called
+    // getSiteSettings() directly. 'layout' revalidates every route under that
+    // shared segment in one call — including statically-generated routes like
+    // /checkout that don't otherwise re-render on their own — so this replaces
+    // the previous '/' + '/contact' pair rather than adding a third path.
+    revalidatePath('/', 'layout')
     return { success: true }
   } catch (error) {
     return { success: false, error: errorMessage(error, 'Не удалось сохранить') }

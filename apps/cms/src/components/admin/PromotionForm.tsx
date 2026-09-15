@@ -6,6 +6,7 @@
 // instead of fetch()-ing Payload's REST endpoints directly.
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import Image from 'next/image'
 import type { Category, Product, Promotion } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
@@ -171,7 +172,11 @@ export default function PromotionForm({ promo, allCategories, allProducts }: Pro
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Изображение (обязательно, 3:4)</div>
             <div className="mt-3 flex items-center gap-4">
-              {imagePreview ? <img src={imagePreview} className="h-24 w-20 rounded-xl bg-muted object-cover" alt="" /> : null}
+              {/* C4 (design_handoff_swiss_bento/08-instruction.md, G3):
+                  fixed 80x96 admin thumbnail — same reasoning as
+                  CategoryForm's own (real, server-persisted URL, never a
+                  blob:). */}
+              {imagePreview ? <Image src={imagePreview} width={80} height={96} className="rounded-xl bg-muted object-cover" alt="" /> : null}
               <input type="file" accept="image/*" onChange={handleImageChange} className="text-[13px]" />
             </div>
           </div>

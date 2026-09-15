@@ -8,6 +8,12 @@ import type { OrderStatus } from '../format'
 // lib/admin/data/{kpi,orders}.ts: the endpoint body minus its own req.user
 // check, now covered once by (admin)/admin/layout.tsx's guard. The endpoint
 // itself is untouched, still serving apps/web's REST-based admin.
+//
+// D4 (calendar consolidation): gained `offsetDays` (14-day pagination) and
+// `quantity` on each product row (deficit detection lives in
+// lib/admin/calendarLayout.ts, which needs it to compare booked-per-day
+// against total stock). Query shape, ACTIVE_STATUSES, and the
+// orderStatusById join are otherwise unchanged.
 const DAYS_TO_SHOW = 14
 const ACTIVE_STATUSES: OrderStatus[] = ['pending', 'confirmed']
 
@@ -35,13 +41,21 @@ export interface AdminCalendarItem {
 export interface AdminCalendarProduct {
   id: number
   title: string
+  quantity: number
   items: AdminCalendarItem[]
 }
 
-export async function getAdminCalendar(): Promise<{ days: string[]; products: AdminCalendarProduct[] }> {
+// `offsetDays` shifts the window start forward from real "today" — negative
+// offsets are clamped to 0 rather than rejected outright, since this is an
+// occupancy tool (what's booked from now on), not a history log; there's no
+// legitimate reason to page backward into the past.
+export async function getAdminCalendar(
+  offsetDays = 0,
+): Promise<{ days: string[]; products: AdminCalendarProduct[] }> {
   const payload = await getPayload({ config })
 
-  const today = startOfDay(new Date())
+  const clampedOffsetDays = Math.max(0, Math.trunc(offsetDays) || 0)
+  const today = addDays(startOfDay(new Date()), clampedOffsetDays)
   const days = Array.from({ length: DAYS_TO_SHOW }, (_, i) => addDays(today, i).toISOString())
   const rangeEnd = addDays(today, DAYS_TO_SHOW)
 
@@ -84,6 +98,7 @@ export async function getAdminCalendar(): Promise<{ days: string[]; products: Ad
   const rows: AdminCalendarProduct[] = orderedProducts.map((product) => ({
     id: product.id,
     title: product.title,
+    quantity: product.quantity,
     items: (itemsByProduct.get(product.id) || []).map((item) => {
       const orderId = typeof item.order === 'object' ? item.order.id : item.order
       return {

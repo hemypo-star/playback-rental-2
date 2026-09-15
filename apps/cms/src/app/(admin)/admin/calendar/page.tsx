@@ -1,18 +1,19 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import AdminPageHeader from '../../../../components/admin/AdminPageHeader'
+import CalendarGrid, { type CalendarGridTheme, type CalendarStatusTone } from '../../../../components/admin/CalendarGrid'
 import { getAdminCalendar } from '../../../../lib/admin/data/calendar'
-import { ORDER_STATUS_TONE, type OrderStatus } from '../../../../lib/admin/format'
+import { ORDER_STATUS_TONE, STOCK_STATUS_TONE, type OrderStatus } from '../../../../lib/admin/format'
 
 // Ported from apps/web/src/pages/admin/calendar.astro (docs/PLAN-next-
-// migration.md Stage 3.5, page group 4).
+// migration.md Stage 3.5, page group 4). D4 (calendar consolidation): now
+// paginated (?offset=N, 14-day pages) and renders through the shared
+// CalendarGrid (lib/admin/calendarLayout.ts owns the lane/deficit math) —
+// see CalendarView.tsx for the same rewrite on the /cms side.
 export const metadata: Metadata = { title: 'Календарь аренд' }
 export const dynamic = 'force-dynamic'
 
-function startOfDay(iso: string): number {
-  const d = new Date(iso)
-  d.setHours(0, 0, 0, 0)
-  return d.getTime()
-}
+const DAYS_PER_PAGE = 14
 
 // Bars only render for confirmed/pending order statuses — those are the
 // only two an item can have (see lib/admin/data/calendar.ts, which only
@@ -22,82 +23,90 @@ const LEGEND: { status: OrderStatus; label: string }[] = [
   { status: 'pending', label: 'Бронь' },
 ]
 
-export default async function AdminCalendarPage() {
-  const { days, products } = await getAdminCalendar()
-  const dayCount = days.length
-  const today = startOfDay(days[0])
-  const rangeEndExclusive = startOfDay(days[dayCount - 1]) + 86400000
-  const dayMs = 86400000
+function toneByStatus(status: OrderStatus): CalendarStatusTone {
+  const tone = ORDER_STATUS_TONE[status]
+  return { background: tone.bg, color: tone.color, label: tone.label }
+}
+
+// Deficit tint reuses the app's existing "out of stock" tone (format.ts) —
+// same shortage semantics as StockStatusCell elsewhere in this admin, not a
+// new color invented for this screen.
+const THEME: CalendarGridTheme = {
+  headerLabelColor: 'var(--color-subtle)',
+  rowLabelColor: 'var(--color-foreground)',
+  emptyStateColor: 'var(--color-subtle)',
+  emptyStateText: 'Нет товаров в аренде',
+  deficitBackground: STOCK_STATUS_TONE.out.bg,
+  deficitBorderColor: STOCK_STATUS_TONE.out.color,
+  unknownStatusTone: { background: '#F0F0F3', color: '#6E6E73', label: '—' },
+}
+
+interface Props {
+  searchParams: Promise<{ offset?: string }>
+}
+
+function parseOffset(raw: string | undefined): number {
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return 0
+  return Math.max(0, Math.trunc(n))
+}
+
+export default async function AdminCalendarPage({ searchParams }: Props) {
+  const { offset: offsetParam } = await searchParams
+  const offset = parseOffset(offsetParam)
+  const { days, products } = await getAdminCalendar(offset)
+
+  const rangeStart = new Date(days[0]).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+  const rangeEnd = new Date(days[days.length - 1]).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
 
   return (
     <>
-      <AdminPageHeader title="Календарь аренд" subtitle="Занятость парка на две недели вперёд" />
+      <AdminPageHeader title="Календарь аренд" subtitle={`Занятость парка: ${rangeStart} – ${rangeEnd}`} />
 
       <div className="rounded-3xl border border-border bg-card p-6">
-        <div className="flex flex-wrap gap-4.5 text-[10.5px] font-semibold tracking-[0.1em] text-subtle uppercase">
-          {LEGEND.map((l) => (
-            <span key={l.status} className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-3 w-3 rounded"
-                style={{ background: ORDER_STATUS_TONE[l.status].bg, border: `1px solid ${ORDER_STATUS_TONE[l.status].color}` }}
-              />
-              {l.label}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-4.5 text-[10.5px] font-semibold tracking-[0.1em] text-subtle uppercase">
+            {LEGEND.map((l) => (
+              <span key={l.status} className="flex items-center gap-1.5">
+                <span
+                  className="inline-block h-3 w-3 rounded"
+                  style={{ background: ORDER_STATUS_TONE[l.status].bg, border: `1px solid ${ORDER_STATUS_TONE[l.status].color}` }}
+                />
+                {l.label}
+              </span>
+            ))}
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-3 w-3 rounded" style={{ background: STOCK_STATUS_TONE.out.bg, border: `1px dashed ${STOCK_STATUS_TONE.out.color}` }} />
+              Перебронь
             </span>
-          ))}
+          </div>
+
+          <div className="flex items-center gap-3 text-[12.5px] font-semibold text-subtle">
+            {offset > 0 ? (
+              <Link href={`/admin/calendar?offset=${Math.max(0, offset - DAYS_PER_PAGE)}`} className="transition-colors duration-240 ease-expo hover:text-foreground">
+                ← Раньше
+              </Link>
+            ) : null}
+            {offset > 0 ? (
+              <Link href="/admin/calendar" className="transition-colors duration-240 ease-expo hover:text-foreground">
+                Сегодня
+              </Link>
+            ) : null}
+            <Link href={`/admin/calendar?offset=${offset + DAYS_PER_PAGE}`} className="transition-colors duration-240 ease-expo hover:text-foreground">
+              Позже →
+            </Link>
+          </div>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <div style={{ minWidth: '900px' }}>
-            <div className="grid gap-3.5" style={{ gridTemplateColumns: '210px 1fr' }}>
-              <div />
-              <div className="grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${dayCount}, 1fr)` }}>
-                {days.map((d) => (
-                  <div key={d} className="text-center text-[10px] font-medium text-subtle">
-                    {new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {products.map((p) => (
-              <div
-                key={p.id}
-                className="grid items-center gap-3.5 rounded-2xl px-0 py-3 transition-colors duration-240 ease-expo hover:bg-muted"
-                style={{ gridTemplateColumns: '210px 1fr' }}
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-[14px] font-medium tracking-[-0.02em]">{p.title}</div>
-                </div>
-                <div className="relative" style={{ height: '28px' }}>
-                  {p.items.map((item) => {
-                    const itemStart = startOfDay(item.startDate)
-                    const itemEnd = startOfDay(item.endDate)
-                    const clippedStart = Math.max(itemStart, today)
-                    const clippedEnd = Math.min(itemEnd, rangeEndExclusive - dayMs)
-                    const startOffset = Math.round((clippedStart - today) / dayMs)
-                    const span = Math.max(1, Math.round((clippedEnd - clippedStart) / dayMs) + 1)
-                    const tone = item.orderStatus ? ORDER_STATUS_TONE[item.orderStatus] : { bg: '#F0F0F3', color: '#6E6E73', label: '—' }
-                    return (
-                      <div
-                        key={item.id}
-                        title={`${item.quantity} шт. — заказ #${item.orderId} · ${tone.label}`}
-                        className="absolute top-0 flex h-[28px] items-center overflow-hidden rounded-lg px-2 text-[12px] font-semibold whitespace-nowrap transition-transform duration-[320ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:scale-y-[1.16]"
-                        style={{
-                          left: `${(startOffset / dayCount) * 100}%`,
-                          width: `${(span / dayCount) * 100}%`,
-                          background: tone.bg,
-                          color: tone.color,
-                        }}
-                      >
-                        ×{item.quantity}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-            {products.length === 0 ? <div className="px-2.5 py-8 text-center text-[13.5px] text-subtle">Нет товаров в аренде</div> : null}
-          </div>
+        <div className="mt-5">
+          <CalendarGrid
+            days={days}
+            products={products}
+            toneByStatus={toneByStatus}
+            theme={THEME}
+            rowClassName="rounded-2xl transition-colors duration-240 ease-expo hover:bg-muted"
+            barClassName="transition-transform duration-320 ease-overshoot hover:scale-y-[1.16]"
+          />
         </div>
       </div>
     </>

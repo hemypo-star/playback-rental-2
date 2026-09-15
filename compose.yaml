@@ -47,6 +47,17 @@ services:
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
       NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
+      # apps/cms/src/lib/security/clientIp.ts. This stack, as shipped below,
+      # publishes `cms`'s port straight to the host — nothing sits in front
+      # of it to overwrite X-Real-IP/X-Forwarded-For, so the correct value
+      # HERE is false: trusting those headers with no proxy stripping a
+      # client-supplied one would let any visitor forge their own rate-limit
+      # bucket and bypass every IP-keyed limit, including admin login. Only
+      # flip this to true in an environment that actually adds a reverse
+      # proxy in front of this service (outside this compose file) and sets
+      # those headers correctly — see clientIp.ts and apps/cms/.env.example
+      # for exactly what "correctly" means.
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
     ports:
       - '${WEB_PORT:-8080}:3000'
     volumes:

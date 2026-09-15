@@ -195,6 +195,68 @@
       transition-duration: 80ms !important;
     }
   }
+
+  /* C3 (design_handoff_swiss_bento/08-instruction.md, audit G2) — the
+     entry-animation family (`bnIn`, plus `bnClip`/`bnRule` used alongside
+     it in the same hero/product-image compositions, per 03-motion.md rule
+     1) is designed to play once, on a genuine first view of a page, not on
+     every client-side navigation C1's next/link switch introduced —
+     including a Back/Forward return to a page the customer already saw.
+     `components/EntryAnimationController.tsx` sets `data-nav-back` on
+     <html> for a `popstate`-driven render (Back/Forward only — a next/link
+     click never fires it) and keeps it set for as long as that same
+     destination stays on screen, clearing it only once a genuinely new
+     navigation replaces it — see that file's own header comment for why
+     "clear right after this render commits" (an earlier version of this
+     rule's own comment, and this mechanism's first implementation) is the
+     wrong target to clear against, not merely a timing bug. While the
+     attribute is present, this collapses just those three keyframes to
+     `animation: none` for the elements that use them — matched off the
+     literal keyframe name already present in each element's own inline
+     `style` attribute, the same `!important`-over-inline technique the
+     prefers-reduced-motion rule above already relies on, just scoped to
+     one navigation instead of a permanent preference. `animation: none` is
+     safe here specifically because none of bnIn/bnClip/bnRule ever set
+     opacity/translate/scale/clip-path outside the animation itself — every
+     property they touch already has that keyframe's own *end* value as
+     its unanimated default (opacity 1, no translate/scale, a fully open
+     clip-path, an unscaled transform), so the element renders at the
+     animation's finished state instantly rather than a blank or broken
+     one.
+
+     Deliberately NOT touched here: `bnFade` (RentalDatePicker's modal
+     overlay + both root layouts' shared `<main>`, the latter of which
+     already only fires once per SPA session since the layout itself never
+     remounts on a same-layout navigation — see that file's own comment),
+     `bnRise` (only real usage today is PromoCarousel's slide-change text,
+     rule 7, which must keep replaying on every rotation regardless of how
+     the page was reached), `bnPop` (value-change pulse), `bnBlink`
+     (open/closed indicator), `bnMark` (marquee) and `bnBar` (promo
+     progress) — none of those are "did the user already see this page"
+     animations.
+
+     `:not([data-manual-entry])` on every branch below is a second,
+     independent guard, not a timing workaround: RentalDatePicker's own
+     modal-open panel shares the literal `bnIn` keyframe name this
+     selector would otherwise match, and — unlike the block/section entries
+     this rule exists for — it mounts on a click, at whatever moment the
+     customer chooses, which can be well after a Back navigation and its
+     `data-nav-back` flag. Relying on the flag having cleared by then was
+     exactly the bug this comment used to (wrongly) claim was safe; a
+     structural exemption on the element itself is correct regardless of
+     when — or whether — the flag has cleared, so a modal, dropdown, or any
+     other click-triggered entrance stays reachable by that same keyframe
+     name too, just tag its own root element `data-manual-entry` (see
+     RentalDatePicker.tsx for the one existing example) rather than
+     special-casing it here. This also means every one of these stays
+     exactly as-is in `node tools/design-sync.mjs audit` — no component's
+     inline `style` text changed, only whether an external rule can
+     override it for one navigation. */
+  html[data-nav-back] [style*="bnIn"]:not([data-manual-entry]),
+  html[data-nav-back] [style*="bnClip"]:not([data-manual-entry]),
+  html[data-nav-back] [style*="bnRule"]:not([data-manual-entry]) {
+    animation: none !important;
+  }
 }
 
 @utility btn {

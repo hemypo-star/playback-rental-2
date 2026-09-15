@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import CatalogPage from '../../../components/CatalogPage'
 import { buildMetadata } from '../../../lib/seo'
+import { parsePageParam } from '../../../lib/catalogQuery'
 
 // Ported from apps/web/src/pages/catalog/index.astro (docs/PLAN-next-
 // migration.md Stage 2). searchParams is a Promise in the App Router
@@ -14,12 +15,12 @@ export const metadata: Metadata = buildMetadata({ title: 'Каталог тех�
 export const dynamic = 'force-dynamic'
 
 interface Props {
-  searchParams: Promise<{ q?: string; sort?: string; type?: string }>
+  searchParams: Promise<{ q?: string; sort?: string; type?: string; page?: string }>
 }
 
 export default async function CatalogIndexPage({ searchParams }: Props) {
-  const { q, sort, type } = await searchParams
+  const { q, sort, type, page } = await searchParams
   const kitOnly = type === 'kit'
 
-  return <CatalogPage searchQuery={q} sort={sort} kitOnly={kitOnly} />
+  return <CatalogPage searchQuery={q} sort={sort} kitOnly={kitOnly} page={parsePageParam(page)} />
 }

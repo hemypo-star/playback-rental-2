@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import type React from 'react'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import '../../../styles/global.css'
 import { getAdminUser } from '../../../lib/admin/auth'
 import { getAdminNavBadges } from '../../../lib/admin/data/navBadges'
 import AdminSidebar from '../../../components/admin/AdminSidebar'
+import EntryAnimationController from '../../../components/EntryAnimationController'
 
 // Root layout for the guarded admin dashboard (docs/PLAN-next-migration.md
 // Stage 3.1/3.2) — ported from apps/web/src/layouts/AdminLayout.astro. A
@@ -35,10 +37,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <link rel="preload" href="/fonts/golos-text-cyrillic.woff2" as="font" type="font/woff2" crossOrigin="" />
       </head>
       <body className="bg-background text-foreground">
-        <main className="grid min-h-screen grid-cols-[246px_1fr] gap-3.5 p-3.5" style={{ animation: 'bnFade 380ms ease both' }}>
+        <main className="grid min-h-screen grid-cols-1 gap-3.5 p-3.5 lg:grid-cols-[246px_1fr]" style={{ animation: 'bnFade 380ms ease both' }}>
           <AdminSidebar userEmail={user.email} badges={badges} />
           <section className="flex min-w-0 flex-col gap-3.5">{children}</section>
         </main>
+        {/* C3 (audit G2) — same mechanism/reasoning as the (frontend) root
+            layout; the admin dashboard's own order/client/stock rows use
+            the same `bnIn` stagger and need the same Back/Forward fix. */}
+        <Suspense fallback={null}>
+          <EntryAnimationController />
+        </Suspense>
       </body>
     </html>
   )
