@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "test": "node --import tsx --test src/lib/**/*.test.ts",
     "smoke:runtime": "node src/scripts/runtime-smoke.mjs",
+    "smoke:seed": "tsx --env-file-if-exists=.env src/scripts/seed-smoke.ts",
+    "smoke:browser": "node src/scripts/browser-smoke.mjs",
     "payload": "payload",
     "generate:types": "payload generate:types",
     "sync:moysklad": "tsx --env-file-if-exists=.env src/scripts/sync-moysklad.ts",
