@@ -119,7 +119,7 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const inputClass = 'mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white'
+  const inputClass = 'mt-1.5 h-11 w-full min-w-0 rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white'
   const labelClass = 'mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle'
 
   return (
@@ -128,23 +128,23 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
       {success && <p className="rounded-2xl bg-[#E4F6E9] px-4 py-3 text-[13px] text-[#0B6B32]">Сохранено.</p>}
 
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
-        <div className="flex flex-col gap-3.5">
+        <div className="min-w-0 flex flex-col gap-3.5">
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Главная — герой</div>
 
-            <div className="mt-3 flex gap-4">
-              <div>
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="min-w-0">
                 <div className="text-[11px] text-subtle">Десктоп</div>
                 {/* C4 (design_handoff_swiss_bento/08-instruction.md, G3):
                     fixed 80x96 admin thumbnails — same reasoning as
                     CategoryForm/PromotionForm's own previews. */}
                 {heroDesktopPreview ? <Image src={heroDesktopPreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
-                <input type="file" accept="image/*" onChange={(e) => handleHeroUpload(e, 'desktop')} className="mt-1.5 block text-[12px]" />
+                <input type="file" accept="image/*" onChange={(e) => handleHeroUpload(e, 'desktop')} className="mt-1.5 block w-full min-w-0 text-[12px]" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="text-[11px] text-subtle">Мобильный</div>
                 {heroMobilePreview ? <Image src={heroMobilePreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
-                <input type="file" accept="image/*" onChange={(e) => handleHeroUpload(e, 'mobile')} className="mt-1.5 block text-[12px]" />
+                <input type="file" accept="image/*" onChange={(e) => handleHeroUpload(e, 'mobile')} className="mt-1.5 block w-full min-w-0 text-[12px]" />
               </div>
             </div>
 
@@ -159,26 +159,26 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
               rows={2}
               value={heroSubtext}
               onChange={(e) => setHeroSubtext(e.target.value)}
-              className="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+              className="mt-1.5 w-full min-w-0 resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Главная — факты</div>
-            <div className="mt-3 grid grid-cols-2 gap-3.5">
-              <div>
+            <div className="mt-3 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Залог — значение</label>
                 <input value={depositLabel} onChange={(e) => setDepositLabel(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Залог — подпись</label>
                 <input value={depositCaption} onChange={(e) => setDepositCaption(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Выдача — значение</label>
                 <input value={pickupTimeLabel} onChange={(e) => setPickupTimeLabel(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Выдача — подпись</label>
                 <input value={pickupTimeCaption} onChange={(e) => setPickupTimeCaption(e.target.value)} className={inputClass} />
               </div>
@@ -188,18 +188,18 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
             <div className="mt-1.5 flex flex-col gap-2.5">
               {steps.map((s, i) => (
                 <div key={i} className="flex gap-2 rounded-xl bg-muted p-2.5">
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <input
                       value={s.title}
                       onChange={(e) => setSteps((prev) => prev.map((v, idx) => (idx === i ? { ...v, title: e.target.value } : v)))}
                       placeholder="Заголовок шага"
-                      className="h-9 w-full rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground"
+                      className="h-9 w-full min-w-0 rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground"
                     />
                     <input
                       value={s.text}
                       onChange={(e) => setSteps((prev) => prev.map((v, idx) => (idx === i ? { ...v, text: e.target.value } : v)))}
                       placeholder="Текст шага"
-                      className="mt-1.5 h-9 w-full rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground"
+                      className="mt-1.5 h-9 w-full min-w-0 rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground"
                     />
                   </div>
                   <button
@@ -228,46 +228,46 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
               rows={2}
               value={ctaSubtext}
               onChange={(e) => setCtaSubtext(e.target.value)}
-              className="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+              className="mt-1.5 w-full min-w-0 resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Контакты</div>
-            <div className="mt-3 grid grid-cols-2 gap-3.5">
-              <div>
+            <div className="mt-3 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Телефон</label>
                 <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Email</label>
                 <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Telegram (@handle)</label>
                 <input value={contactTelegram} onChange={(e) => setContactTelegram(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Telegram (ссылка)</label>
                 <input value={contactTelegramUrl} onChange={(e) => setContactTelegramUrl(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">VK (ссылка)</label>
                 <input value={contactVkUrl} onChange={(e) => setContactVkUrl(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Адрес</label>
                 <input value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Часы работы (текст на сайте)</label>
                 <input value={contactHours} onChange={(e) => setContactHours(e.target.value)} className={inputClass} />
               </div>
-              <div className="col-span-2 grid grid-cols-2 gap-3.5 rounded-2xl border border-border bg-muted-well p-3.5">
-                <div className="col-span-2 text-[11.5px] leading-snug text-subtle">
+              <div className="grid min-w-0 grid-cols-1 gap-3.5 rounded-2xl border border-border bg-muted-well p-3.5 sm:col-span-2 sm:grid-cols-2">
+                <div className="text-[11.5px] leading-snug text-subtle sm:col-span-2">
                   Часы для календаря выбора дат аренды (число 0–23) — отдельно от текста выше, им нельзя пользоваться для расчётов. Держите оба поля согласованными: разошедшиеся значения — та же ошибка, которую эти два поля чинят.
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Открытие (час)</label>
                   <input
                     type="number"
@@ -278,7 +278,7 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
                     className={inputClass}
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Закрытие (час)</label>
                   <input
                     type="number"
@@ -290,11 +290,11 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
                   />
                 </div>
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Яндекс.Карты (ссылка)</label>
                 <input value={yandexMapsUrl} onChange={(e) => setYandexMapsUrl(e.target.value)} className={inputClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">2ГИС (ссылка)</label>
                 <input value={twoGisUrl} onChange={(e) => setTwoGisUrl(e.target.value)} className={inputClass} />
               </div>
@@ -302,7 +302,7 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3.5">
+        <div className="min-w-0 flex flex-col gap-3.5">
           <div className="sticky top-3.5 rounded-3xl border border-border bg-card p-6">
             <button type="button" onClick={handleSave} disabled={saving} className="btn-primary w-full justify-center">
               {saving ? 'Сохраняем…' : 'Сохранить'}
