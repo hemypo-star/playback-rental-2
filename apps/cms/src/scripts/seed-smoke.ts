@@ -1,13 +1,14 @@
 import { getPayload } from 'payload'
 import config from '@payload-config'
 
-const adminEmail = process.env.SMOKE_ADMIN_EMAIL
-const adminPassword = process.env.SMOKE_ADMIN_PASSWORD
-
-if (!adminEmail || !adminPassword) {
-  console.error('SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD are required')
-  process.exit(1)
+function requiredEnv(name: 'SMOKE_ADMIN_EMAIL' | 'SMOKE_ADMIN_PASSWORD'): string {
+  const value = process.env[name]
+  if (!value) throw new Error(`${name} is required`)
+  return value
 }
+
+const adminEmail = requiredEnv('SMOKE_ADMIN_EMAIL')
+const adminPassword = requiredEnv('SMOKE_ADMIN_PASSWORD')
 
 async function main() {
   const payload = await getPayload({ config })
