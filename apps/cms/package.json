@@ -17,6 +17,7 @@
     "smoke:order-lifecycle": "node src/scripts/order-lifecycle-smoke.mjs",
     "smoke:promos": "node src/scripts/promo-acceptance-smoke.mjs",
     "smoke:rate-limit-auth": "node src/scripts/rate-limit-auth-smoke.mjs",
+    "smoke:admin-data": "node src/scripts/admin-data-smoke.mjs",
     "payload": "payload",
     "generate:types": "payload generate:types",
     "sync:moysklad": "tsx --env-file-if-exists=.env src/scripts/sync-moysklad.ts",
