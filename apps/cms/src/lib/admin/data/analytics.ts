@@ -1,6 +1,7 @@
-import { getPayload } from 'payload'
+import { getPayload, type Where } from 'payload'
 import config from '@payload-config'
 import type { OrderItem } from '../../../payload-types'
+import type { AnalyticsDateRange } from '../analyticsDateRange'
 
 // Ported near-verbatim from apps/cms/src/endpoints/admin/analytics.ts
 // (docs/PLAN-next-migration.md Stage 3.5, page group 4) — revenue by
@@ -31,20 +32,34 @@ function addRevenue(byCategory: Map<string, number>, item: OrderItem, amount: nu
   byCategory.set(name, (byCategory.get(name) ?? 0) + amount)
 }
 
-export async function getAdminAnalytics(): Promise<AdminAnalyticsRow[]> {
+export async function getAdminAnalytics(range: AnalyticsDateRange = {}): Promise<AdminAnalyticsRow[]> {
   const payload = await getPayload({ config })
 
-  const cancelledOrders = await payload.find({
+  // Backlog item 14: define the period at the order level, by createdAt.
+  // That keeps an order — and its order-level promo discount — atomic in
+  // analytics. Filtering individual rental-line dates could split a single
+  // discounted order across periods and make the category totals stop
+  // reconciling with its net order total.
+  const orderConditions: Where[] = [{ status: { not_equals: 'cancelled' } }]
+  if (range.fromIso) orderConditions.push({ createdAt: { greater_than_equal: range.fromIso } })
+  if (range.toExclusiveIso) orderConditions.push({ createdAt: { less_than: range.toExclusiveIso } })
+
+  const matchingOrders = await payload.find({
     collection: 'orders',
-    where: { status: { equals: 'cancelled' } },
+    where: orderConditions.length === 1 ? orderConditions[0] : { and: orderConditions },
     limit: 0,
     depth: 0,
+    // The item query below will populate each related order at depth:2, so
+    // this first pass needs IDs only. Payload always returns id even for an
+    // empty select object.
+    select: {},
   })
-  const cancelledIds = cancelledOrders.docs.map((o) => o.id)
+  const orderIds = matchingOrders.docs.map((order) => order.id)
+  if (orderIds.length === 0) return []
 
   const items = await payload.find({
     collection: 'orderItems',
-    where: cancelledIds.length ? { order: { not_in: cancelledIds } } : {},
+    where: { order: { in: orderIds.join(',') } },
     limit: 0,
     depth: 2,
   })
