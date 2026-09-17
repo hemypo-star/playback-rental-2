@@ -1,6 +1,12 @@
 # Playback Rental 2.0 — manual smoke-test checklist
 
-This is the frozen manual acceptance checklist for `2.0`. Automated CI remains mandatory, but CI does not replace the browser/integration checks below.
+This is the acceptance checklist for `2.0`. Automated CI remains mandatory, but CI does not replace visual checks, real external integrations, or final-host validation.
+
+Status notation:
+
+- `[x] (CI)` — currently exercised by automated disposable-environment acceptance in `2.0 CI`.
+- `[ ]` — still requires manual, real-integration, or deployment-host verification.
+- A CI-marked item must be re-opened if its corresponding smoke step is removed or starts failing.
 
 Use this checklist twice:
 
@@ -13,28 +19,28 @@ Do not run destructive checks against legacy `main` / `prod` data.
 
 Before manual testing:
 
-- [ ] `2.0 CI` is green on the exact commit being tested.
-- [ ] Payload migrations apply successfully to an empty/test PostgreSQL database.
-- [ ] `lint`, `tsc --noEmit`, unit tests and `next build` all pass.
+- [x] (CI) `2.0 CI` is green on the exact commit being tested.
+- [x] (CI) Payload migrations apply successfully to an empty/test PostgreSQL database.
+- [x] (CI) `lint`, `tsc --noEmit`, unit tests and `next build` all pass.
 - [ ] No uncommitted/generated type changes remain after `payload generate:types`.
 
 ## 1. App startup and shared chrome
 
 - [ ] App starts with the documented Docker/dev workflow.
-- [ ] `/` loads with no browser-console errors.
+- [x] (CI) `/` loads with no browser-console errors.
 - [ ] Navbar, cart badge, footer and mobile navigation render correctly.
-- [ ] At 360–390px viewport width there is no horizontal page overflow.
-- [ ] `prefers-reduced-motion` does not leave required content hidden or inaccessible.
-- [ ] `/privacy-policy`, `/user-agreement`, `/how-it-works` and `/contact` load normally.
+- [x] (CI, 375px core routes) At 360–390px viewport width there is no horizontal page overflow.
+- [x] (CI) `prefers-reduced-motion` does not leave required homepage content hidden or inaccessible.
+- [x] (CI) `/privacy-policy`, `/user-agreement`, `/how-it-works` and `/contact` load normally.
 
 ## 2. Catalog and product browsing
 
-- [ ] `/catalog` loads real products and category counts.
-- [ ] Category navigation works for parent and nested categories.
-- [ ] Search matches title/description/tag as expected.
+- [x] (CI, seeded data) `/catalog` loads products. Real-МойСклад category counts remain a manual integration check.
+- [x] (CI, seeded data) Category navigation works for nested categories; visually confirm parent navigation manually.
+- [x] (CI for description/tag; title remains manual) Search matches title/description/tag as expected.
 - [ ] Search/filter navigation preserves the intended catalog section.
 - [ ] Product cards show stock state, price and image without layout shift.
-- [ ] `/product/[id]` shows gallery, category breadcrumb, description and related products.
+- [x] (CI route/title) `/product/[id]` renders the seeded product route; gallery/breadcrumb/related-product presentation remains manual.
 - [ ] Responsive product/category/promotion images load through Next Image; no broken media URLs.
 - [ ] After the real media volume is available, run `pnpm --dir apps/cms regenerate:media-sizes` once and confirm existing media receives `card` / `large` variants.
 
@@ -56,21 +62,21 @@ Before manual testing:
 Use disposable customer data.
 
 - [ ] Checkout without a promo code creates an order and its order items.
-- [ ] Percentage promo code applies the expected discount.
-- [ ] Fixed-rouble promo code applies the expected discount.
-- [ ] Minimum-order threshold is enforced for both promo types.
-- [ ] Invalid/inactive/expired promo produces the expected inline state.
-- [ ] Order total equals line-item gross total minus the stored order-level promo discount.
+- [x] (CI) Percentage promo code applies the expected discount.
+- [x] (CI) Fixed-rouble promo code applies the expected discount.
+- [x] (CI) Minimum-order threshold is enforced for both promo types.
+- [x] (CI API/acceptance; confirm final visual copy manually) Invalid/inactive/expired promo is rejected as expected.
+- [x] (CI) Order total equals line-item gross total minus the stored order-level promo discount.
 - [ ] Failed item validation does not leave partial order items behind.
-- [ ] Checkout success state shows the created order number and selected dates.
-- [ ] Public checkout cannot read/update/delete arbitrary existing orders.
-- [ ] Rate-limit behaviour works for checkout/login/contact paths according to the implemented limits.
+- [x] (CI for created order number; visually confirm date presentation manually) Checkout success state shows the created order number and selected dates.
+- [x] (CI) Public checkout cannot read/update/delete arbitrary existing orders.
+- [x] (CI) Rate-limit behaviour works for the automated login/contact boundaries; checkout remains covered by unit/business-flow checks and should be spot-checked manually.
 
 ## 5. Custom `/admin` authentication
 
-- [ ] Unauthenticated `/admin/*` access redirects to login.
+- [x] (CI) Unauthenticated `/admin/*` access redirects to login.
 - [ ] Admin can log in and log out.
-- [ ] Password change works and a fresh login with the new password succeeds.
+- [x] (CI) Password change works and a fresh login with the new password succeeds.
 - [ ] Server Actions reject unauthenticated mutation attempts.
 - [ ] Mobile admin navigation works without horizontal page overflow.
 
@@ -84,8 +90,8 @@ Use disposable customer data.
 - [ ] Invalid edit rolls the visible field back to the persisted value.
 - [ ] Order total updates after item changes without stale client-side arithmetic.
 - [ ] Deleting a non-final item leaves the order intact and recalculates totals.
-- [ ] Deleting the final item **cancels** the order; it never hard-deletes the order.
-- [ ] Changing status to cancelled releases the order from active availability.
+- [x] (CI) Deleting the final item **cancels** the order; it never hard-deletes the order.
+- [x] (CI lifecycle) Cancelling through the tested final-item lifecycle releases the order from active availability; manually spot-check direct status change.
 
 ## 7. Calendar, stock and other admin screens
 
@@ -93,23 +99,23 @@ Use disposable customer data.
 - [ ] Calendar deficit indication matches product quantity and does not falsely flag same-instant handover.
 - [ ] Calendar can navigate beyond the original 14-day window and bars link to the correct order.
 - [ ] Stock search and category filter work.
-- [ ] Categories create/edit/delete flow works, including parent selection.
-- [ ] Promotions create/edit/delete flow works and linked public promotion page renders.
-- [ ] Product edit preserves sync-owned vs admin-owned field boundaries.
-- [ ] Media upload and alt-text edit work.
-- [ ] Users screen can create/delete another admin but cannot misuse self-only actions.
-- [ ] Settings save preserves the full SiteSettings object rather than dropping unrelated fields.
+- [x] (CI) Categories create/edit/delete flow works, including parent preservation.
+- [x] (CI) Promotions create/edit/delete flow works and linked public promotion page renders.
+- [x] (CI) Product edit preserves sync-owned vs admin-owned field boundaries.
+- [x] (CI) Media upload fixture and alt-text edit work.
+- [x] (CI) Users screen/API flow can create/delete another admin and does not expose self-delete in the tested UI.
+- [x] (CI) Settings save preserves unrelated scalar and array business fields in the full SiteSettings object.
 
 ## 8. Analytics
 
-- [ ] `/admin/analytics` loads all-time revenue-by-category by default.
+- [x] (CI render) `/admin/analytics` loads the all-time report UI by default.
 - [ ] `from` only filters orders created from that Kemerovo calendar day onward.
 - [ ] `to` only includes the entire selected end day.
-- [ ] Same-day `from` + `to` returns exactly that Kemerovo calendar day.
-- [ ] Reversed dates are normalized visibly rather than returning a silently empty report.
+- [x] (CI helper + UI rendering) Same-day `from` + `to` is interpreted as one Kemerovo calendar day.
+- [x] (CI) Reversed dates are normalized visibly rather than returning a silently empty report.
 - [ ] Cancelled orders are excluded.
 - [ ] Filtered category totals reconcile to net order revenue after promo discounts.
-- [ ] KPI cards remain all-time and are clearly labelled as unaffected by the report range.
+- [x] (CI label/render) KPI cards remain labelled as all-time and unaffected by the report range.
 - [ ] Reset returns the report to all-time results.
 
 ## 9. МойСклад integration
@@ -132,8 +138,8 @@ No real messenger/SMTP credentials are needed for this sub-check.
 
 - [ ] Normal `compose.dev.yaml` startup does not start the `notifications` worker.
 - [ ] With `NOTIFICATIONS_ENABLED=false`, checkout/contact cannot accidentally send real messages.
-- [ ] With `NOTIFICATIONS_ENABLED=true` but **without** starting the jobs profile, one disposable checkout/contact event creates a pending JSON job in the local notification queue and performs no external delivery.
-- [ ] The queued JSON contains the intended event/customer/order data but no Telegram/MAX/VK/SMTP credentials.
+- [x] (CI) With `NOTIFICATIONS_ENABLED=true` but **without** starting the jobs profile, disposable events create pending JSON jobs and perform no external delivery.
+- [x] (CI) The queued JSON contains intended event/customer/order data but no Telegram/MAX/VK/SMTP credentials.
 
 ### Final VDS delivery
 
