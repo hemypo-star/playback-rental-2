@@ -14,8 +14,10 @@
 // turn "safety net" back into "nothing" until someone notices the container
 // exited. Each run is caught independently; only a failure to even start
 // Payload is fatal.
+import * as Sentry from '@sentry/nextjs'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import '../sentry.server.config'
 import { syncAll } from '../lib/moysklad/sync'
 
 const INTERVAL_MS = (Number(process.env.MOYSKLAD_RECONCILE_INTERVAL_MIN) || 60) * 60 * 1000
@@ -27,6 +29,8 @@ async function runOnce(payload: Awaited<ReturnType<typeof getPayload>>) {
     const result = await syncAll(payload)
     payload.logger.info({ result, tookMs: Date.now() - startedAt }, 'МойСклад reconciliation: complete')
   } catch (err) {
+    Sentry.captureException(err, { tags: { process: 'moysklad-reconcile' } })
+    await Sentry.flush(2_000)
     payload.logger.error({ err, tookMs: Date.now() - startedAt }, 'МойСклад reconciliation: run failed, will retry next interval')
   }
 }
@@ -43,10 +47,12 @@ async function main() {
   }, INTERVAL_MS)
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   // Only reachable if getPayload() itself fails (bad DB connection, bad
   // config) — a real reason to let the container restart via its own
   // `restart: unless-stopped` policy rather than loop forever half-broken.
+  Sentry.captureException(err, { tags: { process: 'moysklad-reconcile', phase: 'startup' } })
+  await Sentry.flush(2_000)
   console.error('МойСклад reconciliation daemon failed to start:', err)
   process.exit(1)
 })
