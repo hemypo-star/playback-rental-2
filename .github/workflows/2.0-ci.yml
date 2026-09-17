@@ -82,3 +82,18 @@ jobs:
         env:
           NODE_ENV: production
         run: pnpm --dir apps/cms build
+
+      - name: Production runtime smoke
+        env:
+          NODE_ENV: production
+          NOTIFICATIONS_ENABLED: 'false'
+          SMOKE_BASE_URL: http://127.0.0.1:3000
+        run: |
+          pnpm --dir apps/cms start > /tmp/playback-runtime.log 2>&1 &
+          CMS_PID=$!
+          trap 'kill "$CMS_PID" 2>/dev/null || true' EXIT
+          if ! pnpm --dir apps/cms smoke:runtime; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-runtime.log
+            exit 1
+          fi
