@@ -97,25 +97,54 @@ async function main() {
     })
   }
 
-  const promoResult = await payload.find({
-    collection: 'promoCodes',
-    where: { code: { equals: 'SMOKE10' } },
-    limit: 1,
-    overrideAccess: true,
-  })
-  if (!promoResult.docs[0]) {
-    await payload.create({
+  const promoFixtures = [
+    {
+      code: 'SMOKE10',
+      discountType: 'percent' as const,
+      discountValue: 10,
+      minOrderAmount: 1000,
+      active: true,
+      description: 'Disposable CI percentage promo fixture',
+    },
+    {
+      code: 'SMOKEFIXED',
+      discountType: 'fixed' as const,
+      discountValue: 500,
+      minOrderAmount: 1500,
+      active: true,
+      description: 'Disposable CI fixed promo fixture',
+    },
+    {
+      code: 'SMOKEINACTIVE',
+      discountType: 'fixed' as const,
+      discountValue: 500,
+      minOrderAmount: 1500,
+      active: false,
+      description: 'Disposable inactive CI promo fixture',
+    },
+    {
+      code: 'SMOKEEXPIRED',
+      discountType: 'percent' as const,
+      discountValue: 25,
+      minOrderAmount: 0,
+      active: true,
+      validUntil: '2020-01-01T00:00:00.000Z',
+      description: 'Disposable expired CI promo fixture',
+    },
+  ]
+
+  for (const data of promoFixtures) {
+    const existing = await payload.find({
       collection: 'promoCodes',
+      where: { code: { equals: data.code } },
+      limit: 1,
       overrideAccess: true,
-      data: {
-        code: 'SMOKE10',
-        discountType: 'percent',
-        discountValue: 10,
-        minOrderAmount: 1000,
-        active: true,
-        description: 'Disposable CI smoke fixture',
-      },
     })
+    if (existing.docs[0]) {
+      await payload.update({ collection: 'promoCodes', id: existing.docs[0].id, data, overrideAccess: true })
+    } else {
+      await payload.create({ collection: 'promoCodes', data, overrideAccess: true })
+    }
   }
 
   const userResult = await payload.find({
@@ -145,7 +174,7 @@ async function main() {
         parentCategory: parent.slug,
         childCategory: child.slug,
         products: products.map((product) => product.title),
-        promoCode: 'SMOKE10',
+        promoCodes: promoFixtures.map((promo) => promo.code),
         adminEmail,
       },
       null,
