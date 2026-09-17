@@ -60,6 +60,11 @@ jobs:
           POSTGRES_PASSWORD: ci-only-compose-password
         run: docker compose -f compose.yaml -f compose.dev.yaml config > /dev/null
 
+      - name: Verify Docker runtime pnpm works offline
+        run: |
+          docker build --target base -t playback-cms-base-ci -f apps/cms/Dockerfile .
+          test "$(docker run --rm --network none playback-cms-base-ci pnpm --version)" = "11.21.0"
+
       - name: Generate Payload types
         run: pnpm --dir apps/cms generate:types
 

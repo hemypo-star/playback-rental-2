@@ -11,7 +11,15 @@ FROM node:22-bookworm-slim AS base
 # sharp (image processing) and @swc/core (Next's compiler) need native
 # addons built for this exact base — bookworm-slim over alpine avoids the
 # glibc/musl mismatch that would otherwise force rebuilding them.
-RUN corepack enable
+#
+# Runtime commands also invoke pnpm (migrations, app start and background
+# daemons). `corepack enable` alone only installs a shim; on a fresh runtime
+# container that shim may try to download pnpm from registry.npmjs.org. Bake
+# the exact workspace pnpm version into the base layer so container startup
+# never depends on registry DNS/network availability.
+RUN corepack enable \
+  && corepack prepare pnpm@11.21.0 --activate \
+  && pnpm --version
 WORKDIR /repo
 
 # ---- deps: install only this package's workspace subgraph -----------------
