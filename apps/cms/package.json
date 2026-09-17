@@ -12,6 +12,8 @@
     "smoke:runtime": "node src/scripts/runtime-smoke.mjs",
     "smoke:seed": "tsx --env-file-if-exists=.env src/scripts/seed-smoke.ts",
     "smoke:browser": "node src/scripts/browser-smoke.mjs",
+    "smoke:public-security": "node src/scripts/public-security-smoke.mjs",
+    "smoke:notifications": "node src/scripts/notification-boundary-smoke.mjs",
     "smoke:order-lifecycle": "node src/scripts/order-lifecycle-smoke.mjs",
     "payload": "payload",
     "generate:types": "payload generate:types",
