@@ -1,0 +1,73 @@
+name: 2.0 CI
+
+on:
+  push:
+    branches:
+      - 2.0
+      - 'chatgpt/**'
+  pull_request:
+    branches:
+      - 2.0
+
+permissions:
+  contents: read
+
+jobs:
+  cms:
+    name: CMS checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: playback_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d playback_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URI: postgresql://postgres:postgres@127.0.0.1:5432/playback_ci
+      PAYLOAD_SECRET: ci-only-placeholder-secret-not-used-in-production
+      WEB_URL: http://localhost:3000
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.21.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter cms...
+
+      - name: Generate Payload types
+        run: pnpm --dir apps/cms generate:types
+
+      - name: Lint
+        run: pnpm --dir apps/cms lint
+
+      - name: Typecheck
+        run: pnpm --dir apps/cms exec tsc --noEmit
+
+      - name: Tests
+        run: pnpm --dir apps/cms test
+
+      - name: Production build
+        env:
+          NODE_ENV: production
+        run: pnpm --dir apps/cms build
