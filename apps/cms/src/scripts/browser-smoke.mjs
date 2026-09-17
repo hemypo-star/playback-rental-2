@@ -192,6 +192,30 @@ async function main() {
       )
     })
 
+    async function assertNoRuntimeErrors(context) {
+      if (runtimeErrors.length) {
+        throw new Error(`${context}: browser errors:\n${runtimeErrors.join('\n')}`)
+      }
+    }
+
+    async function waitForExpression(expression, description, timeoutMs = 20_000) {
+      const deadline = Date.now() + timeoutMs
+      let lastError
+      while (Date.now() < deadline) {
+        try {
+          if (await evaluate(session, expression)) {
+            await assertNoRuntimeErrors(description)
+            return
+          }
+        } catch (error) {
+          lastError = error
+        }
+        await sleep(250)
+      }
+      const body = await evaluate(session, 'document.body?.innerText || ""').catch(() => '')
+      throw new Error(`${description}: timed out${lastError ? `; ${lastError.message}` : ''}\n${body.slice(0, 2000)}`)
+    }
+
     async function navigate(pathname, { width = 1440, height = 900, mobile = false, reducedMotion = false } = {}) {
       runtimeErrors = []
       await session.send('Emulation.setDeviceMetricsOverride', {
@@ -208,10 +232,7 @@ async function main() {
       await loaded
       await sleep(650)
 
-      if (runtimeErrors.length) {
-        throw new Error(`${pathname}: browser errors:\n${runtimeErrors.join('\n')}`)
-      }
-
+      await assertNoRuntimeErrors(pathname)
       const bodyText = await evaluate(session, 'document.body?.innerText || ""')
       if (!bodyText || bodyText.trim().length < 20) throw new Error(`${pathname}: page body is unexpectedly empty`)
       return bodyText
@@ -245,9 +266,14 @@ async function main() {
     if (!body.includes('Smoke Camera Alpha') || !body.includes('Smoke Lens Beta')) {
       throw new Error('/catalog did not render both seeded smoke products')
     }
-    const productHref = await evaluate(session, `document.querySelector('a[href^="/product/"]')?.getAttribute('href') || ''`)
-    if (!productHref) throw new Error('/catalog has no product link')
-    console.log(`PASS seeded catalog; product route ${productHref}`)
+    const productHref = await evaluate(
+      session,
+      `Array.from(document.querySelectorAll('a[href^="/product/"]')).find((a) => a.textContent?.includes('Smoke Camera Alpha'))?.getAttribute('href') || ''`,
+    )
+    if (!productHref) throw new Error('/catalog has no Smoke Camera Alpha product link')
+    const productId = Number(productHref.split('/').pop())
+    if (!Number.isInteger(productId) || productId <= 0) throw new Error(`Invalid seeded product route: ${productHref}`)
+    console.log(`PASS seeded catalog; camera route ${productHref}`)
 
     body = await navigate('/catalog?q=SmokeDescriptionNeedle')
     if (!body.includes('Smoke Camera Alpha') || body.includes('Smoke Lens Beta')) {
@@ -266,9 +292,7 @@ async function main() {
     console.log('PASS nested category route')
 
     body = await navigate(productHref)
-    if (!body.includes('Smoke Camera Alpha') && !body.includes('Smoke Lens Beta')) {
-      throw new Error(`${productHref}: seeded product title is missing`)
-    }
+    if (!body.includes('Smoke Camera Alpha')) throw new Error(`${productHref}: seeded camera title is missing`)
     console.log('PASS product detail route')
 
     const promoResult = await evaluate(
@@ -282,6 +306,90 @@ async function main() {
       throw new Error(`Promo smoke validation failed: ${JSON.stringify(promoResult)}`)
     }
     console.log('PASS public promo validation')
+
+    // Exercise the public checkout as a browser would, but seed its cart and
+    // shared date range directly into the two stores' documented storage
+    // keys. A full Page.navigate follows so the client stores read those
+    // values on module initialization; this is not mutating React internals.
+    const checkoutDate = await evaluate(
+      session,
+      `(() => {
+        const date = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        date.setUTCHours(10, 0, 0, 0)
+        const iso = date.toISOString()
+        localStorage.setItem('pb:cart', JSON.stringify([{
+          productId: ${productId},
+          title: 'Smoke Camera Alpha',
+          price: 1500,
+          listingType: 'rental',
+          unit: 'шт.',
+          quantity: 1
+        }]))
+        sessionStorage.setItem('pb:selectedDates', JSON.stringify({ startDate: iso, endDate: iso }))
+        return iso
+      })()`,
+    )
+
+    body = await navigate('/checkout')
+    if (!body.includes('Smoke Camera Alpha') || !body.includes('Заявка на аренду')) {
+      throw new Error('/checkout did not hydrate the seeded cart')
+    }
+    await waitForExpression(
+      `document.body.innerText.includes('свободно на ваши даты')`,
+      'checkout availability check',
+    )
+    console.log(`PASS checkout cart/date hydration and availability (${checkoutDate})`)
+
+    const filled = await evaluate(
+      session,
+      `(() => {
+        const setValue = (selector, value) => {
+          const element = document.querySelector(selector)
+          if (!element) throw new Error('Missing field: ' + selector)
+          const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), 'value')
+          descriptor.set.call(element, value)
+          element.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+        setValue('input[placeholder="Как к вам обращаться"]', 'Смоук Тест')
+        setValue('input[placeholder="+7 (___) ___-__-__"]', '+7 (900) 111-22-33')
+        setValue('input[placeholder="email@example.com"]', 'smoke-customer@example.invalid')
+        setValue('input[placeholder="Промокод"]', 'SMOKE10')
+        document.querySelector('#agree-data')?.click()
+        document.querySelector('#agree-terms')?.click()
+        const promoInput = document.querySelector('input[placeholder="Промокод"]')
+        const applyButton = promoInput?.parentElement?.querySelector('button')
+        if (!applyButton) throw new Error('Promo apply button is missing')
+        applyButton.click()
+        return true
+      })()`,
+    )
+    if (!filled) throw new Error('Checkout form setup failed')
+
+    await waitForExpression(
+      `Boolean(document.querySelector('input[placeholder="Промокод"]')?.disabled) && document.body.innerText.includes('Скидка')`,
+      'checkout promo application',
+    )
+    console.log('PASS checkout promo UI applied SMOKE10')
+
+    await evaluate(
+      session,
+      `(() => {
+        const submit = document.querySelector('button[type="submit"][form="checkout-form"]')
+        if (!submit) throw new Error('Checkout submit button is missing')
+        submit.click()
+        return true
+      })()`,
+    )
+    await waitForExpression(
+      `document.body.innerText.includes('Заявка отправлена!')`,
+      'checkout submit success',
+      30_000,
+    )
+    body = await evaluate(session, 'document.body.innerText')
+    const orderMatch = body.match(/Заявка №(\d+)/)
+    if (!orderMatch) throw new Error('Checkout success card has no order number')
+    const orderId = Number(orderMatch[1])
+    console.log(`PASS public checkout created order ${orderId}`)
 
     const loginResult = await evaluate(
       session,
@@ -298,12 +406,48 @@ async function main() {
     if (loginResult.status !== 200) throw new Error(`Admin login failed: HTTP ${loginResult.status} ${loginResult.body.slice(0, 500)}`)
     console.log('PASS admin API login')
 
+    const persisted = await evaluate(
+      session,
+      `(async () => {
+        const orderResponse = await fetch('/api/orders/${orderId}?depth=0', { credentials: 'include' })
+        const itemResponse = await fetch('/api/orderItems?where[order][equals]=${orderId}&limit=10&depth=0', { credentials: 'include' })
+        return {
+          orderStatus: orderResponse.status,
+          order: await orderResponse.json(),
+          itemsStatus: itemResponse.status,
+          items: await itemResponse.json(),
+        }
+      })()`,
+    )
+    if (persisted.orderStatus !== 200 || persisted.itemsStatus !== 200) {
+      throw new Error(`Persisted order API failed: ${JSON.stringify(persisted)}`)
+    }
+    if (
+      persisted.order?.status !== 'pending' ||
+      persisted.order?.promoCode !== 'SMOKE10' ||
+      persisted.order?.promoDiscount !== 150 ||
+      persisted.order?.totalPrice !== 1350 ||
+      !persisted.order?.submittedAt
+    ) {
+      throw new Error(`Persisted order has unexpected values: ${JSON.stringify(persisted.order)}`)
+    }
+    if (
+      !Array.isArray(persisted.items?.docs) ||
+      persisted.items.docs.length !== 1 ||
+      persisted.items.docs[0]?.quantity !== 1 ||
+      persisted.items.docs[0]?.lineTotal !== 1500
+    ) {
+      throw new Error(`Persisted order item has unexpected values: ${JSON.stringify(persisted.items)}`)
+    }
+    console.log('PASS persisted order/item totals and promo snapshot')
+
     body = await navigate('/admin')
     const adminPath = await evaluate(session, 'location.pathname')
     if (adminPath !== '/admin/orders' || !body.includes('Очередь заявок')) {
       throw new Error(`/admin auth flow ended at ${adminPath} without the orders dashboard`)
     }
-    console.log('PASS authenticated /admin -> /admin/orders')
+    if (!body.includes('Смоук Тест')) throw new Error('/admin/orders does not show the checkout smoke customer')
+    console.log('PASS authenticated /admin -> /admin/orders with created order visible')
 
     await assertNoHorizontalOverflow('/admin/orders')
 
