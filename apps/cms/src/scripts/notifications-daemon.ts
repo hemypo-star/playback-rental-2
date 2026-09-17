@@ -1,4 +1,4 @@
-import { readFile, readdir, rename, writeFile } from 'node:fs/promises'
+import { readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { sendNotificationDelivery } from '../lib/notifications/channels'
 import {
@@ -12,6 +12,9 @@ const root = notificationQueueRoot()
 const retryMax = Math.max(1, Number(process.env.NOTIFICATION_RETRY_MAX || 5))
 const retryBaseMs = Math.max(1000, Number(process.env.NOTIFICATION_RETRY_BASE_MS || 5000))
 const pollMs = Math.max(500, Number(process.env.NOTIFICATION_POLL_MS || 2000))
+const retentionDays = Math.max(0, Number(process.env.NOTIFICATION_RETENTION_DAYS || 30))
+const cleanupIntervalMs = 60 * 60 * 1000
+let lastCleanupAt = 0
 let stopping = false
 
 function sleep(ms: number): Promise<void> {
@@ -37,6 +40,30 @@ async function recoverProcessing(): Promise<void> {
       await rename(path.join(processing, name), path.join(pending, name))
     } catch (error) {
       console.error('notifications: failed to recover processing job', name, error)
+    }
+  }
+}
+
+async function cleanupCompletedJobs(): Promise<void> {
+  if (retentionDays <= 0) return
+  const now = Date.now()
+  if (now - lastCleanupAt < cleanupIntervalMs) return
+  lastCleanupAt = now
+  const cutoff = now - retentionDays * 24 * 60 * 60 * 1000
+
+  for (const folder of ['sent', 'failed'] as const) {
+    const directory = path.join(root, folder)
+    for (const name of await readdir(directory)) {
+      if (!name.endsWith('.json')) continue
+      const createdAt = Number(name.split('-', 1)[0])
+      if (!Number.isFinite(createdAt) || createdAt >= cutoff) continue
+      try {
+        await unlink(path.join(directory, name))
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          console.error(`notifications: failed to purge old ${folder} job`, error)
+        }
+      }
     }
   }
 }
@@ -112,6 +139,7 @@ async function processJob(name: string): Promise<void> {
 }
 
 async function runPass(): Promise<void> {
+  await cleanupCompletedJobs()
   const names = (await readdir(path.join(root, 'pending'))).filter((name) => name.endsWith('.json')).sort()
   for (const name of names) {
     if (stopping) break
