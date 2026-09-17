@@ -15,6 +15,7 @@
     "smoke:public-security": "node src/scripts/public-security-smoke.mjs",
     "smoke:notifications": "node src/scripts/notification-boundary-smoke.mjs",
     "smoke:order-lifecycle": "node src/scripts/order-lifecycle-smoke.mjs",
+    "smoke:promos": "node src/scripts/promo-acceptance-smoke.mjs",
     "payload": "payload",
     "generate:types": "payload generate:types",
     "sync:moysklad": "tsx --env-file-if-exists=.env src/scripts/sync-moysklad.ts",
