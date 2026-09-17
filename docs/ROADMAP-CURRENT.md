@@ -91,7 +91,7 @@ What remains is intentionally separated below so deployment work is not confused
 
 - ⏸ Item 11 — auto-cancel abandoned checkout orders. Prior discussion indicates this is probably unnecessary because every request is handled manually after notification; confirm decline/acceptance before building anything.
 - ⏸ Manual order creation — decide whether operators need a first-class `/admin` flow for creating an order before cutover.
-- ⏸ Retire `/cms` — currently retained as a break-glass fallback. Remove only after an explicit decision and after every needed operation has an intentional replacement in `/admin`.
+- ⏸ Retire `/cms` — currently retained as a break-glass fallback. It is a route inside the existing Next/Payload `cms` service, not a separate container, so idle CPU/RAM impact is negligible; the real tradeoff is extra authenticated admin attack surface and maintenance. Operational recommendation: keep it through the initial cutover/rollback window, then retire it only after `/admin` has proven sufficient.
 - ⏸ Rename `apps/cms` — naming/clarity only; the directory now contains the whole application. This does not block functionality or deployment.
 
 ## Pre-deployment QA gate
