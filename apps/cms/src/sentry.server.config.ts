@@ -7,7 +7,6 @@ if (dsn) {
     dsn,
     environment: process.env.GLITCHTIP_ENVIRONMENT || process.env.NODE_ENV,
     tracesSampleRate: 0,
-    autoSessionTracking: false,
     sendDefaultPii: false,
   })
 }
