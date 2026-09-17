@@ -232,3 +232,50 @@ jobs:
             cat /tmp/playback-admin-data.log
             exit 1
           fi
+
+      - name: Seed disposable media smoke data
+        env:
+          NODE_ENV: production
+        run: pnpm --dir apps/cms exec tsx src/scripts/seed-media-smoke.ts
+
+      - name: Admin content, media and password smoke
+        env:
+          NODE_ENV: production
+          NOTIFICATIONS_ENABLED: 'false'
+          SMOKE_BASE_URL: http://127.0.0.1:3000
+          SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
+          SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
+        run: |
+          (
+            cd apps/cms
+            exec node ./node_modules/next/dist/bin/next start
+          ) > /tmp/playback-admin-content.log 2>&1 &
+          CMS_PID=$!
+          cleanup() {
+            kill "$CMS_PID" 2>/dev/null || true
+            wait "$CMS_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:3000/api/access > /dev/null; then
+              break
+            fi
+            if ! kill -0 "$CMS_PID" 2>/dev/null; then
+              echo 'Next runtime exited before becoming ready'
+              cat /tmp/playback-admin-content.log
+              exit 1
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo 'Next runtime did not become ready in time'
+              cat /tmp/playback-admin-content.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if ! node apps/cms/src/scripts/admin-content-smoke.mjs; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-admin-content.log
+            exit 1
+          fi
