@@ -24,6 +24,10 @@ function documentFrom(body) {
   return body?.doc || body
 }
 
+function stepContent(steps) {
+  return (steps || []).map((step) => ({ title: step?.title ?? '', text: step?.text ?? '' }))
+}
+
 async function login(email, password) {
   const response = await fetch(url('/api/users/login'), {
     method: 'POST',
@@ -44,7 +48,9 @@ async function main() {
   console.log('PASS content smoke admin login')
 
   // SiteSettings: send a full document, change two distant fields, verify an
-  // unrelated field and the array survive, then restore the original doc.
+  // unrelated field and the array business content survive, then restore the
+  // original document. Payload may regenerate internal array-row IDs on a
+  // full save, so those implementation IDs are intentionally not compared.
   const settingsGet = await fetch(url('/api/globals/site-settings?depth=0'), { headers: authHeaders })
   const settingsResult = await parse(settingsGet)
   if (!settingsGet.ok || !settingsResult.json) {
@@ -76,7 +82,7 @@ async function main() {
     changed?.heroKicker !== 'Smoke settings kicker' ||
     changed?.contactHours !== '11:00 — 20:00' ||
     changed?.contactEmail !== originalSettings.contactEmail ||
-    JSON.stringify(changed?.howItWorksSteps || []) !== JSON.stringify(originalSettings.howItWorksSteps || [])
+    JSON.stringify(stepContent(changed?.howItWorksSteps)) !== JSON.stringify(stepContent(originalSettings.howItWorksSteps))
   ) {
     throw new Error(`site settings full-save preservation failed: ${settingsVerifyResult.text.slice(0, 900)}`)
   }
