@@ -16,7 +16,7 @@ jobs:
   cms:
     name: CMS checks
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -95,5 +95,29 @@ jobs:
           if ! pnpm --dir apps/cms smoke:runtime; then
             echo '--- Next runtime log ---'
             cat /tmp/playback-runtime.log
+            exit 1
+          fi
+
+      - name: Seed disposable browser smoke data
+        env:
+          NODE_ENV: production
+          SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
+          SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
+        run: pnpm --dir apps/cms smoke:seed
+
+      - name: Headless browser smoke
+        env:
+          NODE_ENV: production
+          NOTIFICATIONS_ENABLED: 'false'
+          SMOKE_BASE_URL: http://127.0.0.1:3000
+          SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
+          SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
+        run: |
+          pnpm --dir apps/cms start > /tmp/playback-browser.log 2>&1 &
+          CMS_PID=$!
+          trap 'kill "$CMS_PID" 2>/dev/null || true' EXIT
+          if ! pnpm --dir apps/cms smoke:browser; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-browser.log
             exit 1
           fi
