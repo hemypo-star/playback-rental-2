@@ -19,10 +19,11 @@ async function expectStatus(label, pathname, expectedStatus, options = {}) {
 
 async function main() {
   // Use a deliberately nonexistent account so exhausting this bucket never
-  // interferes with the seeded smoke administrator used by later browser
-  // and lifecycle checks. The account bucket is intentionally keyed from
-  // submitted input before any user lookup, so nonexistent accounts must be
-  // throttled exactly like real ones without leaking account existence.
+  // interferes with the seeded smoke administrator used by later browser,
+  // lifecycle and promo checks. CI sets the per-account max to 3: this target
+  // consumes all three slots itself, while the separate seeded admin account
+  // is also allowed the three legitimate logins exercised elsewhere in the
+  // acceptance suite. Production defaults are not changed.
   const loginBody = JSON.stringify({
     email: 'rate-limit-target@example.invalid',
     password: 'definitely-wrong-password',
@@ -33,9 +34,10 @@ async function main() {
     body: loginBody,
   }
 
-  await expectStatus('login attempt 1 allowed through limiter', '/api/users/login', 401, loginOptions)
-  await expectStatus('login attempt 2 allowed through limiter', '/api/users/login', 401, loginOptions)
-  const limitedLoginBody = await expectStatus('login attempt 3 rate-limited', '/api/users/login', 429, loginOptions)
+  for (const attempt of [1, 2, 3]) {
+    await expectStatus(`login attempt ${attempt} allowed through limiter`, '/api/users/login', 401, loginOptions)
+  }
+  const limitedLoginBody = await expectStatus('login attempt 4 rate-limited', '/api/users/login', 429, loginOptions)
   if (!limitedLoginBody.includes('Слишком много попыток входа')) {
     throw new Error(`Login 429 did not expose the expected public-safe message: ${limitedLoginBody.slice(0, 500)}`)
   }
@@ -68,7 +70,7 @@ async function main() {
 
   // The anonymous custom admin surface must not render protected pages. The
   // public login page itself remains reachable; authenticated access is
-  // exercised by browser-smoke later in this same CI job.
+  // exercised by browser-smoke in this same CI job.
   const adminResponse = await fetch(url('/admin/orders'), { redirect: 'manual' })
   if (![301, 302, 303, 307, 308].includes(adminResponse.status)) {
     throw new Error(`/admin/orders anonymous boundary: expected redirect, got HTTP ${adminResponse.status}`)
