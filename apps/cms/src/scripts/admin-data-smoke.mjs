@@ -49,7 +49,8 @@ async function main() {
     return result.text
   }
 
-  await fetchAdminPage('/admin/orders', ['Очередь заявок'])
+  await fetchAdminPage('/admin/orders', ['Очередь заявок', 'Новый заказ'])
+  await fetchAdminPage('/admin/orders/new', ['Новый заказ', 'Создать заказ', 'МойСклад и уведомления'])
   await fetchAdminPage('/admin/calendar', ['Календарь'])
   await fetchAdminPage('/admin/stock', ['Склад'])
   await fetchAdminPage('/admin/categories', ['Категории', 'Smoke Cameras', 'Smoke Lenses'])
