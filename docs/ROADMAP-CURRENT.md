@@ -87,12 +87,12 @@ A–E were recovered into `2.0` in catch-up commit `eef63c1` after the original 
 
 What remains is intentionally separated below so deployment work is not confused with product decisions and so owner decisions are not silently guessed by an implementation agent.
 
-## Owner/product decisions still open
+## Owner/product decisions for this release
 
-- ⏸ Item 11 — auto-cancel abandoned checkout orders. Prior discussion indicates this is probably unnecessary because every request is handled manually after notification; confirm decline/acceptance before building anything.
-- ⏸ Manual order creation — decide whether operators need a first-class `/admin` flow for creating an order before cutover.
-- ⏸ Retire `/cms` — currently retained as a break-glass fallback. It is a route inside the existing Next/Payload `cms` service, not a separate container, so idle CPU/RAM impact is negligible; the real tradeoff is extra authenticated admin attack surface and maintenance. Operational recommendation: keep it through the initial cutover/rollback window, then retire it only after `/admin` has proven sufficient.
-- ⏸ Rename `apps/cms` — naming/clarity only; the directory now contains the whole application. This does not block functionality or deployment.
+- ✅ Item 11 — **declined for 2.0**. Do not auto-cancel abandoned checkout orders; requests are handled manually after notification, so the stale-order premise does not justify another lifecycle rule.
+- ✅ Manual order creation — **approved and implemented** as `/admin/orders/new`. It creates the same pending Orders + OrderItems model as public checkout, reusing OrderItems pricing/availability hooks; external submit/notification remains an explicit operator action on the order detail page.
+- ✅ `/cms` — **retain as break-glass fallback for this release**. It stays inside the existing Next/Payload service, with no additional proxy/IP protection requested. Revisit retirement only after `/admin` has proven sufficient in production.
+- ✅ Rename `apps/cms` — **deferred/declined for this release**. Naming cleanup does not justify pre-cutover risk.
 
 ## Pre-deployment QA gate
 
@@ -102,7 +102,7 @@ Before provisioning the production host:
 2. ⏳ Run the remaining visual/manual storefront + admin checks in [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md).
 3. ⏳ Run the real-МойСклад integration section with the intended non-legacy credentials.
 4. Resolve any defect found by those checks on a short-lived branch into `2.0`.
-5. Resolve the owner/product decisions above that are considered cutover blockers; explicitly mark non-blockers as deferred/declined rather than leaving them ambiguous.
+5. ✅ Owner/product decisions for this release are resolved above.
 6. Confirm the exact `2.0` SHA that will become the deployment candidate.
 
 ## Final deployment gate
@@ -117,9 +117,9 @@ Only after the user chooses to provision the deployment host/VDS:
 6. Deploy GlitchTip or choose a hosted Sentry-compatible endpoint; set server/browser DSNs and verify one controlled server error and one controlled browser error.
 7. Run the deployment-only sections of [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md), including checkout → notification → МойСклад end to end.
 8. Confirm database/media backups, notification-queue persistence and an explicit rollback procedure.
-9. Decide `/cms` fate and the `apps/cms` rename only if they are still desired for this release.
+9. Keep `/cms` as the agreed break-glass fallback; do not rename `apps/cms` in this release.
 10. Perform cutover from the legacy deployment only after the acceptance record is complete.
 
 ## Immediate next action
 
-**No independent feature wave remains.** Automated pre-deployment acceptance is now broad and green. Next: complete the remaining visual/manual smoke pass, run the real-МойСклад integration checks, and resolve the four owner/product decisions above. VDS/production setup remains postponed until those gates are complete.
+**No independent feature wave remains after the approved manual-order flow.** Next: complete the remaining visual/manual smoke pass and run the real-МойСклад integration checks. Then confirm the exact release-candidate SHA before VDS/production setup.
