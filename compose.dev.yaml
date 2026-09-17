@@ -1,24 +1,16 @@
-# Dev overlay — hot reload via bind mounts, still fully containerized (no
-# local `pnpm dev`/`pnpm build` outside Docker, per the project's Docker-only
-# workflow). Run with:
+# Dev overlay — hot reload via bind mounts, still fully containerized.
+# Run with:
 #   docker compose -f compose.yaml -f compose.dev.yaml up --build
 #
-# Still publishes only `cms` (same as prod) — day-to-day dev should exercise
-# the same single-service setup production runs, not a shortcut around it.
-#
-# node_modules anonymous volumes: each bind mount below shadows the app
-# directory with the host's source tree, which would otherwise blow away the
-# Linux-built node_modules the image installed (host node_modules can carry
-# macOS-built native addons — sharp, @swc/core — that break in the
-# container). Docker seeds a fresh anonymous volume from the image's
-# existing content the first time it's mounted, so pointing one at each
-# node_modules path preserves the container's own install instead.
+# External side-effect daemons are excluded from normal dev. This prevents a
+# Codespace/local stack from continuously hitting the shared МойСклад account
+# or sending real Telegram/MAX/VK/email notifications by accident.
 
 services:
-  # Excluded from dev's default `up` — no reason for local iteration to
-  # continuously hit the real (shared, cross-business) МойСклад account on
-  # a timer. Still runnable on demand: `docker compose run --rm reconcile`.
   reconcile:
+    profiles: [jobs]
+
+  notifications:
     profiles: [jobs]
 
   cms:
@@ -26,14 +18,14 @@ services:
       target: dev
     environment:
       NODE_ENV: development
+      # Safe default is false from .env.example. A developer may explicitly
+      # set true to test that checkout/contact can enqueue durable local jobs;
+      # the delivery worker still does not start unless the jobs profile is
+      # also requested, so enabling this alone cannot send externally.
+      NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-false}
     volumes:
       - ./apps/cms:/repo/apps/cms
       - cms_node_modules:/repo/apps/cms/node_modules
-      # global.css imports docs/design-reference/spec/{tokens.css,
-      # interactions.css} from outside apps/cms (Next.js migration Stage 1) —
-      # without this, Turbopack's dev-time CSS resolution 500s on every page
-      # ("Can't resolve '../../../../docs/design-reference/spec/tokens.css'"),
-      # since only apps/cms is otherwise bind-mounted into the container.
       - ./docs:/repo/docs:ro
     healthcheck:
       start_period: 40s

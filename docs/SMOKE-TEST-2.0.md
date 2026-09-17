@@ -124,11 +124,36 @@ Only run this section with the intended non-legacy credentials/environment.
 - [ ] Manual reconcile completes without an uncaught crash.
 - [ ] Reconcile is not accidentally running continuously in local/dev Compose unless the jobs profile is intentionally enabled.
 
-## 10. Notifications and monitoring
+## 10. Direct notifications and monitoring
 
-- [ ] Order-created notification webhook receives the documented payload.
-- [ ] Contact notification webhook receives a submitted contact form.
-- [ ] Missing/downstream notification service fails in the intended non-destructive way.
+### Local/disposable notification boundary
+
+No real messenger/SMTP credentials are needed for this sub-check.
+
+- [ ] Normal `compose.dev.yaml` startup does not start the `notifications` worker.
+- [ ] With `NOTIFICATIONS_ENABLED=false`, checkout/contact cannot accidentally send real messages.
+- [ ] With `NOTIFICATIONS_ENABLED=true` but **without** starting the jobs profile, one disposable checkout/contact event creates a pending JSON job in the local notification queue and performs no external delivery.
+- [ ] The queued JSON contains the intended event/customer/order data but no Telegram/MAX/VK/SMTP credentials.
+
+### Final VDS delivery
+
+Run only after production channel credentials have been configured on the VDS.
+
+- [ ] The `notifications` worker is running and the queue volume is persistent across worker/container restart.
+- [ ] One disposable order produces exactly one notification to every configured Telegram recipient.
+- [ ] The same order produces exactly one notification to every configured MAX recipient.
+- [ ] Admin SMTP email arrives with customer/items/net total.
+- [ ] Customer order-confirmation email arrives at the checkout address.
+- [ ] If VK is enabled, every configured VK peer receives exactly one message.
+- [ ] Contact-form submission reaches the configured admin Telegram/MAX/VK/email destinations but does not send a customer order-confirmation email.
+- [ ] Temporarily breaking one test destination causes retries while already-successful destinations are not duplicated.
+- [ ] Stopping/restarting the worker while a job is pending does not lose the job.
+- [ ] Queue/log inspection does not expose bot/API/SMTP secrets.
+- [ ] Completed/terminally failed jobs older than `NOTIFICATION_RETENTION_DAYS` are purged; pending jobs are not expired.
+- [ ] The MAX token exposed in the old n8n export has been rotated and is not reused.
+
+### GlitchTip
+
 - [ ] On the final deployed environment, configure GlitchTip/Sentry-compatible DSNs.
 - [ ] Trigger one controlled server exception and verify it arrives in GlitchTip.
 - [ ] Trigger one controlled browser exception and verify it arrives in GlitchTip.
@@ -149,11 +174,12 @@ Only after development items are complete and a deployment host exists.
 
 - [ ] PostgreSQL persistent storage is mounted/backed up.
 - [ ] Media persistent storage is mounted and the image-size backfill has completed.
+- [ ] Notification queue uses persistent storage and direct channel credentials are worker-only.
 - [ ] Production secrets are set outside git.
 - [ ] `WEB_URL`, reverse-proxy origin handling and TLS/HTTPS are correct.
 - [ ] Browser smoke test passes on the real public hostname.
 - [ ] Admin smoke test passes on the real public hostname.
-- [ ] Checkout → order → notification → МойСклад path passes end to end.
+- [ ] Checkout → order → direct notification worker → МойСклад path passes end to end.
 - [ ] GlitchTip server + browser event delivery passes.
 - [ ] Database/media backup and rollback procedure is written and tested before changing traffic.
 - [ ] Legacy deployment remains recoverable until the agreed rollback window expires.
@@ -167,5 +193,6 @@ For the final run, record:
 - deployment hostname;
 - PostgreSQL migration version/state;
 - media backfill result;
+- notification channels enabled and live-delivery result;
 - any skipped checkbox and its explicit reason;
 - final cutover/rollback decision.

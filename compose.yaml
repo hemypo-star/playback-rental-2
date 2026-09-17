@@ -1,12 +1,7 @@
-# Production stack. Only `cms` publishes a port — `db` is reachable solely
-# over the compose network. `cms` is the whole application now
-# (docs/PLAN-next-migration.md Stage 4) — the storefront and admin that
-# used to live in a separate `web` (Astro) service were folded into this
-# same Next.js app in Stages 1-3, and that service was deleted along with
-# apps/web once nothing needed it anymore. Run with:
+# Production stack. `cms` is the public Next/Payload app; Postgres and the
+# notification queue remain internal/persistent Docker resources. Run with:
 #   docker compose up --build
-# Dev mode (hot reload, bind mounts) overlays compose.dev.yaml on top — see
-# that file's header comment.
+# Dev mode overlays compose.dev.yaml and disables external side-effect workers.
 
 services:
   db:
@@ -29,8 +24,6 @@ services:
       context: .
       dockerfile: apps/cms/Dockerfile
       args:
-        # NEXT_PUBLIC_* is compiled into the browser bundle. The GlitchTip
-        # DSN is an ingestion address (safe to expose), not an admin secret.
         NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
         NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
     restart: unless-stopped
@@ -40,41 +33,24 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
-      # Stable forever once set for real — rotating it invalidates every
-      # existing session (admin logins, checkout submitToken checks).
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
-      # This app's own public origin — feeds cors/csrf (payload.config.ts)
-      # and Next's serverActions.allowedOrigins (next.config.mjs), both kept
-      # as real CSRF defenses (not migration-era cruft) in case a reverse
-      # proxy/load balancer/CDN in front of this container rewrites Origin.
       WEB_URL: ${WEB_URL:?set WEB_URL in .env}
       MEDIA_STATIC_DIR: /data/media
-      # Error monitoring is disabled when the DSN is empty. Browser-side
-      # monitoring uses the corresponding NEXT_PUBLIC_* build args above.
       GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
       GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
-      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
-      # apps/cms/src/lib/security/clientIp.ts. This stack, as shipped below,
-      # publishes `cms`'s port straight to the host — nothing sits in front
-      # of it to overwrite X-Real-IP/X-Forwarded-For, so the correct value
-      # HERE is false: trusting those headers with no proxy stripping a
-      # client-supplied one would let any visitor forge their own rate-limit
-      # bucket and bypass every IP-keyed limit, including admin login. Only
-      # flip this to true in an environment that actually adds a reverse
-      # proxy in front of this service (outside this compose file) and sets
-      # those headers correctly — see clientIp.ts and apps/cms/.env.example
-      # for exactly what "correctly" means.
       TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
+      # The web process receives no Telegram/MAX/VK/SMTP credentials. It can
+      # only append durable jobs to the shared queue volume.
+      NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-false}
+      NOTIFICATION_QUEUE_DIR: /data/notifications
     ports:
       - '${WEB_PORT:-8080}:3000'
     volumes:
       - cms_media:/data/media
+      - notification_queue:/data/notifications
     healthcheck:
-      # /api/access is Payload's built-in, unauthenticated access-control
-      # introspection endpoint — always 200, no login needed, so it doubles
-      # as a cheap liveness probe.
       test:
         [
           'CMD',
@@ -87,14 +63,46 @@ services:
       retries: 10
       start_period: 20s
 
-  # Actually schedules reconcile-moysklad.ts's sync (a review found it was
-  # never wired to anything — the only safety net against a missed webhook
-  # was a human running `pnpm reconcile:moysklad` by hand). Unlike the
-  # one-off jobs below, this has no `profiles:` — it's part of the default
-  # `docker compose up` set and stays up under the same `restart:
-  # unless-stopped` policy as db/cms, re-syncing on its own interval
-  # (MOYSKLAD_RECONCILE_INTERVAL_MIN, default 60) for as long as the stack
-  # is up. Disabled in dev — see compose.dev.yaml.
+  # Direct notification delivery. This is the only service that receives
+  # messenger/API/SMTP secrets. Jobs are durable on notification_queue, so a
+  # provider outage or container restart does not block checkout or lose the
+  # event. Successful recipients are persisted per job before other channels
+  # are retried.
+  notifications:
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NOTIFICATION_QUEUE_DIR: /data/notifications
+      NOTIFICATION_RETRY_MAX: ${NOTIFICATION_RETRY_MAX:-5}
+      NOTIFICATION_RETRY_BASE_MS: ${NOTIFICATION_RETRY_BASE_MS:-5000}
+      NOTIFICATION_POLL_MS: ${NOTIFICATION_POLL_MS:-2000}
+      NOTIFICATION_RETENTION_DAYS: ${NOTIFICATION_RETENTION_DAYS:-30}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_IDS: ${TELEGRAM_CHAT_IDS:-}
+      MAX_BOT_TOKEN: ${MAX_BOT_TOKEN:-}
+      MAX_USER_IDS: ${MAX_USER_IDS:-}
+      VK_ACCESS_TOKEN: ${VK_ACCESS_TOKEN:-}
+      VK_PEER_IDS: ${VK_PEER_IDS:-}
+      VK_API_VERSION: ${VK_API_VERSION:-5.199}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_ADMIN_TO: ${SMTP_ADMIN_TO:-}
+      SMTP_TIMEOUT_MS: ${SMTP_TIMEOUT_MS:-15000}
+    volumes:
+      - notification_queue:/data/notifications
+    command: ['pnpm', 'notifications:daemon']
+
+  # Periodic safety-net sync. Disabled in dev by compose.dev.yaml.
   reconcile:
     depends_on:
       db:
@@ -119,11 +127,7 @@ services:
       - cms_media:/data/media
     command: ['pnpm', 'reconcile:moysklad:daemon']
 
-  # МойСклад one-off scripts — not started by `docker compose up` (profiles:
-  # [jobs] excludes them from the default set). Run one-off with e.g.:
-  #   docker compose run --rm sync-moysklad
-  # Reuses the cms image/env (same DATABASE_URI, MOYSKLAD_* vars, media
-  # volume) so a sync run sees exactly what the running app sees.
+  # One-off МойСклад jobs. `profiles: [jobs]` keeps them out of normal `up`.
   sync-moysklad:
     profiles: [jobs]
     depends_on:
@@ -189,11 +193,10 @@ services:
       GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
-      # The webhook target is *this* deployment's public API — WEB_URL, not
-      # an internal address, since МойСклад calls it from the outside.
       WEB_URL: ${WEB_URL:?set WEB_URL in .env}
     command: ['pnpm', 'register:moysklad-webhook']
 
 volumes:
   pgdata:
   cms_media:
+  notification_queue:

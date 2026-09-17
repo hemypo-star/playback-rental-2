@@ -1,50 +1,17 @@
-// Notifications go to a single external webhook (an n8n workflow the owner
-// configures independently — this side only needs to post structured data,
-// nothing here should assume a specific downstream channel). Replaces the
-// old app's two separate, already-fragile paths it had accumulated on prod:
-// a direct Telegram Bot API integration for orders, and a contact-form path
-// that was outright broken (`sendContactNotification` always threw). Payload
-// shape for order.created intentionally matches what the old app's
-// `sendOrderWebhookDirect` (src/services/serverApi.ts on the prod branch)
-// already sent, in case the same n8n workflow is being reused rather than
-// rebuilt: { event, source, createdAt, orderId, name, email, phone, items[],
-// totalAmount, currency }. contact.created has no old-app reference (that
-// path never worked on prod) so its shape is new but follows the same
-// event/source/createdAt envelope for consistency.
+// Compatibility facade for callers that historically posted to an external
+// n8n webhook. Notifications are now persisted to the local VDS queue and a
+// sibling worker delivers them directly to Telegram, MAX, SMTP and optional
+// VK. Keeping these function names avoids coupling checkout/contact code to
+// transport details.
+import { enqueueNotification } from './queue'
+import type { OrderNotificationItem } from './types'
 
-const WEBHOOK_URL = process.env.NOTIFICATION_WEBHOOK_URL
-
-interface WebhookResult {
+interface NotificationResult {
   success: boolean
   error?: string
 }
 
-async function postToWebhook(payload: Record<string, unknown>): Promise<WebhookResult> {
-  if (!WEBHOOK_URL) return { success: false, error: 'NOTIFICATION_WEBHOOK_URL not configured' }
-  try {
-    const res = await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ createdAt: new Date().toISOString(), ...payload }),
-    })
-    if (!res.ok) {
-      const body = await res.text().catch(() => '')
-      return { success: false, error: `HTTP ${res.status}: ${body}` }
-    }
-    return { success: true }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
-  }
-}
-
-export interface OrderNotificationItem {
-  title: string
-  quantity: number
-  listingType: 'rental' | 'sale'
-  startDate?: string | null
-  endDate?: string | null
-  lineTotal: number
-}
+export type { OrderNotificationItem }
 
 export async function sendOrderNotification(params: {
   orderId: number
@@ -53,18 +20,13 @@ export async function sendOrderNotification(params: {
   customerPhone: string
   items: OrderNotificationItem[]
   totalPrice: number
-  // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes) — additive fields,
-  // optional so no existing caller/test has to change. totalAmount below
-  // is already net of promoDiscount (order.totalPrice, per recalcOrderTotal
-  // in OrderItems.ts); these two are included so the owner's n8n workflow
-  // can explain *why* totalAmount is lower than the items' face value,
-  // rather than seeing an unexplained total.
   promoCode?: string | null
   promoDiscount?: number
-}): Promise<WebhookResult> {
-  return postToWebhook({
+}): Promise<NotificationResult> {
+  const result = await enqueueNotification({
     event: 'order.created',
     source: 'playback-rental',
+    createdAt: new Date().toISOString(),
     orderId: params.orderId,
     name: params.customerName,
     email: params.customerEmail,
@@ -82,6 +44,7 @@ export async function sendOrderNotification(params: {
     promoCode: params.promoCode ?? null,
     promoDiscount: params.promoDiscount ?? 0,
   })
+  return { success: result.success, error: result.error }
 }
 
 export async function sendContactNotification(params: {
@@ -90,14 +53,16 @@ export async function sendContactNotification(params: {
   phone: string
   subject?: string
   message: string
-}): Promise<WebhookResult> {
-  return postToWebhook({
+}): Promise<NotificationResult> {
+  const result = await enqueueNotification({
     event: 'contact.created',
     source: 'playback-rental',
+    createdAt: new Date().toISOString(),
     name: params.name,
     email: params.email,
     phone: params.phone,
-    subject: params.subject ?? null,
+    subject: params.subject?.trim() || null,
     message: params.message,
   })
+  return { success: result.success, error: result.error }
 }
