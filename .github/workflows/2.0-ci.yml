@@ -81,7 +81,13 @@ jobs:
       - name: Production build
         env:
           NODE_ENV: production
-        run: pnpm --dir apps/cms build
+        run: |
+          set -o pipefail
+          pnpm --dir apps/cms build 2>&1 | tee /tmp/playback-build.log
+          if grep -Fq 'Dynamic filesystem access causes tracing of the whole project' /tmp/playback-build.log; then
+            echo 'Next build traced the whole project because of dynamic filesystem access'
+            exit 1
+          fi
 
       - name: Production runtime smoke
         env:
@@ -112,14 +118,26 @@ jobs:
           SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
         run: pnpm --dir apps/cms smoke:seed
 
-      - name: Headless browser and order lifecycle smoke
+      - name: Browser, security, notifications and lifecycle smoke
         env:
           NODE_ENV: production
-          NOTIFICATIONS_ENABLED: 'false'
+          NOTIFICATIONS_ENABLED: 'true'
+          NOTIFICATION_QUEUE_DIR: /tmp/playback-notification-queue
           SMOKE_BASE_URL: http://127.0.0.1:3000
           SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
           SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
+          TELEGRAM_BOT_TOKEN: ci-telegram-secret-sentinel
+          TELEGRAM_CHAT_IDS: ci-telegram-recipient-sentinel
+          MAX_BOT_TOKEN: ci-max-secret-sentinel
+          MAX_USER_IDS: ci-max-recipient-sentinel
+          VK_ACCESS_TOKEN: ci-vk-secret-sentinel
+          VK_PEER_IDS: ci-vk-recipient-sentinel
+          SMTP_HOST: smtp.invalid
+          SMTP_FROM: smoke-sender@example.invalid
+          SMTP_ADMIN_TO: ci-admin@example.invalid
+          SMTP_PASSWORD: ci-smtp-secret-sentinel
         run: |
+          rm -rf "$NOTIFICATION_QUEUE_DIR"
           (
             cd apps/cms
             exec node ./node_modules/next/dist/bin/next start
@@ -132,6 +150,18 @@ jobs:
           trap cleanup EXIT
 
           if ! pnpm --dir apps/cms smoke:browser; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-browser.log
+            exit 1
+          fi
+
+          if ! pnpm --dir apps/cms smoke:public-security; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-browser.log
+            exit 1
+          fi
+
+          if ! pnpm --dir apps/cms smoke:notifications; then
             echo '--- Next runtime log ---'
             cat /tmp/playback-browser.log
             exit 1

@@ -57,8 +57,14 @@ export function notificationQueueRoot(env: NodeJS.ProcessEnv = process.env): str
 }
 
 export async function ensureNotificationQueue(root = notificationQueueRoot()): Promise<void> {
+  // The queue root is an intentional runtime path (a Docker persistent volume
+  // in production), not a source-tree asset Next/Turbopack should trace into
+  // the server bundle. The ignore marker prevents a dynamic path from making
+  // Turbopack conservatively include the whole project in its filesystem trace.
   await Promise.all(
-    ['pending', 'processing', 'sent', 'failed'].map((name) => mkdir(path.join(root, name), { recursive: true })),
+    ['pending', 'processing', 'sent', 'failed'].map((name) =>
+      mkdir(path.join(/* turbopackIgnore: true */ root, name), { recursive: true }),
+    ),
   )
 }
 
@@ -85,7 +91,7 @@ export async function enqueueNotification(
     deliveries: [],
   }
   const filename = `${Date.now()}-${id}.json`
-  const pending = path.join(root, 'pending', filename)
+  const pending = path.join(/* turbopackIgnore: true */ root, 'pending', filename)
   const temporary = `${pending}.tmp`
 
   try {
