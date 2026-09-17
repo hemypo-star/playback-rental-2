@@ -18,9 +18,11 @@ services:
       target: dev
     environment:
       NODE_ENV: development
-      # Dev UI remains fully testable, but contact/order notification sends
-      # report disabled instead of quietly messaging real recipients.
-      NOTIFICATIONS_ENABLED: 'false'
+      # Safe default is false from .env.example. A developer may explicitly
+      # set true to test that checkout/contact can enqueue durable local jobs;
+      # the delivery worker still does not start unless the jobs profile is
+      # also requested, so enabling this alone cannot send externally.
+      NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-false}
     volumes:
       - ./apps/cms:/repo/apps/cms
       - cms_node_modules:/repo/apps/cms/node_modules
