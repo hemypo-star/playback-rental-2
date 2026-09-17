@@ -238,6 +238,11 @@ jobs:
             exit 1
           fi
 
+      - name: Manual order smoke
+        env:
+          NODE_ENV: production
+        run: pnpm --dir apps/cms smoke:manual-order
+
       - name: Seed disposable media smoke data
         env:
           NODE_ENV: production
