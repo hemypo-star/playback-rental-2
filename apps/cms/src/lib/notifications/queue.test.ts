@@ -23,6 +23,7 @@ const payload: OrderNotificationPayload = {
 
 test('delivery plan enables only configured channels', () => {
   const env: NodeJS.ProcessEnv = {
+    NODE_ENV: 'test',
     TELEGRAM_BOT_TOKEN: 'secret-token',
     TELEGRAM_CHAT_IDS: '10, 20',
     MAX_BOT_TOKEN: 'max-secret',
@@ -50,6 +51,7 @@ test('delivery plan enables only configured channels', () => {
 test('enqueue persists a durable job without channel credentials or recipients', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'playback-notifications-'))
   const env: NodeJS.ProcessEnv = {
+    NODE_ENV: 'test',
     NOTIFICATIONS_ENABLED: 'true',
     NOTIFICATION_QUEUE_DIR: root,
     TELEGRAM_BOT_TOKEN: 'must-not-be-written',
@@ -74,7 +76,7 @@ test('enqueue persists a durable job without channel credentials or recipients',
 test('enqueue reports disabled notifications when the local worker is disabled', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'playback-notifications-empty-'))
   try {
-    const result = await enqueueNotification(payload, { NOTIFICATION_QUEUE_DIR: root })
+    const result = await enqueueNotification(payload, { NODE_ENV: 'test', NOTIFICATION_QUEUE_DIR: root })
     assert.equal(result.success, false)
     assert.match(result.error || '', /Direct notifications are disabled/)
   } finally {
