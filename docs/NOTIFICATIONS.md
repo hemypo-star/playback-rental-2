@@ -16,8 +16,17 @@ The web container receives only `NOTIFICATIONS_ENABLED` and the queue path. Tele
 - A failure in one destination does not resend destinations that already succeeded.
 - Default policy: 5 attempts, starting at 5 seconds with exponential backoff (capped at 5 minutes).
 - A worker restart recovers jobs left in `processing/` back to the pending queue.
-- Completed and terminally failed jobs remain under `sent/` and `failed/` for diagnosis.
+- Completed and terminally failed jobs stay under `sent/` and `failed/` only for the configured retention window; default is 30 days. Pending/processing jobs are never expired automatically.
 - Notification failure never rolls back an otherwise-valid checkout. Contact form submission reports success once the durable local job is accepted.
+- Bot/API/SMTP secrets are never written into the queue files.
+
+Retention can be changed on the VDS:
+
+```env
+NOTIFICATION_RETENTION_DAYS=30
+```
+
+Use `0` only if automatic cleanup is intentionally disabled. Queue files contain customer/order data, so indefinite retention is not recommended.
 
 ## Telegram
 
@@ -39,7 +48,7 @@ MAX_BOT_TOKEN=...
 MAX_USER_IDS=123456789,987654321
 ```
 
-The worker calls `POST https://platform-api2.max.ru/messages?user_id=...` and sends the token in the `Authorization` header. MAX currently limits a bot to two messages per second to one dialog; this architecture naturally serializes deliveries for a job.
+The worker calls `POST https://platform-api2.max.ru/messages?user_id=...` and sends the token in the `Authorization` header. MAX currently limits a bot to two messages per second to one dialog; this architecture serializes deliveries within a job.
 
 **Security:** the token that appeared in the previously exported n8n workflow must be rotated before production. Never copy that exposed token into the new `.env`.
 
@@ -53,7 +62,7 @@ VK_PEER_IDS=123456789,2000000001
 VK_API_VERSION=5.199
 ```
 
-`VK_PEER_IDS` accepts the normal VK `peer_id` values. The worker derives a deterministic non-zero `random_id` from the queue job + recipient, so a retry of the same queued delivery is deduplicated by VK rather than becoming a second message.
+`VK_PEER_IDS` accepts normal VK `peer_id` values. The worker derives a deterministic non-zero `random_id` from the queue job + recipient, so a retry of the same queued delivery is deduplicated by VK rather than becoming a second message.
 
 Leave `VK_ACCESS_TOKEN` / `VK_PEER_IDS` empty to disable VK without affecting other channels.
 
@@ -97,7 +106,31 @@ docker compose logs -f notifications
 docker compose exec notifications sh -lc 'find /data/notifications -maxdepth 2 -type f | sort'
 ```
 
-Normal local/Codespaces development uses `compose.dev.yaml`, which disables the worker and forces notifications off so test orders cannot message real recipients.
+## Safe local/Codespaces testing
+
+Normal local development uses `compose.dev.yaml`. The `notifications` worker is behind the `jobs` profile, so it does not run during ordinary `up` and cannot send real Telegram/MAX/VK/email messages.
+
+`.env.example` defaults to:
+
+```env
+NOTIFICATIONS_ENABLED=false
+```
+
+To test only the website → durable-queue boundary, explicitly set:
+
+```env
+NOTIFICATIONS_ENABLED=true
+```
+
+and run normal dev Compose **without** `--profile jobs`. Checkout/contact will write pending JSON jobs to the local queue volume, but nothing will be delivered externally. Set it back to `false` after the check.
+
+Only start the worker deliberately when testing real delivery:
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml --profile jobs up notifications
+```
+
+That command can send real messages if credentials are present.
 
 ## Final acceptance on the VDS
 
@@ -110,4 +143,5 @@ Before cutover, send one disposable order/contact event and verify:
 - if configured, every VK peer receives exactly one message;
 - stopping/restarting the worker with a pending job does not lose the job;
 - temporarily breaking one test destination causes retries while already-successful destinations are not duplicated;
-- secrets do not appear in queue JSON or application logs.
+- secrets do not appear in queue JSON or application logs;
+- completed/failed jobs older than the configured retention window are purged while pending jobs remain intact.
