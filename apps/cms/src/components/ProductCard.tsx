@@ -64,7 +64,10 @@ interface Props {
 export default function ProductCard({ product, delay = 0, sizes = DEFAULT_SIZES, variant = 'catalog' }: Props) {
   const isKitCard = variant === 'kit'
   const image = Array.isArray(product.images) ? product.images[0] : undefined
-  const imageUrl = mediaUrl(image)
+  // Backlog item 9: this slot never needs the original upload. Payload's
+  // width-only `card` source preserves aspect ratio, while object-cover below
+  // keeps the existing 4:3 / 3:2 visual treatment unchanged.
+  const imageUrl = mediaUrl(image, 'card')
   const categoryName = typeof product.category === 'object' ? product.category.name : undefined
   const cardTag = product.tag || categoryName
   const subtitle = product.subtitle || product.description
