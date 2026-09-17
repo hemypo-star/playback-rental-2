@@ -58,6 +58,12 @@ jobs:
       - name: Generate Payload types
         run: pnpm --dir apps/cms generate:types
 
+      - name: Apply database migrations
+        env:
+          NODE_ENV: production
+          PAYLOAD_MIGRATING: 'true'
+        run: pnpm --dir apps/cms payload migrate
+
       - name: Lint
         run: pnpm --dir apps/cms lint
 
