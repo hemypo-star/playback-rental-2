@@ -9,8 +9,9 @@
 import { getPayload } from 'payload'
 import { APIError } from 'payload'
 import config from '@payload-config'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { getAdminUser } from '../../../../../lib/admin/auth'
+import { STOREFRONT_CACHE_TAGS } from '../../../../../lib/data/cacheTags'
 
 export interface ActionResult {
   success: boolean
@@ -46,6 +47,8 @@ export async function saveCategory(id: number | null, data: CategoryInput): Prom
       id === null
         ? await payload.create({ collection: 'categories', data, overrideAccess: true })
         : await payload.update({ collection: 'categories', id, data, overrideAccess: true })
+    updateTag(STOREFRONT_CACHE_TAGS.categories)
+    updateTag(STOREFRONT_CACHE_TAGS.catalogFacets)
     revalidatePath('/admin/categories')
     if (id !== null) revalidatePath(`/admin/categories/${id}`)
     return { success: true, id: doc.id }
@@ -59,6 +62,8 @@ export async function deleteCategory(id: number): Promise<ActionResult> {
     await requireAdmin()
     const payload = await getPayload({ config })
     await payload.delete({ collection: 'categories', id, overrideAccess: true })
+    updateTag(STOREFRONT_CACHE_TAGS.categories)
+    updateTag(STOREFRONT_CACHE_TAGS.catalogFacets)
     revalidatePath('/admin/categories')
     return { success: true }
   } catch (error) {
