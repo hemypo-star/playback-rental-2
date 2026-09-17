@@ -69,7 +69,7 @@ async function processJob(name: string): Promise<void> {
   if (job.deliveries.length === 0) {
     job.deliveries = buildNotificationDeliveries(job.payload)
     if (job.deliveries.length === 0) {
-      console.error('notifications: no delivery channels are configured; moving job to failed', name)
+      console.error(`notifications: job ${job.id} has no configured delivery channels; moving to failed`)
       await atomicWrite(processingPath, job)
       await rename(processingPath, path.join(root, 'failed', name))
       return
@@ -86,18 +86,18 @@ async function processJob(name: string): Promise<void> {
       delivery.status = 'sent'
       delivery.lastError = undefined
       delivery.nextAttemptAt = undefined
-      console.info(`notifications: sent ${delivery.kind} -> ${delivery.recipient}`)
+      console.info(`notifications: job ${job.id} sent via ${delivery.kind}`)
     } catch (error) {
       delivery.attempts += 1
       delivery.lastError = error instanceof Error ? error.message : 'Unknown delivery error'
       if (delivery.attempts >= retryMax) {
         delivery.status = 'failed'
         delivery.nextAttemptAt = undefined
-        console.error(`notifications: permanently failed ${delivery.kind} -> ${delivery.recipient}: ${delivery.lastError}`)
+        console.error(`notifications: job ${job.id} permanently failed via ${delivery.kind}: ${delivery.lastError}`)
       } else {
         delivery.nextAttemptAt = new Date(Date.now() + retryDelay(delivery.attempts)).toISOString()
         console.warn(
-          `notifications: retry ${delivery.attempts}/${retryMax} ${delivery.kind} -> ${delivery.recipient}: ${delivery.lastError}`,
+          `notifications: job ${job.id} retry ${delivery.attempts}/${retryMax} via ${delivery.kind}: ${delivery.lastError}`,
         )
       }
     }
