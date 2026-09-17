@@ -9,8 +9,7 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Categories } from './collections/Categories'
 import { Products } from './collections/Products'
-import { Orders } from './collections/Orders'
-import { OrderItems } from './collections/OrderItems'
+import { OrdersWithLifecyclePolicy, OrderItemsWithLifecyclePolicy } from './collections/orderLifecycle'
 import { Promotions } from './collections/Promotions'
 import { PromoCodes } from './collections/PromoCodes'
 import { SiteSettings } from './globals/SiteSettings'
@@ -69,7 +68,16 @@ export default buildConfig({
   routes: {
     admin: '/cms',
   },
-  collections: [Users, Media, Categories, Products, Orders, OrderItems, Promotions, PromoCodes],
+  collections: [
+    Users,
+    Media,
+    Categories,
+    Products,
+    OrdersWithLifecyclePolicy,
+    OrderItemsWithLifecyclePolicy,
+    Promotions,
+    PromoCodes,
+  ],
   globals: [SiteSettings],
   // WEB_URL is this app's OWN public origin (see apps/cms/.env.example —
   // named for consistency with the root .env.example/compose.yaml, not
