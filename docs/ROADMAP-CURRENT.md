@@ -1,6 +1,6 @@
 # Playback Rental 2.0 — Current Execution Roadmap
 
-_Last updated: 2026-09-17. This is the operational route sheet. `docs/ROADMAP-2.0.md` remains the detailed historical/consolidated record; when its old point-in-time statuses disagree with this file, use this file for current execution state._
+_Last updated: 2026-09-18. This is the operational route sheet. `docs/ROADMAP-2.0.md` remains the detailed historical/consolidated record; when its old point-in-time statuses disagree with this file, use this file for current execution state._
 
 ## Ground rules
 
@@ -55,16 +55,28 @@ A–E were recovered into `2.0` in catch-up commit `eef63c1` after the original 
 
 - ✅ Item 14 — `/admin/analytics` now supports inclusive date-range filtering by order creation date in Kemerovo business time, while preserving exact net-revenue promo-discount allocation. Unit tests cover date validation/boundaries. Merged as `bc91f64`.
 
+### Post-roadmap owner request — direct notifications
+
+- ✅ n8n removed from the 2.0 notification architecture. Checkout and contact events are persisted to a durable local Docker volume and delivered by a dedicated VDS worker.
+- ✅ Direct Telegram Bot API delivery with multiple configured recipients.
+- ✅ Direct MAX Bot API delivery with multiple configured recipients.
+- ✅ Direct SMTP delivery: admin notification plus customer order confirmation.
+- ✅ Optional VK community-message delivery via `messages.send`.
+- ✅ Per-recipient retry state prevents a failed channel from duplicating already-successful channels.
+- ✅ Messenger/SMTP secrets are worker-only; the public `cms` container receives no channel credentials.
+- ⏸ Live provider delivery is a deployment-only smoke test because the VDS/production credentials do not exist during development. See [`NOTIFICATIONS.md`](NOTIFICATIONS.md).
+
 ## QA / documentation state
 
 - ✅ Full PR CI exists for `2.0`: PostgreSQL service → install → Payload types → migrations → lint → typecheck → tests → production build.
-- ✅ The previously missing formal manual checklist is frozen in [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md).
+- ✅ The formal manual checklist is frozen in [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md).
+- ✅ Direct-notification deployment/configuration is documented in [`NOTIFICATIONS.md`](NOTIFICATIONS.md).
 - ✅ The missing audit file referenced by stable code comments was reconstructed, without inventing unavailable prose, as [`audits/2026-08-24-baseline.md`](audits/2026-08-24-baseline.md).
 - ⏳ Final manual smoke execution is still a gate, not completed by documentation alone. Run the local/disposable portion before deployment and the deployment-only portion on the final host.
 
 ## Independent development status
 
-**All independently actionable Wave 1–5 coding items are complete.**
+**All independently actionable Wave 1–5 coding items and the direct-notification replacement are complete.**
 
 What remains is intentionally separated below so deployment work is not confused with product decisions and so owner decisions are not silently guessed by an implementation agent.
 
@@ -88,15 +100,17 @@ Before provisioning the production host:
 
 Only after the user chooses to provision the deployment host/VDS:
 
-1. Provision the host and persistent PostgreSQL/media storage.
-2. Configure production secrets, `WEB_URL`, MoySklad credentials/webhook secret and notification webhook.
-3. Apply migrations and run the one-time existing-media size backfill.
-4. Deploy GlitchTip or choose a hosted Sentry-compatible endpoint; set server/browser DSNs and verify one controlled server error and one controlled browser error.
-5. Run the deployment-only sections of [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md), including checkout → notification → МойСклад end to end.
-6. Confirm database/media backups and an explicit rollback procedure.
-7. Decide `/cms` fate and the `apps/cms` rename only if they are still desired for this release.
-8. Perform cutover from the legacy deployment only after the acceptance record is complete.
+1. Provision the host and persistent PostgreSQL, media and notification-queue storage.
+2. Configure production secrets, `WEB_URL`, MoySklad credentials/webhook secret and direct notification channel credentials.
+3. **Rotate the MAX token that was exposed in the old exported n8n workflow; never reuse that token.**
+4. Apply migrations and run the one-time existing-media size backfill.
+5. Enable `NOTIFICATIONS_ENABLED=true`, start the direct notification worker and verify Telegram, MAX, SMTP and (if configured) VK delivery, including one controlled retry/restart test.
+6. Deploy GlitchTip or choose a hosted Sentry-compatible endpoint; set server/browser DSNs and verify one controlled server error and one controlled browser error.
+7. Run the deployment-only sections of [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md), including checkout → notification → МойСклад end to end.
+8. Confirm database/media backups, notification-queue persistence and an explicit rollback procedure.
+9. Decide `/cms` fate and the `apps/cms` rename only if they are still desired for this release.
+10. Perform cutover from the legacy deployment only after the acceptance record is complete.
 
 ## Immediate next action
 
-**No new independent feature wave remains.** Next: run the pre-deployment/manual smoke pass and resolve the four owner/product decisions above. VDS/production setup remains deliberately postponed until those development/decision gates are complete.
+**No new independent feature wave remains after direct-notification CI/merge.** Next: run the pre-deployment/manual smoke pass and resolve the four owner/product decisions above. VDS/production setup remains deliberately postponed until those development/decision gates are complete.
