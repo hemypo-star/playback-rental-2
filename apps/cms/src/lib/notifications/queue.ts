@@ -66,21 +66,23 @@ export async function enqueueNotification(
   payload: NotificationPayload,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<NotificationQueueResult> {
-  const deliveries = buildNotificationDeliveries(payload, env)
-  if (deliveries.length === 0) {
-    return { success: false, error: 'No notification channels configured' }
+  if ((env.NOTIFICATIONS_ENABLED || '').toLowerCase() !== 'true') {
+    return { success: false, error: 'Direct notifications are disabled' }
   }
 
   const root = notificationQueueRoot(env)
   await ensureNotificationQueue(root)
 
   const id = randomUUID()
+  // Delivery targets are intentionally NOT resolved in the web process.
+  // The worker is the only container that receives bot/API/SMTP credentials;
+  // it expands this empty list from its own environment when it claims the job.
   const job: NotificationJob = {
     version: 1,
     id,
     createdAt: new Date().toISOString(),
     payload,
-    deliveries,
+    deliveries: [],
   }
   const filename = `${Date.now()}-${id}.json`
   const pending = path.join(root, 'pending', filename)
