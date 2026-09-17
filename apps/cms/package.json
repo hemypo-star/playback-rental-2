@@ -18,6 +18,7 @@
     "smoke:promos": "node src/scripts/promo-acceptance-smoke.mjs",
     "smoke:rate-limit-auth": "node src/scripts/rate-limit-auth-smoke.mjs",
     "smoke:admin-data": "node src/scripts/admin-data-smoke.mjs",
+    "smoke:admin-screens": "node src/scripts/admin-screen-smoke.mjs",
     "payload": "payload",
     "generate:types": "payload generate:types",
     "sync:moysklad": "tsx --env-file-if-exists=.env src/scripts/sync-moysklad.ts",
