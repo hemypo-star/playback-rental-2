@@ -118,7 +118,7 @@ jobs:
           SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
         run: pnpm --dir apps/cms smoke:seed
 
-      - name: Browser, security, notifications, lifecycle, promo and auth smoke
+      - name: Browser, security, notifications, lifecycle, promo, auth and admin smoke
         env:
           NODE_ENV: production
           NOTIFICATIONS_ENABLED: 'true'
@@ -184,6 +184,12 @@ jobs:
           fi
 
           if ! pnpm --dir apps/cms smoke:rate-limit-auth; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-browser.log
+            exit 1
+          fi
+
+          if ! pnpm --dir apps/cms smoke:admin-screens; then
             echo '--- Next runtime log ---'
             cat /tmp/playback-browser.log
             exit 1
