@@ -69,10 +69,17 @@ A–E were recovered into `2.0` in catch-up commit `eef63c1` after the original 
 ## QA / documentation state
 
 - ✅ Full PR CI exists for `2.0`: PostgreSQL service → install → Payload types → migrations → lint → typecheck → tests → production build.
-- ✅ The formal manual checklist is frozen in [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md).
+- ✅ Production runtime smoke verifies core public routes, Payload access, admin auth redirects and malformed contact-request rejection.
+- ✅ Headless-Chrome smoke verifies browser runtime errors, 375px overflow on core storefront routes, reduced-motion rendering, seeded catalog/search/category/product flows and a real checkout submission.
+- ✅ Security/lifecycle smoke verifies public order isolation, order hard-delete denial, final-item cancellation and availability release.
+- ✅ Promo acceptance verifies percentage/fixed codes, inactive/expired/unknown codes, threshold behaviour and order-level persisted discount math.
+- ✅ Rate-limit/auth smoke verifies real HTTP limits and admin authentication boundaries.
+- ✅ Admin-data/content smoke verifies admin page rendering, analytics date-range behaviour, category/user CRUD, SiteSettings preservation, product field ownership, media upload/alt edit, promotion CRUD and password change/re-login.
+- ✅ Docker regression coverage verifies `pnpm@11.21.0` is available inside the image with `--network none`, preventing the Codespaces/runtime Corepack download failure fixed in PR #19.
+- ✅ The acceptance checklist is maintained in [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md), with CI-confirmed items marked separately from manual/VDS checks.
 - ✅ Direct-notification deployment/configuration is documented in [`NOTIFICATIONS.md`](NOTIFICATIONS.md).
 - ✅ The missing audit file referenced by stable code comments was reconstructed, without inventing unavailable prose, as [`audits/2026-08-24-baseline.md`](audits/2026-08-24-baseline.md).
-- ⏳ Final manual smoke execution is still a gate, not completed by documentation alone. Run the local/disposable portion before deployment and the deployment-only portion on the final host.
+- ⏳ Remaining pre-deployment QA is primarily visual/manual and real-МойСклад integration. Provider delivery, GlitchTip and persistence/backup checks remain deployment-only.
 
 ## Independent development status
 
@@ -84,17 +91,19 @@ What remains is intentionally separated below so deployment work is not confused
 
 - ⏸ Item 11 — auto-cancel abandoned checkout orders. Prior discussion indicates this is probably unnecessary because every request is handled manually after notification; confirm decline/acceptance before building anything.
 - ⏸ Manual order creation — decide whether operators need a first-class `/admin` flow for creating an order before cutover.
-- ⏸ Retire `/cms` — currently retained as a break-glass fallback. Remove only after an explicit decision and after every needed operation has an intentional replacement in `/admin`.
+- ⏸ Retire `/cms` — currently retained as a break-glass fallback. It is a route inside the existing Next/Payload `cms` service, not a separate container, so idle CPU/RAM impact is negligible; the real tradeoff is extra authenticated admin attack surface and maintenance. Operational recommendation: keep it through the initial cutover/rollback window, then retire it only after `/admin` has proven sufficient.
 - ⏸ Rename `apps/cms` — naming/clarity only; the directory now contains the whole application. This does not block functionality or deployment.
 
 ## Pre-deployment QA gate
 
 Before provisioning the production host:
 
-1. Run the non-deployment sections of [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md) against a disposable environment with representative data.
-2. Resolve any defect found by that run on a short-lived branch into `2.0`.
-3. Resolve the owner/product decisions above that are considered cutover blockers; explicitly mark non-blockers as deferred/declined rather than leaving them ambiguous.
-4. Confirm the exact `2.0` SHA that will become the deployment candidate.
+1. ✅ Automated disposable-environment acceptance is in CI and currently covers runtime/browser/checkout/security/order lifecycle/promo/rate-limit/admin/analytics/media/settings/password plus Docker offline-pnpm startup.
+2. ⏳ Run the remaining visual/manual storefront + admin checks in [`SMOKE-TEST-2.0.md`](SMOKE-TEST-2.0.md).
+3. ⏳ Run the real-МойСклад integration section with the intended non-legacy credentials.
+4. Resolve any defect found by those checks on a short-lived branch into `2.0`.
+5. Resolve the owner/product decisions above that are considered cutover blockers; explicitly mark non-blockers as deferred/declined rather than leaving them ambiguous.
+6. Confirm the exact `2.0` SHA that will become the deployment candidate.
 
 ## Final deployment gate
 
@@ -113,4 +122,4 @@ Only after the user chooses to provision the deployment host/VDS:
 
 ## Immediate next action
 
-**No new independent feature wave remains after direct-notification CI/merge.** Next: run the pre-deployment/manual smoke pass and resolve the four owner/product decisions above. VDS/production setup remains deliberately postponed until those development/decision gates are complete.
+**No independent feature wave remains.** Automated pre-deployment acceptance is now broad and green. Next: complete the remaining visual/manual smoke pass, run the real-МойСклад integration checks, and resolve the four owner/product decisions above. VDS/production setup remains postponed until those gates are complete.
