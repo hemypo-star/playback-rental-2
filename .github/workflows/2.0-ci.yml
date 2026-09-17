@@ -126,7 +126,7 @@ jobs:
           SMOKE_BASE_URL: http://127.0.0.1:3000
           SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
           SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
-          RATE_LIMIT_LOGIN_ACCOUNT_MAX: '2'
+          RATE_LIMIT_LOGIN_ACCOUNT_MAX: '3'
           RATE_LIMIT_CONTACT_EMAIL_MAX: '2'
           TELEGRAM_BOT_TOKEN: ci-telegram-secret-sentinel
           TELEGRAM_CHAT_IDS: ci-telegram-recipient-sentinel
