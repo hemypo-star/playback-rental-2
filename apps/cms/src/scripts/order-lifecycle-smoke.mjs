@@ -28,10 +28,16 @@ async function main() {
     body: JSON.stringify({ email: adminEmail, password: adminPassword }),
     redirect: 'manual',
   })
-  if (!login.ok) throw new Error(`Admin login failed: HTTP ${login.status} ${await login.text()}`)
-  const cookie = login.headers.get('set-cookie')
-  if (!cookie) throw new Error('Admin login returned no session cookie')
-  const authHeaders = { Cookie: cookie.split(';', 1)[0] }
+  const loginBody = await json(login)
+  if (!login.ok) throw new Error(`Admin login failed: HTTP ${login.status} ${JSON.stringify(loginBody)}`)
+  if (!loginBody?.token) throw new Error(`Admin login returned no JWT token: ${JSON.stringify(loginBody)}`)
+
+  // This smoke runs in Node, not in a browser, so there is no automatic
+  // cookie jar between fetch() calls. Use Payload's login JWT explicitly
+  // instead of relying on Set-Cookie persistence that Node fetch does not
+  // provide. This exercises the same authenticated access policy without
+  // coupling the test to browser cookie behavior already covered elsewhere.
+  const authHeaders = { Authorization: `JWT ${loginBody.token}` }
   console.log('PASS lifecycle admin login')
 
   const orderSearch = await fetch(
