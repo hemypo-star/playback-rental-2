@@ -82,6 +82,8 @@ Use disposable customer data.
 
 ## 6. Orders admin
 
+- [x] (CI) `/admin/orders/new` renders and manual-order service creates a pending priced order without auto-submitting to МойСклад/notifications.
+- [ ] Visually create one manual order with multiple positions and confirm the resulting detail screen is usable before explicit external submission.
 - [ ] Orders list pagination works and preserves active filters.
 - [ ] Status filter works.
 - [ ] Phone/name search works.
@@ -172,7 +174,7 @@ Run while `/cms` is still intentionally retained.
 - [ ] `/cms` login works.
 - [ ] Core collections/globals are readable.
 - [ ] One harmless edit/save can be completed.
-- [ ] Decide explicitly whether `/cms` remains as a break-glass tool or is retired before cutover; do not remove it implicitly as part of another change.
+- [x] Decision: keep `/cms` as a break-glass fallback for this release, with no additional proxy/IP protection requested.
 
 ## 12. Final deployment/cutover checks
 
