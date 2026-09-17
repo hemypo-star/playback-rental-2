@@ -55,6 +55,8 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
         // that were the whole result. pluralizeRu because 1/2/5 take three
         // different forms — the same helper the catalog and homepage use.
         subtitle={`${result.totalDocs} ${pluralizeRu(result.totalDocs, 'заказ', 'заказа', 'заказов')}${hasFilters ? ' по фильтру' : ''}`}
+        actionLabel="Новый заказ"
+        actionHref="/admin/orders/new"
       />
       <AdminKpiCards kpi={kpi} />
 
