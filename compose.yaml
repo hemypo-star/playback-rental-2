@@ -28,6 +28,11 @@ services:
     build:
       context: .
       dockerfile: apps/cms/Dockerfile
+      args:
+        # NEXT_PUBLIC_* is compiled into the browser bundle. The GlitchTip
+        # DSN is an ingestion address (safe to expose), not an admin secret.
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
     restart: unless-stopped
     depends_on:
       db:
@@ -44,6 +49,10 @@ services:
       # proxy/load balancer/CDN in front of this container rewrites Origin.
       WEB_URL: ${WEB_URL:?set WEB_URL in .env}
       MEDIA_STATIC_DIR: /data/media
+      # Error monitoring is disabled when the DSN is empty. Browser-side
+      # monitoring uses the corresponding NEXT_PUBLIC_* build args above.
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
       NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
@@ -93,12 +102,17 @@ services:
     build:
       context: .
       dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
     restart: unless-stopped
     environment:
       NODE_ENV: production
       DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
       MEDIA_STATIC_DIR: /data/media
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_RECONCILE_INTERVAL_MIN: ${MOYSKLAD_RECONCILE_INTERVAL_MIN:-60}
     volumes:
@@ -118,11 +132,16 @@ services:
     build:
       context: .
       dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
     environment:
       NODE_ENV: production
       DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
       MEDIA_STATIC_DIR: /data/media
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
     volumes:
       - cms_media:/data/media
@@ -136,11 +155,16 @@ services:
     build:
       context: .
       dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
     environment:
       NODE_ENV: production
       DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
       MEDIA_STATIC_DIR: /data/media
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
     volumes:
       - cms_media:/data/media
@@ -154,10 +178,15 @@ services:
     build:
       context: .
       dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
     environment:
       NODE_ENV: production
       DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
       PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
       # The webhook target is *this* deployment's public API — WEB_URL, not

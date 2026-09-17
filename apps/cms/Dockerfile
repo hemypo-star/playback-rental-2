@@ -47,6 +47,14 @@ COPY apps/cms apps/cms
 # fixed there via a bind mount instead (see that file's own comment).
 COPY docs docs
 WORKDIR /repo/apps/cms
+# NEXT_PUBLIC_* values are compiled into browser bundles by Next.js, so the
+# GlitchTip browser DSN/environment must exist during this build stage. A DSN
+# is an ingestion endpoint, not an admin credential; the server DSN remains
+# runtime-only and is not copied into the client bundle.
+ARG NEXT_PUBLIC_GLITCHTIP_DSN=
+ARG NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT=production
+ENV NEXT_PUBLIC_GLITCHTIP_DSN=$NEXT_PUBLIC_GLITCHTIP_DSN
+ENV NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT=$NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT
 # Baked in here, not left to a developer's local `generate:importmap` run,
 # so a forgotten regeneration can never ship stale (see CLAUDE.md gotcha).
 # DATABASE_URI isn't reachable at build time (no db service exists yet in
