@@ -47,9 +47,10 @@ test('delivery plan enables only configured channels', () => {
   )
 })
 
-test('enqueue persists a durable job without channel secrets', async () => {
+test('enqueue persists a durable job without channel credentials or recipients', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'playback-notifications-'))
   const env: NodeJS.ProcessEnv = {
+    NOTIFICATIONS_ENABLED: 'true',
     NOTIFICATION_QUEUE_DIR: root,
     TELEGRAM_BOT_TOKEN: 'must-not-be-written',
     TELEGRAM_CHAT_IDS: '123',
@@ -62,19 +63,20 @@ test('enqueue persists a durable job without channel secrets', async () => {
     assert.equal(files.length, 1)
     const stored = await readFile(path.join(root, 'pending', files[0]), 'utf8')
     assert.ok(!stored.includes('must-not-be-written'))
+    assert.ok(!stored.includes('"123"'))
     assert.match(stored, /"orderId": 7/)
-    assert.match(stored, /"recipient": "123"/)
+    assert.match(stored, /"deliveries": \[\]/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
 })
 
-test('enqueue reports disabled notifications instead of creating an empty job', async () => {
+test('enqueue reports disabled notifications when the local worker is disabled', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'playback-notifications-empty-'))
   try {
     const result = await enqueueNotification(payload, { NOTIFICATION_QUEUE_DIR: root })
     assert.equal(result.success, false)
-    assert.match(result.error || '', /No notification channels configured/)
+    assert.match(result.error || '', /Direct notifications are disabled/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
