@@ -1,7 +1,11 @@
 import { readFile, readdir, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { sendNotificationDelivery } from '../lib/notifications/channels'
-import { ensureNotificationQueue, notificationQueueRoot } from '../lib/notifications/queue'
+import {
+  buildNotificationDeliveries,
+  ensureNotificationQueue,
+  notificationQueueRoot,
+} from '../lib/notifications/queue'
 import type { NotificationJob } from '../lib/notifications/types'
 
 const root = notificationQueueRoot()
@@ -56,6 +60,20 @@ async function processJob(name: string): Promise<void> {
     console.error('notifications: invalid queue job', name, error)
     await rename(processingPath, path.join(root, 'failed', name))
     return
+  }
+
+  // The web container deliberately receives no Telegram/MAX/VK/SMTP
+  // credentials. Resolve recipients exactly once here, in the worker that
+  // owns those secrets, then persist the plan so successful recipients are
+  // never repeated just because another channel needs a retry.
+  if (job.deliveries.length === 0) {
+    job.deliveries = buildNotificationDeliveries(job.payload)
+    if (job.deliveries.length === 0) {
+      console.error('notifications: no delivery channels are configured; moving job to failed', name)
+      await atomicWrite(processingPath, job)
+      await rename(processingPath, path.join(root, 'failed', name))
+      return
+    }
   }
 
   const now = Date.now()
