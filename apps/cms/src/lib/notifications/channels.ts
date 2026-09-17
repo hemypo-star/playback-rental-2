@@ -11,7 +11,8 @@ function clip(text: string, max = 4000): string {
 
 function stableRandomId(value: string): string {
   const digest = createHash('sha256').update(value).digest()
-  return String(digest.readUInt32BE(0) & 0x7fffffff)
+  const id = digest.readUInt32BE(0) & 0x7fffffff
+  return String(id || 1)
 }
 
 async function responseError(response: Response, channel: string): Promise<never> {
@@ -60,7 +61,7 @@ async function sendVk(jobId: string, deliveryId: string, recipient: string, text
     random_id: stableRandomId(`${jobId}:${deliveryId}`),
     message: clip(text),
   })
-  const response = await fetch('https://api.vk.ru/method/messages.send', {
+  const response = await fetch('https://api.vk.com/method/messages.send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
