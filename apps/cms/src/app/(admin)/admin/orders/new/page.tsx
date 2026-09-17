@@ -18,7 +18,7 @@ export default async function NewAdminOrderPage() {
           title: product.title,
           listingType: product.listingType,
           price: product.price,
-          available: product.available,
+          available: product.available !== false,
         }))}
       />
     </>
