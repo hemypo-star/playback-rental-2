@@ -257,6 +257,23 @@ jobs:
           }
           trap cleanup EXIT
 
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:3000/api/access > /dev/null; then
+              break
+            fi
+            if ! kill -0 "$CMS_PID" 2>/dev/null; then
+              echo 'Next runtime exited before becoming ready'
+              cat /tmp/playback-admin-content.log
+              exit 1
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo 'Next runtime did not become ready in time'
+              cat /tmp/playback-admin-content.log
+              exit 1
+            fi
+            sleep 1
+          done
+
           if ! node apps/cms/src/scripts/admin-content-smoke.mjs; then
             echo '--- Next runtime log ---'
             cat /tmp/playback-admin-content.log
