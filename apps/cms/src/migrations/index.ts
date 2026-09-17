@@ -6,6 +6,7 @@ import * as migration_20260910_130000_rate_limit_hits_prune_idx from './20260910
 import * as migration_20260911_090000_rate_limit_hits_uuid_pk from './20260911_090000_rate_limit_hits_uuid_pk';
 import * as migration_20260911_140000_site_settings_business_hours from './20260911_140000_site_settings_business_hours';
 import * as migration_20260912_090000_add_promo_codes from './20260912_090000_add_promo_codes';
+import * as migration_20260918_010000_media_card_large_sizes from './20260918_010000_media_card_large_sizes';
 
 export const migrations = [
   {
@@ -47,5 +48,10 @@ export const migrations = [
     up: migration_20260912_090000_add_promo_codes.up,
     down: migration_20260912_090000_add_promo_codes.down,
     name: '20260912_090000_add_promo_codes',
+  },
+  {
+    up: migration_20260918_010000_media_card_large_sizes.up,
+    down: migration_20260918_010000_media_card_large_sizes.down,
+    name: '20260918_010000_media_card_large_sizes',
   },
 ];
