@@ -1,7 +1,9 @@
+import { unstable_cache } from 'next/cache'
 import { getPayload } from 'payload'
 import type { Where } from 'payload'
 import config from '@payload-config'
 import type { Product } from '../../payload-types'
+import { STOREFRONT_CACHE_REVALIDATE_SECONDS, STOREFRONT_CACHE_TAGS } from './cacheTags'
 
 // Server-only data layer (docs/PLAN-next-migration.md Stage 2 "Данные"),
 // same pattern as lib/data/siteSettings.ts. Local API `where` takes a
@@ -78,26 +80,33 @@ export async function getProducts(params: GetProductsParams = {}) {
 // counts, exactly as it always has — only where the raw numbers come from
 // changed, not how they're combined.
 //
-// Scale note, left here rather than acted on (flagged during the live pass
-// that fixed getCategories()'s own `limit: 100` in the sibling
-// lib/data/categories.ts, not restructured as part of it): this is one
-// round trip per category, in parallel, on every catalog render — fine at
-// a local Postgres and the realistic category counts this shop actually
-// has, but linear in category count with no cap. If that count ever grows
-// into the hundreds, this is the function to revisit (a single grouped
-// aggregate query, most likely), not getCategories() itself.
+// Backlog item 13: cache only these aggregate entries, not getProducts()
+// itself. Product cards and availability stay request-fresh; category facet
+// counts are safe to reuse briefly and are invalidated immediately after
+// custom-admin writes. The 60s TTL also bounds staleness for standalone
+// MoySklad sync/reconcile writes that happen outside the Next process.
+const getCategoryProductCountEntriesCached = unstable_cache(
+  async (categoryIds: number[]): Promise<Array<[number, number]>> => {
+    const payload = await getPayload({ config })
+    return Promise.all(
+      categoryIds.map(async (id): Promise<[number, number]> => {
+        const { totalDocs } = await payload.count({
+          collection: 'products',
+          where: buildProductWhere([{ category: { equals: id } }]),
+        })
+        return [id, totalDocs]
+      }),
+    )
+  },
+  ['catalog-category-product-counts-v1'],
+  {
+    revalidate: STOREFRONT_CACHE_REVALIDATE_SECONDS,
+    tags: [STOREFRONT_CACHE_TAGS.catalogFacets],
+  },
+)
+
 export async function getCategoryProductCounts(categoryIds: number[]): Promise<Map<number, number>> {
-  const payload = await getPayload({ config })
-  const entries = await Promise.all(
-    categoryIds.map(async (id): Promise<[number, number]> => {
-      const { totalDocs } = await payload.count({
-        collection: 'products',
-        where: buildProductWhere([{ category: { equals: id } }]),
-      })
-      return [id, totalDocs]
-    }),
-  )
-  return new Map(entries)
+  return new Map(await getCategoryProductCountEntriesCached(categoryIds))
 }
 
 export interface CategoryProductStats {
@@ -109,11 +118,6 @@ export interface CategoryProductStats {
 // page.tsx used to fetch getProducts({ limit: 500 }) and tally per-category
 // count + cheapest price from those documents in JS — the same waste C5
 // removed from the catalog sidebar, one page over.
-// (Numbering trap for a future reader: the audit's own id for this class of
-// waste is N9, just above, and it names the sidebar specifically. Audit
-// finding N10 is something else entirely — "заявку можно отправить на
-// занятое оборудование", closed by A4. The 10 here is the roadmap backlog's
-// numbering, not the audit's.)
 //
 // Same treatment as C5, one difference: the sidebar renders a count and
 // nothing else, so getCategoryProductCounts above stays a plain COUNT(*);
@@ -128,70 +132,93 @@ export interface CategoryProductStats {
 // preserving the distinction the old JS tally had for free (a category
 // nothing landed in was simply never added) and which categoryMeta() still
 // relies on to render an empty meta line instead of "0 позиций · от 0 ₽".
-//
-// Same per-category-round-trip scale note as getCategoryProductCounts
-// applies here, and more so — see that function's comment.
+const getCategoryProductStatEntriesCached = unstable_cache(
+  async (categoryIds: number[]): Promise<Array<[number, CategoryProductStats]>> => {
+    const payload = await getPayload({ config })
+    const entries = await Promise.all(
+      categoryIds.map(async (id): Promise<[number, CategoryProductStats] | null> => {
+        const { docs, totalDocs } = await payload.find({
+          collection: 'products',
+          where: buildProductWhere([{ category: { equals: id } }]),
+          sort: 'price',
+          limit: 1,
+          depth: 0,
+          select: { price: true },
+        })
+        const cheapest = docs[0]
+        if (!cheapest) return null
+        return [id, { count: totalDocs, minPrice: cheapest.price }]
+      }),
+    )
+    return entries.filter((entry): entry is [number, CategoryProductStats] => entry !== null)
+  },
+  ['catalog-category-product-stats-v1'],
+  {
+    revalidate: STOREFRONT_CACHE_REVALIDATE_SECONDS,
+    tags: [STOREFRONT_CACHE_TAGS.catalogFacets],
+  },
+)
+
 export async function getCategoryProductStats(categoryIds: number[]): Promise<Map<number, CategoryProductStats>> {
-  const payload = await getPayload({ config })
-  const entries = await Promise.all(
-    categoryIds.map(async (id): Promise<[number, CategoryProductStats] | null> => {
-      const { docs, totalDocs } = await payload.find({
-        collection: 'products',
-        where: buildProductWhere([{ category: { equals: id } }]),
-        sort: 'price',
-        limit: 1,
-        depth: 0,
-        select: { price: true },
-      })
-      const cheapest = docs[0]
-      if (!cheapest) return null
-      return [id, { count: totalDocs, minPrice: cheapest.price }]
-    }),
-  )
-  return new Map(entries.filter((entry): entry is [number, CategoryProductStats] => entry !== null))
+  return new Map(await getCategoryProductStatEntriesCached(categoryIds))
 }
 
 // Backlog item 10: the homepage's two headline stats, previously derived by
 // fetching 500 documents and calling .length on two filtered copies of
-// them. `total` is
-// every available product ("Позиций в парке"), `inStock` those that also have
-// stock on hand ("Свободны сегодня") — note buildProductWhere() already
-// constrains both to available: true, which is why the second one only has
-// to add the quantity clause.
+// them. `total` is every available product ("Позиций в парке"), `inStock`
+// those that also have stock on hand ("Свободны сегодня").
 export interface ProductTotals {
   total: number
   inStock: number
 }
 
+const getProductTotalsCached = unstable_cache(
+  async (): Promise<ProductTotals> => {
+    const payload = await getPayload({ config })
+    const [all, inStock] = await Promise.all([
+      payload.count({ collection: 'products', where: buildProductWhere() }),
+      payload.count({ collection: 'products', where: buildProductWhere([{ quantity: { greater_than: 0 } }]) }),
+    ])
+    return { total: all.totalDocs, inStock: inStock.totalDocs }
+  },
+  ['catalog-product-totals-v1'],
+  {
+    revalidate: STOREFRONT_CACHE_REVALIDATE_SECONDS,
+    tags: [STOREFRONT_CACHE_TAGS.catalogFacets],
+  },
+)
+
 export async function getProductTotals(): Promise<ProductTotals> {
-  const payload = await getPayload({ config })
-  const [all, inStock] = await Promise.all([
-    payload.count({ collection: 'products', where: buildProductWhere() }),
-    payload.count({ collection: 'products', where: buildProductWhere([{ quantity: { greater_than: 0 } }]) }),
-  ])
-  return { total: all.totalDocs, inStock: inStock.totalDocs }
+  return getProductTotalsCached()
 }
 
 // Backlog item 10: the homepage hero's "от N ₽". Undefined only when the
 // catalog holds no available rental listing at all, which is what hides the
-// hero line — same as the old `rentalPrices.length ? Math.min(...) :
-// undefined` guard. A real 0 ₽ rental still returns 0 and still renders
-// "от 0 ₽", so the caller has to test for undefined rather than falsiness,
-// exactly as it did before.
-// pagination: false skips the count query Payload would otherwise run
-// alongside this, since nothing here reads totalDocs.
+// hero line. pagination:false skips the count query Payload would otherwise
+// run alongside this, since nothing here reads totalDocs.
+const getLowestRentalPriceCached = unstable_cache(
+  async (): Promise<number | undefined> => {
+    const payload = await getPayload({ config })
+    const { docs } = await payload.find({
+      collection: 'products',
+      where: buildProductWhere([{ listingType: { equals: 'rental' } }]),
+      sort: 'price',
+      limit: 1,
+      depth: 0,
+      pagination: false,
+      select: { price: true },
+    })
+    return docs[0]?.price
+  },
+  ['catalog-lowest-rental-price-v1'],
+  {
+    revalidate: STOREFRONT_CACHE_REVALIDATE_SECONDS,
+    tags: [STOREFRONT_CACHE_TAGS.catalogFacets],
+  },
+)
+
 export async function getLowestRentalPrice(): Promise<number | undefined> {
-  const payload = await getPayload({ config })
-  const { docs } = await payload.find({
-    collection: 'products',
-    where: buildProductWhere([{ listingType: { equals: 'rental' } }]),
-    sort: 'price',
-    limit: 1,
-    depth: 0,
-    pagination: false,
-    select: { price: true },
-  })
-  return docs[0]?.price
+  return getLowestRentalPriceCached()
 }
 
 // Backlog item 10, the self-contained half: product/[id]/page.tsx's "Совместимые

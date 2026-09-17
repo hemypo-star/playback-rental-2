@@ -10,8 +10,9 @@
 import { getPayload } from 'payload'
 import { APIError } from 'payload'
 import config from '@payload-config'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { getAdminUser } from '../../../../lib/admin/auth'
+import { STOREFRONT_CACHE_TAGS } from '../../../../lib/data/cacheTags'
 
 export interface ActionResult {
   success: boolean
@@ -61,6 +62,7 @@ export async function saveSiteSettings(data: SiteSettingsInput): Promise<ActionR
     await requireAdmin()
     const payload = await getPayload({ config })
     await payload.updateGlobal({ slug: 'site-settings', data, overrideAccess: true })
+    updateTag(STOREFRONT_CACHE_TAGS.siteSettings)
     revalidatePath('/admin/settings')
     // B4 (design_handoff_swiss_bento/08-instruction.md, audit N5) — SiteSettings
     // (including businessHoursOpen/Close) now also feeds (frontend)/layout.tsx
