@@ -1,6 +1,6 @@
 import type { Media } from '../payload-types'
 
-export type MediaSize = 'thumbnail' | 'card' | 'large'
+export type MediaSize = 'thumbnail' | 'card' | 'large' | 'original'
 
 // Ported from apps/web/src/lib/payload.ts's mediaUrl() (docs/PLAN-next-
 // migration.md Stage 2). The REST version received `{ url: string } |
@@ -10,18 +10,20 @@ export type MediaSize = 'thumbnail' | 'card' | 'large'
 // natively by this app's own (payload) route group — no origin to resolve
 // here, unlike apps/web's old CMS_INTERNAL_URL/PUBLIC_PAYLOAD_URL split.
 //
-// Backlog item 9: callers rendering a known visual slot can request a
-// pre-generated Payload source so Next/Image does not have to pull the
-// original upload into a cold optimizer cache first. Existing media that
-// predates a size remains safe: Payload leaves that size absent until it is
-// regenerated, and we deliberately fall back to the original URL.
+// Backlog item 9: default to the 1600px width-preserving source. That is
+// large enough for every current hero/gallery slot (including high-density
+// displays) while preventing Next/Image and ordinary <img> previews from
+// fetching an unrestricted multi-megabyte original first. High-volume card
+// grids explicitly request `card`; a caller that genuinely needs the source
+// upload can opt into `original`. Existing media that predates a generated
+// size remains safe because every sized lookup falls back to `media.url`.
 export function mediaUrl(
   media: Media | number | null | undefined,
-  size?: MediaSize,
+  size: MediaSize = 'large',
 ): string | undefined {
   if (!media || typeof media === 'number') return undefined
 
-  if (size) {
+  if (size !== 'original') {
     const sizedUrl = media.sizes?.[size]?.url
     if (sizedUrl) return sizedUrl
   }
