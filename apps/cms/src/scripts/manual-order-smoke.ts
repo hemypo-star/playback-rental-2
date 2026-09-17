@@ -78,6 +78,7 @@ async function main() {
   }
 
   console.log('Manual order smoke passed')
+  process.exit(0)
 }
 
 main().catch((error) => {
