@@ -432,31 +432,52 @@ async function main() {
     }
     if (!version) throw new Error('Chrome CDP not ready')
 
+    // Phase 1: render all prototype references first, matching the proven
+    // standalone diagnostic sequence exactly.
     const referenceTargetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
-    const actualTargetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
     const referenceTarget = await referenceTargetResponse.json()
-    const actualTarget = await actualTargetResponse.json()
-
     referenceCdp = new CdpSession(referenceTarget.webSocketDebuggerUrl)
-    actualCdp = new CdpSession(actualTarget.webSocketDebuggerUrl)
     await referenceCdp.open()
-    await actualCdp.open()
-
-    for (const session of [referenceCdp, actualCdp]) {
-      await session.send('Page.enable')
-      await session.send('Runtime.enable')
-      await session.send('Log.enable')
-      await session.send('Network.enable')
-    }
+    await referenceCdp.send('Page.enable')
+    await referenceCdp.send('Runtime.enable')
+    await referenceCdp.send('Log.enable')
+    await referenceCdp.send('Network.enable')
+    await referenceCdp.send('Page.addScriptToEvaluateOnNewDocument', { source: reference.bootstrap })
 
     const referenceErrors = []
-    const actualErrors = []
     referenceCdp.on('Runtime.exceptionThrown', (params) => {
       referenceErrors.push('EXCEPTION ' + (params.exceptionDetails?.exception?.description || params.exceptionDetails?.text || ''))
     })
     referenceCdp.on('Log.entryAdded', (params) => {
       if (params.entry?.level === 'error') referenceErrors.push('LOG ' + params.entry.text)
     })
+
+    const referenceFiles = new Map()
+    for (const viewport of viewports) {
+      for (const screen of screens) {
+        const stem = screen.id + '-' + viewport.id
+        const referenceFile = path.join(outputDir, stem + '-reference.png')
+        await openReference(referenceCdp, screen, viewport)
+        await capture(referenceCdp, referenceFile)
+        referenceFiles.set(stem, referenceFile)
+        console.log('REFERENCE ' + screen.id + '/' + viewport.id + ' captured')
+      }
+    }
+    referenceCdp.close()
+    referenceCdp = null
+
+    // Phase 2: create a clean target for the real Next app only after all
+    // prototype screenshots exist. No React 18 bootstrap is installed here.
+    const actualTargetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
+    const actualTarget = await actualTargetResponse.json()
+    actualCdp = new CdpSession(actualTarget.webSocketDebuggerUrl)
+    await actualCdp.open()
+    await actualCdp.send('Page.enable')
+    await actualCdp.send('Runtime.enable')
+    await actualCdp.send('Log.enable')
+    await actualCdp.send('Network.enable')
+
+    const actualErrors = []
     actualCdp.on('Runtime.exceptionThrown', (params) => {
       actualErrors.push('EXCEPTION ' + (params.exceptionDetails?.exception?.description || params.exceptionDetails?.text || ''))
     })
@@ -479,12 +500,10 @@ async function main() {
 
       for (const screen of screens) {
         const stem = screen.id + '-' + viewport.id
-        const referenceFile = path.join(outputDir, stem + '-reference.png')
+        const referenceFile = referenceFiles.get(stem)
         const actualFile = path.join(outputDir, stem + '-actual.png')
         const diffFile = path.join(outputDir, stem + '-diff.png')
 
-        await openReference(referenceCdp, screen, viewport)
-        await capture(referenceCdp, referenceFile)
         await openActual(actualCdp, screen, viewport, productPath)
         await capture(actualCdp, actualFile)
 
@@ -534,6 +553,15 @@ async function main() {
       ].join('\n'),
     )
   } catch (error) {
+    if (referenceCdp) {
+      try {
+        const state = await evaluate(
+          referenceCdp,
+          "({ready:document.readyState,hasRoot:Boolean(document.querySelector('#dc-root')),hasReact:Boolean(window.React),hasReactDOM:Boolean(window.ReactDOM),hasBabel:Boolean(window.Babel),bodyText:document.body?.innerText?.slice(0,500)||'',scripts:Array.from(document.scripts).map(s=>s.src||'[inline]')})",
+        )
+        console.error('REFERENCE_STATE', JSON.stringify(state))
+      } catch {}
+    }
     console.error(error)
     if (chromeStderr) console.error(chromeStderr.slice(-5000))
     throw error
