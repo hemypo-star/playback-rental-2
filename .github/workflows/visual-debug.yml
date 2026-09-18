@@ -6,7 +6,7 @@ on:
       - chatgpt/visual-regression-debug
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   visual:
@@ -62,6 +62,24 @@ jobs:
         env:
           VISUAL_BASE_URL: http://127.0.0.1:3000
         run: pnpm --dir apps/cms exec node src/scripts/visual-regression.mjs
+      - name: Commit prototype reference baselines
+        run: |
+          mkdir -p /tmp/playback-visual-baselines
+          cp apps/cms/artifacts/visual-regression/*-reference.png /tmp/playback-visual-baselines/
+
+          git fetch origin frontend-rebuild-from-html
+          git checkout -B visual-baseline-target origin/frontend-rebuild-from-html
+          mkdir -p apps/cms/visual-baselines
+          cp /tmp/playback-visual-baselines/* apps/cms/visual-baselines/
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/cms/visual-baselines
+          if ! git diff --cached --quiet; then
+            git commit -m "test: add prototype visual baselines [skip ci]"
+            git push origin HEAD:frontend-rebuild-from-html
+          fi
+
       - name: Upload visual artifact
         if: always()
         uses: actions/upload-artifact@v4
