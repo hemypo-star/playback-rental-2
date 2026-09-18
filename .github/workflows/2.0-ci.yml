@@ -55,6 +55,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter cms...
 
+      - name: Diagnose prototype reference render
+        run: node apps/cms/src/scripts/reference-render-debug.mjs
+
       - name: Validate Docker Compose
         env:
           POSTGRES_PASSWORD: ci-only-compose-password
