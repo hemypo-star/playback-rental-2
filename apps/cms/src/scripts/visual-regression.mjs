@@ -412,7 +412,8 @@ async function main() {
     if (chromeStderr.length > 20000) chromeStderr = chromeStderr.slice(-20000)
   })
 
-  let cdp
+  let referenceCdp
+  let actualCdp
   try {
     let version
     for (let attempt = 0; attempt < 100 && !version; attempt++) {
@@ -424,23 +425,37 @@ async function main() {
     }
     if (!version) throw new Error('Chrome CDP not ready')
 
-    const targetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
-    const target = await targetResponse.json()
+    const referenceTargetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
+    const actualTargetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
+    const referenceTarget = await referenceTargetResponse.json()
+    const actualTarget = await actualTargetResponse.json()
 
-    cdp = new CdpSession(target.webSocketDebuggerUrl)
-    await cdp.open()
-    await cdp.send('Page.enable')
-    await cdp.send('Runtime.enable')
-    await cdp.send('Log.enable')
-    await cdp.send('Network.enable')
-    await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: reference.bootstrap })
+    referenceCdp = new CdpSession(referenceTarget.webSocketDebuggerUrl)
+    actualCdp = new CdpSession(actualTarget.webSocketDebuggerUrl)
+    await referenceCdp.open()
+    await actualCdp.open()
 
-    const browserErrors = []
-    cdp.on('Runtime.exceptionThrown', (params) => {
-      browserErrors.push('EXCEPTION ' + (params.exceptionDetails?.exception?.description || params.exceptionDetails?.text || ''))
+    for (const session of [referenceCdp, actualCdp]) {
+      await session.send('Page.enable')
+      await session.send('Runtime.enable')
+      await session.send('Log.enable')
+      await session.send('Network.enable')
+    }
+    await referenceCdp.send('Page.addScriptToEvaluateOnNewDocument', { source: reference.bootstrap })
+
+    const referenceErrors = []
+    const actualErrors = []
+    referenceCdp.on('Runtime.exceptionThrown', (params) => {
+      referenceErrors.push('EXCEPTION ' + (params.exceptionDetails?.exception?.description || params.exceptionDetails?.text || ''))
     })
-    cdp.on('Log.entryAdded', (params) => {
-      if (params.entry?.level === 'error') browserErrors.push('LOG ' + params.entry.text)
+    referenceCdp.on('Log.entryAdded', (params) => {
+      if (params.entry?.level === 'error') referenceErrors.push('LOG ' + params.entry.text)
+    })
+    actualCdp.on('Runtime.exceptionThrown', (params) => {
+      actualErrors.push('EXCEPTION ' + (params.exceptionDetails?.exception?.description || params.exceptionDetails?.text || ''))
+    })
+    actualCdp.on('Log.entryAdded', (params) => {
+      if (params.entry?.level === 'error') actualErrors.push('LOG ' + params.entry.text)
     })
 
     const report = {
@@ -448,12 +463,13 @@ async function main() {
       reference: 'design_handoff_swiss_bento/reference/Playback Rental.dc.html',
       actualBase,
       metrics: [],
-      browserErrors,
+      referenceErrors,
+      actualErrors,
     }
 
     let productPath = ''
     for (const viewport of viewports) {
-      if (!productPath) productPath = await discoverProduct(cdp, viewport)
+      if (!productPath) productPath = await discoverProduct(actualCdp, viewport)
 
       for (const screen of screens) {
         const stem = screen.id + '-' + viewport.id
@@ -461,10 +477,10 @@ async function main() {
         const actualFile = path.join(outputDir, stem + '-actual.png')
         const diffFile = path.join(outputDir, stem + '-diff.png')
 
-        await openReference(cdp, screen, viewport)
-        await capture(cdp, referenceFile)
-        await openActual(cdp, screen, viewport, productPath)
-        await capture(cdp, actualFile)
+        await openReference(referenceCdp, screen, viewport)
+        await capture(referenceCdp, referenceFile)
+        await openActual(actualCdp, screen, viewport, productPath)
+        await capture(actualCdp, actualFile)
 
         const metrics = await compare(referenceFile, actualFile, diffFile)
         report.metrics.push({ screen: screen.id, viewport: viewport.id, ...metrics })
@@ -516,10 +532,16 @@ async function main() {
     if (chromeStderr) console.error(chromeStderr.slice(-5000))
     throw error
   } finally {
-    cdp?.close()
+    referenceCdp?.close()
+    actualCdp?.close()
     chrome.kill('SIGTERM')
+    await sleep(300)
     reference.http.close()
-    rmSync(userDataDir, { recursive: true, force: true })
+    try {
+      rmSync(userDataDir, { recursive: true, force: true, maxRetries: 4, retryDelay: 100 })
+    } catch (error) {
+      console.warn('Chrome profile cleanup failed:', error.code || error.message)
+    }
   }
 }
 
