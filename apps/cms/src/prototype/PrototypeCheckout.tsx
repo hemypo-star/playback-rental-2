@@ -12,7 +12,9 @@ const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/
 function phone(raw:string){let d=raw.replace(/\D/g,'');if(d.startsWith('8'))d='7'+d.slice(1);if(!d.startsWith('7'))d='7'+d;d=d.slice(0,11);const r=d.slice(1);let o='+7';if(r.length)o+=` (${r.slice(0,3)}`;if(r.length>=3)o+=')';if(r.length>3)o+=` ${r.slice(3,6)}`;if(r.length>6)o+=`-${r.slice(6,8)}`;if(r.length>8)o+=`-${r.slice(8,10)}`;return o}
 interface Promo{code:string;discountType:'percent'|'fixed';discountValue:number;minOrderAmount:number}
 export default function PrototypeCheckout({openHour,closeHour}:{openHour:number;closeHour:number}){
- const storeCart=useStore($cart),storeDates=useStore($selectedDates);const[mounted,setMounted]=useState(false);\n // eslint-disable-next-line react-hooks/set-state-in-effect\n useEffect(()=>setMounted(true),[]);const cart=mounted?storeCart:[];const dates=mounted?storeDates:{startDate:null,endDate:null}
+ const storeCart=useStore($cart),storeDates=useStore($selectedDates);const[mounted,setMounted]=useState(false);
+ // eslint-disable-next-line react-hooks/set-state-in-effect
+ useEffect(()=>setMounted(true),[]);const cart=mounted?storeCart:[];const dates=mounted?storeDates:{startDate:null,endDate:null}
  const[name,setName]=useState(''),[email,setEmail]=useState(''),[phoneValue,setPhone]=useState(''),[contact,setContact]=useState(''),[comment,setComment]=useState(''),[agreeData,setAgreeData]=useState(false),[agreeTerms,setAgreeTerms]=useState(false),[submitting,setSubmitting]=useState(false),[error,setError]=useState<string|null>(null),[orderId,setOrderId]=useState<number|null>(null),[promoInput,setPromoInput]=useState(''),[promo,setPromo]=useState<Promo|null>(null),[promoError,setPromoError]=useState<string|null>(null),[checking,setChecking]=useState(false)
  const hasRental=cart.some(i=>i.listingType==='rental'),hasDates=!hasRental||Boolean(dates.startDate&&dates.endDate);const days=dates.startDate&&dates.endDate?calculateRentalDays(dates.startDate,dates.endDate):1
  const lineTotal=(i:(typeof cart)[number])=>i.listingType==='sale'?i.price*i.quantity:calculateRentalPrice(i.price,dates.startDate||undefined,dates.endDate||undefined)*i.quantity
