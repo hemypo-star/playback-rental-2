@@ -158,9 +158,12 @@
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
     color-scheme: light;
+    overflow-x: clip;
   }
 
   body {
+    min-width: 0;
+    overflow-x: clip;
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
@@ -266,10 +269,15 @@
 @layer components {
   /* 12-column page grid used by every screen in the design. */
   .container-page {
-    @apply mx-auto w-full max-w-[1460px] px-4 sm:px-[30px];
+    @apply mx-auto w-full max-w-[1460px] px-3 min-[761px]:px-[30px];
   }
+
+  .swiss-header {
+    @apply mx-auto w-full max-w-[1460px] px-3 min-[761px]:px-4;
+  }
+
   .grid-12 {
-    @apply grid grid-cols-1 gap-3.5 sm:grid-cols-6 lg:grid-cols-12;
+    @apply grid grid-cols-6 gap-3.5 min-[1021px]:grid-cols-12;
   }
 
   .btn-primary {
