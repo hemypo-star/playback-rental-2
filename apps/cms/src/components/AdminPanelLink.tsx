@@ -53,7 +53,7 @@ export default function AdminPanelLink() {
   return (
     <Link
       href="/admin"
-      className="hidden h-[38px] shrink-0 items-center whitespace-nowrap rounded-full border border-border px-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground md:flex"
+      className="hidden h-[38px] shrink-0 items-center whitespace-nowrap rounded-full border border-border px-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground min-[1021px]:flex"
     >
       Панель управления
     </Link>
