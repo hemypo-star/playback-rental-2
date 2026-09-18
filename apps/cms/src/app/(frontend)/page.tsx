@@ -186,7 +186,7 @@ export default async function HomePage() {
                 classes are dropped from className; the crop/hover-zoom
                 classes (object-cover, the hover-zoom transform/duration/
                 ease/scale set) are kept verbatim on the same element. */}
-            <div className="relative hidden min-h-[390px] flex-1 overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] md:block" style={{ animation: 'bnClip 900ms var(--ease-expo) 120ms both' }}>
+            <div className="relative hidden min-h-[390px] flex-1 overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] min-[761px]:block" style={{ animation: 'bnClip 900ms var(--ease-expo) 120ms both' }}>
               {heroImageUrl && (
                 <Image
                   src={heroImageUrl}
@@ -201,7 +201,7 @@ export default async function HomePage() {
                 <span>Sony · Canon · GoPro</span><span className="text-accent">Fig. 01</span>
               </div>
             </div>
-            <div className="relative h-[340px] overflow-hidden rounded-[22px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] md:hidden">
+            <div className="relative h-[340px] overflow-hidden rounded-[22px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] min-[761px]:hidden">
               {heroImageMobileUrl && (
                 <Image src={heroImageMobileUrl} alt="Playback Rental" fill priority sizes="100vw" className="object-cover" />
               )}
