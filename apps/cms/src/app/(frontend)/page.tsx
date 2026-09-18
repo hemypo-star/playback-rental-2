@@ -149,7 +149,7 @@ export default async function HomePage() {
     <>
       <section className="container-page pt-3.5">
         <div className="grid-12">
-          <div className="flex flex-col rounded-[26px] border border-border bg-card px-9 pt-[38px] pb-[34px] sm:col-span-6 lg:col-span-7" style={{ animation: 'bnIn 560ms var(--ease-expo) both' }}>
+          <div className="flex flex-col rounded-[26px] border border-border bg-card px-9 pt-[38px] pb-[34px] col-span-6 min-[1021px]:col-span-7" style={{ animation: 'bnIn 560ms var(--ease-expo) both' }}>
             <div className="flex items-center justify-between gap-4 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">
               <span>{siteSettings.heroKicker || 'Прокат съёмочной техники'}</span>
               <span className="rounded-full bg-muted px-[11px] py-1.5">{siteSettings.heroCity || 'Кемерово'}</span>
@@ -171,7 +171,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3.5 sm:col-span-6 lg:col-span-5">
+          <div className="flex flex-col gap-3.5 col-span-6 min-[1021px]:col-span-5">
             {/* C4 (design_handoff_swiss_bento/08-instruction.md, G3): the
                 homepage hero cover — the one slot the instruction singles
                 out for `priority`. Both the desktop and mobile variants
@@ -186,7 +186,7 @@ export default async function HomePage() {
                 classes are dropped from className; the crop/hover-zoom
                 classes (object-cover, the hover-zoom transform/duration/
                 ease/scale set) are kept verbatim on the same element. */}
-            <div className="relative hidden min-h-[390px] flex-1 overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] md:block" style={{ animation: 'bnClip 900ms var(--ease-expo) 120ms both' }}>
+            <div className="relative hidden min-h-[390px] flex-1 overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] min-[761px]:block" style={{ animation: 'bnClip 900ms var(--ease-expo) 120ms both' }}>
               {heroImageUrl && (
                 <Image
                   src={heroImageUrl}
@@ -201,7 +201,7 @@ export default async function HomePage() {
                 <span>Sony · Canon · GoPro</span><span className="text-accent">Fig. 01</span>
               </div>
             </div>
-            <div className="relative h-[340px] overflow-hidden rounded-[22px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] md:hidden">
+            <div className="relative h-[340px] overflow-hidden rounded-[22px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)] min-[761px]:hidden">
               {heroImageMobileUrl && (
                 <Image src={heroImageMobileUrl} alt="Playback Rental" fill priority sizes="100vw" className="object-cover" />
               )}
@@ -218,7 +218,7 @@ export default async function HomePage() {
           {stats.map((s, i) => (
             <div
               key={s.label}
-              className="rounded-[22px] border border-border bg-card px-[22px] py-5 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)] sm:col-span-3 lg:col-span-3"
+              className="rounded-[22px] border border-border bg-card px-[22px] py-5 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)] col-span-3 min-[1021px]:col-span-3"
               style={{ animation: 'bnIn 560ms var(--ease-expo) both', animationDelay: `${Math.min(i * 70, 400)}ms` }}
             >
               <div className="text-[32px] font-medium tracking-[-0.04em]">{s.value}</div>
@@ -263,7 +263,7 @@ export default async function HomePage() {
               <span>Весь каталог</span><span>→</span>
             </Link>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-3.5 min-[761px]:grid-cols-2 min-[1021px]:grid-cols-3">
             {featuredCategories.map((c, i) => {
               const imageUrl = mediaUrl(c.image)
               const meta = categoryMeta(c)
@@ -307,7 +307,7 @@ export default async function HomePage() {
             </div>
             <span className="max-w-[280px] text-right text-[13px] text-subtle">Дешевле, чем брать позиции по отдельности</span>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-3.5 min-[761px]:grid-cols-2 min-[1021px]:grid-cols-3">
             {kits.map((k, i) => (
               // C4: no sidebar competes with this grid's width (unlike
               // CatalogPage's), so its real card is wider than ProductCard's
@@ -321,7 +321,7 @@ export default async function HomePage() {
       <section className="container-page pt-5">
         <div className="grid-12">
           {popular.length > 0 && (
-            <div className="rounded-3xl border border-border bg-card px-6.5 pb-3 pt-6.5 sm:col-span-6 lg:col-span-7">
+            <div className="rounded-3xl border border-border bg-card px-6.5 pb-3 pt-6.5 col-span-6 min-[1021px]:col-span-7">
               <div className="flex items-baseline justify-between">
                 <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Берут чаще всего</div>
                 <span className="text-[11px] text-subtle">{currentMonthLabel}</span>
@@ -349,7 +349,7 @@ export default async function HomePage() {
             </div>
           )}
 
-          <div className="rounded-3xl border border-border bg-card p-6.5 sm:col-span-6 lg:col-span-5">
+          <div className="rounded-3xl border border-border bg-card p-6.5 col-span-6 min-[1021px]:col-span-5">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Как это работает</div>
             {steps.map((s) => (
               <div key={s.n} className="flex gap-4 rounded-2xl px-2.5 py-4 transition-colors duration-240 ease-expo hover:bg-muted">
@@ -362,7 +362,7 @@ export default async function HomePage() {
             ))}
           </div>
 
-          <div className="rounded-[26px] bg-primary p-9 text-primary-foreground sm:col-span-6 lg:col-span-12">
+          <div className="rounded-[26px] bg-primary p-9 text-primary-foreground col-span-6 min-[1021px]:col-span-12">
             <div className="grid grid-cols-1 gap-9 lg:grid-cols-[1.15fr_1fr]">
               <div>
                 <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-white/50">{siteSettings.ctaKicker || 'Нужен совет'}</div>

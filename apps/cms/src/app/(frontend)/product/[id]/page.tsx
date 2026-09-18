@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 
 // C4 (design_handoff_swiss_bento/08-instruction.md, G3): real rendered
 // slots, measured from this page's own grid-12 column spans
-// (`sm:col-span-6 lg:col-span-7` for the gallery column — full width below
+// (`col-span-6 min-[1021px]:col-span-7` for the gallery column — full width below
 // lg/1024px, 7/12 of container-page's capped-1460px width from there up).
 // Not `priority` per the instruction ("приоритет только у обложки героя") —
 // the homepage hero cover is the one image that gets it; this page's own
@@ -107,7 +107,7 @@ export default async function ProductPage({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: productJsonLdSafe }} />
       <div className="container-page grid-12 pt-3.5 pb-20">
-        <div className="flex flex-col gap-3.5 sm:col-span-6 lg:col-span-7">
+        <div className="flex flex-col gap-3.5 col-span-6 min-[1021px]:col-span-7">
           <div className="relative aspect-[4/3] overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(150deg,#e6e4e0,#ded9d1)]" style={{ animation: 'bnClip 900ms var(--ease-expo) both' }}>
             {mainImage && (
               <Image
@@ -156,7 +156,7 @@ export default async function ProductPage({ params }: Props) {
           {kitContents.length > 0 && (
             <div className="rounded-3xl border border-border bg-card p-6.5">
               <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Что в комплекте</div>
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="mt-3 grid grid-cols-1 gap-2 min-[761px]:grid-cols-2">
                 {kitContents.map((item, i) => (
                   <div key={item.id ?? i} className="flex items-center gap-3 rounded-2xl bg-muted p-[12px_14px] transition-[background-color,transform] duration-240 ease-expo hover:translate-x-[3px] hover:bg-[#EAE8E4]">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[10.5px] font-bold text-accent">{i + 1}</span>
@@ -197,7 +197,7 @@ export default async function ProductPage({ params }: Props) {
           )}
 
           {related.length > 0 && (
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3.5 min-[761px]:grid-cols-2 min-[1021px]:grid-cols-3">
               {related.map((p, i) => {
                 const relImg = mediaUrl(Array.isArray(p.images) ? p.images[0] : undefined)
                 return (
@@ -221,8 +221,8 @@ export default async function ProductPage({ params }: Props) {
           )}
         </div>
 
-        <div className="sm:col-span-6 lg:col-span-5">
-          <div className="sticky top-[96px]">
+        <div className="col-span-6 min-[1021px]:col-span-5">
+          <div className="min-[1021px]:sticky min-[1021px]:top-[96px]">
             <ProductPurchasePanel product={product} imageUrl={mainImage} />
           </div>
         </div>
