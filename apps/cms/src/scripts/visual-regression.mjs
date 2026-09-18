@@ -5,131 +5,544 @@ import path from 'node:path'
 import os from 'node:os'
 import sharp from 'sharp'
 
-const actualBase=process.env.VISUAL_BASE_URL||'http://127.0.0.1:3000'
-const referenceDir=path.resolve(process.cwd(),'../../design_handoff_swiss_bento/reference')
-const htmlPath=path.join(referenceDir,'Playback Rental.dc.html')
-const supportPath=path.join(referenceDir,'support.js')
-const imageSlotPath=path.join(referenceDir,'image-slot.js')
-const fontPath=path.resolve(process.cwd(),'public/fonts/golos-text-cyrillic.woff2')
-const outputDir=path.resolve(process.cwd(),process.env.VISUAL_OUTPUT_DIR||'artifacts/visual-regression')
-const port=4173,debug='http://127.0.0.1:9225'
-const adminEmail=process.env.SMOKE_ADMIN_EMAIL||'smoke-admin@example.invalid'
-const adminPassword=process.env.SMOKE_ADMIN_PASSWORD||'ci-smoke-only-password-2026'
+const actualBase = process.env.VISUAL_BASE_URL || 'http://127.0.0.1:3000'
+const adminEmail = process.env.SMOKE_ADMIN_EMAIL
+const adminPassword = process.env.SMOKE_ADMIN_PASSWORD
+const referenceDir = path.resolve(process.cwd(), '../../design_handoff_swiss_bento/reference')
+const referenceHtmlPath = path.join(referenceDir, 'Playback Rental.dc.html')
+const supportPath = path.join(referenceDir, 'support.js')
+const imageSlotPath = path.join(referenceDir, 'image-slot.js')
+const fontPath = path.resolve(process.cwd(), 'public/fonts/golos-text-cyrillic.woff2')
+const outputDir = path.resolve(process.cwd(), process.env.VISUAL_OUTPUT_DIR || 'artifacts/visual-regression')
+const referencePort = 4173
+const debugBase = 'http://127.0.0.1:9225'
 
-const viewports=[
- {id:'desktop',width:1440,height:900,mobile:false},
- {id:'tablet',width:1024,height:900,mobile:false},
- {id:'mobile',width:375,height:812,mobile:true},
-]
-const screens=[
- {id:'home',label:'Главная',path:'/'},
- {id:'catalog',label:'Каталог',path:'/catalog'},
- {id:'product',label:'Товар',path:null},
- {id:'cart',label:'Корзина',path:'/checkout'},
- {id:'admin',label:'Админка',path:'/admin/orders'},
+const viewports = [
+  { id: 'desktop', width: 1440, height: 900, mobile: false },
+  { id: 'tablet', width: 1024, height: 900, mobile: false },
+  { id: 'mobile', width: 375, height: 812, mobile: true },
 ]
 
-function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
-function chrome(){for(const p of [process.env.CHROME_BIN,'/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'])if(p&&existsSync(p))return p;throw new Error('Chrome not found')}
-async function asset(url){const r=await fetch(url);if(!r.ok)throw new Error(url+' -> '+r.status);return Buffer.from(await r.arrayBuffer())}
+const screens = [
+  { id: 'home', label: 'Главная', path: '/' },
+  { id: 'catalog', label: 'Каталог', path: '/catalog' },
+  { id: 'product', label: 'Товар', path: null },
+  { id: 'cart', label: 'Корзина', path: '/checkout' },
+  { id: 'admin', label: 'Админка', path: '/admin/orders' },
+]
 
-async function startReferenceServer(){
- const [react,reactDom,babel]=await Promise.all([
-  asset('https://unpkg.com/react@18.3.1/umd/react.production.min.js'),
-  asset('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'),
-  asset('https://unpkg.com/@babel/standalone@7.29.0/babel.min.js')
- ])
- let support=readFileSync(supportPath,'utf8')
- support=support
-  .replace('https://unpkg.com/react@18.3.1/umd/react.production.min.js','http://127.0.0.1:'+port+'/react.js')
-  .replace('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js','http://127.0.0.1:'+port+'/react-dom.js')
-  .replace('https://unpkg.com/@babel/standalone@7.29.0/babel.min.js','http://127.0.0.1:'+port+'/babel.js')
- let html=readFileSync(htmlPath,'utf8').replace(/<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com" \/>\s*<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin="anonymous" \/>\s*<link href="https:\/\/fonts\.googleapis\.com\/css2[^"]+" rel="stylesheet" \/>/,'<style>@font-face{font-family:"Golos Text";font-style:normal;font-weight:400 800;src:url("/golos.woff2") format("woff2")}</style>')
- const srv=createServer((req,res)=>{const p=new URL(req.url||'/','http://127.0.0.1:'+port).pathname;const send=(type,b)=>{res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store'});res.end(b)}
-  if(p==='/'||p==='/Playback%20Rental.dc.html'||p==='/Playback%20Rental.dc.html'.replace(/%20/g,' ')||p==='/Playback Rental.dc.html')return send('text/html; charset=utf-8',html)
-  if(p==='/support.js')return send('text/javascript; charset=utf-8',support)
-  if(p==='/image-slot.js')return send('text/javascript; charset=utf-8',readFileSync(imageSlotPath))
-  if(p==='/react.js')return send('text/javascript; charset=utf-8',react)
-  if(p==='/react-dom.js')return send('text/javascript; charset=utf-8',reactDom)
-  if(p==='/babel.js')return send('text/javascript; charset=utf-8',babel)
-  if(p==='/golos.woff2')return send('font/woff2',readFileSync(fontPath))
-  res.writeHead(404);res.end('not found')
- })
- await new Promise((ok,fail)=>{srv.once('error',fail);srv.listen(port,'127.0.0.1',ok)})
- return srv
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-class CDP{
- constructor(url){this.url=url;this.i=1;this.p=new Map();this.l=new Map()}
- async open(){this.ws=new WebSocket(this.url);await new Promise((ok,fail)=>{this.ws.onopen=ok;this.ws.onerror=fail});this.ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id){const q=this.p.get(m.id);if(!q)return;this.p.delete(m.id);m.error?q.reject(new Error(m.error.message)):q.resolve(m.result||{});return}for(const f of this.l.get(m.method)||[])f(m.params||{})}}
- send(method,params={}){const id=this.i++;return new Promise((resolve,reject)=>{const t=setTimeout(()=>{this.p.delete(id);reject(new Error(method+' timeout'))},30000);this.p.set(id,{resolve:v=>{clearTimeout(t);resolve(v)},reject:e=>{clearTimeout(t);reject(e)}});this.ws.send(JSON.stringify({id,method,params}))})}
- on(m,f){const a=this.l.get(m)||new Set();a.add(f);this.l.set(m,a)}
- close(){this.ws?.close()}
-}
-async function evalx(c,expression){const r=await c.send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true,userGesture:true});if(r.exceptionDetails)throw new Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text||'evaluate failed');return r.result?.value}
-async function waitFor(c,expression,label,timeout=30000){const end=Date.now()+timeout;let last;while(Date.now()<end){try{if(await evalx(c,expression))return}catch(e){last=e}await sleep(200)}throw new Error(label+' timed out'+(last?': '+last.message:''))}
-async function viewport(c,v){await c.send('Emulation.setDeviceMetricsOverride',{width:v.width,height:v.height,deviceScaleFactor:1,mobile:v.mobile});await c.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]})}
-async function nav(c,url){await c.send('Page.navigate',{url});await waitFor(c,"document.readyState==='complete'",'page load')}
-async function settle(c){await evalx(c,"(async()=>{if(document.fonts&&document.fonts.ready)await document.fonts.ready;await Promise.all(Array.from(document.images).map(i=>i.complete?Promise.resolve():new Promise(r=>{i.onload=r;i.onerror=r})));return true})()");await sleep(200)}
-async function capture(c,file){const r=await c.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});writeFileSync(file,Buffer.from(r.data,'base64'))}
-
-async function openReference(c,label,v){
- await viewport(c,v)
- await nav(c,'http://127.0.0.1:'+port+'/Playback%20Rental.dc.html')
- await waitFor(c,"Boolean(document.querySelector('#dc-root')) && document.body.innerText.includes('Главная')",'reference boot',30000)
- const pick="(()=>{const label="+JSON.stringify(label)+";const els=Array.from(document.querySelectorAll('#dc-root div'));const item=els.find(el=>el.textContent&&el.textContent.trim()===label&&el.parentElement&&getComputedStyle(el.parentElement).position==='fixed');if(!item)throw new Error('switcher '+label+' not found');item.click();return true})()"
- await evalx(c,pick)
- await sleep(80)
- await evalx(c,"(()=>{const els=Array.from(document.querySelectorAll('#dc-root div'));const item=els.find(el=>el.textContent&&el.textContent.trim()==='Главная'&&el.parentElement&&getComputedStyle(el.parentElement).position==='fixed');if(item&&item.parentElement)item.parentElement.style.display='none';return true})()")
- await settle(c)
+function findChrome() {
+  for (const candidate of [
+    process.env.CHROME_BIN,
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+  ]) {
+    if (candidate && existsSync(candidate)) return candidate
+  }
+  throw new Error('Headless Chrome not found')
 }
 
-async function discoverProduct(c,v){await viewport(c,v);await nav(c,new URL('/catalog',actualBase).toString());await waitFor(c,"Boolean(document.querySelector('a[href^=\"/product/\"]'))",'product link');return evalx(c,"document.querySelector('a[href^=\"/product/\"]')?.getAttribute('href')||''")}
-async function login(c){const q="(async()=>{const r=await fetch('/api/users/login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:"+JSON.stringify(adminEmail)+",password:"+JSON.stringify(adminPassword)+"})});return r.status})()";const status=await evalx(c,q);if(status!==200)throw new Error('admin login '+status)}
-async function seedCart(c,productPath){const id=Number(productPath.split('/').pop());const q="(()=>{const s=new Date(Date.now()+7*86400000);s.setHours(11,0,0,0);const e=new Date(s.getTime()+2*86400000);e.setHours(18,0,0,0);localStorage.setItem('pb:cart',JSON.stringify([{productId:"+id+",title:'Smoke Camera Alpha',price:1500,listingType:'rental',unit:'смена / 24 часа',quantity:1},{productId:"+id+",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2}]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:s.toISOString(),endDate:e.toISOString()}));return true})()";await evalx(c,q)}
-async function openActual(c,screen,productPath,v){
- await viewport(c,v)
- if(screen.id==='cart'){await nav(c,new URL('/catalog',actualBase).toString());await seedCart(c,productPath)}
- if(screen.id==='admin'){await nav(c,new URL('/',actualBase).toString());await login(c)}
- const target=screen.id==='product'?productPath:screen.path
- await nav(c,new URL(target,actualBase).toString())
- await waitFor(c,"document.body && document.body.innerText.trim().length>20",'actual screen')
- await settle(c)
+async function fetchBytes(url) {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(url + ' -> ' + response.status)
+  return Buffer.from(await response.arrayBuffer())
 }
 
-async function compare(refFile,actualFile,diffFile){
- const r=await sharp(refFile).removeAlpha().raw().toBuffer({resolveWithObject:true})
- const a=await sharp(actualFile).removeAlpha().raw().toBuffer({resolveWithObject:true})
- if(r.info.width!==a.info.width||r.info.height!==a.info.height)throw new Error('size mismatch')
- const px=r.info.width*r.info.height,d=Buffer.alloc(px*4);let exact=0,meaningful=0,total=0
- for(let p=0;p<px;p++){const i=p*3,j=p*4,dr=Math.abs(r.data[i]-a.data[i]),dg=Math.abs(r.data[i+1]-a.data[i+1]),db=Math.abs(r.data[i+2]-a.data[i+2]),mx=Math.max(dr,dg,db),sum=dr+dg+db;if(sum)exact++;if(mx>16)meaningful++;total+=sum;const lum=Math.round((r.data[i]+r.data[i+1]+r.data[i+2])/3);if(mx>16){d[j]=255;d[j+1]=0;d[j+2]=0;d[j+3]=255}else{d[j]=lum;d[j+1]=lum;d[j+2]=lum;d[j+3]=110}}
- await sharp(d,{raw:{width:r.info.width,height:r.info.height,channels:4}}).png().toFile(diffFile)
- return {exactMismatchPercent:+(exact/px*100).toFixed(3),meaningfulMismatchPercent:+(meaningful/px*100).toFixed(3),meanChannelDelta:+(total/(px*3)).toFixed(3)}
+async function startReferenceServer() {
+  const [react, reactDom] = await Promise.all([
+    fetchBytes('https://unpkg.com/react@18.3.1/umd/react.production.min.js'),
+    fetchBytes('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'),
+  ])
+
+  const html = readFileSync(referenceHtmlPath, 'utf8').replace(
+    /<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com" \/>\s*<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin="anonymous" \/>\s*<link href="https:\/\/fonts\.googleapis\.com\/css2[^"]+" rel="stylesheet" \/>/,
+    '<style>@font-face{font-family:"Golos Text";font-style:normal;font-weight:400 800;font-display:swap;src:url("/golos.woff2") format("woff2")}</style>',
+  )
+  const support = readFileSync(supportPath)
+  const imageSlot = readFileSync(imageSlotPath)
+
+  const http = createServer((req, res) => {
+    const pathname = new URL(req.url || '/', 'http://127.0.0.1:' + referencePort).pathname
+    const send = (type, body) => {
+      res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-store' })
+      res.end(body)
+    }
+
+    if (pathname === '/' || pathname === '/Playback%20Rental.dc.html' || pathname === '/Playback Rental.dc.html') {
+      return send('text/html; charset=utf-8', html)
+    }
+    if (pathname === '/support.js') return send('text/javascript; charset=utf-8', support)
+    if (pathname === '/image-slot.js') return send('text/javascript; charset=utf-8', imageSlot)
+    if (pathname === '/golos.woff2') return send('font/woff2', readFileSync(fontPath))
+
+    res.writeHead(404)
+    res.end('not found')
+  })
+
+  await new Promise((resolve, reject) => {
+    http.once('error', reject)
+    http.listen(referencePort, '127.0.0.1', resolve)
+  })
+
+  return {
+    http,
+    bootstrap: react.toString('utf8') + '\n;\n' + reactDom.toString('utf8'),
+  }
 }
 
-async function main(){
- rmSync(outputDir,{recursive:true,force:true});mkdirSync(outputDir,{recursive:true})
- const srv=await startReferenceServer(),dir=path.join(os.tmpdir(),'pb-visual-'+process.pid),cp=spawn(chrome(),['--headless=new','--no-sandbox','--disable-dev-shm-usage','--hide-scrollbars','--remote-debugging-port=9225','--user-data-dir='+dir,'about:blank'],{stdio:['ignore','ignore','pipe']})
- let stderr='';cp.stderr.on('data',x=>stderr+=String(x));let c
- try{
-  let version;for(let i=0;i<100&&!version;i++){try{const r=await fetch(debug+'/json/version');if(r.ok)version=await r.json()}catch{}if(!version)await sleep(200)}
-  if(!version)throw new Error('Chrome debug endpoint unavailable')
-  const refTargetResponse=await fetch(debug+'/json/new?about:blank',{method:'PUT'}),refTarget=await refTargetResponse.json()
-  const actualTargetResponse=await fetch(debug+'/json/new?about:blank',{method:'PUT'}),actualTarget=await actualTargetResponse.json()
-  const cRef=new CDP(refTarget.webSocketDebuggerUrl),cActual=new CDP(actualTarget.webSocketDebuggerUrl)
-  await cRef.open();await cActual.open()
-  for(const session of [cRef,cActual]){await session.send('Page.enable');await session.send('Runtime.enable');await session.send('Network.enable')}
-  cRef.on('Runtime.exceptionThrown',p=>console.error('REF_EXCEPTION',p.exceptionDetails?.exception?.description||p.exceptionDetails?.text))
-  cRef.on('Network.loadingFailed',p=>console.error('REF_NETWORK_FAIL',p.errorText,p.type||''))
-  cActual.on('Runtime.exceptionThrown',p=>console.error('ACTUAL_EXCEPTION',p.exceptionDetails?.exception?.description||p.exceptionDetails?.text))
-  cActual.on('Network.loadingFailed',p=>console.error('ACTUAL_NETWORK_FAIL',p.errorText,p.type||''))
-  c={close:()=>{cRef.close();cActual.close()}}
-  let productPath='';const report={reference:'design_handoff_swiss_bento/reference/Playback Rental.dc.html',actualBase,generatedAt:new Date().toISOString(),metrics:[]}
-  for(const v of viewports){if(!productPath)productPath=await discoverProduct(cActual,v);for(const screen of screens){const stem=screen.id+'-'+v.id,rf=path.join(outputDir,stem+'-reference.png'),af=path.join(outputDir,stem+'-actual.png'),df=path.join(outputDir,stem+'-diff.png');await openReference(cRef,screen.label,v);await capture(cRef,rf);await openActual(cActual,screen,productPath,v);await capture(cActual,af);const m=await compare(rf,af,df);report.metrics.push({screen:screen.id,viewport:v.id,...m});console.log('VISUAL',screen.id,v.id,JSON.stringify(m))}}
-  writeFileSync(path.join(outputDir,'report.json'),JSON.stringify(report,null,2))
-  const rows=report.metrics.map(m=>'| '+m.screen+' | '+m.viewport+' | '+m.exactMismatchPercent+'% | '+m.meaningfulMismatchPercent+'% | '+m.meanChannelDelta+' |')
-  writeFileSync(path.join(outputDir,'report.md'),['# Visual regression report','','| Screen | Viewport | Exact mismatch | Meaningful mismatch | Mean RGB delta |','|---|---|---:|---:|---:|',...rows,''].join('\n'))
-  console.log('VISUAL_REGRESSION_OK',report.metrics.length)
- }finally{c?.close();cp.kill('SIGTERM');await sleep(500);srv.close();try{rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100})}catch(e){console.warn('CHROME_PROFILE_CLEANUP',e.code||e.message)}if(stderr)console.log('CHROME_TAIL',stderr.slice(-1500))}
+class CdpSession {
+  constructor(url) {
+    this.url = url
+    this.nextId = 1
+    this.pending = new Map()
+    this.listeners = new Map()
+  }
+
+  async open() {
+    this.ws = new WebSocket(this.url)
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('CDP open timeout')), 10000)
+      this.ws.onopen = () => {
+        clearTimeout(timer)
+        resolve()
+      }
+      this.ws.onerror = (event) => {
+        clearTimeout(timer)
+        reject(event.error || new Error('CDP websocket error'))
+      }
+    })
+
+    this.ws.onmessage = (event) => {
+      const message = JSON.parse(event.data)
+      if (message.id) {
+        const pending = this.pending.get(message.id)
+        if (!pending) return
+        this.pending.delete(message.id)
+        clearTimeout(pending.timer)
+        if (message.error) pending.reject(new Error(pending.method + ': ' + message.error.message))
+        else pending.resolve(message.result || {})
+        return
+      }
+      for (const listener of this.listeners.get(message.method) || []) listener(message.params || {})
+    }
+  }
+
+  send(method, params = {}) {
+    const id = this.nextId++
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id)
+        reject(new Error(method + ' timeout'))
+      }, 30000)
+      this.pending.set(id, { resolve, reject, timer, method })
+      this.ws.send(JSON.stringify({ id, method, params }))
+    })
+  }
+
+  on(method, listener) {
+    const set = this.listeners.get(method) || new Set()
+    set.add(listener)
+    this.listeners.set(method, set)
+    return () => set.delete(listener)
+  }
+
+  once(method, timeoutMs = 30000) {
+    return new Promise((resolve, reject) => {
+      let off = () => {}
+      const timer = setTimeout(() => {
+        off()
+        reject(new Error(method + ' event timeout'))
+      }, timeoutMs)
+      off = this.on(method, (params) => {
+        clearTimeout(timer)
+        off()
+        resolve(params)
+      })
+    })
+  }
+
+  close() {
+    this.ws?.close()
+  }
 }
-main().catch(e=>{console.error('VISUAL_REGRESSION_FAILED',e);process.exit(1)})
+
+async function evaluate(cdp, expression) {
+  const result = await cdp.send('Runtime.evaluate', {
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+    userGesture: true,
+  })
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text || 'Browser evaluation failed')
+  }
+  return result.result?.value
+}
+
+async function waitFor(cdp, expression, label, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs
+  let lastError
+  while (Date.now() < deadline) {
+    try {
+      if (await evaluate(cdp, expression)) return
+    } catch (error) {
+      lastError = error
+    }
+    await sleep(200)
+  }
+  throw new Error(label + ' timed out' + (lastError ? ': ' + lastError.message : ''))
+}
+
+async function setViewport(cdp, viewport) {
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: viewport.width,
+    height: viewport.height,
+    deviceScaleFactor: 1,
+    mobile: viewport.mobile,
+  })
+  await cdp.send('Emulation.setEmulatedMedia', {
+    features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+  })
+}
+
+async function navigate(cdp, url) {
+  const loaded = cdp.once('Page.loadEventFired')
+  await cdp.send('Page.navigate', { url })
+  await loaded
+}
+
+async function settle(cdp) {
+  await evaluate(
+    cdp,
+    "(async()=>{if(document.fonts?.ready)await document.fonts.ready;await Promise.all(Array.from(document.images).map(img=>img.complete?Promise.resolve():new Promise(r=>{img.addEventListener('load',r,{once:true});img.addEventListener('error',r,{once:true})})));return true})()",
+  )
+  await sleep(180)
+}
+
+async function capture(cdp, file) {
+  const result = await cdp.send('Page.captureScreenshot', {
+    format: 'png',
+    fromSurface: true,
+    captureBeyondViewport: false,
+  })
+  writeFileSync(file, Buffer.from(result.data, 'base64'))
+}
+
+async function openReference(cdp, screen, viewport) {
+  await setViewport(cdp, viewport)
+  await navigate(cdp, 'http://127.0.0.1:' + referencePort + '/Playback%20Rental.dc.html')
+  await waitFor(
+    cdp,
+    "Boolean(document.querySelector('#dc-root')) && document.body.innerText.includes('Главная')",
+    'reference boot',
+  )
+
+  const clickExpression =
+    "(()=>{const label=" +
+    JSON.stringify(screen.label) +
+    ";const els=Array.from(document.querySelectorAll('#dc-root div'));const item=els.find(el=>el.textContent?.trim()===label&&el.parentElement&&getComputedStyle(el.parentElement).position==='fixed');if(!item)throw new Error('switcher item not found: '+label);item.click();return true})()"
+  await evaluate(cdp, clickExpression)
+
+  await evaluate(
+    cdp,
+    "(()=>{const els=Array.from(document.querySelectorAll('#dc-root div'));const item=els.find(el=>el.textContent?.trim()==='Главная'&&el.parentElement&&getComputedStyle(el.parentElement).position==='fixed');if(item?.parentElement)item.parentElement.style.display='none';return true})()",
+  )
+
+  await settle(cdp)
+}
+
+async function discoverProduct(cdp, viewport) {
+  await setViewport(cdp, viewport)
+  await navigate(cdp, new URL('/catalog', actualBase).toString())
+  await waitFor(cdp, "Boolean(document.querySelector('a[href^=\"/product/\"]'))", 'actual product link')
+  return evaluate(cdp, "document.querySelector('a[href^=\"/product/\"]')?.getAttribute('href')||''")
+}
+
+async function clearActualState(cdp) {
+  await navigate(cdp, new URL('/', actualBase).toString())
+  await evaluate(cdp, "localStorage.clear();sessionStorage.clear();true")
+}
+
+async function seedCart(cdp, productPath) {
+  const id = Number(productPath.split('/').pop())
+  if (!Number.isInteger(id) || id <= 0) throw new Error('invalid product path ' + productPath)
+
+  const expression =
+    "(()=>{const a=new Date(Date.now()+7*86400000);a.setHours(11,0,0,0);const b=new Date(a.getTime()+2*86400000);b.setHours(18,0,0,0);localStorage.setItem('pb:cart',JSON.stringify([{productId:" +
+    id +
+    ",title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1},{productId:" +
+    id +
+    ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2}]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:a.toISOString(),endDate:b.toISOString()}));return true})()"
+  await evaluate(cdp, expression)
+}
+
+async function adminCookies() {
+  if (!adminEmail || !adminPassword) throw new Error('SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD are required')
+  const response = await fetch(new URL('/api/users/login', actualBase), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: adminEmail, password: adminPassword }),
+  })
+  if (!response.ok) throw new Error('admin login failed: ' + response.status)
+  return typeof response.headers.getSetCookie === 'function'
+    ? response.headers.getSetCookie()
+    : [response.headers.get('set-cookie')].filter(Boolean)
+}
+
+async function applyCookies(cdp, cookies) {
+  for (const cookie of cookies) {
+    const first = cookie.split(';', 1)[0]
+    const index = first.indexOf('=')
+    if (index <= 0) continue
+    await cdp.send('Network.setCookie', {
+      name: first.slice(0, index),
+      value: first.slice(index + 1),
+      url: actualBase,
+    })
+  }
+}
+
+async function openActual(cdp, screen, viewport, productPath) {
+  await setViewport(cdp, viewport)
+  await clearActualState(cdp)
+
+  if (screen.id === 'cart') await seedCart(cdp, productPath)
+  if (screen.id === 'admin') await applyCookies(cdp, await adminCookies())
+
+  const target = screen.id === 'product' ? productPath : screen.path
+  await navigate(cdp, new URL(target, actualBase).toString())
+  await waitFor(cdp, "document.body&&document.body.innerText.trim().length>20", 'actual ' + screen.id)
+  await settle(cdp)
+}
+
+async function compare(referenceFile, actualFile, diffFile) {
+  const reference = await sharp(referenceFile).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+  const actual = await sharp(actualFile).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+
+  if (reference.info.width !== actual.info.width || reference.info.height !== actual.info.height) {
+    throw new Error(
+      'screenshot size mismatch: ' +
+        reference.info.width +
+        'x' +
+        reference.info.height +
+        ' vs ' +
+        actual.info.width +
+        'x' +
+        actual.info.height,
+    )
+  }
+
+  const pixels = reference.info.width * reference.info.height
+  const diff = Buffer.alloc(pixels * 4)
+  let exact = 0
+  let meaningful = 0
+  let totalDelta = 0
+
+  for (let pixel = 0; pixel < pixels; pixel++) {
+    const i = pixel * 3
+    const j = pixel * 4
+    const dr = Math.abs(reference.data[i] - actual.data[i])
+    const dg = Math.abs(reference.data[i + 1] - actual.data[i + 1])
+    const db = Math.abs(reference.data[i + 2] - actual.data[i + 2])
+    const max = Math.max(dr, dg, db)
+    const sum = dr + dg + db
+
+    if (sum > 0) exact++
+    if (max > 16) meaningful++
+    totalDelta += sum
+
+    const luminance = Math.round((reference.data[i] + reference.data[i + 1] + reference.data[i + 2]) / 3)
+    if (max > 16) {
+      diff[j] = 255
+      diff[j + 1] = 0
+      diff[j + 2] = 0
+      diff[j + 3] = 255
+    } else {
+      diff[j] = luminance
+      diff[j + 1] = luminance
+      diff[j + 2] = luminance
+      diff[j + 3] = 90
+    }
+  }
+
+  await sharp(diff, {
+    raw: { width: reference.info.width, height: reference.info.height, channels: 4 },
+  })
+    .png()
+    .toFile(diffFile)
+
+  return {
+    width: reference.info.width,
+    height: reference.info.height,
+    exactMismatchPercent: Number(((exact / pixels) * 100).toFixed(4)),
+    meaningfulMismatchPercent: Number(((meaningful / pixels) * 100).toFixed(4)),
+    meanChannelDelta: Number((totalDelta / (pixels * 3)).toFixed(4)),
+  }
+}
+
+async function main() {
+  rmSync(outputDir, { recursive: true, force: true })
+  mkdirSync(outputDir, { recursive: true })
+
+  const reference = await startReferenceServer()
+  const userDataDir = path.join(os.tmpdir(), 'pb-visual-' + process.pid)
+  const chrome = spawn(
+    findChrome(),
+    [
+      '--headless=new',
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--hide-scrollbars',
+      '--remote-debugging-port=9225',
+      '--user-data-dir=' + userDataDir,
+      'about:blank',
+    ],
+    { stdio: ['ignore', 'ignore', 'pipe'] },
+  )
+
+  let chromeStderr = ''
+  chrome.stderr.on('data', (chunk) => {
+    chromeStderr += String(chunk)
+    if (chromeStderr.length > 20000) chromeStderr = chromeStderr.slice(-20000)
+  })
+
+  let referenceCdp
+  let actualCdp
+  try {
+    let version
+    for (let attempt = 0; attempt < 100 && !version; attempt++) {
+      try {
+        const response = await fetch(debugBase + '/json/version')
+        if (response.ok) version = await response.json()
+      } catch {}
+      if (!version) await sleep(200)
+    }
+    if (!version) throw new Error('Chrome CDP not ready')
+
+    const referenceTargetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
+    const actualTargetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
+    const referenceTarget = await referenceTargetResponse.json()
+    const actualTarget = await actualTargetResponse.json()
+
+    referenceCdp = new CdpSession(referenceTarget.webSocketDebuggerUrl)
+    actualCdp = new CdpSession(actualTarget.webSocketDebuggerUrl)
+    await referenceCdp.open()
+    await actualCdp.open()
+
+    for (const session of [referenceCdp, actualCdp]) {
+      await session.send('Page.enable')
+      await session.send('Runtime.enable')
+      await session.send('Log.enable')
+      await session.send('Network.enable')
+    }
+    await referenceCdp.send('Page.addScriptToEvaluateOnNewDocument', { source: reference.bootstrap })
+
+    const referenceErrors = []
+    const actualErrors = []
+    referenceCdp.on('Runtime.exceptionThrown', (params) => {
+      referenceErrors.push('EXCEPTION ' + (params.exceptionDetails?.exception?.description || params.exceptionDetails?.text || ''))
+    })
+    referenceCdp.on('Log.entryAdded', (params) => {
+      if (params.entry?.level === 'error') referenceErrors.push('LOG ' + params.entry.text)
+    })
+    actualCdp.on('Runtime.exceptionThrown', (params) => {
+      actualErrors.push('EXCEPTION ' + (params.exceptionDetails?.exception?.description || params.exceptionDetails?.text || ''))
+    })
+    actualCdp.on('Log.entryAdded', (params) => {
+      if (params.entry?.level === 'error') actualErrors.push('LOG ' + params.entry.text)
+    })
+
+    const report = {
+      generatedAt: new Date().toISOString(),
+      reference: 'design_handoff_swiss_bento/reference/Playback Rental.dc.html',
+      actualBase,
+      metrics: [],
+      referenceErrors,
+      actualErrors,
+    }
+
+    let productPath = ''
+    for (const viewport of viewports) {
+      if (!productPath) productPath = await discoverProduct(actualCdp, viewport)
+
+      for (const screen of screens) {
+        const stem = screen.id + '-' + viewport.id
+        const referenceFile = path.join(outputDir, stem + '-reference.png')
+        const actualFile = path.join(outputDir, stem + '-actual.png')
+        const diffFile = path.join(outputDir, stem + '-diff.png')
+
+        await openReference(referenceCdp, screen, viewport)
+        await capture(referenceCdp, referenceFile)
+        await openActual(actualCdp, screen, viewport, productPath)
+        await capture(actualCdp, actualFile)
+
+        const metrics = await compare(referenceFile, actualFile, diffFile)
+        report.metrics.push({ screen: screen.id, viewport: viewport.id, ...metrics })
+        console.log(
+          'VISUAL ' +
+            screen.id +
+            '/' +
+            viewport.id +
+            ' meaningful=' +
+            metrics.meaningfulMismatchPercent +
+            '% exact=' +
+            metrics.exactMismatchPercent +
+            '% meanDelta=' +
+            metrics.meanChannelDelta,
+        )
+      }
+    }
+
+    writeFileSync(path.join(outputDir, 'report.json'), JSON.stringify(report, null, 2))
+    const rows = report.metrics.map(
+      (metric) =>
+        '| ' +
+        metric.screen +
+        ' | ' +
+        metric.viewport +
+        ' | ' +
+        metric.exactMismatchPercent +
+        '% | ' +
+        metric.meaningfulMismatchPercent +
+        '% | ' +
+        metric.meanChannelDelta +
+        ' |',
+    )
+    writeFileSync(
+      path.join(outputDir, 'report.md'),
+      [
+        '# Visual regression report',
+        '',
+        'Reference: ' + report.reference,
+        '',
+        '| Screen | Viewport | Exact mismatch | Meaningful mismatch (>16 RGB) | Mean channel delta |',
+        '|---|---:|---:|---:|---:|',
+        ...rows,
+        '',
+      ].join('\n'),
+    )
+  } catch (error) {
+    console.error(error)
+    if (chromeStderr) console.error(chromeStderr.slice(-5000))
+    throw error
+  } finally {
+    referenceCdp?.close()
+    actualCdp?.close()
+    chrome.kill('SIGTERM')
+    await sleep(300)
+    reference.http.close()
+    try {
+      rmSync(userDataDir, { recursive: true, force: true, maxRetries: 4, retryDelay: 100 })
+    } catch (error) {
+      console.warn('Chrome profile cleanup failed:', error.code || error.message)
+    }
+  }
+}
+
+main().catch(() => process.exit(1))
