@@ -234,26 +234,32 @@ async function capture(cdp, file) {
   writeFileSync(file, Buffer.from(result.data, 'base64'))
 }
 
-async function openReference(cdp, screen, viewport) {
-  await setViewport(cdp, viewport)
+async function bootReference(cdp, viewport) {
   await navigate(cdp, 'http://127.0.0.1:' + referencePort + '/Playback%20Rental.dc.html')
   await waitFor(
     cdp,
     "Boolean(document.querySelector('#dc-root')) && document.body.innerText.includes('Главная')",
     'reference boot',
   )
+  await setViewport(cdp, viewport)
+  await settle(cdp)
+}
 
+async function selectReferenceScreen(cdp, screen) {
+  await evaluate(
+    cdp,
+    "(()=>{const els=Array.from(document.querySelectorAll('#dc-root div'));const item=els.find(el=>el.textContent?.trim()==='Главная'&&el.parentElement&&getComputedStyle(el.parentElement).position==='fixed');if(item?.parentElement)item.parentElement.style.display='';return true})()",
+  )
   const clickExpression =
     "(()=>{const label=" +
     JSON.stringify(screen.label) +
     ";const els=Array.from(document.querySelectorAll('#dc-root div'));const item=els.find(el=>el.textContent?.trim()===label&&el.parentElement&&getComputedStyle(el.parentElement).position==='fixed');if(!item)throw new Error('switcher item not found: '+label);item.click();return true})()"
   await evaluate(cdp, clickExpression)
-
+  await sleep(80)
   await evaluate(
     cdp,
     "(()=>{const els=Array.from(document.querySelectorAll('#dc-root div'));const item=els.find(el=>el.textContent?.trim()==='Главная'&&el.parentElement&&getComputedStyle(el.parentElement).position==='fixed');if(item?.parentElement)item.parentElement.style.display='none';return true})()",
   )
-
   await settle(cdp)
 }
 
@@ -467,18 +473,25 @@ async function main() {
       actualErrors,
     }
 
-    let productPath = ''
     for (const viewport of viewports) {
-      if (!productPath) productPath = await discoverProduct(actualCdp, viewport)
+      await bootReference(referenceCdp, viewport)
+      for (const screen of screens) {
+        const stem = screen.id + '-' + viewport.id
+        const referenceFile = path.join(outputDir, stem + '-reference.png')
+        await selectReferenceScreen(referenceCdp, screen)
+        await capture(referenceCdp, referenceFile)
+        console.log('REFERENCE_CAPTURED ' + screen.id + '/' + viewport.id)
+      }
+    }
 
+    const productPath = await discoverProduct(actualCdp, viewports[0])
+    for (const viewport of viewports) {
       for (const screen of screens) {
         const stem = screen.id + '-' + viewport.id
         const referenceFile = path.join(outputDir, stem + '-reference.png')
         const actualFile = path.join(outputDir, stem + '-actual.png')
         const diffFile = path.join(outputDir, stem + '-diff.png')
 
-        await openReference(referenceCdp, screen, viewport)
-        await capture(referenceCdp, referenceFile)
         await openActual(actualCdp, screen, viewport, productPath)
         await capture(actualCdp, actualFile)
 
