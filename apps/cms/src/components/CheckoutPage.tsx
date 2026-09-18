@@ -1052,7 +1052,7 @@ export default function CheckoutPage() {
         </div>
 
         <div className="min-[1021px]:col-span-5">
-          <div className="sticky top-[96px] rounded-3xl border border-border bg-card p-6">
+          <div className="rounded-3xl border border-border bg-card p-6 min-[1021px]:sticky min-[1021px]:top-[96px]">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Итог</div>
 
             {/* Backlog item 5 (docs/ROADMAP-2.0.md, promo codes). Disabled
