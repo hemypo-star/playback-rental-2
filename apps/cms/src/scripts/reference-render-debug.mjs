@@ -3,24 +3,34 @@ import { createServer } from 'node:http'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
+import { gunzipSync } from 'node:zlib'
 
 const referenceDir=path.resolve(process.cwd(),'../../design_handoff_swiss_bento/reference')
 const htmlPath=path.join(referenceDir,'Playback Rental.dc.html')
 const supportPath=path.join(referenceDir,'support.js')
 const imageSlotPath=path.join(referenceDir,'image-slot.js')
 const fontPath=path.resolve(process.cwd(),'public/fonts/golos-text-cyrillic.woff2')
+const bundlePath=path.join(referenceDir,'Playback Rental - прокат техники.html')
 const port=4173,debug='http://127.0.0.1:9224'
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 function chrome(){for(const p of [process.env.CHROME_BIN,'/usr/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/chromium','/usr/bin/chromium-browser'])if(p&&existsSync(p))return p;throw new Error('Chrome not found')}
 
-async function asset(url){const r=await fetch(url);if(!r.ok)throw new Error(url+' -> '+r.status);return Buffer.from(await r.arrayBuffer())}
+function bundledRuntime(url){
+ const bundled=readFileSync(bundlePath,'utf8')
+ const manifestMatch=bundled.match(/<script type="__bundler\/manifest">\s*([\s\S]*?)\s*<\/script>/)
+ const extMatch=bundled.match(/<script type="__bundler\/ext_resources">\s*([\s\S]*?)\s*<\/script>/)
+ if(!manifestMatch||!extMatch)throw new Error('Bundled manifest not found')
+ const manifest=JSON.parse(manifestMatch[1]),ext=JSON.parse(extMatch[1])
+ const hit=ext.find(x=>x.id===url)
+ if(!hit||!manifest[hit.uuid])throw new Error('Bundled runtime not found: '+url)
+ const entry=manifest[hit.uuid]
+ const raw=Buffer.from(entry.data,'base64')
+ return entry.compressed?gunzipSync(raw):raw
+}
 async function server(){
- const [react,reactDom,babel]=await Promise.all([
-  asset('https://unpkg.com/react@18.3.1/umd/react.production.min.js'),
-  asset('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'),
-  asset('https://unpkg.com/@babel/standalone@7.29.0/babel.min.js')
- ])
+ const react=bundledRuntime('https://unpkg.com/react@18.3.1/umd/react.production.min.js')
+ const reactDom=bundledRuntime('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js')
  const support=readFileSync(supportPath,'utf8')
  let html=readFileSync(htmlPath,'utf8').replace(/<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com" \/>\s*<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin="anonymous" \/>\s*<link href="https:\/\/fonts\.googleapis\.com\/css2[^"]+" rel="stylesheet" \/>/,'<style>@font-face{font-family:"Golos Text";font-style:normal;font-weight:400 800;src:url("/golos.woff2") format("woff2")}</style>')
  const http=createServer((req,res)=>{const u=new URL(req.url||'/','http://127.0.0.1:'+port);const p=u.pathname
@@ -32,7 +42,7 @@ async function server(){
   res.writeHead(404);res.end('not found')
  })
  await new Promise((ok,fail)=>{http.once('error',fail);http.listen(port,'127.0.0.1',ok)})
- return {http,bootstrap:[react,reactDom,babel].map(x=>x.toString('utf8')).join('\n;\n')}
+ return {http,bootstrap:[react,reactDom].map(x=>x.toString('utf8')).join('\n;\n')}
 }
 class CDP{constructor(url){this.url=url;this.i=1;this.p=new Map();this.l=new Map()}async open(){this.ws=new WebSocket(this.url);await new Promise((ok,fail)=>{this.ws.onopen=ok;this.ws.onerror=fail});this.ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id){const q=this.p.get(m.id);if(!q)return;this.p.delete(m.id);m.error?q.reject(new Error(m.error.message)):q.resolve(m.result||{});return}for(const f of this.l.get(m.method)||[])f(m.params||{})}}send(method,params={}){const id=this.i++;return new Promise((resolve,reject)=>{this.p.set(id,{resolve,reject});this.ws.send(JSON.stringify({id,method,params}))})}on(m,f){const a=this.l.get(m)||new Set();a.add(f);this.l.set(m,a)}}
 async function main(){
