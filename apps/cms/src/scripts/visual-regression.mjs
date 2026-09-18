@@ -114,11 +114,18 @@ async function main(){
  try{
   let version;for(let i=0;i<100&&!version;i++){try{const r=await fetch(debug+'/json/version');if(r.ok)version=await r.json()}catch{}if(!version)await sleep(200)}
   if(!version)throw new Error('Chrome debug endpoint unavailable')
-  const tr=await fetch(debug+'/json/new?about:blank',{method:'PUT'}),t=await tr.json();c=new CDP(t.webSocketDebuggerUrl);await c.open();await c.send('Page.enable');await c.send('Runtime.enable');await c.send('Network.enable')
-  c.on('Runtime.exceptionThrown',p=>console.error('PAGE_EXCEPTION',p.exceptionDetails?.exception?.description||p.exceptionDetails?.text))
-  c.on('Network.loadingFailed',p=>console.error('NETWORK_FAIL',p.errorText,p.type||''))
+  const refTargetResponse=await fetch(debug+'/json/new?about:blank',{method:'PUT'}),refTarget=await refTargetResponse.json()
+  const actualTargetResponse=await fetch(debug+'/json/new?about:blank',{method:'PUT'}),actualTarget=await actualTargetResponse.json()
+  const cRef=new CDP(refTarget.webSocketDebuggerUrl),cActual=new CDP(actualTarget.webSocketDebuggerUrl)
+  await cRef.open();await cActual.open()
+  for(const session of [cRef,cActual]){await session.send('Page.enable');await session.send('Runtime.enable');await session.send('Network.enable')}
+  cRef.on('Runtime.exceptionThrown',p=>console.error('REF_EXCEPTION',p.exceptionDetails?.exception?.description||p.exceptionDetails?.text))
+  cRef.on('Network.loadingFailed',p=>console.error('REF_NETWORK_FAIL',p.errorText,p.type||''))
+  cActual.on('Runtime.exceptionThrown',p=>console.error('ACTUAL_EXCEPTION',p.exceptionDetails?.exception?.description||p.exceptionDetails?.text))
+  cActual.on('Network.loadingFailed',p=>console.error('ACTUAL_NETWORK_FAIL',p.errorText,p.type||''))
+  c={close:()=>{cRef.close();cActual.close()}}
   let productPath='';const report={reference:'design_handoff_swiss_bento/reference/Playback Rental.dc.html',actualBase,generatedAt:new Date().toISOString(),metrics:[]}
-  for(const v of viewports){if(!productPath)productPath=await discoverProduct(c,v);for(const screen of screens){const stem=screen.id+'-'+v.id,rf=path.join(outputDir,stem+'-reference.png'),af=path.join(outputDir,stem+'-actual.png'),df=path.join(outputDir,stem+'-diff.png');await openReference(c,screen.label,v);await capture(c,rf);await openActual(c,screen,productPath,v);await capture(c,af);const m=await compare(rf,af,df);report.metrics.push({screen:screen.id,viewport:v.id,...m});console.log('VISUAL',screen.id,v.id,JSON.stringify(m))}}
+  for(const v of viewports){if(!productPath)productPath=await discoverProduct(cActual,v);for(const screen of screens){const stem=screen.id+'-'+v.id,rf=path.join(outputDir,stem+'-reference.png'),af=path.join(outputDir,stem+'-actual.png'),df=path.join(outputDir,stem+'-diff.png');await openReference(cRef,screen.label,v);await capture(cRef,rf);await openActual(cActual,screen,productPath,v);await capture(cActual,af);const m=await compare(rf,af,df);report.metrics.push({screen:screen.id,viewport:v.id,...m});console.log('VISUAL',screen.id,v.id,JSON.stringify(m))}}
   writeFileSync(path.join(outputDir,'report.json'),JSON.stringify(report,null,2))
   const rows=report.metrics.map(m=>'| '+m.screen+' | '+m.viewport+' | '+m.exactMismatchPercent+'% | '+m.meaningfulMismatchPercent+'% | '+m.meanChannelDelta+' |')
   writeFileSync(path.join(outputDir,'report.md'),['# Visual regression report','','| Screen | Viewport | Exact mismatch | Meaningful mismatch | Mean RGB delta |','|---|---|---:|---:|---:|',...rows,''].join('\n'))
