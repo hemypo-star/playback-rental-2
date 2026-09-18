@@ -123,7 +123,7 @@ export default async function CatalogPage({ activeCategory, searchQuery, sort = 
           kitOnly={kitOnly}
         />
 
-        <div className="col-span-full min-w-0 lg:col-span-9">
+        <div className="col-span-6 min-w-0 min-[1021px]:col-span-9">
           <form method="get" action={basePath} className="relative mb-3.5">
             <input
               type="text"
@@ -186,7 +186,7 @@ export default async function CatalogPage({ activeCategory, searchQuery, sort = 
               </a>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3.5 min-[761px]:grid-cols-2 min-[1021px]:grid-cols-3">
               {products.map((p, i) => (
                 <ProductCard key={p.id} product={p} delay={i * 45} />
               ))}
