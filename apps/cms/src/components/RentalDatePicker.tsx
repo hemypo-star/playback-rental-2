@@ -267,7 +267,7 @@ const RentalDatePicker = forwardRef<RentalDatePickerHandle, Props>(function Rent
         // explicit about the intended mobile treatment ("чип даты →
         // иконка-кнопка 44px с датой в подписи") — an icon-only 44px button
         // below the same breakpoint the burger nav already collapses at
-        // (`md`, not the spec's literal "1020": every other Navbar item was
+        // (the visible-text form now starts above the mobile 760px cutoff):
         // already built and verified against `md`=768px throughout the
         // whole migration, and introducing a second, different breakpoint
         // just for this one element would fragment the header's responsive
@@ -287,13 +287,13 @@ const RentalDatePicker = forwardRef<RentalDatePickerHandle, Props>(function Rent
           type="button"
           onClick={() => openPicker('from')}
           aria-label={dates.startDate && dates.endDate ? `Даты аренды: ${fromLabel} — ${toLabel}` : 'Выбрать даты'}
-          className="flex h-11 w-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-muted text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground md:h-[38px] md:w-auto md:justify-start md:px-[15px]"
+          className="flex h-9 w-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-muted text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors duration-240 ease-expo hover:bg-primary hover:text-primary-foreground min-[761px]:h-[38px] min-[761px]:w-auto min-[761px]:justify-start min-[761px]:px-[15px]"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4.5 w-4.5 shrink-0 md:hidden" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4.5 w-4.5 shrink-0 min-[761px]:hidden" aria-hidden="true">
             <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
             <path strokeLinecap="round" d="M8 3v4M16 3v4M3.5 9.5h17" />
           </svg>
-          <span className="hidden md:inline">{dates.startDate && dates.endDate ? `${fromLabel} — ${toLabel}` : 'Выбрать даты'}</span>
+          <span className="hidden min-[761px]:inline">{dates.startDate && dates.endDate ? `${fromLabel} — ${toLabel}` : 'Выбрать даты'}</span>
         </button>
       )}
 
