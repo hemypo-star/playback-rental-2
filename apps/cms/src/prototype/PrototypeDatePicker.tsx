@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useStore } from '@nanostores/react'
 import { $selectedDates, OPEN_DATE_PICKER_EVENT, setSelectedDates } from '../stores/dates'
 
@@ -25,9 +25,9 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
   const [fromHour,setFromHour]=useState(()=>selected.startDate?.getHours() ?? openHour)
   const [toHour,setToHour]=useState(()=>selected.endDate?.getHours() ?? closeHour)
 
-  const show=(next:'from'|'to'='from')=>{setFrom(selected.startDate);setTo(selected.endDate);setFromHour(selected.startDate?.getHours()??openHour);setToHour(selected.endDate?.getHours()??closeHour);setTarget(next);setOpen(true)}
-  useImperativeHandle(ref,()=>({open:show}))
-  useEffect(()=>{const fn=()=>show('from');window.addEventListener(OPEN_DATE_PICKER_EVENT,fn);return()=>window.removeEventListener(OPEN_DATE_PICKER_EVENT,fn)},[selected.startDate,selected.endDate,openHour,closeHour])
+  const show=useCallback((next:'from'|'to'='from')=>{setFrom(selected.startDate);setTo(selected.endDate);setFromHour(selected.startDate?.getHours()??openHour);setToHour(selected.endDate?.getHours()??closeHour);setTarget(next);setOpen(true)},[selected.startDate,selected.endDate,openHour,closeHour])
+  useImperativeHandle(ref,()=>({open:show}),[show])
+  useEffect(()=>{const fn=()=>show('from');window.addEventListener(OPEN_DATE_PICKER_EVENT,fn);return()=>window.removeEventListener(OPEN_DATE_PICKER_EVENT,fn)},[show])
 
   const cells=useMemo(()=>{const first=startOfMonth(month);const days=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();let weekday=first.getDay();weekday=weekday===0?7:weekday;const out:(Date|null)[]=[];for(let i=1;i<weekday;i++)out.push(null);for(let d=1;d<=days;d++)out.push(new Date(first.getFullYear(),first.getMonth(),d));return out},[month])
   const hours=useMemo(()=>{const out:number[]=[];for(let h=Math.max(0,openHour-1);h<=Math.min(23,closeHour+1);h++)out.push(h);return out},[openHour,closeHour])
