@@ -63,7 +63,7 @@ export default function Navbar() {
 
   return (
     <div className="sticky top-0 z-[60] px-3.5 pt-3 sm:px-[14px]" style={{ background: 'linear-gradient(180deg,rgba(239,238,235,0.96) 60%,rgba(239,238,235,0))' }}>
-      <header className="swiss-header flex h-16 items-center gap-[30px] rounded-[20px] border border-border bg-white/[0.86] shadow-[var(--shadow-soft)] backdrop-blur-[20px] backdrop-saturate-[1.6]">
+      <header className="swiss-header flex h-16 items-center gap-2 rounded-[20px] border border-border bg-white/[0.86] shadow-[var(--shadow-soft)] backdrop-blur-[20px] backdrop-saturate-[1.6] min-[761px]:gap-[30px]">
         <Link href="/" className="flex shrink-0 items-baseline gap-[7px] select-none">
           <span className="text-[15px] font-bold uppercase tracking-[0.02em]">Playback</span>
           <span className="text-[15px] font-normal uppercase tracking-[0.02em] text-subtle">Rental</span>
