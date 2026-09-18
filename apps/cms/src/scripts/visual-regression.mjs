@@ -14,6 +14,7 @@ const supportPath = path.join(referenceDir, 'support.js')
 const imageSlotPath = path.join(referenceDir, 'image-slot.js')
 const fontPath = path.resolve(process.cwd(), 'public/fonts/golos-text-cyrillic.woff2')
 const outputDir = path.resolve(process.cwd(), process.env.VISUAL_OUTPUT_DIR || 'artifacts/visual-regression')
+const baselineDir = path.resolve(process.cwd(), 'visual-baselines')
 const referencePort = 4173
 const debugBase = 'http://127.0.0.1:9225'
 
@@ -457,9 +458,24 @@ async function main() {
       for (const screen of screens) {
         const stem = screen.id + '-' + viewport.id
         const referenceFile = path.join(outputDir, stem + '-reference.png')
+        const baselineFile = path.join(baselineDir, stem + '-reference.png')
+        if (!existsSync(baselineFile)) throw new Error('visual baseline missing: ' + baselineFile)
         await openReference(referenceCdp, screen, viewport)
         await capture(referenceCdp, referenceFile)
         referenceFiles.set(stem, referenceFile)
+        const driftFile = path.join(outputDir, stem + '-prototype-drift.png')
+        const drift = await compare(baselineFile, referenceFile, driftFile)
+        console.log(
+          'BASELINE ' +
+            screen.id +
+            '/' +
+            viewport.id +
+            ' drift=' +
+            drift.meaningfulMismatchPercent +
+            '% exact=' +
+            drift.exactMismatchPercent +
+            '%',
+        )
         console.log('REFERENCE ' + screen.id + '/' + viewport.id + ' captured')
       }
     }
@@ -490,6 +506,7 @@ async function main() {
       reference: 'design_handoff_swiss_bento/reference/Playback Rental.dc.html',
       actualBase,
       metrics: [],
+      prototypeDrift: [],
       referenceErrors,
       actualErrors,
     }
@@ -501,14 +518,18 @@ async function main() {
       for (const screen of screens) {
         const stem = screen.id + '-' + viewport.id
         const referenceFile = referenceFiles.get(stem)
+        const baselineFile = path.join(baselineDir, stem + '-reference.png')
         const actualFile = path.join(outputDir, stem + '-actual.png')
         const diffFile = path.join(outputDir, stem + '-diff.png')
+        const driftFile = path.join(outputDir, stem + '-prototype-drift.png')
 
         await openActual(actualCdp, screen, viewport, productPath)
         await capture(actualCdp, actualFile)
 
-        const metrics = await compare(referenceFile, actualFile, diffFile)
+        const metrics = await compare(baselineFile, actualFile, diffFile)
+        const drift = await compare(baselineFile, referenceFile, driftFile)
         report.metrics.push({ screen: screen.id, viewport: viewport.id, ...metrics })
+        report.prototypeDrift.push({ screen: screen.id, viewport: viewport.id, ...drift })
         console.log(
           'VISUAL ' +
             screen.id +
@@ -549,6 +570,25 @@ async function main() {
         '| Screen | Viewport | Exact mismatch | Meaningful mismatch (>16 RGB) | Mean channel delta |',
         '|---|---:|---:|---:|---:|',
         ...rows,
+        '',
+        '## Prototype baseline drift',
+        '',
+        '| Screen | Viewport | Exact drift | Meaningful drift (>16 RGB) | Mean channel delta |',
+        '|---|---:|---:|---:|---:|',
+        ...report.prototypeDrift.map(
+          (metric) =>
+            '| ' +
+            metric.screen +
+            ' | ' +
+            metric.viewport +
+            ' | ' +
+            metric.exactMismatchPercent +
+            '% | ' +
+            metric.meaningfulMismatchPercent +
+            '% | ' +
+            metric.meanChannelDelta +
+            ' |',
+        ),
         '',
       ].join('\n'),
     )
