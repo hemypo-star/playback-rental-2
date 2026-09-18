@@ -770,8 +770,8 @@ export default function CheckoutPage() {
         </span>
       </div>
 
-      <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-12">
-        <div className="flex flex-col gap-3.5 lg:col-span-7">
+      <div className="mt-3.5 grid grid-cols-1 gap-3.5 min-[1021px]:grid-cols-12">
+        <div className="flex flex-col gap-3.5 min-[1021px]:col-span-7">
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">01 — Позиции</div>
             <div className="mt-1">
@@ -996,7 +996,7 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            <div className="mt-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+            <div className="mt-3.5 grid grid-cols-1 gap-3.5 min-[761px]:grid-cols-2">
               <Field label="Имя">
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Как к вам обращаться" className={inputClass} />
               </Field>
@@ -1051,8 +1051,8 @@ export default function CheckoutPage() {
           </form>
         </div>
 
-        <div className="lg:col-span-5">
-          <div className="sticky top-[96px] rounded-3xl border border-border bg-card p-6">
+        <div className="min-[1021px]:col-span-5">
+          <div className="rounded-3xl border border-border bg-card p-6 min-[1021px]:sticky min-[1021px]:top-[96px]">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Итог</div>
 
             {/* Backlog item 5 (docs/ROADMAP-2.0.md, promo codes). Disabled
