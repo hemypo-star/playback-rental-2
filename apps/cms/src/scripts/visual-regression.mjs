@@ -99,7 +99,7 @@ async function startReferenceServer() {
 
   return {
     http,
-    bootstrap: react.toString('utf8') + '\n;\n' + reactDom.toString('utf8'),
+    bootstrap: [react, reactDom, babel].map((asset) => asset.toString('utf8')).join('\n;\n'),
   }
 }
 
