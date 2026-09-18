@@ -1,0 +1,70 @@
+name: Visual Debug
+
+on:
+  push:
+    branches:
+      - chatgpt/visual-regression-debug
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: playback_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d playback_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DATABASE_URI: postgresql://postgres:postgres@127.0.0.1:5432/playback_ci
+      PAYLOAD_SECRET: ci-only-placeholder-secret-not-used-in-production
+      WEB_URL: http://localhost:3000
+      SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
+      SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: |
+          corepack enable
+          corepack prepare pnpm@11.21.0 --activate
+      - run: pnpm install --frozen-lockfile --filter cms...
+      - run: pnpm --dir apps/cms generate:types
+      - env:
+          NODE_ENV: production
+          PAYLOAD_MIGRATING: 'true'
+        run: pnpm --dir apps/cms payload migrate
+      - env:
+          NODE_ENV: production
+        run: pnpm --dir apps/cms smoke:seed
+      - name: Start Next dev
+        run: |
+          pnpm --dir apps/cms dev > /tmp/visual-next.log 2>&1 &
+          echo $! > /tmp/visual-next.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3000/api/access > /dev/null; then break; fi
+            sleep 1
+          done
+      - name: Run visual regression
+        env:
+          VISUAL_BASE_URL: http://127.0.0.1:3000
+        run: pnpm --dir apps/cms exec node src/scripts/visual-regression.mjs
+      - name: Upload visual artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-debug
+          path: apps/cms/artifacts/visual-regression
+          if-no-files-found: warn
+          retention-days: 7
