@@ -448,7 +448,6 @@ async function main() {
       await session.send('Log.enable')
       await session.send('Network.enable')
     }
-    await referenceCdp.send('Page.addScriptToEvaluateOnNewDocument', { source: reference.bootstrap })
 
     const referenceErrors = []
     const actualErrors = []
