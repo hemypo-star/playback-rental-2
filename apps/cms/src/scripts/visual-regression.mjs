@@ -246,7 +246,7 @@ async function openReference(cdp, screen, viewport) {
   await navigate(cdp, 'http://127.0.0.1:' + referencePort + '/Playback%20Rental.dc.html')
   await waitFor(
     cdp,
-    "Boolean(document.querySelector('#dc-root')) && document.body.innerText.includes('Главная')",
+    "Boolean(document.querySelector('#dc-root'))",
     'reference boot',
   )
 
