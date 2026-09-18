@@ -56,6 +56,8 @@ jobs:
             if curl --fail --silent http://127.0.0.1:3000/api/access > /dev/null; then break; fi
             sleep 1
           done
+      - name: Capture HTML prototype reference
+        run: pnpm --dir apps/cms exec node src/scripts/reference-capture.mjs
       - name: Run visual regression
         env:
           VISUAL_BASE_URL: http://127.0.0.1:3000
