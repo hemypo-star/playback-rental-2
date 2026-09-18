@@ -123,6 +123,67 @@ jobs:
           SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
         run: pnpm --dir apps/cms smoke:seed
 
+      - name: Visual reference and current screenshots
+        env:
+          NODE_ENV: production
+          NOTIFICATIONS_ENABLED: 'false'
+          SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
+          SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
+          VISUAL_APP_URL: http://127.0.0.1:3000
+          VISUAL_REFERENCE_URL: http://127.0.0.1:4173/design_handoff_swiss_bento/reference/Playback%20Rental%20-%20%D0%BF%D1%80%D0%BE%D0%BA%D0%B0%D1%82%20%D1%82%D0%B5%D1%85%D0%BD%D0%B8%D0%BA%D0%B8.html
+          VISUAL_OUT_DIR: visual-artifacts
+        run: |
+          (
+            cd apps/cms
+            exec node ./node_modules/next/dist/bin/next start
+          ) > /tmp/playback-visual-app.log 2>&1 &
+          CMS_PID=$!
+
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/playback-visual-reference.log 2>&1 &
+          REF_PID=$!
+
+          cleanup() {
+            kill "$CMS_PID" "$REF_PID" 2>/dev/null || true
+            wait "$CMS_PID" 2>/dev/null || true
+            wait "$REF_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:3000/api/access > /dev/null; then
+              break
+            fi
+            if ! kill -0 "$CMS_PID" 2>/dev/null; then
+              echo 'Next runtime exited before becoming ready'
+              cat /tmp/playback-visual-app.log
+              exit 1
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo 'Next runtime did not become ready in time'
+              cat /tmp/playback-visual-app.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          curl --fail --silent --show-error http://127.0.0.1:4173/design_handoff_swiss_bento/reference/Playback%20Rental%20-%20%D0%BF%D1%80%D0%BE%D0%BA%D0%B0%D1%82%20%D1%82%D0%B5%D1%85%D0%BD%D0%B8%D0%BA%D0%B8.html > /dev/null
+
+          if ! node tools/visual-capture.mjs; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-visual-app.log
+            echo '--- Reference server log ---'
+            cat /tmp/playback-visual-reference.log
+            exit 1
+          fi
+
+      - name: Upload visual comparison artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-comparison
+          path: visual-artifacts/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Browser, security, notifications, lifecycle and promo smoke
         env:
           NODE_ENV: production
