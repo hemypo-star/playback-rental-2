@@ -222,7 +222,7 @@ export default async function ProductPage({ params }: Props) {
         </div>
 
         <div className="col-span-6 min-[1021px]:col-span-5">
-          <div className="sticky top-[96px]">
+          <div className="min-[1021px]:sticky min-[1021px]:top-[96px]">
             <ProductPurchasePanel product={product} imageUrl={mainImage} />
           </div>
         </div>
