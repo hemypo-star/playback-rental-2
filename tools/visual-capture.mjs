@@ -225,55 +225,29 @@ async function captureReference(session, viewport, screen, metrics) {
 
   await waitForExpression(
     session,
-    `Boolean(document.querySelector('main[data-screen-label="Главная"]'))`,
+    `Boolean(window.__dcSetProps && window.__dcRootName && document.querySelector('main[data-screen-label="Главная"]'))`,
     'reference bundle render',
   )
 
-  await evaluate(session, `(() => {
-    document.querySelector('#__bundler_thumbnail')?.remove()
-    document.querySelector('#__bundler_loading')?.remove()
-    return true
-  })()`)
+  const refScreen = screen === 'checkout' ? 'cart' : screen
+  await evaluate(
+    session,
+    `(() => {
+      const root = window.__dcRootName()
+      window.__dcSetProps(root, { defaultScreen: ${JSON.stringify(refScreen)}, promoAuto: false })
+      document.querySelector('#__bundler_thumbnail')?.remove()
+      document.querySelector('#__bundler_loading')?.remove()
+      return root
+    })()`,
+  )
 
   const label = screenLabels[screen]
-  const menuLabel = screenMenuLabels[screen]
-  if (screen !== 'home') {
-    const clicked = await evaluate(
-      session,
-      `(() => {
-        const candidates = Array.from(document.querySelectorAll('div,button,span,a')).filter((el) => {
-          if ((el.innerText || '').trim() !== ${JSON.stringify(menuLabel)}) return false
-          const style = getComputedStyle(el)
-          const rect = el.getBoundingClientRect()
-          return style.cursor === 'pointer' && rect.width > 0 && rect.height > 0
-        })
-        const target = candidates
-          .map((el) => ({ el, rect: el.getBoundingClientRect() }))
-          .sort((a, b) => b.rect.top - a.rect.top)[0]?.el
-        if (!target) {
-          return {
-            ok: false,
-            matches: Array.from(document.querySelectorAll('div,button,span,a'))
-              .filter((el) => (el.innerText || '').trim() === ${JSON.stringify(menuLabel)})
-              .map((el) => ({
-                tag: el.tagName,
-                cursor: getComputedStyle(el).cursor,
-                rect: el.getBoundingClientRect().toJSON?.() || {},
-              })),
-          }
-        }
-        target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }))
-        return { ok: true }
-      })()`,
-    )
-    if (!clicked?.ok) throw new Error(`Reference screen switch failed: ${menuLabel}; ${JSON.stringify(clicked)}`)
-    await waitForExpression(
-      session,
-      `Boolean(document.querySelector('main[data-screen-label=${JSON.stringify(label)}]'))`,
-      `reference ${label}`,
-    )
-    await sleep(150)
-  }
+  await waitForExpression(
+    session,
+    `Boolean(document.querySelector('main[data-screen-label=${JSON.stringify(label)}]'))`,
+    `reference ${label}`,
+  )
+  await sleep(150)
 
   await evaluate(session, `(() => {
     const fixed = Array.from(document.querySelectorAll('div')).find((el) => {
