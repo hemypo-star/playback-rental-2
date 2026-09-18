@@ -65,8 +65,7 @@ async function startReferenceServer() {
     /<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com" \/>\s*<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin="anonymous" \/>\s*<link href="https:\/\/fonts\.googleapis\.com\/css2[^"]+" rel="stylesheet" \/>/,
     '<style>@font-face{font-family:"Golos Text";font-style:normal;font-weight:400 800;font-display:swap;src:url("/golos.woff2") format("woff2")}</style>',
   )
-  let support = readFileSync(supportPath, 'utf8')
-  support = support
+  const support = readFileSync(supportPath, 'utf8')
     .replace('https://unpkg.com/react@18.3.1/umd/react.production.min.js', 'http://127.0.0.1:' + referencePort + '/react.js')
     .replace('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js', 'http://127.0.0.1:' + referencePort + '/react-dom.js')
     .replace('https://unpkg.com/@babel/standalone@7.29.0/babel.min.js', 'http://127.0.0.1:' + referencePort + '/babel.js')
@@ -98,7 +97,10 @@ async function startReferenceServer() {
     http.listen(referencePort, '127.0.0.1', resolve)
   })
 
-  return { http }
+  return {
+    http,
+    bootstrap: [react, reactDom, babel].map((asset) => asset.toString('utf8')).join('\n;\n'),
+  }
 }
 
 class CdpSession {
@@ -446,6 +448,7 @@ async function main() {
       await session.send('Log.enable')
       await session.send('Network.enable')
     }
+    await referenceCdp.send('Page.addScriptToEvaluateOnNewDocument', { source: reference.bootstrap })
 
     const referenceErrors = []
     const actualErrors = []
