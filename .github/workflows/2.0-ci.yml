@@ -156,6 +156,7 @@ jobs:
             sleep 1
           done
 
+          pnpm --dir apps/cms exec node src/scripts/reference-capture.mjs
           pnpm --dir apps/cms exec node src/scripts/visual-regression.mjs
 
       - name: Upload visual regression artifacts
