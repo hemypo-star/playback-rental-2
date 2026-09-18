@@ -55,16 +55,20 @@ async function fetchBytes(url) {
 }
 
 async function startReferenceServer() {
-  const [react, reactDom] = await Promise.all([
+  const [react, reactDom, babel] = await Promise.all([
     fetchBytes('https://unpkg.com/react@18.3.1/umd/react.production.min.js'),
     fetchBytes('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'),
+    fetchBytes('https://unpkg.com/@babel/standalone@7.29.0/babel.min.js'),
   ])
 
   const html = readFileSync(referenceHtmlPath, 'utf8').replace(
     /<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com" \/>\s*<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin="anonymous" \/>\s*<link href="https:\/\/fonts\.googleapis\.com\/css2[^"]+" rel="stylesheet" \/>/,
     '<style>@font-face{font-family:"Golos Text";font-style:normal;font-weight:400 800;font-display:swap;src:url("/golos.woff2") format("woff2")}</style>',
   )
-  const support = readFileSync(supportPath)
+  const support = readFileSync(supportPath, 'utf8')
+    .replace('https://unpkg.com/react@18.3.1/umd/react.production.min.js', 'http://127.0.0.1:' + referencePort + '/react.js')
+    .replace('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js', 'http://127.0.0.1:' + referencePort + '/react-dom.js')
+    .replace('https://unpkg.com/@babel/standalone@7.29.0/babel.min.js', 'http://127.0.0.1:' + referencePort + '/babel.js')
   const imageSlot = readFileSync(imageSlotPath)
 
   const http = createServer((req, res) => {
@@ -79,6 +83,9 @@ async function startReferenceServer() {
     }
     if (pathname === '/support.js') return send('text/javascript; charset=utf-8', support)
     if (pathname === '/image-slot.js') return send('text/javascript; charset=utf-8', imageSlot)
+    if (pathname === '/react.js') return send('text/javascript; charset=utf-8', react)
+    if (pathname === '/react-dom.js') return send('text/javascript; charset=utf-8', reactDom)
+    if (pathname === '/babel.js') return send('text/javascript; charset=utf-8', babel)
     if (pathname === '/golos.woff2') return send('font/woff2', readFileSync(fontPath))
 
     res.writeHead(404)
