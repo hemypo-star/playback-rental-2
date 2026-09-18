@@ -17,6 +17,10 @@ function withHour(d:Date|null,h:number){ if(!d) return null; const x=new Date(d)
 
 const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function PrototypeDatePicker({variant='navbar',openHour,closeHour},ref){
   const selected=useStore($selectedDates)
+  const [hydrated,setHydrated]=useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(()=>setHydrated(true),[])
+  const shown=hydrated?selected:{startDate:null,endDate:null}
   const [open,setOpen]=useState(false)
   const [target,setTarget]=useState<'from'|'to'>('from')
   const [month,setMonth]=useState(()=>startOfMonth(selected.startDate || new Date()))
@@ -34,17 +38,17 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
   const choose=(d:Date)=>{if(target==='from'){setFrom(d);if(to && d>=to)setTo(null);setTarget('to')}else{if(from && d<from){setFrom(d);setTo(null);setTarget('to')}else setTo(d)}}
   const done=()=>{if(from&&to){setSelectedDates(withHour(from,fromHour),withHour(to,toHour))}setOpen(false)}
   const days=Math.max(1,from&&to?Math.ceil((to.getTime()-from.getTime())/86400000)+1:1)
-  const label=fmtRange(selected.startDate,selected.endDate)
+  const label=fmtRange(shown.startDate,shown.endDate)
   const activeHour=target==='from'?fromHour:toHour
 
   const trigger = variant==='hero' ? (
     <button type="button" className="pb-date-card pb-card" onClick={()=>show('from')} style={{width:'100%',textAlign:'left'}}>
       <div className="pb-date-line"><span className="pb-kicker">Даты аренды</span><span className="pb-kicker pb-red">Изменить</span></div>
-      <div className="pb-date-line" style={{marginTop:12}}><span className="pb-date-value">{label}</span><span style={{fontSize:13,color:'var(--pb-sub)'}}>{timeOf(selected.startDate,openHour)} — {timeOf(selected.endDate,closeHour)}</span></div>
-      <div style={{marginTop:10,fontSize:12.5,color:'var(--pb-sub)'}}>{selected.startDate&&selected.endDate?`${days} ${days===1?'смена':days<5?'смены':'смен'}`:'Выберите период аренды'}</div>
+      <div className="pb-date-line" style={{marginTop:12}}><span className="pb-date-value">{label}</span><span style={{fontSize:13,color:'var(--pb-sub)'}}>{timeOf(shown.startDate,openHour)} — {timeOf(shown.endDate,closeHour)}</span></div>
+      <div style={{marginTop:10,fontSize:12.5,color:'var(--pb-sub)'}}>{shown.startDate&&shown.endDate?`${days} ${days===1?'смена':days<5?'смены':'смен'}`:'Выберите период аренды'}</div>
     </button>
   ) : (
-    <button type="button" className="pb-pill pb-header-date" onClick={()=>show('from')}><span>{variant==='compact'&&selected.startDate&&selected.endDate?`${label} · ${timeOf(selected.startDate,openHour)}—${timeOf(selected.endDate,closeHour)}`:label}</span></button>
+    <button type="button" className="pb-pill pb-header-date" onClick={()=>show('from')}><span>{variant==='compact'&&shown.startDate&&shown.endDate?`${label} · ${timeOf(selected.startDate,openHour)}—${timeOf(selected.endDate,closeHour)}`:label}</span></button>
   )
 
   return <>
