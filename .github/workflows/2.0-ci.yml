@@ -56,7 +56,7 @@ jobs:
         run: pnpm install --frozen-lockfile --filter cms...
 
       - name: Diagnose prototype reference render
-        run: node apps/cms/src/scripts/reference-render-debug.mjs
+        run: pnpm --dir apps/cms exec node src/scripts/reference-render-debug.mjs
 
       - name: Validate Docker Compose
         env:
