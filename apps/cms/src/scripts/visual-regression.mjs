@@ -130,6 +130,6 @@ async function main(){
   const rows=report.metrics.map(m=>'| '+m.screen+' | '+m.viewport+' | '+m.exactMismatchPercent+'% | '+m.meaningfulMismatchPercent+'% | '+m.meanChannelDelta+' |')
   writeFileSync(path.join(outputDir,'report.md'),['# Visual regression report','','| Screen | Viewport | Exact mismatch | Meaningful mismatch | Mean RGB delta |','|---|---|---:|---:|---:|',...rows,''].join('\n'))
   console.log('VISUAL_REGRESSION_OK',report.metrics.length)
- }finally{c?.close();cp.kill('SIGTERM');srv.close();rmSync(dir,{recursive:true,force:true});if(stderr)console.log('CHROME_TAIL',stderr.slice(-1500))}
+ }finally{c?.close();cp.kill('SIGTERM');await sleep(500);srv.close();try{rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100})}catch(e){console.warn('CHROME_PROFILE_CLEANUP',e.code||e.message)}if(stderr)console.log('CHROME_TAIL',stderr.slice(-1500))}
 }
 main().catch(e=>{console.error('VISUAL_REGRESSION_FAILED',e);process.exit(1)})
