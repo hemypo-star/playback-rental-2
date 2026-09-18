@@ -21,25 +21,18 @@ async function server(){
   asset('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'),
   asset('https://unpkg.com/@babel/standalone@7.29.0/babel.min.js')
  ])
- let support=readFileSync(supportPath,'utf8')
- support=support
-  .replace('https://unpkg.com/react@18.3.1/umd/react.production.min.js','http://127.0.0.1:'+port+'/react.js')
-  .replace('https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js','http://127.0.0.1:'+port+'/react-dom.js')
-  .replace('https://unpkg.com/@babel/standalone@7.29.0/babel.min.js','http://127.0.0.1:'+port+'/babel.js')
+ const support=readFileSync(supportPath,'utf8')
  let html=readFileSync(htmlPath,'utf8').replace(/<link rel="preconnect" href="https:\/\/fonts\.googleapis\.com" \/>\s*<link rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin="anonymous" \/>\s*<link href="https:\/\/fonts\.googleapis\.com\/css2[^"]+" rel="stylesheet" \/>/,'<style>@font-face{font-family:"Golos Text";font-style:normal;font-weight:400 800;src:url("/golos.woff2") format("woff2")}</style>')
- const s=createServer((req,res)=>{const u=new URL(req.url||'/','http://127.0.0.1:'+port);const p=u.pathname
+ const http=createServer((req,res)=>{const u=new URL(req.url||'/','http://127.0.0.1:'+port);const p=u.pathname
   const send=(type,b)=>{res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store'});res.end(b)}
   if(p==='/'||p==='/Playback%20Rental.dc.html'||p==='/Playback Rental.dc.html')return send('text/html; charset=utf-8',html)
   if(p==='/support.js')return send('text/javascript; charset=utf-8',support)
   if(p==='/image-slot.js')return send('text/javascript; charset=utf-8',readFileSync(imageSlotPath))
-  if(p==='/react.js')return send('text/javascript; charset=utf-8',react)
-  if(p==='/react-dom.js')return send('text/javascript; charset=utf-8',reactDom)
-  if(p==='/babel.js')return send('text/javascript; charset=utf-8',babel)
   if(p==='/golos.woff2')return send('font/woff2',readFileSync(fontPath))
   res.writeHead(404);res.end('not found')
  })
- await new Promise((ok,fail)=>{s.once('error',fail);s.listen(port,'127.0.0.1',ok)})
- return s
+ await new Promise((ok,fail)=>{http.once('error',fail);http.listen(port,'127.0.0.1',ok)})
+ return {http,bootstrap:[react,reactDom,babel].map(x=>x.toString('utf8')).join('\n;\n')}
 }
 class CDP{constructor(url){this.url=url;this.i=1;this.p=new Map();this.l=new Map()}async open(){this.ws=new WebSocket(this.url);await new Promise((ok,fail)=>{this.ws.onopen=ok;this.ws.onerror=fail});this.ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id){const q=this.p.get(m.id);if(!q)return;this.p.delete(m.id);m.error?q.reject(new Error(m.error.message)):q.resolve(m.result||{});return}for(const f of this.l.get(m.method)||[])f(m.params||{})}}send(method,params={}){const id=this.i++;return new Promise((resolve,reject)=>{this.p.set(id,{resolve,reject});this.ws.send(JSON.stringify({id,method,params}))})}on(m,f){const a=this.l.get(m)||new Set();a.add(f);this.l.set(m,a)}}
 async function main(){
@@ -48,7 +41,7 @@ async function main(){
  try{
   let version;for(let i=0;i<80&&!version;i++){try{const r=await fetch(debug+'/json/version');if(r.ok)version=await r.json()}catch{}if(!version)await sleep(250)}
   const tr=await fetch(debug+'/json/new?about:blank',{method:'PUT'});const t=await tr.json();const c=new CDP(t.webSocketDebuggerUrl);await c.open()
-  await c.send('Page.enable');await c.send('Runtime.enable');await c.send('Log.enable');await c.send('Network.enable')
+  await c.send('Page.enable');await c.send('Runtime.enable');await c.send('Log.enable');await c.send('Network.enable');await c.send('Page.addScriptToEvaluateOnNewDocument',{source:srv.bootstrap})
   c.on('Runtime.consoleAPICalled',p=>console.log('CONSOLE',p.type,(p.args||[]).map(a=>a.value||a.description).join(' | ')))
   c.on('Runtime.exceptionThrown',p=>console.log('EXCEPTION',p.exceptionDetails?.exception?.description||p.exceptionDetails?.text))
   c.on('Log.entryAdded',p=>console.log('LOG',p.entry?.level,p.entry?.text))
@@ -59,6 +52,6 @@ async function main(){
   console.log('STATE',JSON.stringify(state.result?.value,null,2))
   if(!ok)throw new Error('reference did not boot')
   const shot=await c.send('Page.captureScreenshot',{format:'png',fromSurface:true});writeFileSync('/tmp/reference-home.png',Buffer.from(shot.data,'base64'));console.log('REFERENCE_OK')
- }finally{cp.kill('SIGTERM');srv.close();if(err)console.log('CHROME',err.slice(-3000))}
+ }finally{cp.kill('SIGTERM');srv.http.close();if(err)console.log('CHROME',err.slice(-3000))}
 }
 main().catch(e=>{console.error(e);process.exit(1)})
