@@ -22,6 +22,14 @@ const screenLabels = {
   catalog: 'Каталог',
   product: 'Товар',
   checkout: 'Корзина',
+  admin: 'Админ-панель',
+}
+
+const screenMenuLabels = {
+  home: 'Главная',
+  catalog: 'Каталог',
+  product: 'Товар',
+  checkout: 'Корзина',
   admin: 'Админка',
 }
 
@@ -228,23 +236,37 @@ async function captureReference(session, viewport, screen, metrics) {
   })()`)
 
   const label = screenLabels[screen]
+  const menuLabel = screenMenuLabels[screen]
   if (screen !== 'home') {
     const clicked = await evaluate(
       session,
       `(() => {
-        const fixed = Array.from(document.querySelectorAll('div')).find((el) => {
+        const candidates = Array.from(document.querySelectorAll('div,button,span,a')).filter((el) => {
+          if ((el.innerText || '').trim() !== ${JSON.stringify(menuLabel)}) return false
           const style = getComputedStyle(el)
-          const text = el.innerText || ''
-          return style.position === 'fixed' && text.includes('Главная') && text.includes('Каталог') && text.includes('Админка')
+          const rect = el.getBoundingClientRect()
+          return style.cursor === 'pointer' && rect.width > 0 && rect.height > 0
         })
-        if (!fixed) return false
-        const target = Array.from(fixed.querySelectorAll('div')).find((el) => (el.innerText || '').trim() === ${JSON.stringify(label)})
-        if (!target) return false
-        target.click()
-        return true
+        const target = candidates
+          .map((el) => ({ el, rect: el.getBoundingClientRect() }))
+          .sort((a, b) => b.rect.top - a.rect.top)[0]?.el
+        if (!target) {
+          return {
+            ok: false,
+            matches: Array.from(document.querySelectorAll('div,button,span,a'))
+              .filter((el) => (el.innerText || '').trim() === ${JSON.stringify(menuLabel)})
+              .map((el) => ({
+                tag: el.tagName,
+                cursor: getComputedStyle(el).cursor,
+                rect: el.getBoundingClientRect().toJSON?.() || {},
+              })),
+          }
+        }
+        target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }))
+        return { ok: true }
       })()`,
     )
-    if (!clicked) throw new Error(`Reference screen switch failed: ${label}`)
+    if (!clicked?.ok) throw new Error(`Reference screen switch failed: ${menuLabel}; ${JSON.stringify(clicked)}`)
     await waitForExpression(
       session,
       `Boolean(document.querySelector('main[data-screen-label=${JSON.stringify(label)}]'))`,
