@@ -95,4 +95,5 @@ export default function AdminSidebar({ userEmail, badges }: { userEmail: string;
         </button>
       </div>
     </aside>
-  )}
+  )
+}
