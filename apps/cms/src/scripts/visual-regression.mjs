@@ -274,7 +274,10 @@ async function discoverProduct(cdp, viewport) {
 
 async function clearActualState(cdp) {
   await navigate(cdp, new URL('/', actualBase).toString())
-  await evaluate(cdp, "localStorage.clear();sessionStorage.clear();true")
+  await evaluate(
+    cdp,
+    "(()=>{localStorage.clear();sessionStorage.clear();sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2026-08-13T11:00:00.000Z',endDate:'2026-08-15T18:00:00.000Z'}));return true})()",
+  )
 }
 
 async function seedCart(cdp, productPath) {
@@ -282,11 +285,11 @@ async function seedCart(cdp, productPath) {
   if (!Number.isInteger(id) || id <= 0) throw new Error('invalid product path ' + productPath)
 
   const expression =
-    "(()=>{const a=new Date(Date.now()+7*86400000);a.setHours(11,0,0,0);const b=new Date(a.getTime()+2*86400000);b.setHours(18,0,0,0);localStorage.setItem('pb:cart',JSON.stringify([{productId:" +
+    "(()=>{localStorage.setItem('pb:cart',JSON.stringify([{productId:" +
     id +
     ",title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1},{productId:" +
     id +
-    ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2}]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:a.toISOString(),endDate:b.toISOString()}));return true})()"
+    ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2}]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2026-08-13T11:00:00.000Z',endDate:'2026-08-15T18:00:00.000Z'}));return true})()"
   await evaluate(cdp, expression)
 }
 
