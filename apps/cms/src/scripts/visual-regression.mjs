@@ -279,47 +279,33 @@ async function clearActualState(cdp) {
   await navigate(cdp, new URL('/', actualBase).toString())
   await evaluate(
     cdp,
-    "(()=>{localStorage.clear();sessionStorage.clear();sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2027-08-13T11:00:00.000Z',endDate:'2027-08-15T18:00:00.000Z'}));return true})()",
+    "(()=>{localStorage.clear();sessionStorage.clear();sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2026-08-13T11:00:00.000Z',endDate:'2026-08-15T18:00:00.000Z'}));return true})()",
   )
 }
 
-async function addCurrentProductToVisualCart(cdp) {
-  await waitFor(
-    cdp,
-    "Array.from(document.querySelectorAll('button')).some((button)=>button.textContent?.includes('В корзину')&&!button.disabled)",
-    'visual product add button',
-  )
-  await evaluate(
-    cdp,
-    "(()=>{const button=Array.from(document.querySelectorAll('button')).find((candidate)=>candidate.textContent?.includes('В корзину')&&!candidate.disabled);if(!button)throw new Error('Visual add-to-cart button not found');button.click();return true})()",
-  )
-  await sleep(120)
-}
-
-async function prepareVisualCart(cdp, productPath) {
-  await navigate(cdp, new URL(productPath, actualBase).toString())
-  await evaluate(
-    cdp,
-    "sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2027-08-13T11:00:00.000Z',endDate:'2027-08-15T18:00:00.000Z'}));true",
-  )
-  let loaded = cdp.once('Page.loadEventFired')
-  await cdp.send('Page.reload', { ignoreCache: true })
-  await loaded
-  await addCurrentProductToVisualCart(cdp)
-
+async function prepareVisualCart(cdp) {
   await navigate(cdp, new URL('/catalog', actualBase).toString())
-  const goProPath = await evaluate(
+  await waitFor(cdp, "Boolean(document.querySelector('a[href^=\\\"/product/\\\"]'))", 'visual catalog product links')
+  const products = await evaluate(
     cdp,
-    "(()=>{const links=Array.from(document.querySelectorAll('a[href^=\"/product/\"]'));return links.find((a)=>a.textContent?.includes('GoPro HERO13 Black'))?.getAttribute('href')||''})()",
+    "(()=>{const links=Array.from(document.querySelectorAll('a[href^=\\\"/product/\\\"]'));const find=(title)=>{const link=links.find((a)=>a.textContent?.includes(title));if(!link)return null;const href=link.getAttribute('href')||'';const id=Number(href.split('/').pop());return Number.isInteger(id)?{id,href}:null};return {sony:find('Sony A7S III'),gopro:find('GoPro HERO13 Black')}})()",
   )
-  if (!goProPath) throw new Error('GoPro visual product route not found')
-  await navigate(cdp, new URL(goProPath, actualBase).toString())
-  await addCurrentProductToVisualCart(cdp)
-
-  const state = await evaluate(cdp, "({cart:localStorage.getItem('pb:cart'),dates:sessionStorage.getItem('pb:selectedDates')})")
+  if (!products?.sony?.id || !products?.gopro?.id) {
+    throw new Error('Visual cart products not found: ' + JSON.stringify(products))
+  }
+  await evaluate(
+    cdp,
+    "(()=>{localStorage.setItem('pb:cart',JSON.stringify([" +
+      "{productId:" + products.sony.id + ",title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1}," +
+      "{productId:" + products.gopro.id + ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:1}" +
+    "]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2026-08-13T11:00:00.000Z',endDate:'2026-08-15T18:00:00.000Z'}));return true})()",
+  )
+  const state = await evaluate(
+    cdp,
+    "({cart:localStorage.getItem('pb:cart'),dates:sessionStorage.getItem('pb:selectedDates')})",
+  )
   console.log('VISUAL_CART_READY ' + JSON.stringify(state))
 }
-
 async function adminCookies() {
   if (!adminEmail || !adminPassword) throw new Error('SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD are required')
   const response = await fetch(new URL('/api/users/login', actualBase), {
@@ -352,7 +338,7 @@ async function openActual(cdp, screen, viewport, productPath) {
   if (screen.id === 'admin') await applyCookies(cdp, await adminCookies())
 
   if (screen.id === 'cart') {
-    await prepareVisualCart(cdp, productPath)
+    await prepareVisualCart(cdp)
   }
 
   const target = screen.id === 'product' ? productPath : screen.path
