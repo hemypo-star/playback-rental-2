@@ -265,47 +265,26 @@ async function openReference(cdp, screen, viewport) {
   await settle(cdp)
 }
 
-async function discoverProduct(cdp, viewport) {
+async function discoverVisualProducts(cdp, viewport) {
   await setViewport(cdp, viewport)
   await navigate(cdp, new URL('/catalog', actualBase).toString())
-  await waitFor(cdp, "Boolean(document.querySelector('a[href^=\"/product/\"]'))", 'actual product link')
+  await waitFor(cdp, "Boolean(document.querySelector('a[href^=\\\"/product/\\\"]'))", 'actual product links')
   return evaluate(
-    cdp,
-    "(()=>{const links=Array.from(document.querySelectorAll('a[href^=\\\"/product/\\\"]'));const preferred=links.find((a)=>a.textContent?.includes('Sony A7S III'));return (preferred||links[0])?.getAttribute('href')||''})()",
-  )
-}
-
-async function clearActualState(cdp) {
-  await navigate(cdp, new URL('/', actualBase).toString())
-  await evaluate(
-    cdp,
-    "(()=>{localStorage.clear();sessionStorage.clear();sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2026-08-13T11:00:00.000Z',endDate:'2026-08-15T18:00:00.000Z'}));return true})()",
-  )
-}
-
-async function prepareVisualCart(cdp) {
-  await navigate(cdp, new URL('/catalog', actualBase).toString())
-  await waitFor(cdp, "Boolean(document.querySelector('a[href^=\\\"/product/\\\"]'))", 'visual catalog product links')
-  const products = await evaluate(
     cdp,
     "(()=>{const links=Array.from(document.querySelectorAll('a[href^=\\\"/product/\\\"]'));const find=(title)=>{const link=links.find((a)=>a.textContent?.includes(title));if(!link)return null;const href=link.getAttribute('href')||'';const id=Number(href.split('/').pop());return Number.isInteger(id)?{id,href}:null};return {sony:find('Sony A7S III'),gopro:find('GoPro HERO13 Black')}})()",
   )
-  if (!products?.sony?.id || !products?.gopro?.id) {
-    throw new Error('Visual cart products not found: ' + JSON.stringify(products))
-  }
-  await evaluate(
-    cdp,
-    "(()=>{localStorage.setItem('pb:cart',JSON.stringify([" +
-      "{productId:" + products.sony.id + ",title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1}," +
-      "{productId:" + products.gopro.id + ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:1}" +
-    "]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2026-08-13T11:00:00.000Z',endDate:'2026-08-15T18:00:00.000Z'}));return true})()",
-  )
-  const state = await evaluate(
-    cdp,
-    "({cart:localStorage.getItem('pb:cart'),dates:sessionStorage.getItem('pb:selectedDates')})",
-  )
-  console.log('VISUAL_CART_READY ' + JSON.stringify(state))
 }
+
+function visualStateBootstrap(products) {
+  if (!products?.sony?.id || !products?.gopro?.id) {
+    throw new Error('Visual products not found: ' + JSON.stringify(products))
+  }
+  return "(()=>{try{localStorage.setItem('pb:cart',JSON.stringify([" +
+    "{productId:" + products.sony.id + ",title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1}," +
+    "{productId:" + products.gopro.id + ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2}" +
+    "]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2026-08-13T11:00:00.000Z',endDate:'2026-08-15T18:00:00.000Z'}));}catch{};return true})()"
+}
+
 async function adminCookies() {
   if (!adminEmail || !adminPassword) throw new Error('SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD are required')
   const response = await fetch(new URL('/api/users/login', actualBase), {
@@ -334,22 +313,20 @@ async function applyCookies(cdp, cookies) {
 
 async function openActual(cdp, screen, viewport, productPath) {
   await setViewport(cdp, viewport)
-  await clearActualState(cdp)
   if (screen.id === 'admin') await applyCookies(cdp, await adminCookies())
-
-  if (screen.id === 'cart') {
-    await prepareVisualCart(cdp)
-  }
 
   const target = screen.id === 'product' ? productPath : screen.path
   await navigate(cdp, new URL(target, actualBase).toString())
   await waitFor(cdp, "document.body&&document.body.innerText.trim().length>20", 'actual ' + screen.id)
   if (screen.id === 'cart') {
-    await waitFor(cdp, "document.body.innerText.includes('Sony A7S III')&&document.body.innerText.includes('GoPro HERO13 Black')", 'visual checkout cart hydration')
+    await waitFor(
+      cdp,
+      "document.body.innerText.includes('Sony A7S III')&&document.body.innerText.includes('GoPro HERO13 Black')",
+      'visual checkout cart hydration',
+    )
   }
   await settle(cdp)
 }
-
 async function compare(referenceFile, actualFile, diffFile) {
   const reference = await sharp(referenceFile).removeAlpha().raw().toBuffer({ resolveWithObject: true })
   const actual = await sharp(actualFile).removeAlpha().raw().toBuffer({ resolveWithObject: true })
@@ -532,10 +509,14 @@ async function main() {
       actualErrors,
     }
 
-    let productPath = ''
-    for (const viewport of viewports) {
-      if (!productPath) productPath = await discoverProduct(actualCdp, viewport)
+    const visualProducts = await discoverVisualProducts(actualCdp, viewports[0])
+    if (!visualProducts?.sony?.href) throw new Error('Sony A7S III visual route not found')
+    const productPath = visualProducts.sony.href
+    await actualCdp.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: visualStateBootstrap(visualProducts),
+    })
 
+    for (const viewport of viewports) {
       for (const screen of screens) {
         const stem = screen.id + '-' + viewport.id
         const referenceFile = referenceFiles.get(stem)
