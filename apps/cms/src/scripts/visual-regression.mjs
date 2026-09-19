@@ -269,7 +269,10 @@ async function discoverProduct(cdp, viewport) {
   await setViewport(cdp, viewport)
   await navigate(cdp, new URL('/catalog', actualBase).toString())
   await waitFor(cdp, "Boolean(document.querySelector('a[href^=\"/product/\"]'))", 'actual product link')
-  return evaluate(cdp, "document.querySelector('a[href^=\"/product/\"]')?.getAttribute('href')||''")
+  return evaluate(
+    cdp,
+    "(()=>{const links=Array.from(document.querySelectorAll('a[href^=\\\"/product/\\\"]'));const preferred=links.find((a)=>a.textContent?.includes('Sony A7S III'));return (preferred||links[0])?.getAttribute('href')||''})()",
+  )
 }
 
 async function clearActualState(cdp) {
