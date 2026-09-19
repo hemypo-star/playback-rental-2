@@ -485,8 +485,22 @@ async function main() {
     referenceCdp.close()
     referenceCdp = null
 
-    // Phase 2: create a clean target for the real Next app only after all
-    // prototype screenshots exist. No React 18 bootstrap is installed here.
+    // Phase 2a: discover dynamic product IDs in an isolated target. This
+    // target intentionally never becomes the screenshot target because
+    // importing the storefront here initializes its nanostores.
+    const discoveryTargetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
+    const discoveryTarget = await discoveryTargetResponse.json()
+    const discoveryCdp = new CdpSession(discoveryTarget.webSocketDebuggerUrl)
+    await discoveryCdp.open()
+    await discoveryCdp.send('Page.enable')
+    await discoveryCdp.send('Runtime.enable')
+    const visualProducts = await discoverVisualProducts(discoveryCdp, viewports[0])
+    discoveryCdp.close()
+    if (!visualProducts?.sony?.href) throw new Error('Sony A7S III visual route not found')
+
+    // Phase 2b: fresh target for screenshots. Install persisted visual state
+    // before the very first storefront document loads, so cart/date stores
+    // read the fixture values during module initialization.
     const actualTargetResponse = await fetch(debugBase + '/json/new?about:blank', { method: 'PUT' })
     const actualTarget = await actualTargetResponse.json()
     actualCdp = new CdpSession(actualTarget.webSocketDebuggerUrl)
@@ -495,6 +509,9 @@ async function main() {
     await actualCdp.send('Runtime.enable')
     await actualCdp.send('Log.enable')
     await actualCdp.send('Network.enable')
+    await actualCdp.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: visualStateBootstrap(visualProducts),
+    })
 
     const actualErrors = []
     actualCdp.on('Runtime.exceptionThrown', (params) => {
@@ -514,12 +531,7 @@ async function main() {
       actualErrors,
     }
 
-    const visualProducts = await discoverVisualProducts(actualCdp, viewports[0])
-    if (!visualProducts?.sony?.href) throw new Error('Sony A7S III visual route not found')
     const productPath = visualProducts.sony.href
-    await actualCdp.send('Page.addScriptToEvaluateOnNewDocument', {
-      source: visualStateBootstrap(visualProducts),
-    })
 
     for (const viewport of viewports) {
       for (const screen of screens) {
