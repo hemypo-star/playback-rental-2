@@ -16,28 +16,42 @@ async function expectDenied(label, pathname, options = {}) {
   console.log(`PASS ${label}: HTTP ${response.status}`)
 }
 
+async function latestSubmittedFixture() {
+  // orderItems are intentionally public-readable so storefront availability
+  // can be rendered anonymously. Use that public surface to discover the
+  // item just created by the preceding browser smoke instead of assuming
+  // PostgreSQL sequence ids restart at 1 after disposable visual fixtures
+  // are created and removed.
+  const response = await fetch(url('/api/orderItems?sort=-id&limit=1&depth=0'))
+  if (!response.ok) throw new Error(`Failed to discover latest smoke order item: HTTP ${response.status}`)
+  const body = await response.json()
+  const item = body?.docs?.[0]
+  if (!item?.id) throw new Error(`Latest smoke order item is missing: ${JSON.stringify(body)}`)
+  const orderId = typeof item.order === 'object' ? item.order?.id : item.order
+  if (!orderId) throw new Error(`Latest smoke order relationship is missing: ${JSON.stringify(item)}`)
+  return { orderId, itemId: item.id }
+}
+
 async function main() {
-  // The disposable smoke DB starts empty and the preceding browser smoke
-  // creates its first order/item, so id=1 is deliberate here. These checks
-  // run before the authenticated lifecycle smoke mutates that order.
-  await expectDenied('anonymous order read blocked', '/api/orders/1?depth=0')
-  await expectDenied('anonymous order update blocked', '/api/orders/1', {
+  const { orderId, itemId } = await latestSubmittedFixture()
+
+  await expectDenied('anonymous order read blocked', `/api/orders/${orderId}?depth=0`)
+  await expectDenied('anonymous order update blocked', `/api/orders/${orderId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ notes: 'must-not-save' }),
   })
-  await expectDenied('anonymous order hard-delete blocked', '/api/orders/1', { method: 'DELETE' })
+  await expectDenied('anonymous order hard-delete blocked', `/api/orders/${orderId}`, { method: 'DELETE' })
 
-  // Public checkout may mutate its own *draft* line items while assembling an
+  // Public checkout may mutate its own draft line items while assembling an
   // order, but once checkout has submitted it the item becomes an immutable
-  // booking record for anonymous callers. The browser smoke has already
-  // submitted order/item #1 by this point.
-  await expectDenied('anonymous submitted item update blocked', '/api/orderItems/1', {
+  // booking record for anonymous callers.
+  await expectDenied('anonymous submitted item update blocked', `/api/orderItems/${itemId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantity: 2 }),
   })
-  await expectDenied('anonymous submitted item delete blocked', '/api/orderItems/1', { method: 'DELETE' })
+  await expectDenied('anonymous submitted item delete blocked', `/api/orderItems/${itemId}`, { method: 'DELETE' })
 
   console.log('Public order security smoke passed')
 }
