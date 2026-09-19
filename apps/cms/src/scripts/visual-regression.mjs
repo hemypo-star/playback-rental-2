@@ -319,6 +319,11 @@ async function openActual(cdp, screen, viewport, productPath) {
   await navigate(cdp, new URL(target, actualBase).toString())
   await waitFor(cdp, "document.body&&document.body.innerText.trim().length>20", 'actual ' + screen.id)
   if (screen.id === 'cart') {
+    const checkoutState = await evaluate(
+      cdp,
+      "({path:location.pathname,cartStorage:localStorage.getItem('pb:cart'),dateStorage:sessionStorage.getItem('pb:selectedDates'),cartBadge:document.querySelector('.pb-cart-count')?.textContent||null,body:document.body.innerText.slice(0,1800)})",
+    )
+    console.log('VISUAL_CHECKOUT_STATE ' + JSON.stringify(checkoutState))
     await waitFor(
       cdp,
       "document.body.innerText.includes('Sony A7S III')&&document.body.innerText.includes('GoPro HERO13 Black')",
