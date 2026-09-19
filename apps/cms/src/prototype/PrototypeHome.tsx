@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Category } from '../payload-types'
 import { getCategories } from '../lib/data/categories'
-import { getCategoryProductStats,getLowestRentalPrice,getProductTotals,getProducts } from '../lib/data/products'
+import { getCategoryProductStats,getProductTotals,getProducts } from '../lib/data/products'
 import { getActivePromotions } from '../lib/data/promotions'
 import { getSiteSettings } from '../lib/data/siteSettings'
 import { getSubtreeIds } from '../lib/categoryTree'
@@ -13,8 +13,8 @@ import PrototypeProductCard from './PrototypeProductCard'
 import PrototypePromoCarousel from './PrototypePromoCarousel'
 
 export default async function PrototypeHome(){
- const [categories,featuredResult,totals,fromPrice,marqueeResult,settings,promotions,kitsResult]=await Promise.all([
-  getCategories(),getProducts({limit:8,sort:'-lastSyncedAt'}),getProductTotals(),getLowestRentalPrice(),getProducts({limit:10,sort:'price',depth:0}),getSiteSettings(),getActivePromotions(),getProducts({isKit:true,limit:3})
+ const [categories,featuredResult,totals,marqueeResult,settings,promotions,kitsResult]=await Promise.all([
+  getCategories(),getProducts({limit:8,sort:'-lastSyncedAt'}),getProductTotals(),getProducts({limit:10,sort:'price',depth:0}),getSiteSettings(),getActivePromotions(),getProducts({isKit:true,limit:3})
  ])
  const featuredCategories=categories.filter(c=>c.parent==null).slice(0,6)
  const statIds=Array.from(new Set(featuredCategories.flatMap(c=>getSubtreeIds(c.id,categories))))
