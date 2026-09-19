@@ -24,6 +24,7 @@ type VisualProduct = {
   category:string
   title:string
   subtitle:string
+  description?:string
   price:number
   tag:string
   quantity:number
@@ -36,7 +37,7 @@ const products: VisualProduct[] = [
   { id:'funsaver', category:'film', title:'Kodak FunSaver 27', subtitle:'35 мм · ISO 800 · вспышка', price:1490, tag:'Плёнка', quantity:3 },
   { id:'quicksnap', category:'film', title:'Fujifilm QuickSnap Flash 400', subtitle:'35 мм · ISO 400 · 27 кадров', price:1590, tag:'Плёнка', quantity:3 },
   { id:'meta', category:'glasses', title:'Ray-Ban Meta Wayfarer', subtitle:'Умные очки · 12 Мп · 1080p', price:1900, tag:'Очки', quantity:2 },
-  { id:'a7siii', category:'sony', title:'Sony A7S III', subtitle:'Полный кадр · 4K 120p', price:3500, tag:'Камера', quantity:3 },
+  { id:'a7siii', category:'sony', title:'Sony A7S III', subtitle:'Полный кадр · 4K 120p', description:'Референс по чувствительности: снимает там, где глаз уже почти ничего не видит. Байонет E, 10-бит 4:2:2 внутрь.', price:3500, tag:'Камера', quantity:3, kitItems:[{label:'Корпус A7S III'},{label:'3 аккумулятора NP-FZ100'},{label:'Зарядное устройство'},{label:'Ремень и заглушка байонета'},{label:'Кейс Peli'}] },
   { id:'zve1', category:'sony', title:'Sony ZV-E1', subtitle:'Полный кадр · для влогов', price:2900, tag:'Камера', quantity:2 },
   { id:'cx190', category:'sony', title:'Sony HDR-CX190E', subtitle:'Видеокамера · 25× зум', price:900, tag:'Видеокамера', quantity:2 },
   { id:'r6', category:'canon', title:'Canon EOS R6', subtitle:'Полный кадр · 20 Мп', price:2700, tag:'Камера', quantity:1 },
@@ -76,6 +77,7 @@ async function main() {
     const record = {
       title:data.title,
       subtitle:data.subtitle,
+      description:data.description,
       tag:data.tag,
       price:data.price,
       quantity:data.quantity,
