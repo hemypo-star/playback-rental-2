@@ -281,8 +281,8 @@ function visualStateValues(products) {
   }
   return {
     cart: JSON.stringify([
-      {productId:products.sony.id,title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1},
-      {productId:products.gopro.id,title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2},
+      {productId:products.sony.id,title:'Sony A7S III',subtitle:'Полный кадр · 4K 120p',price:3500,listingType:'rental',unit:'смена',quantity:1},
+      {productId:products.gopro.id,title:'GoPro HERO13 Black',subtitle:'Экшн · 5.3K 60p',price:1200,listingType:'rental',unit:'смена',quantity:2},
     ]),
     dates: JSON.stringify({
       startDate:'2026-08-13T11:00:00.000Z',
