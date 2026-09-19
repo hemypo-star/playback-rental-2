@@ -292,19 +292,18 @@ function visualStateValues(products) {
 }
 
 async function seedVisualBrowserStorage(cdp, products) {
-  const origin = new URL(actualBase).origin
   const values = visualStateValues(products)
-  await cdp.send('DOMStorage.enable')
-  await cdp.send('DOMStorage.setDOMStorageItem', {
-    storageId: { securityOrigin: origin, isLocalStorage: true },
-    key: 'pb:cart',
-    value: values.cart,
-  })
-  await cdp.send('DOMStorage.setDOMStorageItem', {
-    storageId: { securityOrigin: origin, isLocalStorage: false },
-    key: 'pb:selectedDates',
-    value: values.dates,
-  })
+  // Establish a same-origin frame without loading any storefront modules.
+  // This makes sessionStorage available while keeping nanostores uninitialized.
+  await navigate(cdp, new URL('/api/access', actualBase).toString())
+  await evaluate(
+    cdp,
+    "(()=>{localStorage.setItem('pb:cart'," +
+      JSON.stringify(values.cart) +
+      ");sessionStorage.setItem('pb:selectedDates'," +
+      JSON.stringify(values.dates) +
+      ");return {cart:localStorage.getItem('pb:cart'),dates:sessionStorage.getItem('pb:selectedDates')}})()",
+  )
 }
 async function adminCookies() {
   if (!adminEmail || !adminPassword) throw new Error('SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD are required')
