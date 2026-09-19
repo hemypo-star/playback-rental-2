@@ -275,16 +275,37 @@ async function discoverVisualProducts(cdp, viewport) {
   )
 }
 
-function visualStateBootstrap(products) {
+function visualStateValues(products) {
   if (!products?.sony?.id || !products?.gopro?.id) {
     throw new Error('Visual products not found: ' + JSON.stringify(products))
   }
-  return "(()=>{try{localStorage.setItem('pb:cart',JSON.stringify([" +
-    "{productId:" + products.sony.id + ",title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1}," +
-    "{productId:" + products.gopro.id + ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2}" +
-    "]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2026-08-13T11:00:00.000Z',endDate:'2026-08-15T18:00:00.000Z'}));}catch{};return true})()"
+  return {
+    cart: JSON.stringify([
+      {productId:products.sony.id,title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1},
+      {productId:products.gopro.id,title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2},
+    ]),
+    dates: JSON.stringify({
+      startDate:'2026-08-13T11:00:00.000Z',
+      endDate:'2026-08-15T18:00:00.000Z',
+    }),
+  }
 }
 
+async function seedVisualBrowserStorage(cdp, products) {
+  const origin = new URL(actualBase).origin
+  const values = visualStateValues(products)
+  await cdp.send('DOMStorage.enable')
+  await cdp.send('DOMStorage.setDOMStorageItem', {
+    storageId: { securityOrigin: origin, isLocalStorage: true },
+    key: 'pb:cart',
+    value: values.cart,
+  })
+  await cdp.send('DOMStorage.setDOMStorageItem', {
+    storageId: { securityOrigin: origin, isLocalStorage: false },
+    key: 'pb:selectedDates',
+    value: values.dates,
+  })
+}
 async function adminCookies() {
   if (!adminEmail || !adminPassword) throw new Error('SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD are required')
   const response = await fetch(new URL('/api/users/login', actualBase), {
@@ -509,9 +530,7 @@ async function main() {
     await actualCdp.send('Runtime.enable')
     await actualCdp.send('Log.enable')
     await actualCdp.send('Network.enable')
-    await actualCdp.send('Page.addScriptToEvaluateOnNewDocument', {
-      source: visualStateBootstrap(visualProducts),
-    })
+    await seedVisualBrowserStorage(actualCdp, visualProducts)
 
     const actualErrors = []
     actualCdp.on('Runtime.exceptionThrown', (params) => {
