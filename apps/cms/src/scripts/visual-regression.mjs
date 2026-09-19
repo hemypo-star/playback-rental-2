@@ -283,17 +283,15 @@ async function clearActualState(cdp) {
   )
 }
 
-async function seedCart(cdp, productPath) {
+function cartBootstrap(productPath) {
   const id = Number(productPath.split('/').pop())
   if (!Number.isInteger(id) || id <= 0) throw new Error('invalid product path ' + productPath)
 
-  const expression =
-    "(()=>{localStorage.setItem('pb:cart',JSON.stringify([{productId:" +
+  return "(()=>{if(location.pathname==='/checkout'){localStorage.setItem('pb:cart',JSON.stringify([{productId:" +
     id +
     ",title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1},{productId:" +
     id +
-    ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2}]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2027-08-13T11:00:00.000Z',endDate:'2027-08-15T18:00:00.000Z'}));return true})()"
-  await evaluate(cdp, expression)
+    ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2}]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2027-08-13T11:00:00.000Z',endDate:'2027-08-15T18:00:00.000Z'}));}})()"
 }
 
 async function adminCookies() {
@@ -326,15 +324,16 @@ async function openActual(cdp, screen, viewport, productPath) {
   await setViewport(cdp, viewport)
   await clearActualState(cdp)
 
+  let cartScriptId
   if (screen.id === 'cart') {
-    await seedCart(cdp, productPath)
-    const seeded = await evaluate(cdp, "({cart:localStorage.getItem('pb:cart'),dates:sessionStorage.getItem('pb:selectedDates')})")
-    console.log('CART_SEED ' + JSON.stringify(seeded))
+    const installed = await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: cartBootstrap(productPath) })
+    cartScriptId = installed.identifier
   }
   if (screen.id === 'admin') await applyCookies(cdp, await adminCookies())
 
   const target = screen.id === 'product' ? productPath : screen.path
   await navigate(cdp, new URL(target, actualBase).toString())
+  if (cartScriptId) await cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: cartScriptId })
   await waitFor(cdp, "document.body&&document.body.innerText.trim().length>20", 'actual ' + screen.id)
   if (screen.id === 'cart') {
     await waitFor(cdp, "document.body.innerText.includes('Sony A7S III')", 'visual checkout cart hydration')
