@@ -5,7 +5,7 @@ import { useStore } from '@nanostores/react'
 import { $selectedDates, OPEN_DATE_PICKER_EVENT, setSelectedDates } from '../stores/dates'
 
 export interface PrototypeDatePickerHandle { open: (target?: 'from' | 'to') => void }
-interface Props { variant?: 'navbar' | 'compact' | 'hero'; openHour: number; closeHour: number }
+interface Props { variant?: 'navbar' | 'compact' | 'hero' | 'hidden'; openHour: number; closeHour: number }
 
 function startOfMonth(d: Date){ return new Date(d.getFullYear(), d.getMonth(), 1) }
 function addMonths(d: Date,n:number){ return new Date(d.getFullYear(), d.getMonth()+n,1) }
@@ -41,7 +41,7 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
   const label=fmtRange(shown.startDate,shown.endDate)
   const activeHour=target==='from'?fromHour:toHour
 
-  const trigger = variant==='hero' ? (
+  const trigger = variant==='hidden' ? null : variant==='hero' ? (
     <button type="button" className="pb-date-card pb-card" onClick={()=>show('from')} style={{width:'100%',textAlign:'left'}}>
       <div className="pb-date-line"><span className="pb-kicker">Даты аренды</span><span className="pb-kicker pb-red">Изменить</span></div>
       <div className="pb-date-line" style={{marginTop:12}}><span className="pb-date-value">{label}</span><span style={{fontSize:13,color:'var(--pb-sub)'}}>{timeOf(shown.startDate,openHour)} — {timeOf(shown.endDate,closeHour)}</span></div>
