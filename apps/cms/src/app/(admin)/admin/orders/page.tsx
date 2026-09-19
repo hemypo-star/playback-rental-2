@@ -22,8 +22,6 @@ interface Props {
   searchParams: Promise<{ status?: string; q?: string; page?: string }>
 }
 
-const STATUS_FILTER_OPTIONS = Object.entries(ORDER_STATUS_TONE) as [OrderStatus, (typeof ORDER_STATUS_TONE)[OrderStatus]][]
-
 function isOrderStatus(value: string): value is OrderStatus {
   return value in ORDER_STATUS_TONE
 }
@@ -59,43 +57,6 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
         actionHref="/admin/orders/new"
       />
       <AdminKpiCards kpi={kpi} />
-
-      <form method="GET" className="flex flex-wrap items-end gap-3 rounded-3xl border border-border bg-card p-6">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="order-status" className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">
-            Статус
-          </label>
-          <select
-            id="order-status"
-            name="status"
-            defaultValue={status ?? ''}
-            className="h-11 min-w-[190px] rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground"
-          >
-            <option value="">Все статусы</option>
-            {STATUS_FILTER_OPTIONS.map(([value, tone]) => (
-              <option key={value} value={value}>
-                {tone.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-          <label htmlFor="order-q" className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">
-            Поиск
-          </label>
-          <input
-            id="order-q"
-            type="text"
-            name="q"
-            defaultValue={qParam ?? ''}
-            placeholder="Телефон или имя"
-            className="h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground"
-          />
-        </div>
-        <button type="submit" className="btn-primary h-11">
-          Найти
-        </button>
-      </form>
 
       <div className="rounded-3xl border border-border bg-card p-6">
         <div className="hidden grid-cols-[90px_1.6fr_1.4fr_1fr_110px_130px] gap-3.5 px-2.5 pb-3 text-[10px] font-semibold tracking-[0.13em] text-subtle uppercase lg:grid">
