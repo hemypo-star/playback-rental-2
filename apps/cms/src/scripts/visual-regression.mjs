@@ -283,15 +283,41 @@ async function clearActualState(cdp) {
   )
 }
 
-function cartBootstrap(productPath) {
-  const id = Number(productPath.split('/').pop())
-  if (!Number.isInteger(id) || id <= 0) throw new Error('invalid product path ' + productPath)
+async function addCurrentProductToVisualCart(cdp) {
+  await waitFor(
+    cdp,
+    "Array.from(document.querySelectorAll('button')).some((button)=>button.textContent?.includes('В корзину')&&!button.disabled)",
+    'visual product add button',
+  )
+  await evaluate(
+    cdp,
+    "(()=>{const button=Array.from(document.querySelectorAll('button')).find((candidate)=>candidate.textContent?.includes('В корзину')&&!candidate.disabled);if(!button)throw new Error('Visual add-to-cart button not found');button.click();return true})()",
+  )
+  await sleep(120)
+}
 
-  return "(()=>{if(location.pathname==='/checkout'){localStorage.setItem('pb:cart',JSON.stringify([{productId:" +
-    id +
-    ",title:'Sony A7S III',price:3500,listingType:'rental',unit:'смена / 24 часа',quantity:1},{productId:" +
-    id +
-    ",title:'GoPro HERO13 Black',price:1200,listingType:'rental',unit:'смена / 24 часа',quantity:2}]));sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2027-08-13T11:00:00.000Z',endDate:'2027-08-15T18:00:00.000Z'}));}})()"
+async function prepareVisualCart(cdp, productPath) {
+  await navigate(cdp, new URL(productPath, actualBase).toString())
+  await evaluate(
+    cdp,
+    "sessionStorage.setItem('pb:selectedDates',JSON.stringify({startDate:'2027-08-13T11:00:00.000Z',endDate:'2027-08-15T18:00:00.000Z'}));true",
+  )
+  let loaded = cdp.once('Page.loadEventFired')
+  await cdp.send('Page.reload', { ignoreCache: true })
+  await loaded
+  await addCurrentProductToVisualCart(cdp)
+
+  await navigate(cdp, new URL('/catalog', actualBase).toString())
+  const goProPath = await evaluate(
+    cdp,
+    "(()=>{const links=Array.from(document.querySelectorAll('a[href^=\"/product/\"]'));return links.find((a)=>a.textContent?.includes('GoPro HERO13 Black'))?.getAttribute('href')||''})()",
+  )
+  if (!goProPath) throw new Error('GoPro visual product route not found')
+  await navigate(cdp, new URL(goProPath, actualBase).toString())
+  await addCurrentProductToVisualCart(cdp)
+
+  const state = await evaluate(cdp, "({cart:localStorage.getItem('pb:cart'),dates:sessionStorage.getItem('pb:selectedDates')})")
+  console.log('VISUAL_CART_READY ' + JSON.stringify(state))
 }
 
 async function adminCookies() {
@@ -325,21 +351,15 @@ async function openActual(cdp, screen, viewport, productPath) {
   await clearActualState(cdp)
   if (screen.id === 'admin') await applyCookies(cdp, await adminCookies())
 
-  const target = screen.id === 'product' ? productPath : screen.path
-  await navigate(cdp, new URL(target, actualBase).toString())
-
   if (screen.id === 'cart') {
-    await evaluate(cdp, cartBootstrap(productPath))
-    const storage = await evaluate(cdp, "({cart:localStorage.getItem('pb:cart'),dates:sessionStorage.getItem('pb:selectedDates')})")
-    console.log('CART_STORAGE ' + JSON.stringify(storage))
-    const loaded = cdp.once('Page.loadEventFired')
-    await cdp.send('Page.reload', { ignoreCache: true })
-    await loaded
+    await prepareVisualCart(cdp, productPath)
   }
 
+  const target = screen.id === 'product' ? productPath : screen.path
+  await navigate(cdp, new URL(target, actualBase).toString())
   await waitFor(cdp, "document.body&&document.body.innerText.trim().length>20", 'actual ' + screen.id)
   if (screen.id === 'cart') {
-    await waitFor(cdp, "document.body.innerText.includes('Sony A7S III')", 'visual checkout cart hydration')
+    await waitFor(cdp, "document.body.innerText.includes('Sony A7S III')&&document.body.innerText.includes('GoPro HERO13 Black')", 'visual checkout cart hydration')
   }
   await settle(cdp)
 }
