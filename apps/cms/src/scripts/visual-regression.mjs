@@ -530,6 +530,13 @@ async function main() {
         const driftFile = path.join(outputDir, stem + '-prototype-drift.png')
 
         await openActual(actualCdp, screen, viewport, productPath)
+        if (screen.id === 'home' && viewport.id === 'mobile') {
+          const geometry = await evaluate(
+            actualCdp,
+            "(()=>{const grid=document.querySelector('.pb-home-grid');const copy=document.querySelector('.pb-hero-copy');const side=document.querySelector('.pb-hero-side');return {innerWidth:window.innerWidth,clientWidth:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth,grid:grid?getComputedStyle(grid).gridTemplateColumns:null,copyColumn:copy?getComputedStyle(copy).gridColumn:null,copyWidth:copy?.getBoundingClientRect().width,sideColumn:side?getComputedStyle(side).gridColumn:null,sideWidth:side?.getBoundingClientRect().width,media760:matchMedia('(max-width:760px)').matches,media1020:matchMedia('(max-width:1020px)').matches}})()",
+          )
+          console.log('GEOMETRY home/mobile ' + JSON.stringify(geometry))
+        }
         await capture(actualCdp, actualFile)
 
         const metrics = await compare(baselineFile, actualFile, diffFile)
