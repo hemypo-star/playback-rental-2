@@ -47,8 +47,18 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
       <div className="pb-date-line" style={{marginTop:12}}><span className="pb-date-value">{label}</span><span style={{fontSize:13,color:'var(--pb-sub)'}}>{timeOf(shown.startDate,openHour)} — {timeOf(shown.endDate,closeHour)}</span></div>
       <div style={{marginTop:10,fontSize:12.5,color:'var(--pb-sub)'}}>{shown.startDate&&shown.endDate?`${days} ${days===1?'смена':days<5?'смены':'смен'}`:'Выберите период аренды'}</div>
     </button>
+  ) : variant==='compact' ? (
+    <button
+      type="button"
+      className="pb-pill pb-header-date"
+      onClick={()=>show('from')}
+      style={{minHeight:48,height:'auto',flexShrink:0,whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:14,padding:'0 8px 0 20px'}}
+    >
+      <span style={{whiteSpace:'nowrap'}}>{shown.startDate&&shown.endDate?`${label} · ${timeOf(selected.startDate,openHour)}—${timeOf(selected.endDate,closeHour)}`:label}</span>
+      <span aria-hidden="true" style={{width:32,height:32,flexShrink:0,borderRadius:'50%',background:'rgba(10,10,10,.08)',display:'flex',alignItems:'center',justifyContent:'center'}}>↺</span>
+    </button>
   ) : (
-    <button type="button" className="pb-pill pb-header-date" onClick={()=>show('from')}><span>{variant==='compact'&&shown.startDate&&shown.endDate?`${label} · ${timeOf(selected.startDate,openHour)}—${timeOf(selected.endDate,closeHour)}`:label}</span></button>
+    <button type="button" className="pb-pill pb-header-date" onClick={()=>show('from')}><span>{label}</span></button>
   )
 
   return <>
