@@ -29,7 +29,8 @@
     "regenerate:media-sizes": "tsx --env-file-if-exists=.env src/scripts/regenerate-media-sizes.ts",
     "check:migration-drift": "tsx --env-file-if-exists=.env src/scripts/check-migration-drift.ts",
     "visual:regression": "node src/scripts/visual-regression.mjs",
-    "visual:seed": "tsx --env-file-if-exists=.env src/scripts/seed-visual.ts"
+    "visual:seed": "tsx --env-file-if-exists=.env src/scripts/seed-visual.ts",
+    "visual:cleanup": "tsx --env-file-if-exists=.env src/scripts/cleanup-visual.ts"
   },
   "dependencies": {
     "@nanostores/persistent": "^1.3.5",
