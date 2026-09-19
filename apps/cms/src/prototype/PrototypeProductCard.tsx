@@ -10,7 +10,7 @@ export interface PrototypeProductCardData{
 }
 export default function PrototypeProductCard({product,delay=0}:{product:PrototypeProductCardData;delay?:number}){
  const cart=useStore($cart);const dates=useStore($selectedDates);const inCart=cart.some(i=>i.productId===product.id);const inStock=Boolean(product.available)&&product.quantity>0
- const add=()=>{if(product.listingType==='rental'&&(!dates.startDate||!dates.endDate)){requestDatePickerOpen();return}addToCart({productId:product.id,title:product.title,price:product.price,imageUrl:product.imageUrl,listingType:product.listingType,unit:product.unit|| (product.listingType==='rental'?'смена / 24 часа':'шт.')},1)}
+ const add=()=>{if(product.listingType==='rental'&&(!dates.startDate||!dates.endDate)){requestDatePickerOpen();return}addToCart({productId:product.id,title:product.title,subtitle:product.subtitle||undefined,price:product.price,imageUrl:product.imageUrl,listingType:product.listingType,unit:product.unit|| (product.listingType==='rental'?'смена / 24 часа':'шт.')},1)}
  return <article className="pb-card pb-product-card" style={{animationDelay:`${Math.min(delay,400)}ms`}}>
    <Link href={`/product/${product.id}`} className="pb-product-image" aria-label={product.title}>
     {product.imageUrl?<Image src={product.imageUrl} alt={product.title} fill sizes="(min-width:1021px) 30vw,(min-width:761px) 46vw,92vw" style={{objectFit:'cover'}}/>:<div className="pb-image-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.7"/><path d="m5 18 5-5 3.5 3 2.5-2.5 3 4.5"/></svg><span>{product.title}</span></div>}
