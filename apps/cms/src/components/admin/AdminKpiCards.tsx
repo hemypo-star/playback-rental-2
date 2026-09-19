@@ -15,7 +15,7 @@ export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
       note: kpi.pendingCount > 0 ? 'ждут звонка' : undefined,
       accent: kpi.pendingCount > 0,
     },
-    { label: 'Занятость парка', value: `${kpi.utilization}%`, note: `${kpi.activeRentalQty} из ${kpi.totalRentalStock} ед.`, accent: false },
+    { label: 'Загрузка парка', value: `${kpi.utilization}%`, note: `${kpi.activeRentalQty} из ${kpi.totalRentalStock} ед.`, accent: false },
     { label: 'Средний чек', value: rub(kpi.avgOrderValue), note: `${kpi.submittedCount} оформленных`, accent: false },
   ]
 
