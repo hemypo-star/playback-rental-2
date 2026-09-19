@@ -121,7 +121,9 @@ jobs:
           NODE_ENV: production
           SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
           SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
-        run: pnpm --dir apps/cms visual:seed
+        run: |
+          pnpm --dir apps/cms visual:seed
+          rm -rf apps/cms/.next/cache
 
       - name: Visual regression against HTML prototype
         env:
