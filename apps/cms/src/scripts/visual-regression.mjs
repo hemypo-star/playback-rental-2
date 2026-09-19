@@ -323,17 +323,20 @@ async function applyCookies(cdp, cookies) {
 async function openActual(cdp, screen, viewport, productPath) {
   await setViewport(cdp, viewport)
   await clearActualState(cdp)
-
-  let cartScriptId
-  if (screen.id === 'cart') {
-    const installed = await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: cartBootstrap(productPath) })
-    cartScriptId = installed.identifier
-  }
   if (screen.id === 'admin') await applyCookies(cdp, await adminCookies())
 
   const target = screen.id === 'product' ? productPath : screen.path
   await navigate(cdp, new URL(target, actualBase).toString())
-  if (cartScriptId) await cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: cartScriptId })
+
+  if (screen.id === 'cart') {
+    await evaluate(cdp, cartBootstrap(productPath))
+    const storage = await evaluate(cdp, "({cart:localStorage.getItem('pb:cart'),dates:sessionStorage.getItem('pb:selectedDates')})")
+    console.log('CART_STORAGE ' + JSON.stringify(storage))
+    const loaded = cdp.once('Page.loadEventFired')
+    await cdp.send('Page.reload', { ignoreCache: true })
+    await loaded
+  }
+
   await waitFor(cdp, "document.body&&document.body.innerText.trim().length>20", 'actual ' + screen.id)
   if (screen.id === 'cart') {
     await waitFor(cdp, "document.body.innerText.includes('Sony A7S III')", 'visual checkout cart hydration')
