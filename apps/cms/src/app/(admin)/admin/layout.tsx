@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <link rel="preload" href="/fonts/golos-text-cyrillic.woff2" as="font" type="font/woff2" crossOrigin="" />
       </head>
       <body className="bg-background text-foreground">
-        <main className="pb-admin-shell"><PrototypeAdminSidebar userEmail={user.email} badges={badges} /><section className="pb-admin-content">{children}</section></main>
+        <main className="pb-admin-shell"><PrototypeAdminSidebar badges={badges} /><section className="pb-admin-content">{children}</section></main>
         {/* C3 (audit G2) — same mechanism/reasoning as the (frontend) root
             layout; the admin dashboard's own order/client/stock rows use
             the same `bnIn` stagger and need the same Back/Forward fix. */}
