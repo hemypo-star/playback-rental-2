@@ -46,6 +46,7 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
 
   return (
     <>
+      <span className="sr-only">Новый заказ</span>
       <AdminPageHeader
         title="Очередь заявок"
         // totalDocs, not docs.length: with paging the latter is just this
