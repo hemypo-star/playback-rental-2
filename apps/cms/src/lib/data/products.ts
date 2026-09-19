@@ -20,6 +20,7 @@ export interface GetProductsParams {
   categoryIds?: number[]
   search?: string
   isKit?: boolean
+  inStockOnly?: boolean
   limit?: number
   page?: number
   sort?: string
@@ -54,6 +55,7 @@ export async function getProducts(params: GetProductsParams = {}) {
   // splitting the query in app code and building an and-of-ors instead.
   if (params.search) extra.push({ or: [{ title: { like: params.search } }, { description: { like: params.search } }, { tag: { like: params.search } }] })
   if (params.isKit !== undefined) extra.push({ isKit: { equals: params.isKit } })
+  if (params.inStockOnly) extra.push({ quantity: { greater_than: 0 } })
 
   return payload.find({
     collection: 'products',

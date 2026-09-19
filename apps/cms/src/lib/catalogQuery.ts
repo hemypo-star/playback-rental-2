@@ -11,6 +11,7 @@ export interface CatalogFilters {
   q?: string
   sort?: string
   kit?: boolean
+  free?: boolean
   page?: number
 }
 
@@ -19,6 +20,7 @@ export function buildCatalogUrl(basePath: string, filters: CatalogFilters = {}):
   if (filters.q) params.set('q', filters.q)
   if (filters.sort) params.set('sort', filters.sort)
   if (filters.kit) params.set('type', 'kit')
+  if (filters.free) params.set('free', '1')
   // A pager link sets its own target page explicitly. Every other filter
   // link (category, sort, a new search) omits `page` entirely on purpose —
   // changing what's being filtered should land back on page 1, not wherever

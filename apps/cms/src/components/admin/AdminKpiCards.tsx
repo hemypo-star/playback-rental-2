@@ -15,12 +15,12 @@ export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
       note: kpi.pendingCount > 0 ? 'ждут звонка' : undefined,
       accent: kpi.pendingCount > 0,
     },
-    { label: 'Занятость парка', value: `${kpi.utilization}%`, note: `${kpi.activeRentalQty} из ${kpi.totalRentalStock} ед.`, accent: false },
+    { label: 'Загрузка парка', value: `${kpi.utilization}%`, note: `${kpi.activeRentalQty} из ${kpi.totalRentalStock} ед.`, accent: false },
     { label: 'Средний чек', value: rub(kpi.avgOrderValue), note: `${kpi.submittedCount} оформленных`, accent: false },
   ]
 
   return (
-    <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="pb-admin-kpis">
       {cards.map((c, i) => (
         <div
           key={c.label}
