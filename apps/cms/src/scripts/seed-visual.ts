@@ -62,6 +62,7 @@ async function main() {
   const payload = await getPayload({ config })
 
   const categoryIds = new Map<string, number>()
+  const productIds = new Map<string, number>()
   for (const data of categories) {
     const category = await upsertCategory(payload, data)
     categoryIds.set(data.slug, category.id)
@@ -88,8 +89,40 @@ async function main() {
       lastSyncedAt:new Date(Date.UTC(2026,7,20-index,12,0,0)).toISOString(),
     }
     const found = await payload.find({ collection:'products', where:{ moySkladId:{ equals:moySkladId } }, limit:1, overrideAccess:true })
-    if (found.docs[0]) await payload.update({ collection:'products', id:found.docs[0].id, data:record, overrideAccess:true })
-    else await payload.create({ collection:'products', data:record, overrideAccess:true })
+    const saved = found.docs[0]
+      ? await payload.update({ collection:'products', id:found.docs[0].id, data:record, overrideAccess:true })
+      : await payload.create({ collection:'products', data:record, overrideAccess:true })
+    productIds.set(data.id, saved.id)
+  }
+
+  const visualOrders = [
+    { email:'visual-admin-1@example.invalid', name:'Марк Демидов', phone:'+7 918 000-00-01', product:'a7siii', quantity:1, status:'pending' as const, start:'2027-08-13T11:00:00.000Z', end:'2027-08-15T18:00:00.000Z', total:12300 },
+    { email:'visual-admin-2@example.invalid', name:'Алина Крылова', phone:'+7 918 000-00-02', product:'wedding', quantity:1, status:'confirmed' as const, start:'2027-08-15T11:00:00.000Z', end:'2027-08-17T18:00:00.000Z', total:17800 },
+    { email:'visual-admin-3@example.invalid', name:'Дарья Волкова', phone:'+7 918 000-00-03', product:'zve1', quantity:1, status:'confirmed' as const, start:'2027-08-12T11:00:00.000Z', end:'2027-08-13T18:00:00.000Z', total:3900 },
+    { email:'visual-admin-4@example.invalid', name:'Тимур Раев', phone:'+7 918 000-00-04', product:'hero13', quantity:2, status:'pending' as const, start:'2027-08-11T11:00:00.000Z', end:'2027-08-14T18:00:00.000Z', total:7200 },
+    { email:'visual-admin-5@example.invalid', name:'Игорь Панов', phone:'+7 918 000-00-05', product:'r6', quantity:1, status:'completed' as const, start:'2027-08-10T11:00:00.000Z', end:'2027-08-12T18:00:00.000Z', total:9400 },
+  ]
+
+  for (const fixture of visualOrders) {
+    let order = (await payload.find({ collection:'orders', where:{ customerEmail:{ equals:fixture.email } }, limit:1, overrideAccess:true })).docs[0]
+    if (!order) {
+      order = await payload.create({
+        collection:'orders',
+        data:{ customerName:fixture.name, customerEmail:fixture.email, customerPhone:fixture.phone, status:fixture.status },
+        overrideAccess:true,
+      })
+    }
+    const existingItems = await payload.find({ collection:'orderItems', where:{ order:{ equals:order.id } }, limit:1, overrideAccess:true })
+    if (existingItems.totalDocs === 0) {
+      const productId = productIds.get(fixture.product)
+      if (!productId) throw new Error(`Visual product missing for order: ${fixture.product}`)
+      await payload.create({
+        collection:'orderItems',
+        data:{ order:order.id, product:productId, quantity:fixture.quantity, startDate:fixture.start, endDate:fixture.end },
+        overrideAccess:true,
+      })
+    }
+    await payload.update({ collection:'orders', id:order.id, data:{ status:fixture.status, totalPrice:fixture.total }, overrideAccess:true })
   }
 
   await payload.updateGlobal({
@@ -120,7 +153,7 @@ async function main() {
     await payload.create({ collection:'users', data:{ email:adminEmail, password:adminPassword }, overrideAccess:true })
   }
 
-  console.log(JSON.stringify({ categories:categories.length, products:products.length, adminEmail }, null, 2))
+  console.log(JSON.stringify({ categories:categories.length, products:products.length, orders:visualOrders.length, adminEmail }, null, 2))
   process.exit(0)
 }
 

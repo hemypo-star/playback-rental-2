@@ -336,6 +336,9 @@ async function openActual(cdp, screen, viewport, productPath) {
   const target = screen.id === 'product' ? productPath : screen.path
   await navigate(cdp, new URL(target, actualBase).toString())
   await waitFor(cdp, "document.body&&document.body.innerText.trim().length>20", 'actual ' + screen.id)
+  if (screen.id === 'cart') {
+    await waitFor(cdp, "document.body.innerText.includes('Sony A7S III')", 'visual checkout cart hydration')
+  }
   await settle(cdp)
 }
 
