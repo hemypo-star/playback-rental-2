@@ -20,7 +20,7 @@ export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
   ]
 
   return (
-    <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="pb-admin-kpis">
       {cards.map((c, i) => (
         <div
           key={c.label}
