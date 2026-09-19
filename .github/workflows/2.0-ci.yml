@@ -116,12 +116,12 @@ jobs:
             exit 1
           fi
 
-      - name: Seed disposable browser smoke data
+      - name: Seed prototype visual data
         env:
           NODE_ENV: production
           SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
           SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
-        run: pnpm --dir apps/cms smoke:seed
+        run: pnpm --dir apps/cms visual:seed
 
       - name: Visual regression against HTML prototype
         env:
@@ -173,6 +173,13 @@ jobs:
           path: apps/cms/artifacts/visual-regression
           if-no-files-found: error
           retention-days: 14
+
+      - name: Seed disposable browser smoke data
+        env:
+          NODE_ENV: production
+          SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
+          SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
+        run: pnpm --dir apps/cms smoke:seed
 
       - name: Browser, security, notifications, lifecycle and promo smoke
         env:
