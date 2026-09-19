@@ -19,7 +19,20 @@ const categories = [
   { slug: 'compact', name: 'Мобильные фотоаппараты Canon', tag: 'PS', order: 6 },
 ]
 
-const products = [
+type VisualProduct = {
+  id:string
+  category:string
+  title:string
+  subtitle:string
+  price:number
+  tag:string
+  quantity:number
+  isKit?:boolean
+  oldPrice?:number
+  kitItems?:{label:string}[]
+}
+
+const products: VisualProduct[] = [
   { id:'funsaver', category:'film', title:'Kodak FunSaver 27', subtitle:'35 мм · ISO 800 · вспышка', price:1490, tag:'Плёнка', quantity:3 },
   { id:'quicksnap', category:'film', title:'Fujifilm QuickSnap Flash 400', subtitle:'35 мм · ISO 400 · 27 кадров', price:1590, tag:'Плёнка', quantity:3 },
   { id:'meta', category:'glasses', title:'Ray-Ban Meta Wayfarer', subtitle:'Умные очки · 12 Мп · 1080p', price:1900, tag:'Очки', quantity:2 },
@@ -32,6 +45,9 @@ const products = [
   { id:'maxlens', category:'action', title:'GoPro Max Lens Mod 2.0', subtitle:'Насадка 177° для HERO', price:400, tag:'Аксессуар', quantity:2 },
   { id:'v10', category:'compact', title:'Canon PowerShot V10', subtitle:'Компакт для влогов', price:1100, tag:'Компакт', quantity:2 },
   { id:'inspic', category:'compact', title:'Canon iNSPiC REC', subtitle:'Мини-камера-карабин', price:700, tag:'Компакт', quantity:2 },
+  { id:'wedding', category:'film', title:'Свадебный набор', subtitle:'Набор · 6 позиций', price:8900, tag:'Набор', quantity:2, isKit:true, oldPrice:9350, kitItems:[{label:'5× Kodak FunSaver 27'},{label:'Ray-Ban Meta Wayfarer'},{label:'Зарядный кейс'}] },
+  { id:'vlog', category:'sony', title:'Влог-сет', subtitle:'Набор · 3 позиции', price:3900, tag:'Набор', quantity:2, isKit:true, oldPrice:4300, kitItems:[{label:'Sony ZV-E1 с объективом'},{label:'Радиосистема-петличка'},{label:'Настольный штатив'}] },
+  { id:'travel', category:'action', title:'Тревел-сет', subtitle:'Набор · 4 позиции', price:2400, tag:'Набор', quantity:2, isKit:true, oldPrice:2700, kitItems:[{label:'GoPro HERO13 Black'},{label:'Canon PowerShot V10'},{label:'Набор креплений'}] },
 ]
 
 async function upsertCategory(payload: Awaited<ReturnType<typeof getPayload>>, data: (typeof categories)[number]) {
@@ -65,7 +81,9 @@ async function main() {
       category,
       listingType:'rental' as const,
       available:true,
-      isKit:false,
+      isKit:Boolean(data.isKit),
+      oldPrice:data.oldPrice,
+      kitItems:data.kitItems,
       moySkladId,
       lastSyncedAt:new Date(Date.UTC(2026,7,20-index,12,0,0)).toISOString(),
     }
