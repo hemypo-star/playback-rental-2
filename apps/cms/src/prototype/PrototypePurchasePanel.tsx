@@ -11,7 +11,7 @@ export default function PrototypePurchasePanel({product,imageUrl,openHour,closeH
  const hasDates=product.listingType==='sale'||Boolean(dates.startDate&&dates.endDate)
  const days=dates.startDate&&dates.endDate?calculateRentalDays(dates.startDate,dates.endDate):1
  const total=product.listingType==='sale'?product.price:hasDates?calculateRentalPrice(product.price,dates.startDate||undefined,dates.endDate||undefined):product.price
- const add=()=>{if(!inStock||!hasDates)return;addToCart({productId:product.id,title:product.title,price:product.price,imageUrl,listingType:product.listingType,unit:product.listingType==='rental'?'смена / 24 часа':'шт.'},1)}
+ const add=()=>{if(!inStock||!hasDates)return;addToCart({productId:product.id,title:product.title,subtitle:product.subtitle||undefined,price:product.price,imageUrl,listingType:product.listingType,unit:product.listingType==='rental'?'смена / 24 часа':'шт.'},1)}
  return <div className="pb-card pb-product-panel">
   <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',gap:12}}><span className="pb-price-large">{formatCurrency(product.price)}</span><span style={{fontSize:11,letterSpacing:'.1em',textTransform:'uppercase',color:'var(--pb-sub)'}}>{product.listingType==='rental'?'/ смена':'/ шт.'}</span></div>
   {product.listingType==='rental'&&<div style={{marginTop:22}}><PrototypeInlineRentalCalendar openHour={openHour} closeHour={closeHour}/></div>}
