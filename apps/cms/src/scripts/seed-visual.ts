@@ -98,11 +98,11 @@ async function main() {
   }
 
   const visualOrders = [
-    { email:'visual-admin-1@example.invalid', name:'Марк Демидов', phone:'+7 918 000-00-01', product:'a7siii', quantity:1, status:'pending' as const, start:'2027-08-13T11:00:00.000Z', end:'2027-08-15T18:00:00.000Z', total:12300 },
-    { email:'visual-admin-2@example.invalid', name:'Алина Крылова', phone:'+7 918 000-00-02', product:'wedding', quantity:1, status:'confirmed' as const, start:'2027-08-15T11:00:00.000Z', end:'2027-08-17T18:00:00.000Z', total:17800 },
-    { email:'visual-admin-3@example.invalid', name:'Дарья Волкова', phone:'+7 918 000-00-03', product:'zve1', quantity:1, status:'confirmed' as const, start:'2027-08-12T11:00:00.000Z', end:'2027-08-13T18:00:00.000Z', total:3900 },
-    { email:'visual-admin-4@example.invalid', name:'Тимур Раев', phone:'+7 918 000-00-04', product:'hero13', quantity:2, status:'pending' as const, start:'2027-08-11T11:00:00.000Z', end:'2027-08-14T18:00:00.000Z', total:7200 },
-    { email:'visual-admin-5@example.invalid', name:'Игорь Панов', phone:'+7 918 000-00-05', product:'r6', quantity:1, status:'completed' as const, start:'2027-08-10T11:00:00.000Z', end:'2027-08-12T18:00:00.000Z', total:9400 },
+    { email:'visual-admin-1@example.invalid', name:'Марк Демидов', phone:'+7 918 000-00-01', product:'a7siii', quantity:1, status:'pending' as const, start:'2026-08-13T11:00:00.000Z', end:'2026-08-15T18:00:00.000Z', total:12300 },
+    { email:'visual-admin-2@example.invalid', name:'Алина Крылова', phone:'+7 918 000-00-02', product:'wedding', quantity:1, status:'confirmed' as const, start:'2026-08-15T11:00:00.000Z', end:'2026-08-17T18:00:00.000Z', total:17800 },
+    { email:'visual-admin-3@example.invalid', name:'Дарья Волкова', phone:'+7 918 000-00-03', product:'zve1', quantity:1, status:'confirmed' as const, start:'2026-08-12T11:00:00.000Z', end:'2026-08-13T18:00:00.000Z', total:3900 },
+    { email:'visual-admin-4@example.invalid', name:'Тимур Раев', phone:'+7 918 000-00-04', product:'hero13', quantity:2, status:'pending' as const, start:'2026-08-11T11:00:00.000Z', end:'2026-08-14T18:00:00.000Z', total:7200 },
+    { email:'visual-admin-5@example.invalid', name:'Игорь Панов', phone:'+7 918 000-00-05', product:'r6', quantity:1, status:'completed' as const, start:'2026-08-10T11:00:00.000Z', end:'2026-08-12T18:00:00.000Z', total:9400 },
   ]
 
   for (const fixture of visualOrders) {

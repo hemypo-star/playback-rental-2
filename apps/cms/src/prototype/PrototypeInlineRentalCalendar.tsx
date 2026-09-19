@@ -17,7 +17,7 @@ export default function PrototypeInlineRentalCalendar({openHour,closeHour}:{open
  const cells=useMemo(()=>{const first=startOfMonth(month);const count=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();let weekday=first.getDay();weekday=weekday===0?7:weekday;const out:(Date|null)[]=[];for(let i=1;i<weekday;i++)out.push(null);for(let d=1;d<=count;d++)out.push(new Date(first.getFullYear(),first.getMonth(),d));return out},[month])
  const choose=(day:Date)=>{
   const start=selected.startDate,end=selected.endDate
-  if(!start||end||day<=start){setSelectedDates(withHour(day,openHour),null);return}
+  if(!start||end||day.getTime()<=start.getTime()){setSelectedDates(withHour(day,openHour),null);return}
   setSelectedDates(start,withHour(day,closeHour))
  }
  const prev=()=>setMonth(new Date(month.getFullYear(),month.getMonth()-1,1))
