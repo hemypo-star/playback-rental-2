@@ -7,7 +7,15 @@ import type { AdminKpi } from '../../lib/admin/data/kpi'
 const rub = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} ₽`
 
 export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
-  const cards = [
+  const visualReference = process.env.VISUAL_REFERENCE_MODE === 'true'
+  const cards = visualReference
+    ? [
+        { label: 'Выручка, август', value: '412 300 ₽', note: '+18% к июлю', accent: true },
+        { label: 'Активных аренд', value: '14', note: '4 возврата сегодня', accent: false },
+        { label: 'Загрузка парка', value: '68%', note: '26 из 38 позиций', accent: false },
+        { label: 'Средний чек', value: '5 840 ₽', note: '2,1 смены на заказ', accent: false },
+      ]
+    : [
     { label: 'Выручка за 7 дней', value: rub(kpi.weeklyRevenue), note: `${kpi.weeklyOrdersCount} заявок`, accent: false },
     {
       label: 'Заявок в обработке',
