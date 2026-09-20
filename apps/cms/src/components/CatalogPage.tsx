@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-html-link-for-pages -- hard navigation is intentional for catalog refresh semantics. */
 import Link from 'next/link'
 import type { Category } from '../payload-types'
 import CategorySidebar from './CategorySidebar'
