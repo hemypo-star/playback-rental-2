@@ -348,7 +348,7 @@ async function verifyActualMotion(cdp, productPath) {
   await waitFor(cdp, "Boolean(document.querySelector('.pb-hero-copy'))", 'motion home')
   const home = await evaluate(
     cdp,
-    "(()=>{const pick=(s)=>getComputedStyle(document.querySelector(s));const hero=pick('.pb-hero-copy');const media=pick('.pb-hero-media');const dot=pick('.pb-hours-dot');return {heroDuration:hero.animationDuration,heroTiming:hero.animationTimingFunction,mediaDuration:media.animationDuration,mediaDelay:media.animationDelay,dotDuration:dot.animationDuration,dotIteration:dot.animationIterationCount}})()",
+    "(()=>{const pick=(s)=>{const el=document.querySelector(s);return el?getComputedStyle(el):null};const hero=pick('.pb-hero-copy');const media=pick('.pb-hero-media');const dot=pick('.pb-hours-dot');const badge=pick('.pb-cart-count');const marquee=pick('.pb-marquee-track');return {heroDuration:hero?.animationDuration||'',heroTiming:hero?.animationTimingFunction||'',mediaDuration:media?.animationDuration||'',mediaDelay:media?.animationDelay||'',dotDuration:dot?.animationDuration||'',dotIteration:dot?.animationIterationCount||'',badgeDuration:badge?.animationDuration||'',marqueeDuration:marquee?.animationDuration||'',marqueeTiming:marquee?.animationTimingFunction||'',marqueeIteration:marquee?.animationIterationCount||''}})()",
   )
   expectMotion(home, {
     heroDuration: '0.56s',
@@ -357,6 +357,10 @@ async function verifyActualMotion(cdp, productPath) {
     mediaDelay: '0.12s',
     dotDuration: '2.6s',
     dotIteration: 'infinite',
+    badgeDuration: '0.38s',
+    marqueeDuration: '40s',
+    marqueeTiming: 'linear',
+    marqueeIteration: 'infinite',
   }, 'home')
 
   await navigate(cdp, new URL('/catalog', actualBase).toString())
@@ -402,7 +406,7 @@ async function verifyActualMotion(cdp, productPath) {
   await waitFor(cdp, "Boolean(document.querySelector('.pb-cart-line'))", 'motion checkout')
   const checkout = await evaluate(
     cdp,
-    "(()=>{const row=getComputedStyle(document.querySelector('.pb-cart-line'));const qty=getComputedStyle(document.querySelector('.pb-qty button'));const consent=getComputedStyle(document.querySelector('.pb-consent input'));return {rowDuration:row.animationDuration,rowTiming:row.animationTimingFunction,qtyDuration:qty.transitionDuration,consentDuration:consent.transitionDuration,consentTiming:consent.transitionTimingFunction}})()",
+    "(()=>{const row=getComputedStyle(document.querySelector('.pb-cart-line'));const qty=getComputedStyle(document.querySelector('.pb-qty button'));const consent=getComputedStyle(document.querySelector('.pb-consent input'));const pop=getComputedStyle(document.querySelector('.pb-pop-value'));return {rowDuration:row.animationDuration,rowTiming:row.animationTimingFunction,qtyDuration:qty.transitionDuration,consentDuration:consent.transitionDuration,consentTiming:consent.transitionTimingFunction,popDuration:pop.animationDuration,popTiming:pop.animationTimingFunction}})()",
   )
   expectMotion(checkout, {
     rowDuration: '0.56s',
@@ -410,6 +414,8 @@ async function verifyActualMotion(cdp, productPath) {
     qtyDuration: '0.22s, 0.24s',
     consentDuration: '0.24s, 0.24s, 0.32s',
     consentTiming: 'ease, ease, cubic-bezier(0.34, 1.56, 0.64, 1)',
+    popDuration: '0.38s',
+    popTiming: 'cubic-bezier(0.16, 1, 0.3, 1)',
   }, 'checkout')
 
   await applyCookies(cdp, await adminCookies())
@@ -417,12 +423,14 @@ async function verifyActualMotion(cdp, productPath) {
   await waitFor(cdp, "Boolean(document.querySelector('.pb-admin-shell'))", 'motion admin')
   const admin = await evaluate(
     cdp,
-    "(()=>{const shell=getComputedStyle(document.querySelector('.pb-admin-shell'));const kpi=document.querySelector('.pb-admin-kpis > div');const kpiStyle=kpi?getComputedStyle(kpi):null;return {shellDuration:shell.animationDuration,kpiDuration:kpiStyle?.animationDuration||'',kpiTiming:kpiStyle?.animationTimingFunction||''}})()",
+    "(()=>{const shell=getComputedStyle(document.querySelector('.pb-admin-shell'));const kpi=document.querySelector('.pb-admin-kpis > div');const kpiStyle=kpi?getComputedStyle(kpi):null;const action=document.querySelector('a[href=\"/admin/orders/new\"]');const actionStyle=action?getComputedStyle(action):null;return {shellDuration:shell.animationDuration,kpiDuration:kpiStyle?.animationDuration||'',kpiTiming:kpiStyle?.animationTimingFunction||'',actionDuration:actionStyle?.transitionDuration||'',actionTiming:actionStyle?.transitionTimingFunction||''}})()",
   )
   expectMotion(admin, {
     shellDuration: '0.38s',
     kpiDuration: '0.56s',
     kpiTiming: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    actionDuration: '0.24s, 0.38s',
+    actionTiming: 'ease, cubic-bezier(0.16, 1, 0.3, 1)',
   }, 'admin')
 }
 
