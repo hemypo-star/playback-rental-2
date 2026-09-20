@@ -86,7 +86,11 @@ export async function updateOrderItem(orderId: number, itemId: number, data: Upd
   try {
     await requireAdmin()
     const payload = await getPayload({ config })
-    const updated = await payload.update({ collection: 'orderItems', id: itemId, data, overrideAccess: true })
+    // An operator may legitimately record or correct a rental whose
+    // pickup date has already passed — bookkeeping after the fact, not a
+    // booking of the past — so OrderItems' beforeValidate past-date guard
+    // is waived here. Only the anonymous checkout path is subject to it.
+    const updated = await payload.update({ collection: 'orderItems', id: itemId, data, overrideAccess: true, context: { allowPastRentalDates: true } })
     // OrderItems' afterChange hook has already recomputed orders.totalPrice
     // synchronously by the time payload.update() above resolves.
     const order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0, overrideAccess: true })

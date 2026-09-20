@@ -3,6 +3,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useStore } from '@nanostores/react'
 import { $selectedDates, OPEN_DATE_PICKER_EVENT, setSelectedDates } from '../stores/dates'
+import { isBeforeBusinessToday } from '../lib/rental/businessDay'
 
 export interface PrototypeDatePickerHandle { open: (target?: 'from' | 'to') => void }
 interface Props { variant?: 'navbar' | 'compact' | 'hero' | 'hidden'; openHour: number; closeHour: number }
@@ -35,7 +36,11 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
 
   const cells=useMemo(()=>{const first=startOfMonth(month);const days=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();let weekday=first.getDay();weekday=weekday===0?7:weekday;const out:(Date|null)[]=[];for(let i=1;i<weekday;i++)out.push(null);for(let d=1;d<=days;d++)out.push(new Date(first.getFullYear(),first.getMonth(),d));return out},[month])
   const hours=useMemo(()=>{const out:number[]=[];for(let h=Math.max(0,openHour-1);h<=Math.min(23,closeHour+1);h++)out.push(h);return out},[openHour,closeHour])
-  const choose=(d:Date)=>{if(target==='from'){setFrom(d);if(to && d>=to)setTo(null);setTarget('to')}else{if(from && d<from){setFrom(d);setTo(null);setTarget('to')}else setTo(d)}}
+  // Mirrors the server guard in collections/OrderItems.ts: a pickup date on
+  // an earlier calendar day than today cannot be fulfilled. The grid below
+  // renders those days disabled too, but the check lives here as well so the
+  // rule holds for any other caller of choose().
+  const choose=(d:Date)=>{if(isBeforeBusinessToday(d))return;if(target==='from'){setFrom(d);if(to && d>=to)setTo(null);setTarget('to')}else{if(from && d<from){setFrom(d);setTo(null);setTarget('to')}else setTo(d)}}
   const done=()=>{if(from&&to){setSelectedDates(withHour(from,fromHour),withHour(to,toHour))}setOpen(false)}
   const days=Math.max(1,from&&to?Math.ceil((to.getTime()-from.getTime())/86400000)+1:1)
   const label=fmtRange(shown.startDate,shown.endDate)
@@ -75,7 +80,7 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
           <div>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><button type="button" className="pb-modal-close" onClick={()=>setMonth(addMonths(month,-1))}>←</button><div className="pb-kicker">{month.toLocaleDateString('ru-RU',{month:'long',year:'numeric'})}</div><button type="button" className="pb-modal-close" onClick={()=>setMonth(addMonths(month,1))}>→</button></div>
             <div className="pb-weekdays"><span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span></div>
-            <div className="pb-days">{cells.map((d,i)=>d?<button key={i} type="button" className="pb-day" data-selected={sameDay(d,from)||sameDay(d,to)} onClick={()=>choose(d)}>{d.getDate()}</button>:<span key={i}/>)}</div>
+            <div className="pb-days">{cells.map((d,i)=>d?<button key={i} type="button" className="pb-day" disabled={isBeforeBusinessToday(d)} data-selected={sameDay(d,from)||sameDay(d,to)} onClick={()=>choose(d)}>{d.getDate()}</button>:<span key={i}/>)}</div>
           </div>
           <div><div className="pb-kicker">{target==='from'?'Время выдачи':'Время возврата'}</div><div className="pb-times">{hours.map(h=><button key={h} type="button" className="pb-time" data-active={h===activeHour} onClick={()=>target==='from'?setFromHour(h):setToHour(h)}>{String(h).padStart(2,'0')}:00</button>)}</div></div>
         </div>

@@ -96,6 +96,11 @@ export async function createManualOrder(payload: Payload, input: ManualOrderInpu
           endDate: item.endDate || undefined,
         },
         overrideAccess: true,
+      // An operator may legitimately record or correct a rental whose
+      // pickup date has already passed — bookkeeping after the fact, not a
+      // booking of the past — so OrderItems' beforeValidate past-date guard
+      // is waived here. Only the anonymous checkout path is subject to it.
+        context: { allowPastRentalDates: true },
       })
       createdItemIds.push(created.id)
     }

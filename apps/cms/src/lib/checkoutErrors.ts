@@ -27,12 +27,12 @@ export type CheckoutErrorCode =
   | 'RATE_LIMITED'
   | 'UNKNOWN'
 
-// RENTAL_DATES_INVALID covers two real throw sites in OrderItems.ts's
-// beforeValidate hook: dates missing entirely, and a return date earlier
-// than the pickup date (a backwards range — same-calendar-day is valid
-// since A1, see that throw site's own comment). `reason` distinguishes the
-// two so the Russian text can be specific instead of a generic "check your
-// dates". There is no RENTAL_MIN_DURATION here on purpose: A1 turned the
+// RENTAL_DATES_INVALID covers three real throw sites in OrderItems.ts's
+// beforeValidate hook: dates missing entirely, a return date earlier than
+// the pickup date (a backwards range — same-calendar-day is valid since
+// A1, see that throw site's own comment), and a pickup date on an earlier
+// calendar day than today. `reason` distinguishes them so the Russian text
+// can be specific instead of a generic "check your dates". There is no RENTAL_MIN_DURATION here on purpose: A1 turned the
 // old "minimum one day" rejection into a Math.max(1, ...) floor in
 // lib/rental/pricing.ts, so nothing in this codebase rejects a too-short
 // rental anymore — a too-short range is priced as one day, not an error.
@@ -42,7 +42,7 @@ export interface CheckoutErrorData {
   productTitle?: string
   requested?: number
   available?: number
-  reason?: 'missing' | 'backwards'
+  reason?: 'missing' | 'backwards' | 'past'
 }
 
 export interface CheckoutErrorInfo {
@@ -73,6 +73,12 @@ export function pluralUnits(n: number): string {
 export function translateCheckoutError({ code, data }: CheckoutErrorInfo): TranslatedCheckoutError {
   switch (code) {
     case 'RENTAL_DATES_INVALID':
+      if (data?.reason === 'past') {
+        return {
+          message: 'Дата выдачи уже прошла. Выберите дату не раньше сегодняшней.',
+          canChangeDates: true,
+        }
+      }
       if (data?.reason === 'backwards') {
         return {
           message: 'Дата возврата раньше даты выдачи. Выберите даты ещё раз.',
@@ -172,7 +178,7 @@ function pickErrorData(data: object): CheckoutErrorData {
     productTitle: typeof d.productTitle === 'string' ? d.productTitle : undefined,
     requested: typeof d.requested === 'number' ? d.requested : undefined,
     available: typeof d.available === 'number' ? d.available : undefined,
-    reason: d.reason === 'missing' || d.reason === 'backwards' ? d.reason : undefined,
+    reason: d.reason === 'missing' || d.reason === 'backwards' || d.reason === 'past' ? d.reason : undefined,
   }
 }
 
