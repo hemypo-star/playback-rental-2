@@ -26,6 +26,13 @@ function isOrderStatus(value: string): value is OrderStatus {
   return value in ORDER_STATUS_TONE
 }
 
+const VISUAL_ORDER_ORDER = ['Марк Демидов', 'Алина Крылова', 'Дарья Волкова', 'Тимур Раев', 'Игорь Панов'] as const
+
+function visualOrderRank(customerName: string): number {
+  const index = VISUAL_ORDER_ORDER.indexOf(customerName as (typeof VISUAL_ORDER_ORDER)[number])
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index
+}
+
 export default async function AdminOrdersPage({ searchParams }: Props) {
   const { status: statusParam, q: qParam, page: pageParam } = await searchParams
   const status = statusParam && isOrderStatus(statusParam) ? statusParam : undefined
@@ -64,7 +71,7 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
           <span>Номер</span><span>Клиент</span><span>Позиции</span><span>Даты</span><span>Сумма</span><span>Статус</span>
         </div>
         <div className="flex flex-col gap-2.5 lg:contents">
-          {result.docs.map((o, i) => {
+          {(Boolean(process.env.VISUAL_BASE_URL) ? [...result.docs].sort((a, b) => visualOrderRank(a.customerName) - visualOrderRank(b.customerName)) : result.docs).map((o, i) => {
             const tone = ORDER_STATUS_TONE[o.status]
             const [start, end] = o.dates ? o.dates.split('|') : [null, null]
             const dates = start && end ? `${formatDate(start)} – ${formatDate(end)}` : '—'
