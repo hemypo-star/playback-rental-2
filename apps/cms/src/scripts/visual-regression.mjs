@@ -340,6 +340,67 @@ function expectMotion(actual, expected, label) {
   console.log('MOTION ' + label + ' ' + JSON.stringify(actual))
 }
 
+async function verifyStateDrivenMotion(cdp) {
+  await setViewport(cdp, viewports[0], 'no-preference')
+  await navigate(cdp, new URL('/checkout', actualBase).toString())
+  await waitFor(cdp, "Boolean(document.querySelector('.pb-cart-line .pb-qty'))&&Boolean(document.querySelector('.pb-cart-count'))", 'motion state checkout')
+
+  const before = await evaluate(
+    cdp,
+    "(()=>{const line=document.querySelector('.pb-cart-line');const qty=line?.querySelector('.pb-pop-value');const badge=document.querySelector('.pb-cart-count');const total=document.querySelector('.pb-summary .pb-pop-value');if(!qty||!badge||!total)throw new Error('state motion elements missing');qty.__motionMarker='old';badge.__motionMarker='old';total.__motionMarker='old';return {qty:Number(qty.textContent),badge:Number(badge.textContent),total:total.textContent}})()",
+  )
+
+  await evaluate(
+    cdp,
+    "(()=>{const plus=document.querySelector('.pb-cart-line .pb-qty button:last-child');if(!plus)throw new Error('quantity increment missing');plus.click();return true})()",
+  )
+  await waitFor(
+    cdp,
+    "(()=>{const qty=document.querySelector('.pb-cart-line .pb-qty .pb-pop-value');return qty&&Number(qty.textContent)>" + before.qty + "})()",
+    'motion quantity state update',
+  )
+
+  const after = await evaluate(
+    cdp,
+    "(()=>{const qty=document.querySelector('.pb-cart-line .pb-qty .pb-pop-value');const badge=document.querySelector('.pb-cart-count');const total=document.querySelector('.pb-summary .pb-pop-value');return {qty:Number(qty?.textContent),badge:Number(badge?.textContent),total:total?.textContent||'',qtyRemounted:qty?.__motionMarker!=='old',badgeRemounted:badge?.__motionMarker!=='old',totalRemounted:total?.__motionMarker!=='old',qtyAnimation:getComputedStyle(qty).animationName,badgeAnimation:getComputedStyle(badge).animationName,totalAnimation:getComputedStyle(total).animationName}})()",
+  )
+  if (
+    after.qty !== before.qty + 1 ||
+    after.badge !== before.badge + 1 ||
+    after.total === before.total ||
+    !after.qtyRemounted ||
+    !after.badgeRemounted ||
+    !after.totalRemounted
+  ) {
+    throw new Error('state motion remount mismatch: ' + JSON.stringify({ before, after }))
+  }
+  expectMotion(after, {
+    qtyAnimation: 'pbPop',
+    badgeAnimation: 'pbPop',
+    totalAnimation: 'pbPop',
+  }, 'state-pop')
+
+  await evaluate(
+    cdp,
+    "(()=>{const checkbox=document.querySelector('.pb-consent input');if(!checkbox)throw new Error('consent checkbox missing');checkbox.click();return true})()",
+  )
+  await waitFor(cdp, "Boolean(document.querySelector('.pb-consent input')?.checked)", 'motion consent state update')
+  await sleep(360)
+  const consent = await evaluate(
+    cdp,
+    "(()=>{const checkbox=document.querySelector('.pb-consent input');const style=getComputedStyle(checkbox);return {checked:checkbox.checked,transform:style.transform,transitionDuration:style.transitionDuration,transitionTiming:style.transitionTimingFunction}})()",
+  )
+  if (!consent.checked || consent.transform === 'none') {
+    throw new Error('consent spring state mismatch: ' + JSON.stringify(consent))
+  }
+  expectMotion(consent, {
+    transitionDuration: '0.24s, 0.24s, 0.32s',
+    transitionTiming: 'ease, ease, cubic-bezier(0.34, 1.56, 0.64, 1)',
+  }, 'state-consent')
+
+  console.log('MOTION state-driven ok ' + JSON.stringify({ before, after, consent }))
+}
+
 async function verifyBackForwardMotion(cdp) {
   await navigate(cdp, new URL('/', actualBase).toString())
   await waitFor(cdp, "Boolean(document.querySelector('a[href=\"/catalog\"]'))", 'motion back-forward home link')
@@ -687,6 +748,8 @@ async function main() {
     const productPath = visualProducts.sony.href
 
     await verifyActualMotion(actualCdp, productPath)
+    await verifyStateDrivenMotion(actualCdp)
+    await seedVisualBrowserStorage(actualCdp, visualProducts)
     await verifyBackForwardMotion(actualCdp)
     await seedVisualBrowserStorage(actualCdp, visualProducts)
 
