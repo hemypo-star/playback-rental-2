@@ -207,7 +207,7 @@ async function waitFor(cdp, expression, label, timeoutMs = 30000) {
   throw new Error(label + ' timed out' + (lastError ? ': ' + lastError.message : ''))
 }
 
-async function setViewport(cdp, viewport) {
+async function setViewport(cdp, viewport, motion = 'reduce') {
   await cdp.send('Emulation.setDeviceMetricsOverride', {
     width: viewport.width,
     height: viewport.height,
@@ -215,7 +215,7 @@ async function setViewport(cdp, viewport) {
     mobile: viewport.mobile,
   })
   await cdp.send('Emulation.setEmulatedMedia', {
-    features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+    features: [{ name: 'prefers-reduced-motion', value: motion }],
   })
 }
 
@@ -329,6 +329,101 @@ async function applyCookies(cdp, cookies) {
       url: actualBase,
     })
   }
+}
+
+function expectMotion(actual, expected, label) {
+  for (const [key, value] of Object.entries(expected)) {
+    if (actual?.[key] !== value) {
+      throw new Error('motion mismatch ' + label + ' ' + key + ': expected ' + value + ', got ' + actual?.[key])
+    }
+  }
+  console.log('MOTION ' + label + ' ' + JSON.stringify(actual))
+}
+
+async function verifyActualMotion(cdp, productPath) {
+  const viewport = viewports[0]
+  await setViewport(cdp, viewport, 'no-preference')
+
+  await navigate(cdp, new URL('/', actualBase).toString())
+  await waitFor(cdp, "Boolean(document.querySelector('.pb-hero-copy'))", 'motion home')
+  const home = await evaluate(
+    cdp,
+    "(()=>{const pick=(s)=>getComputedStyle(document.querySelector(s));const hero=pick('.pb-hero-copy');const media=pick('.pb-hero-media');const dot=pick('.pb-hours-dot');return {heroDuration:hero.animationDuration,heroTiming:hero.animationTimingFunction,mediaDuration:media.animationDuration,mediaDelay:media.animationDelay,dotDuration:dot.animationDuration,dotIteration:dot.animationIterationCount}})()",
+  )
+  expectMotion(home, {
+    heroDuration: '0.56s',
+    heroTiming: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    mediaDuration: '0.9s',
+    mediaDelay: '0.12s',
+    dotDuration: '2.6s',
+    dotIteration: 'infinite',
+  }, 'home')
+
+  await navigate(cdp, new URL('/catalog', actualBase).toString())
+  await waitFor(cdp, "Boolean(document.querySelector('.pb-product-card'))", 'motion catalog')
+  const catalog = await evaluate(
+    cdp,
+    "(()=>{const card=getComputedStyle(document.querySelector('.pb-product-card'));const knob=getComputedStyle(document.querySelector('.pb-switch span'));return {cardDuration:card.animationDuration,cardTiming:card.animationTimingFunction,knobDuration:knob.transitionDuration,knobTiming:knob.transitionTimingFunction}})()",
+  )
+  expectMotion(catalog, {
+    cardDuration: '0.56s',
+    cardTiming: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    knobDuration: '0.32s',
+    knobTiming: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+  }, 'catalog')
+
+  await evaluate(cdp, "document.querySelector('.pb-header-date')?.click()")
+  await waitFor(cdp, "Boolean(document.querySelector('.pb-modal'))", 'motion date picker modal')
+  const modal = await evaluate(
+    cdp,
+    "(()=>{const panel=getComputedStyle(document.querySelector('.pb-modal'));const close=getComputedStyle(document.querySelector('.pb-modal-close'));const day=getComputedStyle(document.querySelector('.pb-day'));return {panelDuration:panel.animationDuration,panelTiming:panel.animationTimingFunction,closeDuration:close.transitionDuration,dayDuration:day.transitionDuration,dayTiming:day.transitionTimingFunction}})()",
+  )
+  expectMotion(modal, {
+    panelDuration: '0.56s',
+    panelTiming: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    closeDuration: '0.24s, 0.24s, 0.32s',
+    dayDuration: '0.24s, 0.24s, 0.32s',
+    dayTiming: 'ease, ease, cubic-bezier(0.34, 1.56, 0.64, 1)',
+  }, 'modal')
+
+  await navigate(cdp, new URL(productPath, actualBase).toString())
+  await waitFor(cdp, "Boolean(document.querySelector('.pb-product-hero'))", 'motion product')
+  const product = await evaluate(
+    cdp,
+    "(()=>{const hero=getComputedStyle(document.querySelector('.pb-product-hero'));const image=document.querySelector('.pb-product-hero img');const imageStyle=image?getComputedStyle(image):null;return {heroDuration:hero.animationDuration,heroTiming:hero.animationTimingFunction,imageDuration:imageStyle?.transitionDuration||'0.9s'}})()",
+  )
+  expectMotion(product, {
+    heroDuration: '0.9s',
+    heroTiming: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    imageDuration: '0.9s',
+  }, 'product')
+
+  await navigate(cdp, new URL('/checkout', actualBase).toString())
+  await waitFor(cdp, "Boolean(document.querySelector('.pb-cart-line'))", 'motion checkout')
+  const checkout = await evaluate(
+    cdp,
+    "(()=>{const row=getComputedStyle(document.querySelector('.pb-cart-line'));const qty=getComputedStyle(document.querySelector('.pb-qty button'));const consent=getComputedStyle(document.querySelector('.pb-consent input'));return {rowDuration:row.animationDuration,rowTiming:row.animationTimingFunction,qtyDuration:qty.transitionDuration,consentDuration:consent.transitionDuration,consentTiming:consent.transitionTimingFunction}})()",
+  )
+  expectMotion(checkout, {
+    rowDuration: '0.56s',
+    rowTiming: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    qtyDuration: '0.22s, 0.24s',
+    consentDuration: '0.24s, 0.24s, 0.32s',
+    consentTiming: 'ease, ease, cubic-bezier(0.34, 1.56, 0.64, 1)',
+  }, 'checkout')
+
+  await applyCookies(cdp, await adminCookies())
+  await navigate(cdp, new URL('/admin/orders', actualBase).toString())
+  await waitFor(cdp, "Boolean(document.querySelector('.pb-admin-shell'))", 'motion admin')
+  const admin = await evaluate(
+    cdp,
+    "(()=>{const shell=getComputedStyle(document.querySelector('.pb-admin-shell'));const kpi=document.querySelector('.pb-admin-kpis > div');const kpiStyle=kpi?getComputedStyle(kpi):null;return {shellDuration:shell.animationDuration,kpiDuration:kpiStyle?.animationDuration||'',kpiTiming:kpiStyle?.animationTimingFunction||''}})()",
+  )
+  expectMotion(admin, {
+    shellDuration: '0.38s',
+    kpiDuration: '0.56s',
+    kpiTiming: 'cubic-bezier(0.16, 1, 0.3, 1)',
+  }, 'admin')
 }
 
 async function openActual(cdp, screen, viewport, productPath) {
@@ -550,6 +645,8 @@ async function main() {
     }
 
     const productPath = visualProducts.sony.href
+
+    await verifyActualMotion(actualCdp, productPath)
 
     for (const viewport of viewports) {
       for (const screen of screens) {
