@@ -390,7 +390,7 @@ async function verifyActualMotion(cdp, productPath) {
   await waitFor(cdp, "Boolean(document.querySelector('.pb-product-hero'))", 'motion product')
   const product = await evaluate(
     cdp,
-    "(()=>{const hero=getComputedStyle(document.querySelector('.pb-product-hero'));const image=document.querySelector('.pb-product-hero img');const imageStyle=image?getComputedStyle(image):null;return {heroDuration:hero.animationDuration,heroTiming:hero.animationTimingFunction,imageDuration:imageStyle?.transitionDuration||'0.9s'}})()",
+    "(()=>{const heroEl=document.querySelector('.pb-product-hero');const hero=getComputedStyle(heroEl);const visual=heroEl?.firstElementChild;const visualStyle=visual?getComputedStyle(visual):null;return {heroDuration:hero.animationDuration,heroTiming:hero.animationTimingFunction,imageDuration:visualStyle?.transitionDuration||''}})()",
   )
   expectMotion(product, {
     heroDuration: '0.9s',
