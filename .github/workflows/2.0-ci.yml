@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - 2.0
+      - frontend-transfer-unified
       - 'chatgpt/**'
   pull_request:
     branches:
       - 2.0
+      - frontend-transfer-unified
 
 permissions:
   contents: read
