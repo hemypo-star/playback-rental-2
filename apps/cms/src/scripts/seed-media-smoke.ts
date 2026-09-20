@@ -1,7 +1,9 @@
+import { sql, type PostgresAdapter } from '@payloadcms/db-postgres'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 
 const FILE_NAME = 'smoke-admin-media.png'
+const ADMIN_RATE_LIMIT_KEY = (process.env.SMOKE_ADMIN_EMAIL || 'smoke-admin@example.invalid').toLowerCase().trim()
 
 // 1x1 opaque PNG, generated once and embedded so CI needs no external file.
 const PNG_BASE64 =
@@ -9,6 +11,16 @@ const PNG_BASE64 =
 
 async function main() {
   const payload = await getPayload({ config })
+
+  // This seed runs immediately before admin-content-smoke in CI. Earlier
+  // visual/admin/browser checks intentionally reuse the same disposable
+  // admin and therefore spend its persistent account-level login budget.
+  // Reset only that CI fixture bucket here so the password-change smoke
+  // starts from a deterministic state without weakening production limits.
+  const adapter = payload.db as unknown as PostgresAdapter
+  await adapter.drizzle.execute(
+    sql`DELETE FROM "rate_limit_hits" WHERE "bucket" = 'login_account' AND "rate_key" = ${ADMIN_RATE_LIMIT_KEY}`,
+  )
 
   const existing = await payload.find({
     collection: 'media',
