@@ -340,6 +340,37 @@ function expectMotion(actual, expected, label) {
   console.log('MOTION ' + label + ' ' + JSON.stringify(actual))
 }
 
+async function verifyBackForwardMotion(cdp) {
+  await navigate(cdp, new URL('/', actualBase).toString())
+  await waitFor(cdp, "Boolean(document.querySelector('a[href=\"/catalog\"]'))", 'motion back-forward home link')
+  await evaluate(
+    cdp,
+    "(()=>{const link=Array.from(document.querySelectorAll('a[href=\"/catalog\"]')).find(a=>a.offsetParent!==null);if(!link)throw new Error('visible catalog link missing');link.click();return true})()",
+  )
+  await waitFor(cdp, "location.pathname==='/catalog'&&Boolean(document.querySelector('.pb-product-card'))", 'motion forward catalog')
+  await evaluate(cdp, "history.back();true")
+  await waitFor(cdp, "location.pathname==='/'&&Boolean(document.querySelector('.pb-hero-copy'))", 'motion browser back home')
+  await waitFor(cdp, "document.documentElement.getAttribute('data-nav-back')==='true'", 'motion browser back flag')
+  const back = await evaluate(
+    cdp,
+    "(()=>{const hero=getComputedStyle(document.querySelector('.pb-hero-copy'));const media=getComputedStyle(document.querySelector('.pb-hero-media'));const rule=getComputedStyle(document.querySelector('.pb-rule'));return {flag:document.documentElement.getAttribute('data-nav-back'),heroAnimation:hero.animationName,mediaAnimation:media.animationName,ruleAnimation:rule.animationName}})()",
+  )
+  expectMotion(back, {
+    flag: 'true',
+    heroAnimation: 'none',
+    mediaAnimation: 'none',
+    ruleAnimation: 'none',
+  }, 'back-forward')
+
+  await evaluate(
+    cdp,
+    "(()=>{const link=Array.from(document.querySelectorAll('a[href=\"/catalog\"]')).find(a=>a.offsetParent!==null);if(!link)throw new Error('visible catalog link missing after back');link.click();return true})()",
+  )
+  await waitFor(cdp, "location.pathname==='/catalog'&&Boolean(document.querySelector('.pb-product-card'))", 'motion new navigation after back')
+  await waitFor(cdp, "!document.documentElement.hasAttribute('data-nav-back')", 'motion back flag cleared')
+  console.log('MOTION back-forward-clear ok')
+}
+
 async function verifyActualMotion(cdp, productPath) {
   const viewport = viewports[0]
   await setViewport(cdp, viewport, 'no-preference')
@@ -656,6 +687,8 @@ async function main() {
     const productPath = visualProducts.sony.href
 
     await verifyActualMotion(actualCdp, productPath)
+    await verifyBackForwardMotion(actualCdp)
+    await seedVisualBrowserStorage(actualCdp, visualProducts)
 
     for (const viewport of viewports) {
       for (const screen of screens) {
