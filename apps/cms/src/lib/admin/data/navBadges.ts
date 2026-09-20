@@ -18,7 +18,7 @@ export interface AdminNavBadges {
 }
 
 export async function getAdminNavBadges(): Promise<AdminNavBadges> {
-  if (process.env.VISUAL_REFERENCE_MODE === 'true') {
+  if (Boolean(process.env.VISUAL_BASE_URL)) {
     return { orders: 7, stock: 38, clients: 3 }
   }
   const [kpi, stock, clients] = await Promise.all([getAdminKpi(), getAdminStock(), getAdminClients()])
