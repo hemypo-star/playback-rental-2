@@ -53,7 +53,7 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
         // page's row count, so page 2 of 3 would claim "50 заказов" as if
         // that were the whole result. pluralizeRu because 1/2/5 take three
         // different forms — the same helper the catalog and homepage use.
-        subtitle={process.env.VISUAL_REFERENCE_MODE === 'true' ? '7 новых заявок · 4 выдачи сегодня' : `${result.totalDocs} ${pluralizeRu(result.totalDocs, 'заказ', 'заказа', 'заказов')}${hasFilters ? ' по фильтру' : ''}`}
+        subtitle={Boolean(process.env.VISUAL_BASE_URL) ? '7 новых заявок · 4 выдачи сегодня' : `${result.totalDocs} ${pluralizeRu(result.totalDocs, 'заказ', 'заказа', 'заказов')}${hasFilters ? ' по фильтру' : ''}`}
         actionLabel="Создать заказ"
         actionHref="/admin/orders/new"
       />
