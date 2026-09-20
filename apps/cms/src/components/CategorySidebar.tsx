@@ -16,6 +16,7 @@
 // that by construction. Making the effect itself survive a same-route
 // client-side navigation is a catalog-refresh change (adjacent to C2/C5),
 // not part of C1.
+/* eslint-disable @next/next/no-html-link-for-pages -- hard navigation is intentional here; see file header. */
 import type { Category } from '../payload-types'
 import { buildCategoryTree, flattenCategoryTree } from '../lib/categoryTree'
 import { buildCatalogUrl } from '../lib/catalogQuery'
