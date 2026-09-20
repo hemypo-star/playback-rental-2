@@ -79,7 +79,7 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
           </div>
           <div><div className="pb-kicker">{target==='from'?'Время выдачи':'Время возврата'}</div><div className="pb-times">{hours.map(h=><button key={h} type="button" className="pb-time" data-active={h===activeHour} onClick={()=>target==='from'?setFromHour(h):setToHour(h)}>{String(h).padStart(2,'0')}:00</button>)}</div></div>
         </div>
-        <div className="pb-modal-foot"><span style={{fontSize:12.5,color:'var(--pb-sub)',maxWidth:400}}>Рабочие часы {String(openHour).padStart(2,'0')}:00 — {String(closeHour).padStart(2,'0')}:00.</span><button type="button" className="pb-pill pb-btn" onClick={done} disabled={!from||!to}><span>Готово · {days} {days===1?'смена':days<5?'смены':'смен'}</span><span>→</span></button></div>
+        <div className="pb-modal-foot"><span style={{fontSize:12.5,color:'var(--pb-sub)',maxWidth:400}}>Рабочие часы {String(openHour).padStart(2,'0')}:00 — {String(closeHour).padStart(2,'0')}:00.</span><button type="button" className="pb-pill pb-btn pb-modal-done" onClick={done} disabled={!from||!to}><span>Готово · {days} {days===1?'смена':days<5?'смены':'смен'}</span><span>→</span></button></div>
       </div>
     </div>}
   </>
