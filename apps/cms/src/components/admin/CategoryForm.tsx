@@ -78,7 +78,7 @@ export default function CategoryForm({ category, parentOptions, currentParentId 
 
   return (
     <>
-      {error && <p className="rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]">{error}</p>}
+      {error && <p className="rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>}
 
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex flex-col gap-3.5">

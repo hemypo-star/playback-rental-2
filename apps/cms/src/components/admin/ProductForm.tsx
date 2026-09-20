@@ -98,7 +98,7 @@ export default function ProductForm({ product, categoryName }: Props) {
 
   return (
     <>
-      {error && <p className="rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]">{error}</p>}
+      {error && <p className="rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>}
 
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex flex-col gap-3.5">
@@ -159,7 +159,7 @@ export default function ProductForm({ product, categoryName }: Props) {
                   {img.url && <Image src={img.url} width={84} height={84} className="aspect-square w-full rounded-lg object-cover" alt="" />}
                   <div className="mt-1 flex items-center justify-between">
                     <button type="button" onClick={() => moveImage(i, -1)} disabled={i === 0} className="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">←</button>
-                    <button type="button" onClick={() => removeImage(i)} className="text-[11px] text-accent hover:text-[#B03017]">✕</button>
+                    <button type="button" onClick={() => removeImage(i)} className="text-[11px] text-accent hover:text-status-alert">✕</button>
                     <button type="button" onClick={() => moveImage(i, 1)} disabled={i === images.length - 1} className="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">→</button>
                   </div>
                 </div>

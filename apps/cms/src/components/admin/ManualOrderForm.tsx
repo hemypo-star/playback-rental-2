@@ -288,7 +288,7 @@ export default function ManualOrderForm({ products }: Props) {
           </div>
 
           {error ? (
-            <p className="mt-4 rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]">{error}</p>
+            <p className="mt-4 rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>
           ) : null}
 
           <button type="submit" disabled={submitting} className="btn-primary mt-5 w-full justify-center">

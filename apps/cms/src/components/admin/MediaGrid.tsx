@@ -44,7 +44,7 @@ export default function MediaGrid({ items: initialItems }: { items: Media[] }) {
 
   return (
     <>
-      {error && <p className="rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]">{error}</p>}
+      {error && <p className="rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>}
 
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4 lg:grid-cols-6">
         {items.map((m) => (
@@ -63,7 +63,7 @@ export default function MediaGrid({ items: initialItems }: { items: Media[] }) {
               <button type="button" onClick={() => handleSaveAlt(m.id)} className="text-[10.5px] font-semibold text-subtle hover:text-foreground">
                 Сохранить
               </button>
-              <button type="button" onClick={() => handleDelete(m.id)} className="text-[10.5px] font-semibold text-accent hover:text-[#B03017]">
+              <button type="button" onClick={() => handleDelete(m.id)} className="text-[10.5px] font-semibold text-accent hover:text-status-alert">
                 Удалить
               </button>
             </div>

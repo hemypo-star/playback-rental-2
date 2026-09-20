@@ -259,8 +259,8 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
 
   return (
     <>
-      {error && <p className="rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]">{error}</p>}
-      {success && <p className="rounded-2xl bg-[#E4F6E9] px-4 py-3 text-[13px] text-[#0B6B32]">{success}</p>}
+      {error && <p className="rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>}
+      {success && <p className="rounded-2xl bg-status-ok-bg px-4 py-3 text-[13px] text-status-ok">{success}</p>}
 
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.5fr_1fr]">
         <div className="rounded-3xl border border-border bg-card p-6">

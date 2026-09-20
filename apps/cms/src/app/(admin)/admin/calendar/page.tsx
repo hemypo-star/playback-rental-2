@@ -38,7 +38,7 @@ const THEME: CalendarGridTheme = {
   emptyStateText: 'Нет товаров в аренде',
   deficitBackground: STOCK_STATUS_TONE.out.bg,
   deficitBorderColor: STOCK_STATUS_TONE.out.color,
-  unknownStatusTone: { background: '#F0F0F3', color: '#6E6E73', label: '—' },
+  unknownStatusTone: { background: 'var(--color-muted)', color: 'var(--color-subtle)', label: '—' },
 }
 
 interface Props {

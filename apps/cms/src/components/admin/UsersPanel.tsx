@@ -72,8 +72,8 @@ export default function UsersPanel({ users: initialUsers, ownId }: Props) {
 
   return (
     <>
-      {error && <p className="rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]">{error}</p>}
-      {success && <p className="rounded-2xl bg-[#E4F6E9] px-4 py-3 text-[13px] text-[#0B6B32]">{success}</p>}
+      {error && <p className="rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>}
+      {success && <p className="rounded-2xl bg-status-ok-bg px-4 py-3 text-[13px] text-status-ok">{success}</p>}
 
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
         <div className="rounded-3xl border border-border bg-card p-6">
@@ -83,7 +83,7 @@ export default function UsersPanel({ users: initialUsers, ownId }: Props) {
               <div key={u.id} className="flex items-center justify-between rounded-xl bg-muted px-3.5 py-2.5 text-[13.5px]">
                 <span>{u.email}</span>
                 {u.id !== ownId ? (
-                  <button type="button" onClick={() => handleDelete(u.id)} className="text-[11px] font-semibold text-accent hover:text-[#B03017]">
+                  <button type="button" onClick={() => handleDelete(u.id)} className="text-[11px] font-semibold text-accent hover:text-status-alert">
                     Удалить
                   </button>
                 ) : (
