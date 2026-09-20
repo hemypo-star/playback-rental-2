@@ -1,8 +1,8 @@
 'use client'
 
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useStore } from '@nanostores/react'
-import { $selectedDates, OPEN_DATE_PICKER_EVENT, setSelectedDates } from '../stores/dates'
+import { $selectedDates, OPEN_DATE_PICKER_EVENT, resetSelectedDates, setSelectedDates } from '../stores/dates'
 import { isBeforeBusinessToday } from '../lib/rental/businessDay'
 
 export interface PrototypeDatePickerHandle { open: (target?: 'from' | 'to') => void }
@@ -30,9 +30,19 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
   const [fromHour,setFromHour]=useState(()=>selected.startDate?.getHours() ?? openHour)
   const [toHour,setToHour]=useState(()=>selected.endDate?.getHours() ?? closeHour)
 
-  const show=useCallback((next:'from'|'to'='from')=>{setFrom(selected.startDate);setTo(selected.endDate);setFromHour(selected.startDate?.getHours()??openHour);setToHour(selected.endDate?.getHours()??closeHour);setTarget(next);setOpen(true)},[selected.startDate,selected.endDate,openHour,closeHour])
+  const modalRef=useRef<HTMLDivElement>(null)
+  const previouslyFocusedRef=useRef<HTMLElement|null>(null)
+  const show=useCallback((next:'from'|'to'='from')=>{previouslyFocusedRef.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setFrom(selected.startDate);setTo(selected.endDate);setFromHour(selected.startDate?.getHours()??openHour);setToHour(selected.endDate?.getHours()??closeHour);setTarget(next);setOpen(true)},[selected.startDate,selected.endDate,openHour,closeHour])
   useImperativeHandle(ref,()=>({open:show}),[show])
   useEffect(()=>{const fn=()=>show('from');window.addEventListener(OPEN_DATE_PICKER_EVENT,fn);return()=>window.removeEventListener(OPEN_DATE_PICKER_EVENT,fn)},[show])
+  // ACC-001 regression fix (see components/RentalDatePicker.tsx ~113-177):
+  // close() hides the modal and returns focus to whichever element opened it
+  // (captured by show() above into previouslyFocusedRef).
+  const close=useCallback(()=>{setOpen(false);previouslyFocusedRef.current?.focus()},[])
+  // Focus the modal on open (tabIndex=-1 below makes it programmatically
+  // focusable without joining the page's own tab order), trap Tab/Shift+Tab
+  // within it while open, and close on Escape.
+  useEffect(()=>{if(!open)return;modalRef.current?.focus();const onKeyDown=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();close();return}if(e.key!=='Tab')return;const modal=modalRef.current;if(!modal)return;const focusable=modal.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');if(focusable.length===0)return;const first=focusable[0];const last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}};document.addEventListener('keydown',onKeyDown);return()=>document.removeEventListener('keydown',onKeyDown)},[open,close])
 
   const cells=useMemo(()=>{const first=startOfMonth(month);const days=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();let weekday=first.getDay();weekday=weekday===0?7:weekday;const out:(Date|null)[]=[];for(let i=1;i<weekday;i++)out.push(null);for(let d=1;d<=days;d++)out.push(new Date(first.getFullYear(),first.getMonth(),d));return out},[month])
   const hours=useMemo(()=>{const out:number[]=[];for(let h=Math.max(0,openHour-1);h<=Math.min(23,closeHour+1);h++)out.push(h);return out},[openHour,closeHour])
@@ -41,7 +51,8 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
   // renders those days disabled too, but the check lives here as well so the
   // rule holds for any other caller of choose().
   const choose=(d:Date)=>{if(isBeforeBusinessToday(d))return;if(target==='from'){setFrom(d);if(to && d>=to)setTo(null);setTarget('to')}else{if(from && d<from){setFrom(d);setTo(null);setTarget('to')}else setTo(d)}}
-  const done=()=>{if(from&&to){setSelectedDates(withHour(from,fromHour),withHour(to,toHour))}setOpen(false)}
+  const done=()=>{if(from&&to){setSelectedDates(withHour(from,fromHour),withHour(to,toHour))}close()}
+  const reset=()=>{resetSelectedDates();setFrom(null);setTo(null);setFromHour(openHour);setToHour(closeHour);setTarget('from');setMonth(startOfMonth(new Date()))}
   const days=Math.max(1,from&&to?Math.ceil((to.getTime()-from.getTime())/86400000)+1:1)
   const label=fmtRange(shown.startDate,shown.endDate)
   const activeHour=target==='from'?fromHour:toHour
@@ -69,9 +80,9 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
   return <>
     {trigger}
     {open&&<div className="pb-modal-backdrop" role="dialog" aria-modal="true" aria-label="Период аренды">
-      <button type="button" aria-label="Закрыть" onClick={()=>setOpen(false)} style={{position:'absolute',inset:0,border:0,background:'transparent'}} />
-      <div className="pb-modal">
-        <div className="pb-modal-head"><div><div className="pb-kicker">Период аренды</div><div style={{marginTop:6,fontSize:22,fontWeight:500,letterSpacing:'-.03em'}}>{target==='from'?'День и время выдачи':'День и время возврата'}</div></div><button type="button" className="pb-modal-close" onClick={()=>setOpen(false)}>✕</button></div>
+      <button type="button" aria-label="Закрыть" onClick={close} style={{position:'absolute',inset:0,border:0,background:'transparent'}} />
+      <div className="pb-modal" ref={modalRef} tabIndex={-1} style={{outline:'none'}}>
+        <div className="pb-modal-head"><div><div className="pb-kicker">Период аренды</div><div style={{marginTop:6,fontSize:22,fontWeight:500,letterSpacing:'-.03em'}}>{target==='from'?'День и время выдачи':'День и время возврата'}</div></div><button type="button" className="pb-modal-close" onClick={close}>✕</button></div>
         <div className="pb-modal-tabs">
           <button type="button" className="pb-modal-tab" data-active={target==='from'} onClick={()=>setTarget('from')}><div className="pb-kicker" style={{color:'inherit',opacity:.62}}>Выдача</div><div style={{marginTop:6,fontSize:16,fontWeight:500}}>{fmtDay(from)} · {String(fromHour).padStart(2,'0')}:00</div></button>
           <button type="button" className="pb-modal-tab" data-active={target==='to'} onClick={()=>setTarget('to')}><div className="pb-kicker" style={{color:'inherit',opacity:.62}}>Возврат</div><div style={{marginTop:6,fontSize:16,fontWeight:500}}>{fmtDay(to)} · {String(toHour).padStart(2,'0')}:00</div></button>
@@ -84,7 +95,7 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
           </div>
           <div><div className="pb-kicker">{target==='from'?'Время выдачи':'Время возврата'}</div><div className="pb-times">{hours.map(h=><button key={h} type="button" className="pb-time" data-active={h===activeHour} onClick={()=>target==='from'?setFromHour(h):setToHour(h)}>{String(h).padStart(2,'0')}:00</button>)}</div></div>
         </div>
-        <div className="pb-modal-foot"><span style={{fontSize:12.5,color:'var(--pb-sub)',maxWidth:400}}>Рабочие часы {String(openHour).padStart(2,'0')}:00 — {String(closeHour).padStart(2,'0')}:00.</span><button type="button" className="pb-pill pb-btn pb-modal-done" onClick={done} disabled={!from||!to}><span>Готово · {days} {days===1?'смена':days<5?'смены':'смен'}</span><span>→</span></button></div>
+        <div className="pb-modal-foot"><div style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:14}}><span style={{fontSize:12.5,color:'var(--pb-sub)',maxWidth:400}}>Рабочие часы {String(openHour).padStart(2,'0')}:00 — {String(closeHour).padStart(2,'0')}:00.</span>{(from||to)&&<button type="button" onClick={reset} className="pb-reset-link" style={{fontSize:11,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'var(--pb-sub)',background:'none',border:0,padding:0,cursor:'pointer'}}>Сбросить</button>}</div><button type="button" className="pb-pill pb-btn pb-modal-done" onClick={done} disabled={!from||!to}><span>Готово · {days} {days===1?'смена':days<5?'смены':'смен'}</span><span>→</span></button></div>
       </div>
     </div>}
   </>
