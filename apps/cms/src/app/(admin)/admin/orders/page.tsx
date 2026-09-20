@@ -78,7 +78,7 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
       />
       <AdminKpiCards kpi={kpi} />
 
-      <div className="rounded-3xl border border-border bg-card p-6">
+      <div className="rounded-3xl border border-border bg-card px-6 py-[22px]">
         <div className="hidden grid-cols-[90px_1.6fr_1.4fr_1fr_110px_130px] gap-3.5 px-2.5 pb-3 text-[10px] font-semibold tracking-[0.13em] text-subtle uppercase lg:grid">
           <span>Номер</span><span>Клиент</span><span>Позиции</span><span>Даты</span><span>Сумма</span><span>Статус</span>
         </div>
