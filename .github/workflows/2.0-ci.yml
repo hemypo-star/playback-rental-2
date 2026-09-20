@@ -305,6 +305,18 @@ jobs:
             exit 1
           fi
 
+          if ! pnpm --dir apps/cms smoke:analytics-ui; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-admin-data.log
+            exit 1
+          fi
+
+          if ! pnpm --dir apps/cms smoke:admin-screen; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-admin-data.log
+            exit 1
+          fi
+
       - name: Manual order smoke
         env:
           NODE_ENV: production
