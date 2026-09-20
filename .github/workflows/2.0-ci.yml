@@ -6,6 +6,7 @@ on:
       - 2.0
       - frontend-transfer-unified
       - 'chatgpt/**'
+      - 'claude/**'
   pull_request:
     branches:
       - 2.0
