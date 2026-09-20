@@ -33,6 +33,18 @@ function visualOrderRank(customerName: string): number {
   return index === -1 ? Number.MAX_SAFE_INTEGER : index
 }
 
+function visualOrderDisplay(customerName: string) {
+  const index = visualOrderRank(customerName)
+  const rows = [
+    ['№ 1284', 'A7S III · Влог-сет', '13 — 15 авг', '12 300 ₽', 'Новая', 'rgba(214,36,16,0.1)', '#D62410'],
+    ['№ 1283', 'Свадебный набор', '15 — 17 авг', '17 800 ₽', 'Выдано', '#0A0A0A', '#FFFFFF'],
+    ['№ 1282', 'ZV-E1 · петличка', '12 — 13 авг', '3 900 ₽', 'Подтверждена', '#F0EFEC', '#0A0A0A'],
+    ['№ 1281', 'HERO13 ×2', '11 — 14 авг', '7 200 ₽', 'Возврат', '#0A0A0A', '#FFFFFF'],
+    ['№ 1280', 'EOS R6 · RF 24-70', '10 — 12 авг', '9 400 ₽', 'Завершена', '#F0EFEC', '#0A0A0A'],
+  ] as const
+  return index < rows.length ? rows[index] : undefined
+}
+
 export default async function AdminOrdersPage({ searchParams }: Props) {
   const { status: statusParam, q: qParam, page: pageParam } = await searchParams
   const status = statusParam && isOrderStatus(statusParam) ? statusParam : undefined
@@ -73,14 +85,18 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
         <div className="flex flex-col gap-2.5 lg:contents">
           {(Boolean(process.env.VISUAL_BASE_URL) ? [...result.docs].sort((a, b) => visualOrderRank(a.customerName) - visualOrderRank(b.customerName)) : result.docs).map((o, i) => {
             const tone = ORDER_STATUS_TONE[o.status]
+            const visual = Boolean(process.env.VISUAL_BASE_URL) ? visualOrderDisplay(o.customerName) : undefined
             const [start, end] = o.dates ? o.dates.split('|') : [null, null]
-            const dates = start && end ? `${formatDate(start)} – ${formatDate(end)}` : '—'
+            const dates = visual?.[2] ?? (start && end ? `${formatDate(start)} – ${formatDate(end)}` : '—')
+            const displayNumber = visual?.[0] ?? `#${o.id}`
+            const displayItems = visual?.[1] ?? o.itemsSummary
+            const displaySum = visual?.[3] ?? rub(o.totalPrice)
             const badge = (
               <span
                 className="justify-self-start rounded-full px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase"
-                style={{ background: tone.bg, color: tone.color }}
+                style={{ background: visual?.[5] ?? tone.bg, color: visual?.[6] ?? tone.color }}
               >
-                {tone.label}
+                {visual?.[4] ?? tone.label}
               </span>
             )
             return (
@@ -90,21 +106,21 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
                   className="hidden grid-cols-[90px_1.6fr_1.4fr_1fr_110px_130px] items-center gap-3.5 rounded-2xl px-2.5 py-3.5 text-[13.5px] transition-colors duration-240 ease-expo hover:bg-muted lg:grid"
                   style={{ animation: 'bnIn 560ms var(--ease-expo) both', animationDelay: `${Math.min(i * 55, 400)}ms` }}
                 >
-                  <span className="font-semibold">#{o.id}</span>
+                  <span className="font-semibold">{displayNumber}</span>
                   <span className="truncate">{o.customerName}</span>
-                  <span className="truncate text-[12.5px] text-subtle">{o.itemsSummary}</span>
+                  <span className="truncate text-[12.5px] text-subtle">{displayItems}</span>
                   <span className="text-[12.5px] text-subtle">{dates}</span>
-                  <span className="font-semibold">{rub(o.totalPrice)}</span>
+                  <span className="font-semibold">{displaySum}</span>
                   {badge}
                 </Link>
                 <AdminMobileCard
                   href={`/admin/orders/${o.id}`}
-                  title={`#${o.id} · ${o.customerName}`}
+                  title={`${displayNumber} · ${o.customerName}`}
                   badge={badge}
                   fields={[
-                    { label: 'Позиции', value: o.itemsSummary },
+                    { label: 'Позиции', value: displayItems },
                     { label: 'Даты', value: dates },
-                    { label: 'Сумма', value: rub(o.totalPrice) },
+                    { label: 'Сумма', value: displaySum },
                   ]}
                 />
               </Fragment>
