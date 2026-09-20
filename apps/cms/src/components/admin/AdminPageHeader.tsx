@@ -23,7 +23,7 @@ export default function AdminPageHeader({ title, subtitle, actionLabel, actionHr
       {actionLabel ? (
         <Link
           href={actionHref ?? '#'}
-          className="flex h-[42px] items-center gap-3 rounded-full bg-primary px-5 text-[11px] font-semibold tracking-[0.1em] text-primary-foreground uppercase transition-all duration-240 ease-expo hover:gap-5 hover:bg-accent"
+          className="flex h-[42px] items-center gap-3 rounded-full bg-primary px-5 text-[11px] font-semibold tracking-[0.1em] text-white uppercase transition-all duration-240 ease-expo hover:gap-5 hover:bg-accent"
         >
           <span>{actionLabel}</span>
           <span>+</span>
