@@ -14,6 +14,7 @@ function phone(raw:string){let d=raw.replace(/\D/g,'');if(d.startsWith('8'))d='7
 interface Promo{code:string;discountType:'percent'|'fixed';discountValue:number;minOrderAmount:number}
 export default function PrototypeCheckout({openHour,closeHour}:{openHour:number;closeHour:number}){
  const storeCart=useStore($cart),storeDates=useStore($selectedDates);const[mounted,setMounted]=useState(false);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration gate for session/local storage backed stores.
  useEffect(()=>setMounted(true),[]);const cart=mounted?storeCart:[];const dates=mounted?storeDates:{startDate:null,endDate:null}
  const datePickerRef=useRef<PrototypeDatePickerHandle>(null);const[name,setName]=useState(''),[email,setEmail]=useState(''),[phoneValue,setPhone]=useState(''),[contact,setContact]=useState(''),[comment,setComment]=useState(''),[agreeData,setAgreeData]=useState(false),[agreeTerms,setAgreeTerms]=useState(false),[submitting,setSubmitting]=useState(false),[error,setError]=useState<string|null>(null),[orderId,setOrderId]=useState<number|null>(null),[promoInput,setPromoInput]=useState(''),[promo,setPromo]=useState<Promo|null>(null),[promoError,setPromoError]=useState<string|null>(null),[checking,setChecking]=useState(false)
  const hasRental=cart.some(i=>i.listingType==='rental'),hasDates=!hasRental||Boolean(dates.startDate&&dates.endDate);const days=dates.startDate&&dates.endDate?calculateRentalDays(dates.startDate,dates.endDate):1
