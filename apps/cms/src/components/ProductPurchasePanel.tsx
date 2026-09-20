@@ -126,6 +126,8 @@ export default function ProductPurchasePanel({ product, imageUrl }: Props) {
 
   const isRental = product.listingType === 'rental'
   const hasDates = Boolean(dates.startDate && dates.endDate)
+  const startTime = dates.startDate?.getTime()
+  const endTime = dates.endDate?.getTime()
   const days = calculateRentalDays(dates.startDate ?? undefined, dates.endDate ?? undefined)
   // B1 (design_handoff_swiss_bento/08-instruction.md) — imperative handle so
   // the add-to-cart button below can open this same modal instead of doing
@@ -141,7 +143,9 @@ export default function ProductPurchasePanel({ product, imageUrl }: Props) {
     // loading flag just needs to flip before the fetch starts, not after.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setChecking(true)
-    getRentalAvailability(product.id, dates.startDate ?? undefined, dates.endDate ?? undefined)
+    const startDate = startTime === undefined ? undefined : new Date(startTime)
+    const endDate = endTime === undefined ? undefined : new Date(endTime)
+    getRentalAvailability(product.id, startDate, endDate)
       .then((res) => {
         if (cancelled) return
         setAvailable(res.available)
@@ -157,7 +161,7 @@ export default function ProductPurchasePanel({ product, imageUrl }: Props) {
     return () => {
       cancelled = true
     }
-  }, [isRental, product.id, dates.startDate?.getTime(), dates.endDate?.getTime()])
+  }, [isRental, product.id, startTime, endTime])
 
   const baseSum = isRental ? product.price * days * quantity : product.price * quantity
   const lineTotal = isRental
