@@ -376,7 +376,8 @@ async function verifyActualMotion(cdp, productPath) {
     knobTiming: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
   }, 'catalog')
 
-  await evaluate(cdp, "document.querySelector('.pb-header-date')?.click()")
+  await waitFor(cdp, "Boolean(document.querySelector('.pb-page-head .pb-header-date'))", 'motion compact date trigger')
+  await evaluate(cdp, "(()=>{const button=document.querySelector('.pb-page-head .pb-header-date');if(!button)throw new Error('compact date trigger missing');button.click();return true})()")
   await waitFor(cdp, "Boolean(document.querySelector('.pb-modal'))", 'motion date picker modal')
   const modal = await evaluate(
     cdp,
