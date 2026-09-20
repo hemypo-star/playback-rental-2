@@ -7,7 +7,7 @@ import type { AdminKpi } from '../../lib/admin/data/kpi'
 const rub = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} ₽`
 
 export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
-  const visualReference = process.env.VISUAL_REFERENCE_MODE === 'true'
+  const visualReference = Boolean(process.env.VISUAL_BASE_URL)
   const cards = visualReference
     ? [
         { label: 'Выручка, август', value: '412 300 ₽', note: '+18% к июлю', accent: true },
