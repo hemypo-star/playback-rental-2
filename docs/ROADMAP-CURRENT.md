@@ -1,6 +1,6 @@
 # Playback Rental 2.0 — Current Execution Roadmap
 
-_Last updated: 2026-09-18. This is the operational route sheet. `docs/ROADMAP-2.0.md` remains the detailed historical/consolidated record; when its old point-in-time statuses disagree with this file, use this file for current execution state._
+_Last updated: 2026-09-21. This is the operational route sheet. `docs/ROADMAP-2.0.md` remains the detailed historical/consolidated record; when its old point-in-time statuses disagree with this file, use this file for current execution state._
 
 ## Ground rules
 
@@ -119,6 +119,51 @@ Only after the user chooses to provision the deployment host/VDS:
 8. Confirm database/media backups, notification-queue persistence and an explicit rollback procedure.
 9. Keep `/cms` as the agreed break-glass fallback; do not rename `apps/cms` in this release.
 10. Perform cutover from the legacy deployment only after the acceptance record is complete.
+
+## 2026-09-21 — storefront rewrite regression pass
+
+The `frontend-rebuild-from-html` work (`docs/PLAN-motion-visual-parity.md`)
+rebuilt the storefront as `apps/cms/src/prototype/*`. A parity audit against the
+components it displaced found that it had also dropped functionality, against
+that plan's own rule 3 ("do not replace or simplify working business logic for
+visual parity"). Nine high-severity items were verified against the live code
+and fixed; the displaced components were deleted only afterwards, since they
+were the reference implementation.
+
+| Item | State |
+|---|---|
+| Design tokens + font subsets missing from the live stylesheet | ✅ `34b1a65` |
+| Past rental dates bookable — no guard client or server | ✅ `c35adad` |
+| Client-side availability system entirely unreachable | ✅ `a907415` |
+| Date-picker modal advertised a dialog it did not implement (ACC-001 regression) | ✅ `a907415` |
+| No search input anywhere on the storefront | ✅ `b0d166b` |
+| Subcategories unreachable; "Только свободные" date-blind | ✅ `b0d166b` |
+| Checkout claimed availability without checking; errors collapsed to one sentence | ✅ `b0d166b` |
+| Touch targets below 44px on the customer path | ✅ `dcf89fa` |
+| 3253 lines of unreachable storefront code | ✅ `e939609` |
+
+Open, and needing the owner rather than an implementer:
+
+- ⏳ **`--color-status-*` tokens** — added per `docs/audits/2026-09-17-design.md`
+  DESIGN-003, which directly contradicts the work order's "система закрыта".
+  One commit to revert if the owner prefers the rule.
+- ⏳ **`--color-subtle` at `#6B6964`** — a delivered-design value changed for
+  contrast (4.08:1 → 4.73:1). The handoff's process is to edit the design bundle
+  and regenerate, which is not possible from here.
+- ⏳ **`--color-accent` at 4.39:1** on the page background, below the 4.5
+  threshold. Deliberately not changed: it is the brand colour.
+
+Found and recorded, not fixed:
+
+- Admin forms render `<label>` as a sibling with no `htmlFor` and no input `id`
+  — roughly fifty fields visually labelled but not programmatically associated.
+  Wider than DESIGN-004's stated nine; needs its own pass.
+- Promo autoplay ignores `prefers-reduced-motion`, which `03-motion.md` requires,
+  and does not stop after the first manual arrow click. Never implemented.
+- Day cells in both calendars are 44px tall but 32–42px wide on a phone; seven
+  columns cannot each be 44px at 360px without horizontal scroll.
+- `bnPop` now audits 2× against the design's 3× — the third instance lived in the
+  deleted `CheckoutPage.tsx`, so the prototype checkout may be missing one.
 
 ## Immediate next action
 

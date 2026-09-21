@@ -1779,3 +1779,189 @@ the artifact's `defaultScreen` prop), the source for the custom admin UI in
   site, deliberate). With item 10 landed, **wave 1 and wave 2 are both
   closed; wave 3 (error monitoring, then caching) is next**, and wave 4's
   "only if 10-lite leaves a gap" clause is moot — item 10 was done in full.
+- **2026-09-21** — **Regression pass over the storefront rewrite.** The
+  `frontend-rebuild-from-html` work (`docs/PLAN-motion-visual-parity.md`)
+  rebuilt the storefront as `apps/cms/src/prototype/*` and left the
+  components it displaced in the tree. This session started as a
+  design-debt pass against `docs/audits/2026-09-17-design.md` and turned
+  into something else once a parity audit was run between the two sets:
+  the rewrite had dropped functionality, not only markup — against that
+  plan's own rule 3, "do not replace or simplify working business logic
+  for visual parity". Nineteen differences, nine of them high severity.
+  Every one below was re-verified against the live code first, because
+  the audit's own `file:line` references had gone stale: they point at
+  `components/CheckoutPage.tsx`, `QuantitySelector.tsx`,
+  `RentalDatePicker.tsx` and `CatalogPage.tsx`, none of which any route
+  could still reach.
+
+  **The order mattered more than the list.** The displaced components
+  were the only surviving implementation of what had been lost, so the
+  plan's original first step — delete the dead code — would have
+  destroyed the source every restoration was read from. Deletion moved
+  to last.
+
+  **Design tokens and fonts** (`34b1a65`). `prototype.css` became the
+  only stylesheet either route group imports, but its `@theme` is a
+  strict subset of the one in `global.css` it displaced, and nothing
+  imported `global.css` any more. Five utilities the live markup still
+  used resolved to nothing, confirmed against the compiled CSS rather
+  than by reading: `rounded-lg` fell back to Tailwind's own
+  `--radius-lg` (`.5rem`) instead of the design's `1.625rem` on 13
+  elements; `hover:shadow-[var(--shadow-medium)]` referenced an
+  undefined var so the hover lift did nothing; `var(--ease-overshoot)`
+  and `var(--ease-inout)` were undefined, which invalidates the whole
+  `transition` shorthand containing them — the admin calendar bar hover
+  and the promo crossfade, both of which block E had deliberately tuned;
+  and `.text-success`/`.bg-success-bg`/`.bg-danger-bg` were not
+  generated at all, so the contact form's banners and the add-to-cart
+  in-cart state had no colour. Fonts regressed the same way: four
+  `@font-face` blocks split by `unicode-range` became one (cyrillic),
+  with the range dropped, so latin glyphs — most product titles — fell
+  back to Helvetica while the other three `.woff2` files still shipped
+  unreferenced.
+
+  **Past dates were bookable** (`c35adad`). `OrderItems`'
+  `beforeValidate` compares `endDate` to `startDate` and computes
+  availability over the requested window, but neither cares where that
+  window sits in time, and the picker did no comparison against today —
+  so a customer could book last week. The guard went in the hook, not
+  the Server Action, because `OrderItems.create` is deliberately public
+  so anonymous checkout can attach lines to its own order; a guard in
+  the action alone is bypassed by a direct `POST /api/orderItems`.
+  Day-granular in Kemerovo time via a new `lib/rental/businessDay.ts`:
+  date-fns' `startOfDay` would have used the container's UTC, and
+  between 00:00 and 07:00 local that is still the previous UTC day, so a
+  UTC comparison would reject same-day bookings every working morning.
+  Not theoretical — the verification run fell at 04:02 Kemerovo and a
+  wrong fixture reproduced exactly that, which is how the case got its
+  test. Admin paths keep the ability to backdate through a `context`
+  flag; that is safe as a boundary because Payload builds `req.context`
+  fresh and empty for every REST request and never populates it from the
+  body (checked in `createPayloadRequest.js`, not assumed). The new
+  `reason: 'past'` threaded through `lib/checkoutErrors.ts`, whose
+  exhaustive `switch` made the Russian text a compile error until it was
+  written — that file's stated purpose, working.
+
+  **Availability was dead code** (`a907415`). `lib/rentalAvailability.ts`
+  still exported both functions and nothing live called either. The
+  product panel gated add-to-cart on static stock, and the inline
+  calendar rendered a "Занято" legend key with no busy-day logic behind
+  it — decoration with nothing driving it, the same shape as the
+  `.pb-day:disabled` rule that existed with nothing able to trigger it.
+  Worth recording as a pattern: the rewrite twice kept the *appearance*
+  of a feature and dropped its mechanism.
+
+  A subagent's first pass at this folded a failed lookup into
+  `available = 0`, which renders "Забронировано на выбранные даты" — the
+  mirror image of audit N10, whose original bug swallowed the error into
+  an empty `.catch` so an outage read as "everything free". Both lie;
+  A4 asks for the opposite of both ("Ошибку загрузки показывать как
+  ошибку"). Caught in review and given its own state, then proved by
+  aborting every availability request in a real browser.
+
+  **ACC-001 had regressed.** The modal carried `role="dialog"
+  aria-modal="true"` and implemented none of the keyboard contract those
+  promise — no Escape, no focus trap, no focus on open, no focus
+  restore. `docs/audits/2026-08-24-baseline.md` lists that finding as
+  resolved, which was true of the component the rewrite replaced and
+  false of the live one. That table is now corrected, with a note that a
+  "resolved" status describes the code that exists, not a guarantee
+  against a later rewrite.
+
+  **Catalog and checkout** (`b0d166b`). There was no search input
+  anywhere on the storefront: the component threaded a `searchQuery`
+  prop through every link it built and the backend search worked, but
+  nothing rendered a field. CI never noticed because it navigates to
+  `/catalog?q=…` by URL — a reminder that a smoke test written against
+  the API tests the API. The restored form carries `sort`/`type`/`free`
+  as hidden inputs, which is N8 exactly. The sidebar listed only
+  top-level categories; it now follows
+  `docs/design-reference/hierarchical-categories.md` to the value
+  (14 + depth×14 indent, subtle colour for nested inactive rows,
+  unresolved parent degrading to a root). The nested colour goes through
+  a `--pb-row-color` custom property rather than an inline `color`,
+  because an inline colour outranks the stylesheet's own `:hover` and
+  would have left nested rows dim on hover.
+
+  "Только свободные" had quietly become date-blind — a `quantity > 0`
+  query with no dates in it. Renamed to "Только в наличии", and the
+  date-aware part restored where it belongs: live per-card badges. The
+  implementation this replaces hid unavailable cards with
+  `display:none` after render, which left the server-rendered pager and
+  the "N позиций" count describing a grid no longer on screen; one bulk
+  lookup per page now publishes to a store the cards subscribe to.
+
+  Checkout labelled every dated rental line "свободно на ваши даты"
+  without checking, and collapsed all seven error codes into one
+  sentence though `translateCheckoutError` already existed and was
+  tested. N10 has two halves and the warning only fixes one — the
+  audit's own wording is that the old page "не мешает отправке" — so
+  submission is now blocked until the customer takes one of the three
+  offered ways out. The third of those, "оставить, менеджер подтвердит",
+  submits the quantity that is actually free: sending the requested
+  amount would be refused outright by the hook, so the acknowledgement
+  would have produced nothing but a confusing error. Proved by reading
+  the stored row afterwards — `quantity` 1 where 3 was asked for, which
+  is the difference between the reduction reaching the server and merely
+  being displayed.
+
+  **Touch targets** (`dcf89fa`). Raised on `max-width:760px` only, not
+  everywhere: `01-tokens.md` specifies the stepper at 28–30px and states
+  the mobile rule as substitution ("чипы 38px в шапке на мобильном
+  заменяются на кнопки 44px"), so the design's sizes still stand on
+  pointer devices. One selector was aimed at the wrong control on the
+  way — `.pb-arrow` is the homepage category arrow, while the modal's
+  month nav reuses `.pb-modal-close` — caught by measuring in a browser
+  rather than by reading the rule, which reported nothing for a selector
+  matching nothing.
+
+  **Then the deletion** (`e939609`): twelve components, a client script
+  and `global.css`, 3253 lines, none reachable from any route.
+
+  **Tooling.** `tools/design-sync.mjs` hardcoded a `bn` keyframe prefix;
+  the rewrite renamed every keyframe to `pb*` and moved most out of
+  inline styles into CSS classes, so the tool had been reporting
+  keyframes as missing that were sitting in `prototype.css` — `bnClip`
+  and `bnMark` read as 0× against a design that wants 2× and 1×. Fixed
+  by normalising both spellings onto the design's names; four false
+  warnings resolved into real ✓. One real gap surfaced by the fix:
+  `bnPop` is 2× against the design's 3×, and the third instance lived in
+  the deleted `CheckoutPage.tsx`.
+
+  **Two deliberate deviations, both flagged for the owner rather than
+  decided here.** `--color-status-*` was added for the admin's five
+  status tones, replacing 35 hex literals across 12 files — which
+  contradicts "Новых токенов не заводить: система закрыта" in
+  `08-instruction.md` §1/§3, and follows `docs/audits/2026-09-17-design.md`
+  DESIGN-003, which argues that rule is what produced the literals. And
+  `--color-subtle` moved from the delivered `#75736E` to `#6B6964`
+  (4.08:1 → 4.73:1 on the page background); the handoff's process is to
+  edit the design bundle and regenerate, which this session cannot do.
+  `--color-accent` measures 4.39:1 and was left alone as a brand
+  decision. Each is one commit to revert.
+
+  **Also recorded, not fixed**: admin forms render `<label>` as a
+  sibling with no `htmlFor` and no input `id`, so roughly fifty fields
+  are labelled visually but not programmatically — wider than
+  DESIGN-004's stated nine, and left its own pass rather than rewritten
+  late. Promo autoplay ignores `prefers-reduced-motion`, which
+  `03-motion.md` requires, and does not stop after the first manual
+  click; never implemented, in the old component either. Day cells are
+  44px tall but 32–42px wide on a phone, which seven columns at 360px
+  cannot avoid without horizontal scroll.
+
+  Two stale claims corrected while here: `apps/README.md` still
+  described `apps/web`, `packages/shared-types`, "4 workspace projects"
+  and a plan file that does not exist, all deleted on 2026-08-21 —
+  `08-instruction.md` §0 had already asked for this and it had not been
+  done. And the `tsx`/`@next/env` crash this log has carried as
+  unresolved since Stage 3 **no longer reproduces**; the repo's own
+  `tsx` scripts run fine, and the Local-API script that proved the admin
+  backdating path was written that way.
+
+  Verification throughout was against a real Postgres and a production
+  build, in a real browser where the behaviour is stateful — focus
+  order, availability states, touch-target geometry at 1440/390/360px —
+  and against the database where the claim was about what got stored.
+  All seeded data removed after each run; `eslint` is clean for the
+  first time in this branch's history, `tsc --noEmit` clean, 39/39 tests.

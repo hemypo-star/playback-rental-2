@@ -19,7 +19,11 @@ function withHour(d:Date|null,h:number){ if(!d) return null; const x=new Date(d)
 const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function PrototypeDatePicker({variant='navbar',openHour,closeHour},ref){
   const selected=useStore($selectedDates)
   const [hydrated,setHydrated]=useState(false)
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Post-mount gate for the sessionStorage-backed dates store — the server has
+  // no sessionStorage to agree with, so reading it during the first render
+  // hydration-mismatches. No eslint-disable here on purpose:
+  // react-hooks/set-state-in-effect does not analyse effects inside a
+  // forwardRef render function, so one only lints as unused.
   useEffect(()=>setHydrated(true),[])
   const shown=hydrated?selected:{startDate:null,endDate:null}
   const [open,setOpen]=useState(false)

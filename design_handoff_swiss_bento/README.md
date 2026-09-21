@@ -24,7 +24,9 @@ node tools/design-sync.mjs audit apps/cms/src
 
 Прежние `tailwind.config.ts` и `index.css` из пакета **удалены**: это был Tailwind v3
 под легаси-приложение. В `apps/cms` токены живут в `@theme` внутри
-`apps/cms/src/styles/global.css` и уже соответствуют дизайну.
+`apps/cms/src/styles/prototype.css` и уже соответствуют дизайну.
+(До 2026-09-21 это был `global.css`; перестройка витрины на `src/prototype/*`
+сделала живым `prototype.css`, а `global.css` перестал импортироваться и удалён.)
 
 ## Что в пакете
 
@@ -61,7 +63,7 @@ production-код: там инлайн-стили и фейковые данны
 ## Активы
 
 - Шрифт: **Golos Text**, self-hosted в `apps/cms/public/fonts` (4 woff2, variable 400–800),
-  подключён через `@font-face` в `global.css` и `preload` в layout. Не Google Fonts.
+  подключён через `@font-face` в `prototype.css` и `preload` в layout. Не Google Fonts.
 - Иконки: в дизайне их почти нет — стрелки и знаки набраны текстом (`→`, `←`, `+`, `−`,
   `✓`, `✕`, `↺`, `◆`). Оставить текстом: это часть свисс-характера.
 - Изображения: в прототипе плейсхолдеры; в приложении — Payload media через `mediaUrl()`.
