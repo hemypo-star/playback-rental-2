@@ -7,7 +7,8 @@
 // logged "content option is missing or empty" — see next dev output).
 //
 // @tailwindcss/postcss added in docs/PLAN-next-migration.md Stage 1, for
-// src/styles/global.css (the (frontend) route group's stylesheet). It only
+// src/styles/prototype.css (the stylesheet both the storefront and the
+// custom /admin route groups import; it replaced global.css). It only
 // activates for files that actually `@import "tailwindcss"` — Payload's own
 // (payload)/custom.css has no Tailwind directives, so it passes through
 // unaffected.

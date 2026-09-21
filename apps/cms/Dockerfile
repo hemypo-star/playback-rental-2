@@ -48,7 +48,7 @@ CMD ["pnpm", "dev"]
 # ---- build: compile the Next app + regenerate Payload's import map --------
 FROM deps AS build
 COPY apps/cms apps/cms
-# global.css imports docs/design-reference/spec/{tokens.css,interactions.css}
+# prototype.css imports docs/design-reference/spec/tokens.css
 # from outside apps/cms (Next.js migration Stage 1, 2026-08-20) — without
 # this, `pnpm build` below 500s/fails resolving them, since only apps/cms
 # was copied into this stage. Same gap compose.dev.yaml had for `next dev`,
