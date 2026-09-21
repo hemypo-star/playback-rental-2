@@ -29,6 +29,12 @@ export interface GetProductsParams {
   // caller needs those; a caller that only reads scalar columns off the
   // result passes 0 rather than paying for the joins.
   depth?: number
+  // Product ids to leave out of the result. The catalog's "Только свободные"
+  // filter passes the products that are fully booked over the visitor's
+  // selected dates (lib/rental/bookedQuantity.ts) — an exclusion the database
+  // can apply, so totalDocs/totalPages keep describing exactly what the page
+  // renders. Ignored when empty.
+  excludeIds?: number[]
 }
 
 // Every product query on the storefront is scoped to available:true —
@@ -56,6 +62,7 @@ export async function getProducts(params: GetProductsParams = {}) {
   if (params.search) extra.push({ or: [{ title: { like: params.search } }, { description: { like: params.search } }, { tag: { like: params.search } }] })
   if (params.isKit !== undefined) extra.push({ isKit: { equals: params.isKit } })
   if (params.inStockOnly) extra.push({ quantity: { greater_than: 0 } })
+  if (params.excludeIds?.length) extra.push({ id: { not_in: params.excludeIds } })
 
   return payload.find({
     collection: 'products',
