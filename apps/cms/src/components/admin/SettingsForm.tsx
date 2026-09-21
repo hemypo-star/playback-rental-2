@@ -192,12 +192,14 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
                     <input
                       value={s.title}
                       onChange={(e) => setSteps((prev) => prev.map((v, idx) => (idx === i ? { ...v, title: e.target.value } : v)))}
+                      aria-label={`Шаг ${i + 1}: заголовок`}
                       placeholder="Заголовок шага"
                       className="h-9 w-full rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground"
                     />
                     <input
                       value={s.text}
                       onChange={(e) => setSteps((prev) => prev.map((v, idx) => (idx === i ? { ...v, text: e.target.value } : v)))}
+                      aria-label={`Шаг ${i + 1}: текст`}
                       placeholder="Текст шага"
                       className="mt-1.5 h-9 w-full rounded-lg border border-input bg-white px-2.5 text-[13px] outline-none focus:border-foreground"
                     />

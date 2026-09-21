@@ -55,6 +55,7 @@ export default function MediaGrid({ items: initialItems }: { items: Media[] }) {
             <input
               type="text"
               value={alts[m.id] ?? ''}
+              aria-label="Альтернативный текст изображения"
               onChange={(e) => setAlts((prev) => ({ ...prev, [m.id]: e.target.value }))}
               placeholder="Alt текст"
               className="mt-1.5 h-8 w-full rounded-lg border border-input bg-muted-well px-2 text-[11.5px] outline-none focus:border-foreground focus:bg-white"
