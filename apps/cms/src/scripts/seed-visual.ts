@@ -122,6 +122,13 @@ async function main() {
         collection:'orderItems',
         data:{ order:order.id, product:productId, quantity:fixture.quantity, startDate:fixture.start, endDate:fixture.end },
         overrideAccess:true,
+        // These fixtures are pinned to fixed August 2026 dates so the committed
+        // visual-regression baselines stay reproducible, which means they fall
+        // into the past as time passes. OrderItems' beforeValidate refuses a
+        // pickup date before the current business day (lib/rental/businessDay
+        // .ts) — the same escape hatch the custom admin uses for backdating an
+        // order applies here, since this is a seeding tool, not a customer.
+        context:{ allowPastRentalDates:true },
       })
     }
     await payload.update({ collection:'orders', id:order.id, data:{ status:fixture.status, totalPrice:fixture.total }, overrideAccess:true })
