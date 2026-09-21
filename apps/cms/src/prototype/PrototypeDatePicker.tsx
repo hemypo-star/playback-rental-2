@@ -78,7 +78,17 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
       <span aria-hidden="true" style={{width:32,height:32,flexShrink:0,borderRadius:'50%',background:'rgba(10,10,10,.08)',display:'flex',alignItems:'center',justifyContent:'center'}}>↺</span>
     </button>
   ) : (
-    <button type="button" className="pb-pill pb-header-date" onClick={()=>show('from')}><span>{label}</span></button>
+    // 04-screens.md S0: below the header's own mobile breakpoint this chip
+    // becomes a 44px icon button. The date moves into aria-label so the
+    // accessible name does not depend on which of the two children CSS is
+    // currently showing; the glyph is a plain stroke icon, the same
+    // convention the rest of the app's inline icons use.
+    <button type="button" className="pb-pill pb-header-date" aria-label={label} onClick={()=>show('from')}>
+      <span className="pb-header-date-text">{label}</span>
+      <span className="pb-header-date-glyph" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+      </span>
+    </button>
   )
 
   return <>

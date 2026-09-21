@@ -106,6 +106,38 @@ html[data-nav-back="true"] [style*="bnRule"]{animation:none!important}
  .pb-related-grid{grid-template-columns:1fr}
 }
 
+/* Touch targets on small phones (audit DESIGN-001). Day cells are already
+   44px tall from the max-width:760px block below, but not 44px *wide*: seven
+   columns inside a 24px-padded card on a 360px screen leave 37px each. The
+   grid (and only the grid — the calendar's own heading, legend and the rest
+   of the panel keep their padding) bleeds out toward the card edge and the
+   column gap drops to 2px, which buys the ~7px per column that gets every
+   cell over 44 in both directions. Scoped to the widths where it is actually
+   needed: from ~410px up the cells clear 44px on their own. */
+@media(max-width:400px){
+ .pb-inline-weekdays,.pb-inline-days{margin-inline:-18px;gap:2px}
+ .pb-modal-backdrop{padding:10px}
+ .pb-modal-head{padding:20px 14px 0}
+ .pb-modal-tabs{padding:16px 14px 0}
+ .pb-picker-grid{padding:16px 14px 0}
+ .pb-modal-foot{padding:16px 14px}
+ .pb-weekdays,.pb-days{margin-inline:-8px;gap:2px}
+}
+
+/* The navbar's date chip, and its mobile form. Above the header's own mobile
+   breakpoint it is a text pill; below it, a 44px icon button — 04-screens.md
+   S0 ("чип даты → иконка-кнопка 44px с датой в подписи"), the same treatment
+   .pb-cart-link already gets in that block. Without it the header stops
+   fitting: at 320px the brand, an 87px date chip and the cart pill overflow
+   by 30px, and at 360px they fit with under 10px to spare, which a longer
+   date range then eats. */
+.pb-header-date-glyph{display:none}
+@media(max-width:760px){
+ .pb-header-date{min-width:44px;height:44px;padding:0 12px}
+ .pb-header-date-text{display:none}
+ .pb-header-date-glyph{display:flex;align-items:center;justify-content:center}
+}
+
 /* Touch targets (audit DESIGN-001, work-order N16). 01-tokens.md specifies the
    stepper at 28-30px and the round buttons at 32-38px, and states the mobile
    rule as substitution rather than override: "чипы 38px в шапке на мобильном
