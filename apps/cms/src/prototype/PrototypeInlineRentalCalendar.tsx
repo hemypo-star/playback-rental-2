@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@nanostores/react'
 import { $selectedDates, setSelectedDates } from '../stores/dates'
 import { isBeforeBusinessToday } from '../lib/rental/businessDay'
@@ -17,9 +17,22 @@ function withHour(day:Date,hour:number){const d=new Date(day);d.setHours(hour,0,
 function isBusyDay(day:Date,bookedRanges?:RentalAvailability['bookedRanges']){if(!bookedRanges)return false;const dayStart=new Date(day.getFullYear(),day.getMonth(),day.getDate()).getTime();const dayEnd=dayStart+86400000;return bookedRanges.some(r=>new Date(r.startDate).getTime()<dayEnd&&new Date(r.endDate).getTime()>dayStart)}
 
 export default function PrototypeInlineRentalCalendar({openHour,closeHour,bookedRanges}:{openHour:number;closeHour:number;bookedRanges?:RentalAvailability['bookedRanges']}){
- const selected=useStore($selectedDates)
+ const stored=useStore($selectedDates)
  const pickerRef=useRef<PrototypeDatePickerHandle>(null)
- const [month,setMonth]=useState(()=>startOfMonth(selected.startDate||new Date()))
+ // Hydration gate, same as PrototypeDatePicker's: the selected dates come from
+ // sessionStorage, which the server cannot see, and they drive both the day
+ // cells' data-edge/data-range attributes and the "Выдача"/"Возврат" labels.
+ // The visible month is gated too — it would otherwise open on the selected
+ // month on the client and the current one on the server.
+ const [hydrated,setHydrated]=useState(false)
+ const [month,setMonth]=useState(()=>startOfMonth(new Date()))
+ useEffect(()=>{
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  setHydrated(true)
+  const start=$selectedDates.get().startDate
+  if(start)setMonth(startOfMonth(start))
+ },[])
+ const selected=hydrated?stored:{startDate:null,endDate:null}
  const cells=useMemo(()=>{const first=startOfMonth(month);const count=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();let weekday=first.getDay();weekday=weekday===0?7:weekday;const out:(Date|null)[]=[];for(let i=1;i<weekday;i++)out.push(null);for(let d=1;d<=count;d++)out.push(new Date(first.getFullYear(),first.getMonth(),d));return out},[month])
  const choose=(day:Date)=>{
   // Mirrors PrototypeDatePicker's own guard (isBeforeBusinessToday) plus the

@@ -9,7 +9,18 @@ import { getRentalAvailability,type RentalAvailability } from '../lib/rentalAvai
 import PrototypeInlineRentalCalendar from './PrototypeInlineRentalCalendar'
 
 export default function PrototypePurchasePanel({product,imageUrl,openHour,closeHour}:{product:Product;imageUrl?:string;openHour:number;closeHour:number}){
- const dates=useStore($selectedDates);const isRental=product.listingType==='rental';const inStock=Boolean(product.available)&&product.quantity>0
+ const stored=useStore($selectedDates);const isRental=product.listingType==='rental';const inStock=Boolean(product.available)&&product.quantity>0
+ // Same hydration gate PrototypeDatePicker already carries, and for the same
+ // reason: $selectedDates is sessionStorage-backed, so the server renders
+ // "Не выбрано" / no price while the client's first render would already know
+ // the dates. Everything below is derived from `dates`, so gating the read
+ // once keeps the whole panel's first client render identical to the server's.
+ // Without it, visiting a product page with dates picked logs a React
+ // hydration error on every load.
+ const [hydrated,setHydrated]=useState(false)
+ // eslint-disable-next-line react-hooks/set-state-in-effect
+ useEffect(()=>setHydrated(true),[])
+ const dates=hydrated?stored:{startDate:null,endDate:null}
  const hasDates=product.listingType==='sale'||Boolean(dates.startDate&&dates.endDate)
  const days=dates.startDate&&dates.endDate?calculateRentalDays(dates.startDate,dates.endDate):1
  const total=product.listingType==='sale'?product.price:hasDates?calculateRentalPrice(product.price,dates.startDate||undefined,dates.endDate||undefined):product.price
