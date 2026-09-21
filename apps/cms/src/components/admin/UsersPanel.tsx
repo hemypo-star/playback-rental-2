@@ -3,7 +3,7 @@
 // Ported from the inline <script> in apps/web/src/pages/admin/users.astro
 // (docs/PLAN-next-migration.md Stage 3.4/3.5) — same create/delete/change-
 // own-password behavior, as React state instead of raw DOM manipulation.
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type { AdminUserRow } from '../../lib/admin/data/users'
 import { createUser, deleteUser, changeOwnPassword } from '../../app/(admin)/admin/users/actions'
 
@@ -13,6 +13,7 @@ interface Props {
 }
 
 export default function UsersPanel({ users: initialUsers, ownId }: Props) {
+  const uid = useId()
   const [users, setUsers] = useState(initialUsers)
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -100,15 +101,17 @@ export default function UsersPanel({ users: initialUsers, ownId }: Props) {
             <p className="mt-1.5 text-[11.5px] text-subtle">
               Почта для рассылки не настроена — придумайте пароль сами и сообщите его новому администратору лично (например, в Telegram).
             </p>
-            <label className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Email</label>
+            <label htmlFor={`${uid}-new-email`} className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Email</label>
             <input
+              id={`${uid}-new-email`}
               type="email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
-            <label className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Пароль</label>
+            <label htmlFor={`${uid}-new-password`} className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Пароль</label>
             <input
+              id={`${uid}-new-password`}
               type="text"
               minLength={8}
               value={newPassword}
@@ -122,8 +125,9 @@ export default function UsersPanel({ users: initialUsers, ownId }: Props) {
 
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Сменить свой пароль</div>
-            <label className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Новый пароль</label>
+            <label htmlFor={`${uid}-own-password`} className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Новый пароль</label>
             <input
+              id={`${uid}-own-password`}
               type="text"
               minLength={8}
               value={ownPassword}

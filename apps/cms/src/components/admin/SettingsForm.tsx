@@ -6,7 +6,7 @@
 // sections stacked as sections rather than real tab UI (same simplification
 // the Astro source itself already made, per the 2026-08-14 dev log's Step 7
 // entry — "simpler to build reliably, still fully functional").
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import Image from 'next/image'
 import type { SiteSetting } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
@@ -24,6 +24,7 @@ function imageId(value: SiteSetting['heroBannerImage']): number | null {
 }
 
 export default function SettingsForm({ settings }: { settings: SiteSetting }) {
+  const uid = useId()
   const [heroDesktopId, setHeroDesktopId] = useState<number | null>(imageId(settings.heroBannerImage))
   const [heroDesktopPreview, setHeroDesktopPreview] = useState<string | undefined>(mediaUrl(settings.heroBannerImage))
   const [heroMobileId, setHeroMobileId] = useState<number | null>(imageId(settings.heroBannerImageMobile))
@@ -139,23 +140,24 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
                     fixed 80x96 admin thumbnails — same reasoning as
                     CategoryForm/PromotionForm's own previews. */}
                 {heroDesktopPreview ? <Image src={heroDesktopPreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
-                <input type="file" accept="image/*" onChange={(e) => handleHeroUpload(e, 'desktop')} className="mt-1.5 block text-[12px]" />
+                <input type="file" accept="image/*" aria-label="Баннер героя: десктопное изображение" onChange={(e) => handleHeroUpload(e, 'desktop')} className="mt-1.5 block text-[12px]" />
               </div>
               <div>
                 <div className="text-[11px] text-subtle">Мобильный</div>
                 {heroMobilePreview ? <Image src={heroMobilePreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
-                <input type="file" accept="image/*" onChange={(e) => handleHeroUpload(e, 'mobile')} className="mt-1.5 block text-[12px]" />
+                <input type="file" accept="image/*" aria-label="Баннер героя: мобильное изображение" onChange={(e) => handleHeroUpload(e, 'mobile')} className="mt-1.5 block text-[12px]" />
               </div>
             </div>
 
-            <label className={labelClass}>Кикер</label>
-            <input value={heroKicker} onChange={(e) => setHeroKicker(e.target.value)} className={inputClass} />
-            <label className={labelClass}>Город</label>
-            <input value={heroCity} onChange={(e) => setHeroCity(e.target.value)} className={inputClass} />
-            <label className={labelClass}>Заголовок</label>
-            <input value={heroHeadline} onChange={(e) => setHeroHeadline(e.target.value)} className={inputClass} />
-            <label className={labelClass}>Подзаголовок</label>
+            <label htmlFor={`${uid}-hero-kicker`} className={labelClass}>Кикер</label>
+            <input id={`${uid}-hero-kicker`} value={heroKicker} onChange={(e) => setHeroKicker(e.target.value)} className={inputClass} />
+            <label htmlFor={`${uid}-hero-city`} className={labelClass}>Город</label>
+            <input id={`${uid}-hero-city`} value={heroCity} onChange={(e) => setHeroCity(e.target.value)} className={inputClass} />
+            <label htmlFor={`${uid}-hero-headline`} className={labelClass}>Заголовок</label>
+            <input id={`${uid}-hero-headline`} value={heroHeadline} onChange={(e) => setHeroHeadline(e.target.value)} className={inputClass} />
+            <label htmlFor={`${uid}-hero-subtext`} className={labelClass}>Подзаголовок</label>
             <textarea
+              id={`${uid}-hero-subtext`}
               rows={2}
               value={heroSubtext}
               onChange={(e) => setHeroSubtext(e.target.value)}
@@ -167,20 +169,20 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Главная — факты</div>
             <div className="mt-3 grid grid-cols-2 gap-3.5">
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Залог — значение</label>
-                <input value={depositLabel} onChange={(e) => setDepositLabel(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-deposit-label`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Залог — значение</label>
+                <input id={`${uid}-deposit-label`} value={depositLabel} onChange={(e) => setDepositLabel(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Залог — подпись</label>
-                <input value={depositCaption} onChange={(e) => setDepositCaption(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-deposit-caption`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Залог — подпись</label>
+                <input id={`${uid}-deposit-caption`} value={depositCaption} onChange={(e) => setDepositCaption(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Выдача — значение</label>
-                <input value={pickupTimeLabel} onChange={(e) => setPickupTimeLabel(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-pickup-time-label`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Выдача — значение</label>
+                <input id={`${uid}-pickup-time-label`} value={pickupTimeLabel} onChange={(e) => setPickupTimeLabel(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Выдача — подпись</label>
-                <input value={pickupTimeCaption} onChange={(e) => setPickupTimeCaption(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-pickup-time-caption`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Выдача — подпись</label>
+                <input id={`${uid}-pickup-time-caption`} value={pickupTimeCaption} onChange={(e) => setPickupTimeCaption(e.target.value)} className={inputClass} />
               </div>
             </div>
 
@@ -221,12 +223,13 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
 
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Блок «Нужен совет»</div>
-            <label className={labelClass}>Кикер</label>
-            <input value={ctaKicker} onChange={(e) => setCtaKicker(e.target.value)} className={inputClass} />
-            <label className={labelClass}>Заголовок</label>
-            <input value={ctaHeadline} onChange={(e) => setCtaHeadline(e.target.value)} className={inputClass} />
-            <label className={labelClass}>Подтекст</label>
+            <label htmlFor={`${uid}-cta-kicker`} className={labelClass}>Кикер</label>
+            <input id={`${uid}-cta-kicker`} value={ctaKicker} onChange={(e) => setCtaKicker(e.target.value)} className={inputClass} />
+            <label htmlFor={`${uid}-cta-headline`} className={labelClass}>Заголовок</label>
+            <input id={`${uid}-cta-headline`} value={ctaHeadline} onChange={(e) => setCtaHeadline(e.target.value)} className={inputClass} />
+            <label htmlFor={`${uid}-cta-subtext`} className={labelClass}>Подтекст</label>
             <textarea
+              id={`${uid}-cta-subtext`}
               rows={2}
               value={ctaSubtext}
               onChange={(e) => setCtaSubtext(e.target.value)}
@@ -238,40 +241,41 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Контакты</div>
             <div className="mt-3 grid grid-cols-2 gap-3.5">
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Телефон</label>
-                <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-contact-phone`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Телефон</label>
+                <input id={`${uid}-contact-phone`} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Email</label>
-                <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-contact-email`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Email</label>
+                <input id={`${uid}-contact-email`} value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Telegram (@handle)</label>
-                <input value={contactTelegram} onChange={(e) => setContactTelegram(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-contact-telegram`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Telegram (@handle)</label>
+                <input id={`${uid}-contact-telegram`} value={contactTelegram} onChange={(e) => setContactTelegram(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Telegram (ссылка)</label>
-                <input value={contactTelegramUrl} onChange={(e) => setContactTelegramUrl(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-contact-telegram-url`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Telegram (ссылка)</label>
+                <input id={`${uid}-contact-telegram-url`} value={contactTelegramUrl} onChange={(e) => setContactTelegramUrl(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">VK (ссылка)</label>
-                <input value={contactVkUrl} onChange={(e) => setContactVkUrl(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-contact-vk-url`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">VK (ссылка)</label>
+                <input id={`${uid}-contact-vk-url`} value={contactVkUrl} onChange={(e) => setContactVkUrl(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Адрес</label>
-                <input value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-contact-address`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Адрес</label>
+                <input id={`${uid}-contact-address`} value={contactAddress} onChange={(e) => setContactAddress(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Часы работы (текст на сайте)</label>
-                <input value={contactHours} onChange={(e) => setContactHours(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-contact-hours`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Часы работы (текст на сайте)</label>
+                <input id={`${uid}-contact-hours`} value={contactHours} onChange={(e) => setContactHours(e.target.value)} className={inputClass} />
               </div>
               <div className="col-span-2 grid grid-cols-2 gap-3.5 rounded-2xl border border-border bg-muted-well p-3.5">
                 <div className="col-span-2 text-[11.5px] leading-snug text-subtle">
                   Часы для календаря выбора дат аренды (число 0–23) — отдельно от текста выше, им нельзя пользоваться для расчётов. Держите оба поля согласованными: разошедшиеся значения — та же ошибка, которую эти два поля чинят.
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Открытие (час)</label>
+                  <label htmlFor={`${uid}-business-hours-open`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Открытие (час)</label>
                   <input
+                    id={`${uid}-business-hours-open`}
                     type="number"
                     min={0}
                     max={23}
@@ -281,8 +285,9 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Закрытие (час)</label>
+                  <label htmlFor={`${uid}-business-hours-close`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Закрытие (час)</label>
                   <input
+                    id={`${uid}-business-hours-close`}
                     type="number"
                     min={0}
                     max={23}
@@ -293,12 +298,12 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
                 </div>
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Яндекс.Карты (ссылка)</label>
-                <input value={yandexMapsUrl} onChange={(e) => setYandexMapsUrl(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-yandex-maps-url`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Яндекс.Карты (ссылка)</label>
+                <input id={`${uid}-yandex-maps-url`} value={yandexMapsUrl} onChange={(e) => setYandexMapsUrl(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">2ГИС (ссылка)</label>
-                <input value={twoGisUrl} onChange={(e) => setTwoGisUrl(e.target.value)} className={inputClass} />
+                <label htmlFor={`${uid}-two-gis-url`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">2ГИС (ссылка)</label>
+                <input id={`${uid}-two-gis-url`} value={twoGisUrl} onChange={(e) => setTwoGisUrl(e.target.value)} className={inputClass} />
               </div>
             </div>
           </div>

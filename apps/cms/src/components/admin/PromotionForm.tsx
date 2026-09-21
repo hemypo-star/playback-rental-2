@@ -5,7 +5,7 @@
 // same save/delete behavior. Calls the Server Actions in ./actions.ts
 // instead of fetch()-ing Payload's REST endpoints directly.
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import Image from 'next/image'
 import type { Category, Product, Promotion } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
@@ -24,6 +24,7 @@ function selectedIds(select: HTMLSelectElement): number[] {
 
 export default function PromotionForm({ promo, allCategories, allProducts }: Props) {
   const router = useRouter()
+  const uid = useId()
   const isNew = promo === null
 
   const [title, setTitle] = useState(promo?.title ?? '')
@@ -109,47 +110,53 @@ export default function PromotionForm({ promo, allCategories, allProducts }: Pro
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex flex-col gap-3.5">
           <div className="rounded-3xl border border-border bg-card p-6">
-            <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Название</label>
+            <label htmlFor={`${uid}-title`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Название</label>
             <input
+              id={`${uid}-title`}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">
+            <label htmlFor={`${uid}-slug`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">
               Slug <span className="normal-case text-subtle/70">(если пусто — сгенерируется из названия)</span>
             </label>
             <input
+              id={`${uid}-slug`}
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Кикер (над заголовком в карусели)</label>
+            <label htmlFor={`${uid}-kicker`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Кикер (над заголовком в карусели)</label>
             <input
+              id={`${uid}-kicker`}
               value={kicker}
               onChange={(e) => setKicker(e.target.value)}
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Короткий текст (в карусели)</label>
+            <label htmlFor={`${uid}-text`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Короткий текст (в карусели)</label>
             <textarea
+              id={`${uid}-text`}
               rows={2}
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Полный текст (на странице акции)</label>
+            <label htmlFor={`${uid}-content`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Полный текст (на странице акции)</label>
             <textarea
+              id={`${uid}-content`}
               rows={5}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Ссылка (необязательно)</label>
+            <label htmlFor={`${uid}-link-url`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Ссылка (необязательно)</label>
             <input
+              id={`${uid}-link-url`}
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
@@ -160,8 +167,9 @@ export default function PromotionForm({ promo, allCategories, allProducts }: Pro
               Активна (показывать в карусели)
             </label>
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Порядок</label>
+            <label htmlFor={`${uid}-order`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Порядок</label>
             <input
+              id={`${uid}-order`}
               type="number"
               value={order}
               onChange={(e) => setOrder(Number(e.target.value))}

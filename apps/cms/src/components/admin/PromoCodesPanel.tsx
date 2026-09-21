@@ -7,7 +7,7 @@
 // panel listing and mutating rows in place, with its own actions.ts beside
 // it — since that's this repo's own established shape for exactly this
 // kind of "manage a short admin-only list on one page" screen.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { PromoCode } from '../../payload-types'
 import { createPromoCode, deletePromoCode, updatePromoCode } from '../../app/(admin)/admin/promo-codes/actions'
 
@@ -31,6 +31,7 @@ const iconButtonClass =
   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors duration-240 ease-expo focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
 export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props) {
+  const uid = useId()
   const [promoCodes, setPromoCodes] = useState(initialPromoCodes)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -355,8 +356,9 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
         <div className="rounded-3xl border border-border bg-card p-6">
           <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Новый промокод</div>
 
-          <label className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Код</label>
+          <label htmlFor={`${uid}-new-code`} className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Код</label>
           <input
+            id={`${uid}-new-code`}
             value={newCode}
             onChange={(e) => setNewCode(e.target.value)}
             placeholder="SUMMER10"
@@ -365,8 +367,9 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
 
           <div className="mt-3 flex gap-2.5">
             <div className="flex-1">
-              <label className="block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Скидка</label>
+              <label htmlFor={`${uid}-new-discount-value`} className="block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Скидка</label>
               <input
+                id={`${uid}-new-discount-value`}
                 type="number"
                 min={1}
                 max={newDiscountType === 'percent' ? 100 : undefined}
@@ -376,8 +379,9 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
               />
             </div>
             <div className="w-28">
-              <label className="block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Тип</label>
+              <label htmlFor={`${uid}-new-discount-type`} className="block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Тип</label>
               <select
+                id={`${uid}-new-discount-type`}
                 value={newDiscountType}
                 onChange={(e) => {
                   const type = e.target.value as DiscountType
@@ -392,8 +396,9 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
             </div>
           </div>
 
-          <label className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Мин. сумма заказа, ₽ (необязательно)</label>
+          <label htmlFor={`${uid}-new-min-order-amount`} className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Мин. сумма заказа, ₽ (необязательно)</label>
           <input
+            id={`${uid}-new-min-order-amount`}
             type="number"
             min={0}
             value={newMinOrderAmount}
@@ -402,16 +407,18 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
             className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
           />
 
-          <label className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Действует до (необязательно)</label>
+          <label htmlFor={`${uid}-new-valid-until`} className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Действует до (необязательно)</label>
           <input
+            id={`${uid}-new-valid-until`}
             type="date"
             value={newValidUntil}
             onChange={(e) => setNewValidUntil(e.target.value)}
             className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
           />
 
-          <label className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Заметка (необязательно)</label>
+          <label htmlFor={`${uid}-new-description`} className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Заметка (необязательно)</label>
           <input
+            id={`${uid}-new-description`}
             value={newDescription}
             onChange={(e) => setNewDescription(e.target.value)}
             placeholder="Летняя акция 2026"

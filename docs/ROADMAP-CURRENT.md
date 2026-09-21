@@ -142,28 +142,39 @@ were the reference implementation.
 | Touch targets below 44px on the customer path | ✅ `dcf89fa` |
 | 3253 lines of unreachable storefront code | ✅ `e939609` |
 
-Open, and needing the owner rather than an implementer:
+Owner decisions, all resolved 2026-09-21:
 
-- ⏳ **`--color-status-*` tokens** — added per `docs/audits/2026-09-17-design.md`
-  DESIGN-003, which directly contradicts the work order's "система закрыта".
-  One commit to revert if the owner prefers the rule.
-- ⏳ **`--color-subtle` at `#6B6964`** — a delivered-design value changed for
-  contrast (4.08:1 → 4.73:1). The handoff's process is to edit the design bundle
-  and regenerate, which is not possible from here.
-- ⏳ **`--color-accent` at 4.39:1** on the page background, below the 4.5
-  threshold. Deliberately not changed: it is the brand colour.
+- ✅ **`--color-status-*` tokens** — kept. They contradict the work order's
+  "система закрыта", and `docs/audits/2026-09-17-design.md` DESIGN-003 argues
+  that rule is what produced the 35 literals in the first place. Owner: no
+  divergence in the code; the literals do not come back.
+- ✅ **`--color-subtle` at `#6B6964`** — kept (4.08:1 → 4.73:1). A delivered
+  design value changed for contrast. `design-sync spec` does not regenerate this
+  token, so the change will not be overwritten.
+- ✅ **`--color-accent` at 4.39:1** — left as `#D62410`. Owner considers the
+  muted colour differing from the accent acceptable. For the record, `#D22310`
+  would reach 4.54:1 at a 2% luminance cost if this is ever revisited.
+- ✅ **"Только свободные" → "Только в наличии"** — kept. The toggle is a
+  `quantity > 0` query with no dates in it; date awareness lives in the live
+  per-card badges instead, where it does not desynchronise the pager.
 
-Found and recorded, not fixed:
+Also closed 2026-09-21:
 
-- Admin forms render `<label>` as a sibling with no `htmlFor` and no input `id`
-  — roughly fifty fields visually labelled but not programmatically associated.
-  Wider than DESIGN-004's stated nine; needs its own pass.
-- Promo autoplay ignores `prefers-reduced-motion`, which `03-motion.md` requires,
-  and does not stop after the first manual arrow click. Never implemented.
-- Day cells in both calendars are 44px tall but 32–42px wide on a phone; seven
-  columns cannot each be 44px at 360px without horizontal scroll.
-- `bnPop` now audits 2× against the design's 3× — the third instance lived in the
-  deleted `CheckoutPage.tsx`, so the prototype checkout may be missing one.
+- ✅ Promo autoplay now stops on hover, under `prefers-reduced-motion`, and
+  permanently after manual control, per `03-motion.md`. None of the three had
+  ever been implemented.
+- ✅ Admin label association (`htmlFor`/`id` via `useId()`) across the admin
+  forms — the wider reading of DESIGN-004.
+
+Investigated and deliberately left as they are:
+
+- **Day cells** in both calendars are 44px tall but 32–42px wide on a phone.
+  Seven columns cannot each be 44px at 360px without horizontal scroll; full
+  44×44 needs a different calendar, not a size change.
+- **`bnPop` audits 2× against the design's 3×** — not a real gap. The animation
+  lives in the shared `.pb-pop-value` class, applied at three call sites; the
+  tool counts the single `animation:` declaration, not its uses. Same class-reuse
+  blind spot already recorded for `bnIn` on 2026-08-21.
 
 ## Immediate next action
 
