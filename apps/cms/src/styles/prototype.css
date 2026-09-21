@@ -108,20 +108,34 @@ html[data-nav-back="true"] [style*="bnRule"]{animation:none!important}
 
 /* Touch targets on small phones (audit DESIGN-001). Day cells are already
    44px tall from the max-width:760px block below, but not 44px *wide*: seven
-   columns inside a 24px-padded card on a 360px screen leave 37px each. The
-   grid (and only the grid — the calendar's own heading, legend and the rest
-   of the panel keep their padding) bleeds out toward the card edge and the
-   column gap drops to 2px, which buys the ~7px per column that gets every
-   cell over 44 in both directions. Scoped to the widths where it is actually
-   needed: from ~410px up the cells clear 44px on their own. */
+   columns inside a 24px-padded card on a 360px screen leave 37px each.
+
+   The extra width comes from the containers' own side padding and a 2px
+   column gap, never from the grid growing past the box it sits in. An
+   earlier version of this block did pull the grid outward with a negative
+   margin, which bought the last pixel or two but left the first and last
+   columns hanging over the calendar's own edge — the cells fit, but read as
+   cut off. Staying inside the box costs about a pixel of width on the
+   product panel (43px rather than 44px at 360px, still 44px tall) and
+   nothing at all in the picker modal.
+
+   Scoped to the widths where it matters: from ~410px up the cells clear
+   44px on their own. */
 @media(max-width:400px){
- .pb-inline-weekdays,.pb-inline-days{margin-inline:-18px;gap:2px}
+ .pb-product-panel{padding:24px 12px}
  .pb-modal-backdrop{padding:10px}
  .pb-modal-head{padding:20px 14px 0}
  .pb-modal-tabs{padding:16px 14px 0}
- .pb-picker-grid{padding:16px 14px 0}
+ .pb-picker-grid{padding:16px 8px 0}
  .pb-modal-foot{padding:16px 14px}
- .pb-weekdays,.pb-days{margin-inline:-8px;gap:2px}
+ /* The column gap becomes part of the cells instead of dead space between
+    them: a transparent 2px border plus background-clip:padding-box keeps the
+    tile and the 4px of air between tiles looking exactly as before, while the
+    button's own box — what a finger actually hits — grows to the full column.
+    That is the difference between a 43px and a 44px target on the product
+    panel at 360px, bought without pushing anything past an edge. */
+ .pb-inline-weekdays,.pb-inline-days,.pb-weekdays,.pb-days{gap:0}
+ .pb-inline-day,.pb-day{border:2px solid transparent;background-clip:padding-box;border-radius:13px}
 }
 
 /* The navbar's date chip, and its mobile form. Above the header's own mobile
