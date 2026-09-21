@@ -31,6 +31,7 @@
     "visual:regression": "node src/scripts/visual-regression.mjs",
     "visual:seed": "tsx --env-file-if-exists=.env src/scripts/seed-visual.ts",
     "visual:cleanup": "tsx --env-file-if-exists=.env src/scripts/cleanup-visual.ts",
+    "preview:seed": "tsx --env-file-if-exists=.env src/scripts/seed-preview.ts",
     "smoke:analytics-ui": "node src/scripts/analytics-ui-smoke.mjs",
     "smoke:admin-screen": "node src/scripts/admin-screen-smoke.mjs"
   },
