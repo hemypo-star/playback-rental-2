@@ -75,6 +75,16 @@ html[data-nav-back="true"] [style*="bnRule"]{animation:none!important}
 .pb-wordmark strong{font-size:15px;font-weight:700;letter-spacing:-.03em}
 .pb-wordmark span{font-size:15px;font-weight:300;color:var(--pb-sub)}
 
+/* Homepage "Как это работает" block. SiteSettings.howItWorksSteps is
+   admin-editable and has no fixed length, so the row is auto-fit rather than
+   a fixed span of the 12-column grid — 3, 4 or 6 steps all lay out sensibly. */
+.pb-steps{grid-column:span 12;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px;padding:18px}
+.pb-step{display:flex;gap:14px;padding:16px 12px;border-radius:18px;transition:background .24s ease}
+.pb-step:hover{background:var(--pb-muted)}
+.pb-step-n{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--pb-ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.pb-step-title{font-size:16px;font-weight:500;letter-spacing:-.02em}
+.pb-step-text{margin-top:4px;font-size:13px;line-height:1.45;color:var(--pb-sub)}
+
 /* Touch targets (audit DESIGN-001, work-order N16). 01-tokens.md specifies the
    stepper at 28-30px and the round buttons at 32-38px, and states the mobile
    rule as substitution rather than override: "чипы 38px в шапке на мобильном

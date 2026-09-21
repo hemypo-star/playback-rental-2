@@ -7,10 +7,25 @@ import { getActivePromotions } from '../lib/data/promotions'
 import { getSiteSettings } from '../lib/data/siteSettings'
 import { getSubtreeIds } from '../lib/categoryTree'
 import { mediaUrl } from '../lib/mediaUrl'
+import { categoryNameOf } from '../lib/productDisplay'
 import { formatCurrency } from '../lib/pricing'
 import PrototypeDatePicker from './PrototypeDatePicker'
 import PrototypeProductCard from './PrototypeProductCard'
 import PrototypePromoCarousel from './PrototypePromoCarousel'
+
+// Fallback copy for the "Как это работает" block, matching the list the
+// homepage on `2.0` shipped (apps/cms/src/app/(frontend)/page.tsx). The real
+// source is SiteSettings.howItWorksSteps, which the custom admin has always
+// been able to edit (components/admin/SettingsForm.tsx) but which nothing on
+// this branch rendered — /how-it-works has its own longer, hardcoded list,
+// as its own header comment says. Restoring this block is what gives that
+// field a surface again.
+const HOW_IT_WORKS_FALLBACK=[
+ {title:'Выбираете даты',text:'Каталог сразу показывает, что свободно на выбранные даты.'},
+ {title:'Оставляете заявку',text:'Имя и телефон — без регистрации. Перезвоним и подтвердим бронь.'},
+ {title:'Забираете технику',text:'Приезжаете по адресу, получаете оборудование, короткий инструктаж.'},
+ {title:'Возвращаете',text:'В оговорённый срок, по тому же адресу.'},
+]
 
 export default async function PrototypeHome(){
  const [categories,featuredResult,totals,marqueeResult,settings,promotions,kitsResult]=await Promise.all([
@@ -23,6 +38,7 @@ export default async function PrototypeHome(){
  const hero=mediaUrl(settings.heroBannerImage),heroMobile=mediaUrl(settings.heroBannerImageMobile)||hero
  const stats=[{value:String(totals.total),label:'Позиций в парке'},{value:String(totals.inStock),label:'Свободны сегодня'},{value:settings.depositLabel||'0 ₽',label:settings.depositCaption||'Залог'},{value:settings.pickupTimeLabel||'10 мин',label:settings.pickupTimeCaption||'Выдача по паспорту'}]
  const promos=promotions.map(p=>({id:p.id,title:p.title,kicker:p.kicker||undefined,text:p.text||undefined,imageUrl:mediaUrl(p.image),linkUrl:p.linkUrl||(p.slug?`/promotions/${p.slug}`:undefined)}))
+ const steps=(settings.howItWorksSteps?.length?settings.howItWorksSteps:HOW_IT_WORKS_FALLBACK).map((s,i)=>({title:s.title,text:s.text,n:i+1}))
  const contact={phone:settings.contactPhone||'+7 (996) 527-0026',telegram:settings.contactTelegram||'@Playbackrental_admin',address:settings.contactAddress||'г. Кемерово, ул. Демьяна Бедного, 6',hours:settings.contactHours||'10:00 — 21:00'}
  return <div className="pb-home">
   <section className="pb-container pb-grid pb-home-grid">
@@ -32,8 +48,10 @@ export default async function PrototypeHome(){
    {marqueeResult.docs.length>0&&<div className="pb-marquee"><div className="pb-marquee-track">{[0,1].map(n=><div key={n} className="pb-marquee-row">{marqueeResult.docs.map(p=><span key={`${n}-${p.id}`} style={{display:'flex',gap:44,alignItems:'center'}}><span>{p.title}</span><span className="pb-red">◆</span></span>)}</div>)}</div></div>}
    {promos.length>0&&<PrototypePromoCarousel promos={promos}/>}
    {featuredCategories.length>0&&<><div className="pb-section-head"><div><div className="pb-kicker">Категории</div><h2 className="pb-h2">Выберите, чем снимать</h2></div><Link href="/catalog" className="pb-pill pb-section-cta"><span>Весь каталог</span><span>→</span></Link></div><div className="pb-section-grid">{featuredCategories.map((c,i)=>{const img=mediaUrl(c.image);return <Link key={c.id} href={`/catalog/${c.slug}`} className="pb-tile" style={{gridColumn:'span 4',animationDelay:`${i*60}ms`}}><div className="pb-tile-media">{img&&<Image src={img} alt={c.name} fill sizes="(min-width:1021px) 30vw,46vw" style={{objectFit:'cover'}}/>}<span className="pb-chip">{(c.slug||c.name).slice(0,4).toUpperCase()}</span></div><div className="pb-tile-body"><div><div className="pb-tile-title">{c.name}</div><div className="pb-tile-meta">{catMeta(c)}</div></div><span className="pb-arrow">→</span></div></Link>})}</div></>}
-   {kitsResult.docs.length>0&&<><div className="pb-section-head"><div><div className="pb-kicker">Наборы</div><h2 className="pb-h2">Собрано под сценарий</h2></div><span style={{fontSize:13,color:'var(--pb-sub)'}}>Готовые комплекты техники</span></div><div className="pb-section-grid">{kitsResult.docs.map((p,i)=><div key={p.id} style={{gridColumn:'span 4'}}><PrototypeProductCard delay={i*60} product={{id:p.id,title:p.title,subtitle:p.subtitle,price:p.price,listingType:p.listingType,quantity:p.quantity,available:p.available,tag:p.tag,imageUrl:mediaUrl(p.images?.[0]),unit:p.listingType==='rental'?'набор / сутки':'шт.'}}/></div>)}</div></>}
-   {featuredResult.docs.length>0&&<><div className="pb-section-head"><div><div className="pb-kicker">Берут чаще всего</div><h2 className="pb-h2">Популярные позиции</h2></div></div><div className="pb-section-grid">{featuredResult.docs.slice(0,4).map((p,i)=><div key={p.id} style={{gridColumn:'span 3'}}><PrototypeProductCard delay={i*45} product={{id:p.id,title:p.title,subtitle:p.subtitle,price:p.price,listingType:p.listingType,quantity:p.quantity,available:p.available,tag:p.tag,imageUrl:mediaUrl(p.images?.[0]),unit:p.listingType==='rental'?'смена / 24 часа':'шт.'}}/></div>)}</div></>}
+   {kitsResult.docs.length>0&&<><div className="pb-section-head"><div><div className="pb-kicker">Наборы</div><h2 className="pb-h2">Собрано под сценарий</h2></div><span style={{fontSize:13,color:'var(--pb-sub)'}}>Готовые комплекты техники</span></div><div className="pb-section-grid">{kitsResult.docs.map((p,i)=><div key={p.id} style={{gridColumn:'span 4'}}><PrototypeProductCard delay={i*60} product={{id:p.id,title:p.title,subtitle:p.subtitle,price:p.price,listingType:p.listingType,quantity:p.quantity,available:p.available,tag:p.tag,categoryName:categoryNameOf(p),imageUrl:mediaUrl(p.images?.[0]),unit:p.listingType==='rental'?'набор / сутки':'шт.'}}/></div>)}</div></>}
+   {featuredResult.docs.length>0&&<><div className="pb-section-head"><div><div className="pb-kicker">Берут чаще всего</div><h2 className="pb-h2">Популярные позиции</h2></div></div><div className="pb-section-grid">{featuredResult.docs.slice(0,4).map((p,i)=><div key={p.id} style={{gridColumn:'span 3'}}><PrototypeProductCard delay={i*45} product={{id:p.id,title:p.title,subtitle:p.subtitle,price:p.price,listingType:p.listingType,quantity:p.quantity,available:p.available,tag:p.tag,categoryName:categoryNameOf(p),imageUrl:mediaUrl(p.images?.[0]),unit:p.listingType==='rental'?'смена / 24 часа':'шт.'}}/></div>)}</div></>}
+   <div className="pb-section-head"><div><div className="pb-kicker">Как это работает</div><h2 className="pb-h2">От выбора до возврата</h2></div><Link href="/how-it-works" className="pb-pill pb-section-cta"><span>Подробные условия</span><span>→</span></Link></div>
+   <div className="pb-card pb-steps">{steps.map(s=><div key={s.n} className="pb-step"><span className="pb-step-n">{s.n}</span><div><div className="pb-step-title">{s.title}</div><div className="pb-step-text">{s.text}</div></div></div>)}</div>
    <div className="pb-dark-contact"><div><div className="pb-kicker" style={{color:'rgba(255,255,255,.5)'}}>Нужен совет</div><div style={{marginTop:16,fontSize:'clamp(26px,3.2vw,44px)',fontWeight:500,letterSpacing:'-.04em',lineHeight:1.02}}>Не знаете, что взять на съёмку?</div><p style={{marginTop:16,fontSize:14.5,lineHeight:1.55,color:'rgba(255,255,255,.62)',maxWidth:420}}>Опишите задачу — соберём комплект под неё и посчитаем стоимость на ваши даты.</p><Link href="/contact" className="pb-pill pb-btn pb-contact-cta" style={{marginTop:28}}><span>Написать нам</span><span className="pb-contact-icon">→</span></Link></div><div style={{display:'flex',flexDirection:'column',justifyContent:'flex-end',gap:8}}><div className="pb-contact-row"><span style={{color:'rgba(255,255,255,.55)'}}>Телефон</span><span>{contact.phone}</span></div><div className="pb-contact-row"><span style={{color:'rgba(255,255,255,.55)'}}>Telegram</span><span>{contact.telegram}</span></div><div className="pb-contact-row"><span style={{color:'rgba(255,255,255,.55)'}}>Адрес</span><span>{contact.address}</span></div><div className="pb-contact-row"><span style={{color:'rgba(255,255,255,.55)'}}>Часы</span><span>{contact.hours}</span></div></div></div>
   </section>
  </div>
