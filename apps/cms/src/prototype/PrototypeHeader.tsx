@@ -12,6 +12,6 @@ export default function PrototypeHeader({openHour,closeHour}:{openHour:number;cl
   <nav className="pb-nav"><Link data-active={active('/catalog')&&!kits} href="/catalog">Каталог</Link><Link data-active={kits} href="/catalog?type=kit">Наборы</Link><Link data-active={active('/how-it-works')} href="/how-it-works">Условия</Link><Link data-active={active('/contact')} href="/contact">Контакты</Link></nav>
   <div className="pb-header-spacer"/><div className="pb-hours"><span className="pb-hours-dot"/><span>{String(openHour).padStart(2,'0')}:00—{String(closeHour).padStart(2,'0')}:00</span></div>
   <PrototypeDatePicker variant="navbar" openHour={openHour} closeHour={closeHour}/>
-  <Link href="/checkout" className="pb-pill pb-cart-link"><span>Корзина</span><PrototypeCartBadge/></Link>
+  <Link href="/checkout" aria-label="Корзина" className="pb-pill pb-cart-link"><span>Корзина</span><PrototypeCartBadge/></Link>
  </header></div>
 }
