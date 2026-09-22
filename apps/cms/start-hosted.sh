@@ -40,16 +40,23 @@ echo "start-hosted: WEB_URL=$WEB_URL"
 pnpm check:migration-drift
 pnpm payload migrate
 
-# 3. Demo content, once. Opt-in via PREVIEW_SEED=1 and skipped when the catalog
-#    already has rows, so a redeploy or a restart never overwrites whatever is
-#    in there — including anything edited through the admin after seeding.
+# 3. Demo content. Opt-in via PREVIEW_SEED=1. The full seed runs only into an
+#    empty catalog, so a redeploy or a restart never overwrites what is in
+#    there — including anything edited through the admin afterwards.
+#
+#    The media repair runs every boot regardless, because a free hosting plan
+#    gives the container no persistent disk: the database keeps the media rows
+#    while the files under MEDIA_STATIC_DIR are gone, which without this is a
+#    homepage carousel of broken images. It re-uploads only what is actually
+#    missing.
 if [ "${PREVIEW_SEED:-}" = "1" ]; then
   if pnpm tsx src/scripts/is-catalog-empty.ts; then
     echo "start-hosted: seeding demo content"
     pnpm visual:seed
     pnpm preview:seed
   else
-    echo "start-hosted: catalog is not empty, leaving it alone"
+    echo "start-hosted: catalog is not empty, checking demo images only"
+    pnpm preview:seed:media
   fi
 fi
 

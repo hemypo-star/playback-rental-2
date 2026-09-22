@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import sharp from 'sharp'
 import { getPayload } from 'payload'
 import config from '@payload-config'
@@ -14,6 +16,16 @@ import config from '@payload-config'
 // would plausibly pick today.
 //
 // Idempotent: re-running it reuses what it already created.
+//
+// `--media-only` skips everything except repairing promo images. A free
+// hosting plan gives the container no persistent disk, so every restart —
+// and a sleeping free instance restarts often — comes back with an empty
+// uploads directory while the database still holds the media rows pointing
+// into it. Left alone that is a carousel of broken images. This mode runs on
+// every boot there and re-uploads only what has actually gone missing;
+// bookings, settings and anything edited through the admin are left alone.
+const MEDIA_ONLY = process.argv.includes('--media-only')
+const MEDIA_DIR = path.resolve(process.env.MEDIA_STATIC_DIR || 'media')
 const DAY = 86_400_000
 
 function at(offsetDays: number, hour: number): string {
@@ -53,9 +65,21 @@ const bookings = [
 async function main() {
   const payload = await getPayload({ config })
 
+  let repaired = 0
   for (const promo of promos) {
-    const existing = await payload.find({ collection: 'promotions', where: { title: { equals: promo.title } }, limit: 1, overrideAccess: true })
-    if (existing.docs[0]) continue
+    const existing = await payload.find({ collection: 'promotions', where: { title: { equals: promo.title } }, limit: 1, depth: 1, overrideAccess: true })
+    const current = existing.docs[0]
+    if (current) {
+      // The row is there; the question is whether its file still is.
+      const image = typeof current.image === 'object' && current.image ? current.image : undefined
+      if (image?.filename && existsSync(path.join(MEDIA_DIR, image.filename))) continue
+      repaired += 1
+    } else if (MEDIA_ONLY) {
+      // Nothing to repair — a promotion that was never seeded is not this
+      // mode's business.
+      continue
+    }
+
     const data = await gradientPng(promo.from, promo.to)
     const media = await payload.create({
       collection: 'media',
@@ -63,11 +87,20 @@ async function main() {
       file: { data, mimetype: 'image/png', name: `preview-${promo.title.replace(/\s+/g, '-').toLowerCase()}.png`, size: data.length },
       overrideAccess: true,
     })
-    await payload.create({
-      collection: 'promotions',
-      data: { title: promo.title, kicker: promo.kicker, text: promo.text, image: media.id, active: true },
-      overrideAccess: true,
-    })
+    if (current) {
+      await payload.update({ collection: 'promotions', id: current.id, data: { image: media.id }, overrideAccess: true })
+    } else {
+      await payload.create({
+        collection: 'promotions',
+        data: { title: promo.title, kicker: promo.kicker, text: promo.text, image: media.id, active: true },
+        overrideAccess: true,
+      })
+    }
+  }
+
+  if (MEDIA_ONLY) {
+    console.log(JSON.stringify({ mode: 'media-only', repaired }, null, 2))
+    process.exit(0)
   }
 
   for (const booking of bookings) {
