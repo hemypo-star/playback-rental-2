@@ -31,7 +31,8 @@ cp .env.example .env
 # Fill POSTGRES_PASSWORD and PAYLOAD_SECRET.
 
 Just want to look at the site? `./scripts/preview.sh` starts Postgres, runs
-the app and fills it with a demo catalog and an admin login — see
+the app and fills it with a demo catalog and an admin login; add `--tunnel`
+for a temporary public https URL you can open on a phone — see
 `docs/PREVIEW.md`. The stack below is the full containerized dev setup.
 
 
