@@ -8,6 +8,14 @@ verify, when to ask) — loaded into every session via this import:
 Context for whoever (human or Claude) picks this branch up next. Setup/run instructions
 are in `README.md`; this file is architecture, gotchas, and a running dev log.
 
+## Branches (owner's rule)
+
+- **`dev`** — the development branch. All work, docs and tooling land here.
+- **`prod`** — deploy-only, gets **code changes only**. Never push docs, `CLAUDE.md`,
+  `.claude/`, CI or other dev scaffolding to it; never hand-edit it. It is regenerated
+  from `dev` by `scripts/make-release.sh`, which already strips all of that.
+- **`main`** — do not touch at all: no pushes, merges, or rebases.
+
 ## What this is
 
 A full rewrite of the Playback Rental storefront + admin (camera/video equipment rental,
