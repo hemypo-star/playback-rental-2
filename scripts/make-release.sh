@@ -3,6 +3,8 @@
 #
 #   ./scripts/make-release.sh [target-branch] [source-ref]
 #
+# Defaults: builds `prod` from the current branch (`dev`).
+#
 # The release branch is GENERATED, never hand-edited. Everything below is a
 # deletion or a mechanical transformation of the development branch, so cutting
 # a new release is "run this again" rather than "merge and re-clean by hand" —
@@ -29,7 +31,7 @@ if [ "${MAKE_RELEASE_REEXEC:-}" != "1" ]; then
 fi
 cd "${MAKE_RELEASE_REPO:-$REPO}"
 
-TARGET="${1:-release/vds}"
+TARGET="${1:-prod}"
 SOURCE="${2:-HEAD}"
 
 command -v pnpm >/dev/null 2>&1 || { echo "make-release: pnpm is required" >&2; exit 1; }
