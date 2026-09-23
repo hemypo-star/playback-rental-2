@@ -25,6 +25,17 @@ export const metadata: Metadata = {
   title: { template: '%s · Playback Admin', default: 'Playback Admin' },
 }
 
+// Every page under this layout is behind getAdminUser(), which opens a
+// database connection, so none of them can be prerendered — and the segment
+// has to say so here rather than page by page. It did not: /admin/content is
+// a plain 'use client' page with no data of its own and so declared nothing,
+// which left Next trying to export it at build time, running this layout, and
+// failing on the first query. That only showed up when a build ran without a
+// reachable database — which is exactly the situation inside the Docker build
+// stage, where DATABASE_URI is a placeholder. Declared on the layout so a new
+// admin page cannot reintroduce it by forgetting the same line.
+export const dynamic = 'force-dynamic'
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getAdminUser()
   if (!user) redirect('/admin/login')
