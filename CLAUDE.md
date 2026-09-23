@@ -1,5 +1,10 @@
 # Playback Rental 2.0 — working notes
 
+**Standing working instructions for Claude, project-wide** (how to carry tasks to done,
+verify, when to ask) — loaded into every session via this import:
+
+@docs/claude-working-instructions.md
+
 Context for whoever (human or Claude) picks this branch up next. Setup/run instructions
 are in `README.md`; this file is architecture, gotchas, and a running dev log.
 
