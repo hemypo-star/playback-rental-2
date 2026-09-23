@@ -13,11 +13,11 @@ export const StockStatusCell: React.FC<DefaultCellComponentProps> = ({ rowData }
 
   let tone: { bg: string; color: string; label: string }
   if (!available || quantity === 0) {
-    tone = { bg: '#FFE9E4', color: '#B03017', label: 'Нет в наличии' }
+    tone = { bg: 'var(--color-status-alert-bg)', color: 'var(--color-status-alert)', label: 'Нет в наличии' }
   } else if (quantity <= 2) {
-    tone = { bg: '#FFF2DE', color: '#9A6100', label: 'Мало' }
+    tone = { bg: 'var(--color-status-warn-bg)', color: 'var(--color-status-warn)', label: 'Мало' }
   } else {
-    tone = { bg: '#F0EFEC', color: '#0A0A0A', label: 'В наличии' }
+    tone = { bg: 'var(--color-status-neutral-bg)', color: 'var(--color-status-neutral)', label: 'В наличии' }
   }
 
   return (

@@ -27,7 +27,7 @@ export default async function AdminPromotionsPage() {
             const badge = (
               <span
                 className="justify-self-start rounded-full px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase"
-                style={{ background: p.active ? '#E4F6E9' : '#F0EFEC', color: p.active ? '#0B6B32' : '#75736E' }}
+                style={{ background: p.active ? 'var(--color-status-ok-bg)' : 'var(--color-status-neutral-bg)', color: p.active ? 'var(--color-status-ok)' : 'var(--color-subtle)' }}
               >
                 {p.active ? 'Активна' : 'Скрыта'}
               </span>

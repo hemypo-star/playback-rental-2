@@ -2,6 +2,7 @@ import type { CollectionConfig, PayloadRequest } from 'payload'
 import { APIError } from 'payload'
 import { differenceInCalendarDays } from 'date-fns'
 import { calculateLineTotal } from '../lib/rental/pricing'
+import { isBeforeBusinessToday } from '../lib/rental/businessDay'
 import { getAvailableRentalQuantity, getAvailableSaleQuantity, lockProductForBooking } from '../lib/rental/availability'
 
 // Hooks receive relationship fields populated to Payload's default depth
@@ -293,6 +294,35 @@ export const OrderItems: CollectionConfig = {
               'endDate is earlier than startDate',
               400,
               { code: 'RENTAL_DATES_INVALID', reason: 'backwards', productTitle: product.title },
+              true,
+            )
+          }
+          // A rental that starts on an earlier calendar day than today
+          // cannot be fulfilled: the equipment would have had to leave the
+          // counter in the past. Nothing else in the stack refuses this —
+          // the backwards-range check above only compares the two dates to
+          // each other, and availability is computed over the requested
+          // window regardless of where that window sits in time — so
+          // without this a customer could book last week.
+          //
+          // Day-granular, in Kemerovo time, so a booking placed at 14:00
+          // for a 10:00 pickup the same day still goes through; see
+          // lib/rental/businessDay.ts for why the server's own UTC day is
+          // the wrong unit here.
+          //
+          // Skipped when the caller sets allowPastRentalDates. That is an
+          // admin escape hatch: an operator recording or correcting a
+          // rental that already happened is doing legitimate bookkeeping,
+          // not booking the past. It is safe as an authorisation boundary
+          // because `context` is a Local API option — Payload builds
+          // req.context fresh and empty for every REST request and never
+          // populates it from the request body, so an anonymous caller
+          // cannot set it.
+          if (!req.context?.allowPastRentalDates && isBeforeBusinessToday(new Date(data.startDate))) {
+            throw new APIError(
+              'startDate is before the current business day',
+              400,
+              { code: 'RENTAL_DATES_INVALID', reason: 'past', productTitle: product.title },
               true,
             )
           }

@@ -5,7 +5,7 @@
 // same save/delete behavior. Calls the Server Actions in ./actions.ts
 // instead of fetch()-ing Payload's REST endpoints directly.
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import Image from 'next/image'
 import type { Category } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
@@ -20,6 +20,7 @@ interface Props {
 
 export default function CategoryForm({ category, parentOptions, currentParentId }: Props) {
   const router = useRouter()
+  const uid = useId()
   const isNew = category === null
 
   const [name, setName] = useState(category?.name ?? '')
@@ -78,50 +79,56 @@ export default function CategoryForm({ category, parentOptions, currentParentId 
 
   return (
     <>
-      {error && <p className="rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]">{error}</p>}
+      {error && <p className="rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>}
 
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex flex-col gap-3.5">
           <div className="rounded-3xl border border-border bg-card p-6">
-            <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Название</label>
+            <label htmlFor={`${uid}-name`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Название</label>
             <input
+              id={`${uid}-name`}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Slug</label>
+            <label htmlFor={`${uid}-slug`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Slug</label>
             <input
+              id={`${uid}-slug`}
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Описание</label>
+            <label htmlFor={`${uid}-description`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Описание</label>
             <textarea
+              id={`${uid}-description`}
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Тег (бейдж на плитке)</label>
+            <label htmlFor={`${uid}-tag`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Тег (бейдж на плитке)</label>
             <input
+              id={`${uid}-tag`}
               value={tag}
               onChange={(e) => setTag(e.target.value)}
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Порядок</label>
+            <label htmlFor={`${uid}-order`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Порядок</label>
             <input
+              id={`${uid}-order`}
               type="number"
               value={order}
               onChange={(e) => setOrder(Number(e.target.value))}
               className="mt-1.5 h-11 w-40 rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Родительская категория</label>
+            <label htmlFor={`${uid}-parent`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Родительская категория</label>
             <select
+              id={`${uid}-parent`}
               value={parent}
               onChange={(e) => setParent(e.target.value)}
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"

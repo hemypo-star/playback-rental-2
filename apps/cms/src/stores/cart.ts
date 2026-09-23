@@ -25,6 +25,7 @@ export const MAX_CART_ITEM_QUANTITY = 99
 export interface CartItem {
   productId: number
   title: string
+  subtitle?: string
   price: number
   imageUrl?: string
   listingType: ListingType

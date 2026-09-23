@@ -28,6 +28,12 @@ dist-ssr
 .env
 .env.*
 !.env.example
+# Throwaway values for the local preview stack, deliberately committed so
+# `docker compose --env-file .env.preview ...` needs nothing invented first.
+!.env.preview
+
+# cloudflared binary fetched on demand by scripts/preview.sh --tunnel
+/.cache/
 
 # Claude Code local session/tooling state - machine-specific, not project source.
 # Project-scoped subagents are the exception - shared, checked-in source, like

@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import type React from 'react'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import '../../../styles/global.css'
+import '../../../styles/prototype.css'
 import { getAdminUser } from '../../../lib/admin/auth'
 import { getAdminNavBadges } from '../../../lib/admin/data/navBadges'
-import AdminSidebar from '../../../components/admin/AdminSidebar'
+import PrototypeAdminSidebar from '../../../prototype/PrototypeAdminSidebar'
 import EntryAnimationController from '../../../components/EntryAnimationController'
 
 // Root layout for the guarded admin dashboard (docs/PLAN-next-migration.md
@@ -25,6 +25,17 @@ export const metadata: Metadata = {
   title: { template: '%s · Playback Admin', default: 'Playback Admin' },
 }
 
+// Every page under this layout is behind getAdminUser(), which opens a
+// database connection, so none of them can be prerendered — and the segment
+// has to say so here rather than page by page. It did not: /admin/content is
+// a plain 'use client' page with no data of its own and so declared nothing,
+// which left Next trying to export it at build time, running this layout, and
+// failing on the first query. That only showed up when a build ran without a
+// reachable database — which is exactly the situation inside the Docker build
+// stage, where DATABASE_URI is a placeholder. Declared on the layout so a new
+// admin page cannot reintroduce it by forgetting the same line.
+export const dynamic = 'force-dynamic'
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getAdminUser()
   if (!user) redirect('/admin/login')
@@ -37,10 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <link rel="preload" href="/fonts/golos-text-cyrillic.woff2" as="font" type="font/woff2" crossOrigin="" />
       </head>
       <body className="bg-background text-foreground">
-        <main className="grid min-h-screen grid-cols-1 gap-3.5 p-3.5 min-[1021px]:grid-cols-[246px_1fr]" style={{ animation: 'bnFade 380ms ease both' }}>
-          <AdminSidebar userEmail={user.email} badges={badges} />
-          <section className="flex min-w-0 flex-col gap-3.5">{children}</section>
-        </main>
+        <main className="pb-admin-shell"><PrototypeAdminSidebar badges={badges} /><section className="pb-admin-content">{children}</section></main>
         {/* C3 (audit G2) — same mechanism/reasoning as the (frontend) root
             layout; the admin dashboard's own order/client/stock rows use
             the same `bnIn` stagger and need the same Back/Forward fix. */}

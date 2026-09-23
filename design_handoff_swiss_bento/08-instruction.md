@@ -36,8 +36,8 @@
 - штатную админку Payload `/cms` — у неё своя тема, дизайн туда не переносим;
 - `docs/design-reference/spec/tokens.css` и `interactions.css` — генерируются, правки затрёт.
 
-`apps/README.md` устарел (описывает Astro и «old app deploys from prod») — поправить
-заодно, чтобы не путал следующего.
+~~`apps/README.md` устарел (описывает Astro и «old app deploys from prod») — поправить
+заодно, чтобы не путал следующего.~~ Сделано 2026-09-21.
 
 ---
 
@@ -53,8 +53,9 @@ node tools/design-sync.mjs audit apps/cms/src
 
 - `extract` разбирает бандл дизайна (машиночитаемая спецификация экранов, не картинка);
 - `spec` пишет `docs/design-reference/spec/tokens.css` (кривые, длительности как утилиты
-  Tailwind v4) и `interactions.css` (24 правила состояний) — оба импортируются из
-  `apps/cms/src/styles/global.css`;
+  Tailwind v4) и `interactions.css` (24 правила состояний). `tokens.css` импортируется
+  из `apps/cms/src/styles/prototype.css`; `interactions.css` — справочный файл для
+  переноса (сгенерированные классы `.d-hXXXXXX`), в рантайм не подключается;
 - `audit` сверяет код с дизайном и печатает расхождения.
 
 Бандл лежит в `reference/Playback Rental - прокат техники.html` этого пакета — положить
@@ -63,8 +64,13 @@ node tools/design-sync.mjs audit apps/cms/src
 Правки дизайна идут **в бандл**, оттуда `extract` + `spec`. Не в сгенерированные CSS.
 
 Токены цвета, радиусов, теней и шрифта уже объявлены в `@theme` внутри
-`apps/cms/src/styles/global.css` и **соответствуют дизайну**. Новых токенов не заводить:
-система закрыта. Шрифт — Golos Text, self-hosted в `apps/cms/public/fonts`, не Google Fonts.
+`apps/cms/src/styles/prototype.css` и **соответствуют дизайну**. Новых токенов не заводить:
+система закрыта.
+
+> Исключение, зафиксированное 2026-09-21: семейство `--color-status-*` для админки
+> заведено по прямому предписанию `docs/audits/2026-09-17-design.md` (DESIGN-003),
+> которое разбирает, что именно это правило и породило 35 hex-литералов мимо
+> токенов. Отступление сознательное и подлежит подтверждению владельцем. Шрифт — Golos Text, self-hosted в `apps/cms/public/fonts`, не Google Fonts.
 
 ---
 

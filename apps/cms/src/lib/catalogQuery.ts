@@ -11,6 +11,16 @@ export interface CatalogFilters {
   q?: string
   sort?: string
   kit?: boolean
+  free?: boolean
+  // The visitor's selected rental window, as ISO instants. Only carried while
+  // `free` is on, since that is the only filter it changes: with dates the
+  // "Только свободные" toggle means "free on these dates", without them it
+  // falls back to plain in-stock. Full instants rather than calendar days on
+  // purpose — the picker's window has real open/close times in it, and the
+  // server-side filter has to compute overlap against exactly the same
+  // window the per-card availability badges are fetched for.
+  from?: string
+  to?: string
   page?: number
 }
 
@@ -19,6 +29,11 @@ export function buildCatalogUrl(basePath: string, filters: CatalogFilters = {}):
   if (filters.q) params.set('q', filters.q)
   if (filters.sort) params.set('sort', filters.sort)
   if (filters.kit) params.set('type', 'kit')
+  if (filters.free) params.set('free', '1')
+  if (filters.free && filters.from && filters.to) {
+    params.set('from', filters.from)
+    params.set('to', filters.to)
+  }
   // A pager link sets its own target page explicitly. Every other filter
   // link (category, sort, a new search) omits `page` entirely on purpose —
   // changing what's being filtered should land back on page 1, not wherever
@@ -35,4 +50,13 @@ export function buildCatalogUrl(basePath: string, filters: CatalogFilters = {}):
 export function parsePageParam(raw?: string): number {
   const n = Number(raw)
   return Number.isInteger(n) && n > 0 ? n : 1
+}
+
+// Parses a ?from=/?to= rental-window bound into a Date, or undefined for
+// anything missing or unparseable (a hand-edited or truncated URL). Callers
+// treat a missing bound as "no window", never as an epoch date.
+export function parseDateParam(raw?: string): Date | undefined {
+  if (!raw) return undefined
+  const d = new Date(raw)
+  return Number.isNaN(d.getTime()) ? undefined : d
 }

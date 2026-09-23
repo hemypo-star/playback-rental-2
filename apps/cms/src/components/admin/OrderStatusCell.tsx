@@ -3,15 +3,15 @@ import React from 'react'
 import type { DefaultCellComponentProps } from 'payload'
 
 const TONE: Record<string, { bg: string; color: string; label: string }> = {
-  pending: { bg: '#FFF2DE', color: '#9A6100', label: 'Ожидает звонка' },
-  confirmed: { bg: '#E4F6E9', color: '#0B6B32', label: 'Подтверждён' },
-  completed: { bg: '#E8EDFF', color: '#1F3FBF', label: 'Завершён' },
-  cancelled: { bg: '#FFE9E4', color: '#B03017', label: 'Отменён' },
+  pending: { bg: 'var(--color-status-warn-bg)', color: 'var(--color-status-warn)', label: 'Ожидает звонка' },
+  confirmed: { bg: 'var(--color-status-ok-bg)', color: 'var(--color-status-ok)', label: 'Подтверждён' },
+  completed: { bg: 'var(--color-status-info-bg)', color: 'var(--color-status-info)', label: 'Завершён' },
+  cancelled: { bg: 'var(--color-status-alert-bg)', color: 'var(--color-status-alert)', label: 'Отменён' },
 }
 
 export const OrderStatusCell: React.FC<DefaultCellComponentProps> = ({ cellData }) => {
   const status = String(cellData ?? '')
-  const tone = TONE[status] ?? { bg: '#F0F0F3', color: '#6E6E73', label: status }
+  const tone = TONE[status] ?? { bg: 'var(--color-muted)', color: 'var(--color-subtle)', label: status }
 
   return (
     <span

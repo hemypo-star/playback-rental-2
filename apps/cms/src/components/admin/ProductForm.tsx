@@ -8,7 +8,7 @@
 // injection trap); here that's just React state arrays instead — same
 // end behavior (add/reorder/remove), idiomatic for the framework rather
 // than a DOM-diffing exercise.
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import type { Media, Product } from '../../payload-types'
@@ -28,6 +28,7 @@ interface ImageItem {
 
 export default function ProductForm({ product, categoryName }: Props) {
   const router = useRouter()
+  const uid = useId()
 
   const [price, setPrice] = useState(product.price)
   const [quantity, setQuantity] = useState(product.quantity)
@@ -98,7 +99,7 @@ export default function ProductForm({ product, categoryName }: Props) {
 
   return (
     <>
-      {error && <p className="rounded-2xl bg-[#FFE9E4] px-4 py-3 text-[13px] text-[#B03017]">{error}</p>}
+      {error && <p className="rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>}
 
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex flex-col gap-3.5">
@@ -106,8 +107,9 @@ export default function ProductForm({ product, categoryName }: Props) {
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Синхронизировано из МойСклад — только чтение</div>
             <div className="mt-2 text-[13.5px] text-subtle">{product.description || 'Без описания'}</div>
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Цена, ₽</label>
+            <label htmlFor={`${uid}-price`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Цена, ₽</label>
             <input
+              id={`${uid}-price`}
               type="number"
               min={0}
               value={price}
@@ -115,8 +117,9 @@ export default function ProductForm({ product, categoryName }: Props) {
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Остаток</label>
+            <label htmlFor={`${uid}-quantity`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Остаток</label>
             <input
+              id={`${uid}-quantity`}
               type="number"
               min={0}
               value={quantity}
@@ -129,16 +132,18 @@ export default function ProductForm({ product, categoryName }: Props) {
               Доступен для аренды/продажи
             </label>
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Подзаголовок (не синхронизируется)</label>
+            <label htmlFor={`${uid}-subtitle`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Подзаголовок (не синхронизируется)</label>
             <input
+              id={`${uid}-subtitle`}
               value={subtitle}
               onChange={(e) => setSubtitle(e.target.value)}
               placeholder="Например: Полный кадр · 4K 120p"
               className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
             />
 
-            <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Бейдж на карточке (не синхронизируется)</label>
+            <label htmlFor={`${uid}-tag`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Бейдж на карточке (не синхронизируется)</label>
             <input
+              id={`${uid}-tag`}
               value={tag}
               onChange={(e) => setTag(e.target.value)}
               placeholder={categoryName}
@@ -159,7 +164,7 @@ export default function ProductForm({ product, categoryName }: Props) {
                   {img.url && <Image src={img.url} width={84} height={84} className="aspect-square w-full rounded-lg object-cover" alt="" />}
                   <div className="mt-1 flex items-center justify-between">
                     <button type="button" onClick={() => moveImage(i, -1)} disabled={i === 0} className="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">←</button>
-                    <button type="button" onClick={() => removeImage(i)} className="text-[11px] text-accent hover:text-[#B03017]">✕</button>
+                    <button type="button" onClick={() => removeImage(i)} className="text-[11px] text-accent hover:text-status-alert">✕</button>
                     <button type="button" onClick={() => moveImage(i, 1)} disabled={i === images.length - 1} className="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">→</button>
                   </div>
                 </div>
@@ -176,8 +181,9 @@ export default function ProductForm({ product, categoryName }: Props) {
 
             {isKit ? (
               <div className="mt-4">
-                <label className="block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Цена по отдельности (для зачёркнутой цены), ₽</label>
+                <label htmlFor={`${uid}-old-price`} className="block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Цена по отдельности (для зачёркнутой цены), ₽</label>
                 <input
+                  id={`${uid}-old-price`}
                   type="number"
                   min={0}
                   value={oldPrice}

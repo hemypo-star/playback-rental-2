@@ -274,7 +274,18 @@ function audit() {
   // Backtick included alongside '/" — a keyframe whose duration is a JS
   // constant rather than a literal (PromoCarousel's `bnBar ${ROTATE_MS}ms...`)
   // can only be written as a template literal, not a plain string.
-  const codeKf = new Map(countBy([...code.matchAll(/animation:\s*['"`]?(bn[A-Za-z]+)/g)].map((m) => m[1])))
+  // Both prefixes: the design bundle names its keyframes bnX, and the code did
+  // too until the storefront was rebuilt against the prototype, which renamed
+  // every one to pbX and moved most of them out of inline styles into CSS
+  // classes. Matching only `bn` made this section report keyframes as missing
+  // that were present under the other name — pbClip and pbMark read as 0x while
+  // sitting in prototype.css — so the counts are normalised onto the design's
+  // own names before comparison rather than reported per spelling.
+  const codeKf = new Map(
+    countBy(
+      [...code.matchAll(/animation:\s*['"`]?(bn|pb)([A-Za-z]+)/g)].map((m) => `bn${m[2]}`),
+    ),
+  )
 
   const L = []
   L.push(`Файлов просмотрено: ${files.length}\n`)

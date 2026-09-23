@@ -1,6 +1,6 @@
 # Playback Rental 2.0 — Current Execution Roadmap
 
-_Last updated: 2026-09-18. This is the operational route sheet. `docs/ROADMAP-2.0.md` remains the detailed historical/consolidated record; when its old point-in-time statuses disagree with this file, use this file for current execution state._
+_Last updated: 2026-09-21. This is the operational route sheet. `docs/ROADMAP-2.0.md` remains the detailed historical/consolidated record; when its old point-in-time statuses disagree with this file, use this file for current execution state._
 
 ## Ground rules
 
@@ -119,6 +119,62 @@ Only after the user chooses to provision the deployment host/VDS:
 8. Confirm database/media backups, notification-queue persistence and an explicit rollback procedure.
 9. Keep `/cms` as the agreed break-glass fallback; do not rename `apps/cms` in this release.
 10. Perform cutover from the legacy deployment only after the acceptance record is complete.
+
+## 2026-09-21 — storefront rewrite regression pass
+
+The `frontend-rebuild-from-html` work (`docs/PLAN-motion-visual-parity.md`)
+rebuilt the storefront as `apps/cms/src/prototype/*`. A parity audit against the
+components it displaced found that it had also dropped functionality, against
+that plan's own rule 3 ("do not replace or simplify working business logic for
+visual parity"). Nine high-severity items were verified against the live code
+and fixed; the displaced components were deleted only afterwards, since they
+were the reference implementation.
+
+| Item | State |
+|---|---|
+| Design tokens + font subsets missing from the live stylesheet | ✅ `34b1a65` |
+| Past rental dates bookable — no guard client or server | ✅ `c35adad` |
+| Client-side availability system entirely unreachable | ✅ `a907415` |
+| Date-picker modal advertised a dialog it did not implement (ACC-001 regression) | ✅ `a907415` |
+| No search input anywhere on the storefront | ✅ `b0d166b` |
+| Subcategories unreachable; "Только свободные" date-blind | ✅ `b0d166b` |
+| Checkout claimed availability without checking; errors collapsed to one sentence | ✅ `b0d166b` |
+| Touch targets below 44px on the customer path | ✅ `dcf89fa` |
+| 3253 lines of unreachable storefront code | ✅ `e939609` |
+
+Owner decisions, all resolved 2026-09-21:
+
+- ✅ **`--color-status-*` tokens** — kept. They contradict the work order's
+  "система закрыта", and `docs/audits/2026-09-17-design.md` DESIGN-003 argues
+  that rule is what produced the 35 literals in the first place. Owner: no
+  divergence in the code; the literals do not come back.
+- ✅ **`--color-subtle` at `#6B6964`** — kept (4.08:1 → 4.73:1). A delivered
+  design value changed for contrast. `design-sync spec` does not regenerate this
+  token, so the change will not be overwritten.
+- ✅ **`--color-accent` at 4.39:1** — left as `#D62410`. Owner considers the
+  muted colour differing from the accent acceptable. For the record, `#D22310`
+  would reach 4.54:1 at a 2% luminance cost if this is ever revisited.
+- ✅ **"Только свободные" → "Только в наличии"** — kept. The toggle is a
+  `quantity > 0` query with no dates in it; date awareness lives in the live
+  per-card badges instead, where it does not desynchronise the pager.
+
+Also closed 2026-09-21:
+
+- ✅ Promo autoplay now stops on hover, under `prefers-reduced-motion`, and
+  permanently after manual control, per `03-motion.md`. None of the three had
+  ever been implemented.
+- ✅ Admin label association (`htmlFor`/`id` via `useId()`) across the admin
+  forms — the wider reading of DESIGN-004.
+
+Investigated and deliberately left as they are:
+
+- **Day cells** in both calendars are 44px tall but 32–42px wide on a phone.
+  Seven columns cannot each be 44px at 360px without horizontal scroll; full
+  44×44 needs a different calendar, not a size change.
+- **`bnPop` audits 2× against the design's 3×** — not a real gap. The animation
+  lives in the shared `.pb-pop-value` class, applied at three call sites; the
+  tool counts the single `animation:` declaration, not its uses. Same class-reuse
+  blind spot already recorded for `bnIn` on 2026-08-21.
 
 ## Immediate next action
 

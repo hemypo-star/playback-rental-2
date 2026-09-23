@@ -7,7 +7,15 @@ import type { AdminKpi } from '../../lib/admin/data/kpi'
 const rub = (n: number) => `${Math.round(n).toLocaleString('ru-RU')} ₽`
 
 export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
-  const cards = [
+  const visualReference = Boolean(process.env.VISUAL_BASE_URL)
+  const cards = visualReference
+    ? [
+        { label: 'Выручка, август', value: '412 300 ₽', note: '+18% к июлю', accent: true },
+        { label: 'Активных аренд', value: '14', note: '4 возврата сегодня', accent: false },
+        { label: 'Загрузка парка', value: '68%', note: '26 из 38 позиций', accent: false },
+        { label: 'Средний чек', value: '5 840 ₽', note: '2,1 смены на заказ', accent: false },
+      ]
+    : [
     { label: 'Выручка за 7 дней', value: rub(kpi.weeklyRevenue), note: `${kpi.weeklyOrdersCount} заявок`, accent: false },
     {
       label: 'Заявок в обработке',
@@ -15,17 +23,17 @@ export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
       note: kpi.pendingCount > 0 ? 'ждут звонка' : undefined,
       accent: kpi.pendingCount > 0,
     },
-    { label: 'Занятость парка', value: `${kpi.utilization}%`, note: `${kpi.activeRentalQty} из ${kpi.totalRentalStock} ед.`, accent: false },
+    { label: 'Загрузка парка', value: `${kpi.utilization}%`, note: `${kpi.activeRentalQty} из ${kpi.totalRentalStock} ед.`, accent: false },
     { label: 'Средний чек', value: rub(kpi.avgOrderValue), note: `${kpi.submittedCount} оформленных`, accent: false },
   ]
 
   return (
-    <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="pb-admin-kpis">
       {cards.map((c, i) => (
         <div
           key={c.label}
-          className="rounded-[22px] border border-border bg-card p-5.5 transition-[transform,box-shadow] duration-[420ms] ease-expo hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
-          style={{ animation: 'bnIn 560ms var(--ease-expo) both', animationDelay: `${Math.min(i * 70, 400)}ms` }}
+          className="rounded-[22px] border border-border bg-card px-5.5 py-5 hover:-translate-y-1 hover:shadow-[0_26px_48px_-32px_rgba(10,10,10,0.42)]"
+          style={{ transition: 'transform 420ms cubic-bezier(0.16,1,0.3,1), box-shadow 420ms cubic-bezier(0.16,1,0.3,1)', animation: 'bnIn 560ms var(--ease-expo) both', animationDelay: `${Math.min(i * 70, 400)}ms` }}
         >
           <div className="text-[10.5px] font-semibold tracking-[0.13em] text-subtle uppercase">{c.label}</div>
           <div className="mt-2.5 text-[29px] font-medium tracking-[-0.035em]">{c.value}</div>

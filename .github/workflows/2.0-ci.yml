@@ -4,10 +4,13 @@ on:
   push:
     branches:
       - 2.0
+      - frontend-transfer-unified
       - 'chatgpt/**'
+      - 'claude/**'
   pull_request:
     branches:
       - 2.0
+      - frontend-transfer-unified
 
 permissions:
   contents: read
@@ -115,6 +118,73 @@ jobs:
             cat /tmp/playback-runtime.log
             exit 1
           fi
+
+      - name: Seed prototype visual data
+        env:
+          NODE_ENV: production
+          SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
+          SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
+        run: |
+          pnpm --dir apps/cms visual:seed
+          rm -rf apps/cms/.next/cache
+
+      - name: Visual regression against HTML prototype
+        env:
+          NODE_ENV: production
+          NOTIFICATIONS_ENABLED: 'false'
+          VISUAL_BASE_URL: http://127.0.0.1:3000
+          SMOKE_ADMIN_EMAIL: smoke-admin@example.invalid
+          SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
+        run: |
+          (
+            cd apps/cms
+            exec node ./node_modules/next/dist/bin/next start
+          ) > /tmp/playback-visual.log 2>&1 &
+          CMS_PID=$!
+          cleanup() {
+            kill "$CMS_PID" 2>/dev/null || true
+            wait "$CMS_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:3000/api/access > /dev/null; then
+              break
+            fi
+            if ! kill -0 "$CMS_PID" 2>/dev/null; then
+              echo 'Next runtime exited before visual regression'
+              cat /tmp/playback-visual.log
+              exit 1
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo 'Next runtime did not become ready for visual regression'
+              cat /tmp/playback-visual.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if ! pnpm --dir apps/cms visual:regression; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-visual.log
+            exit 1
+          fi
+
+      - name: Upload visual regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression
+          path: apps/cms/artifacts/visual-regression
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Clean prototype visual data
+        env:
+          NODE_ENV: production
+        run: |
+          pnpm --dir apps/cms visual:cleanup
+          rm -rf apps/cms/.next/cache
 
       - name: Seed disposable browser smoke data
         env:
@@ -233,6 +303,18 @@ jobs:
           trap cleanup EXIT
 
           if ! pnpm --dir apps/cms smoke:admin-data; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-admin-data.log
+            exit 1
+          fi
+
+          if ! pnpm --dir apps/cms smoke:analytics-ui; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-admin-data.log
+            exit 1
+          fi
+
+          if ! pnpm --dir apps/cms smoke:admin-screen; then
             echo '--- Next runtime log ---'
             cat /tmp/playback-admin-data.log
             exit 1
