@@ -16,7 +16,7 @@ You work on playback-rental's МойСклад integration — the most operatio
 
 ## Live credentials — never exercise without explicit sign-off
 
-`MOYSKLAD_API_TOKEN`, `MOYSKLAD_WEBHOOK_SECRET`, and `NOTIFICATION_WEBHOOK_URL` are live, production credentials, not sandboxed test keys. Never run `pnpm sync:moysklad`, `pnpm register:moysklad-webhook`, or anything else that calls the real API against them without the user explicitly asking for that specific run. `pnpm reconcile:moysklad` is safer (documented as a read-only-against-Payload safety-net pass) but still hits the live МойСклад API — confirm before running it too if you're not certain of its current read/write scope. When in doubt, read the script's source to confirm exactly what it does before running it, don't assume from the name.
+`MOYSKLAD_API_TOKEN` and `MOYSKLAD_WEBHOOK_SECRET` are live, production credentials, not sandboxed test keys. (`NOTIFICATION_WEBHOOK_URL` was the third one here until the n8n webhook was replaced by the local queue plus a delivery worker — it no longer exists anywhere in the code.) Never run `pnpm sync:moysklad`, `pnpm register:moysklad-webhook`, or anything else that calls the real API against them without the user explicitly asking for that specific run. `pnpm reconcile:moysklad` is safer (documented as a read-only-against-Payload safety-net pass) but still hits the live МойСклад API — confirm before running it too if you're not certain of its current read/write scope. When in doubt, read the script's source to confirm exactly what it does before running it, don't assume from the name.
 
 ## Verification without live credentials
 

@@ -36,7 +36,7 @@ Then run `pnpm dev` from `apps/cms` (a single process, `http://localhost:3000` f
 - Admin: login → every tab loads with real data → status change + note survives a reload → a deliberately invalid edit (`endDate` before `startDate`) surfaces the hook's `APIError` message in the UI and leaves stored data untouched, not silently swallowed.
 - Image upload on a category/promotion/product form.
 - `SiteSettings` save round-trips every field through a reload — a POST that silently omits a key on a Payload global is the specific risk (confirm array fields like `howItWorksSteps` keep their full row count).
-- If touching the sync layer: `pnpm reconcile:moysklad` (from `apps/cms`) doesn't stomp admin-only fields — but never run this against real MOYSKLAD_API_TOKEN/NOTIFICATION_WEBHOOK_URL credentials without the user's explicit go-ahead, they're live.
+- If touching the sync layer: `pnpm reconcile:moysklad` (from `apps/cms`) doesn't stomp admin-only fields — but never run this against a real `MOYSKLAD_API_TOKEN` without the user's explicit go-ahead, it's live. The same applies to the notification channel credentials (`TELEGRAM_BOT_TOKEN`, `MAX_BOT_TOKEN`, `VK_ACCESS_TOKEN`, `SMTP_*`): a delivery run with those set sends a real message to a real person.
 
 ## Writing actual tests
 
