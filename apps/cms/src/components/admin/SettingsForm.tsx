@@ -133,19 +133,19 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Главная — герой</div>
 
-            <div className="mt-3 flex gap-4">
-              <div>
+            <div className="mt-3 flex flex-wrap gap-4">
+              <div className="min-w-0 flex-1">
                 <div className="text-[11px] text-subtle">Десктоп</div>
                 {/* C4 (design_handoff_swiss_bento/08-instruction.md, G3):
                     fixed 80x96 admin thumbnails — same reasoning as
                     CategoryForm/PromotionForm's own previews. */}
                 {heroDesktopPreview ? <Image src={heroDesktopPreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
-                <input type="file" accept="image/*" aria-label="Баннер героя: десктопное изображение" onChange={(e) => handleHeroUpload(e, 'desktop')} className="mt-1.5 block text-[12px]" />
+                <input type="file" accept="image/*" aria-label="Баннер героя: десктопное изображение" onChange={(e) => handleHeroUpload(e, 'desktop')} className="mt-1.5 block w-full max-w-full text-[12px]" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="text-[11px] text-subtle">Мобильный</div>
                 {heroMobilePreview ? <Image src={heroMobilePreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
-                <input type="file" accept="image/*" aria-label="Баннер героя: мобильное изображение" onChange={(e) => handleHeroUpload(e, 'mobile')} className="mt-1.5 block text-[12px]" />
+                <input type="file" accept="image/*" aria-label="Баннер героя: мобильное изображение" onChange={(e) => handleHeroUpload(e, 'mobile')} className="mt-1.5 block w-full max-w-full text-[12px]" />
               </div>
             </div>
 
@@ -167,7 +167,7 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
 
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Главная — факты</div>
-            <div className="mt-3 grid grid-cols-2 gap-3.5">
+            <div className="mt-3 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
               <div>
                 <label htmlFor={`${uid}-deposit-label`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Залог — значение</label>
                 <input id={`${uid}-deposit-label`} value={depositLabel} onChange={(e) => setDepositLabel(e.target.value)} className={inputClass} />
@@ -239,7 +239,7 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
 
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Контакты</div>
-            <div className="mt-3 grid grid-cols-2 gap-3.5">
+            <div className="mt-3 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
               <div>
                 <label htmlFor={`${uid}-contact-phone`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Телефон</label>
                 <input id={`${uid}-contact-phone`} value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inputClass} />
@@ -268,8 +268,8 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
                 <label htmlFor={`${uid}-contact-hours`} className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Часы работы (текст на сайте)</label>
                 <input id={`${uid}-contact-hours`} value={contactHours} onChange={(e) => setContactHours(e.target.value)} className={inputClass} />
               </div>
-              <div className="col-span-2 grid grid-cols-2 gap-3.5 rounded-2xl border border-border bg-muted-well p-3.5">
-                <div className="col-span-2 text-[11.5px] leading-snug text-subtle">
+              <div className="grid grid-cols-1 gap-3.5 rounded-2xl border border-border bg-muted-well p-3.5 sm:col-span-2 sm:grid-cols-2">
+                <div className="text-[11.5px] leading-snug text-subtle sm:col-span-2">
                   Часы для календаря выбора дат аренды (число 0–23) — отдельно от текста выше, им нельзя пользоваться для расчётов. Держите оба поля согласованными: разошедшиеся значения — та же ошибка, которую эти два поля чинят.
                 </div>
                 <div>

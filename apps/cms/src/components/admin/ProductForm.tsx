@@ -170,7 +170,7 @@ export default function ProductForm({ product, categoryName }: Props) {
                 </div>
               ))}
             </div>
-            <input type="file" accept="image/*" onChange={handleAddImage} className="mt-3 text-[13px]" />
+            <input type="file" accept="image/*" onChange={handleAddImage} className="mt-3 w-full max-w-full text-[13px]" />
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-6">

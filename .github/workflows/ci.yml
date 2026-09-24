@@ -43,7 +43,17 @@ jobs:
     env:
       DATABASE_URI: postgresql://postgres:postgres@127.0.0.1:5432/playback_ci
       PAYLOAD_SECRET: ci-only-placeholder-secret-not-used-in-production
-      WEB_URL: http://localhost:3000
+      # Must match the origin the smokes actually drive the app on
+      # (SMOKE_BASE_URL/VISUAL_BASE_URL below, 127.0.0.1). WEB_URL is what
+      # payload.config.ts feeds to cors/csrf and next.config.mjs to
+      # serverActions.allowedOrigins, and Payload's cookie-JWT strategy
+      # only checks Origin when the request carries one. Page navigations
+      # do not, so admin pages rendered fine on the mismatched value while
+      # every browser-side fetch that needs the session was rejected as
+      # "No User" — which is how admin-screen-smoke's logout failed while
+      # everything around it passed. Same mechanism as the Server Action
+      # auth bug in docs/DEV-LOG.md, 2026-08-20.
+      WEB_URL: http://127.0.0.1:3000
       NODE_ENV: test
 
     steps:
@@ -198,7 +208,7 @@ jobs:
           SMOKE_ADMIN_PASSWORD: ci-smoke-only-password-2026
         run: pnpm --dir apps/cms smoke:seed
 
-      - name: Browser, security, notifications, lifecycle and promo smoke
+      - name: Browser, analytics, security, notifications, lifecycle and promo smoke
         env:
           NODE_ENV: production
           NOTIFICATIONS_ENABLED: 'true'
@@ -230,6 +240,17 @@ jobs:
           trap cleanup EXIT
 
           if ! pnpm --dir apps/cms smoke:browser; then
+            echo '--- Next runtime log ---'
+            cat /tmp/playback-browser.log
+            exit 1
+          fi
+
+          # Runs here, not with the other admin smokes, because it reads the
+          # order smoke:browser just created (one pending 1500-rouble checkout
+          # with a 10% promo, asserted as 1 350 ₽ net). smoke:order-lifecycle
+          # below cancels the newest order for that same test customer, which
+          # is that order — so this has to assert before it, not after.
+          if ! pnpm --dir apps/cms smoke:analytics-ui; then
             echo '--- Next runtime log ---'
             cat /tmp/playback-browser.log
             exit 1
@@ -288,7 +309,7 @@ jobs:
             exit 1
           fi
 
-      - name: Admin data and analytics smoke
+      - name: Admin data and screen smoke
         env:
           NODE_ENV: production
           NOTIFICATIONS_ENABLED: 'false'
@@ -313,11 +334,6 @@ jobs:
             exit 1
           fi
 
-          if ! pnpm --dir apps/cms smoke:analytics-ui; then
-            echo '--- Next runtime log ---'
-            cat /tmp/playback-admin-data.log
-            exit 1
-          fi
 
           if ! pnpm --dir apps/cms smoke:admin-screen; then
             echo '--- Next runtime log ---'

@@ -156,7 +156,7 @@ export default function CategoryForm({ category, parentOptions, currentParentId 
                   server-persisted /api/media/file/... path, never a
                   client-only blob: URL next/image couldn't optimize. */}
               {imagePreview ? <Image src={imagePreview} width={80} height={80} className="rounded-xl bg-muted object-cover" alt="" /> : null}
-              <input type="file" accept="image/*" onChange={handleImageChange} className="text-[13px]" />
+              <input type="file" accept="image/*" onChange={handleImageChange} className="w-full max-w-full text-[13px]" />
             </div>
           </div>
         </div>

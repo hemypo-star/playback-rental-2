@@ -344,6 +344,18 @@ async function verifyStateDrivenMotion(cdp) {
   await setViewport(cdp, viewports[0], 'no-preference')
   await navigate(cdp, new URL('/checkout', actualBase).toString())
   await waitFor(cdp, "Boolean(document.querySelector('.pb-cart-line .pb-qty'))&&Boolean(document.querySelector('.pb-cart-count'))", 'motion state checkout')
+  // Existing in the DOM is not the same as showing the cart. The badge is
+  // server-rendered as 0 — the server has no localStorage to read the cart
+  // from — and only reaches its real count once the client store hydrates.
+  // Sampling `before` in that window records badge 0, and the after/before
+  // comparison below then fails with a remount mismatch that is purely a
+  // timing artifact. Seen on a cold server, where first-request compilation
+  // pushes hydration past the existence check.
+  await waitFor(
+    cdp,
+    "Number(document.querySelector('.pb-cart-count')?.textContent) > 0",
+    'motion state cart hydration',
+  )
 
   const before = await evaluate(
     cdp,

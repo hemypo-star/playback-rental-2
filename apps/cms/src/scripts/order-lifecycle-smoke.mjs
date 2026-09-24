@@ -40,6 +40,12 @@ async function main() {
   const authHeaders = { Authorization: `JWT ${loginBody.token}` }
   console.log('PASS lifecycle admin login')
 
+  // The newest order for this customer is the one browser-smoke just created
+  // by driving a real checkout. Cancelling it is the point of this script —
+  // but it is also the fixture analytics-ui-smoke asserts its 1 350 ₽ net
+  // revenue against, and a cancelled order is excluded from that report. CI
+  // therefore runs analytics-ui before this; if you reorder the smokes, or
+  // make this one cancel something else, check that script too.
   const orderSearch = await fetch(
     url(`/api/orders?where[customerEmail][equals]=${encodeURIComponent(customerEmail)}&sort=-createdAt&limit=1&depth=0`),
     { headers: authHeaders },

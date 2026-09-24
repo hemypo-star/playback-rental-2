@@ -70,6 +70,13 @@ async function main() {
   // Browser smoke has just created one pending 1500-ruble order with a 10%
   // promo snapshot, so the report must use NET revenue (1350), not the gross
   // order-item line total (1500).
+  //
+  // That order is a shared fixture with a limited life: order-lifecycle-smoke
+  // takes the newest order for the same test customer and cancels it, and a
+  // cancelled order contributes nothing here. So this script only holds while
+  // it runs between those two, which is why CI keeps it in the browser-smoke
+  // step rather than with the other admin smokes. Run out of order it reports
+  // "0 ₽ / Пока нет данных" and reads as a revenue bug that isn't one.
   let text = await fetchAnalytics('/admin/analytics', auth)
   if (!text.includes('за всё время · 1 350 ₽')) {
     throw new Error(`all-time analytics did not show expected net 1 350 ₽ total: ${text.slice(0, 1500)}`)

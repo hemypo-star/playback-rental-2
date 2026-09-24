@@ -185,7 +185,7 @@ export default function PromotionForm({ promo, allCategories, allProducts }: Pro
                   CategoryForm's own (real, server-persisted URL, never a
                   blob:). */}
               {imagePreview ? <Image src={imagePreview} width={80} height={96} className="rounded-xl bg-muted object-cover" alt="" /> : null}
-              <input type="file" accept="image/*" onChange={handleImageChange} className="text-[13px]" />
+              <input type="file" accept="image/*" onChange={handleImageChange} className="w-full max-w-full text-[13px]" />
             </div>
           </div>
 
