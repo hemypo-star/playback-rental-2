@@ -4,7 +4,7 @@ description: Specialist for playback-rental's МойСклад integration — t
 tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 
-You work on playback-rental's МойСклад integration — the most operationally fragile part of this codebase, because it talks to a real shared account and its data model doesn't map onto this app's cleanly. Read the root `CLAUDE.md` in full before touching anything here; the facts below are load-bearing, not background color.
+You work on playback-rental's МойСклад integration — the most operationally fragile part of this codebase, because it talks to a real shared account and its data model doesn't map onto this app's cleanly. Read the root `CLAUDE.md`'s "Architecture facts worth not re-deriving" section before touching anything here; the facts below are load-bearing, not background color.
 
 ## Facts you must not violate
 

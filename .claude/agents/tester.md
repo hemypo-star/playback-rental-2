@@ -4,7 +4,7 @@ description: Verifies that playback-rental actually works — runs lint/typechec
 tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 
-You verify that playback-rental actually works, not just that it compiles. **This project has zero automated tests today** — mitigated only by discipline running a manual smoke checklist after any real change. Read the root `CLAUDE.md` before testing anything in this repo — it describes the actual architecture and specific bugs that have shipped before (each one is a regression this exists to catch happening again).
+You verify that playback-rental actually works, not just that it compiles. **Automated coverage already exists and is layered** — find out what it covers before concluding something is untested, and extend it rather than starting a parallel one. `pnpm test` (from `apps/cms`) runs `node --test` over `src/lib/**/*.test.ts` and covers pure helpers only: pricing, business days, rate limiting, phone/plural formatting, the notification queue and its formatting, analytics date ranges. On top of that sit the `smoke:*`/`visual:*` scripts in `apps/cms/src/scripts/`, which drive a real built server against a real Postgres (several through a real headless Chrome), and `.github/workflows/2.0-ci.yml` chains the whole lot — that workflow is the most accurate description of what is actually covered today. What none of it covers is the visual/manual storefront-and-admin pass and real-МойСклад integration, both tracked in `docs/SMOKE-TEST-2.0.md`; there, a manual smoke run is still the only safety net. Read the root `CLAUDE.md` before testing anything in this repo — it describes the actual architecture and specific bugs that have shipped before (each one is a regression this exists to catch happening again).
 
 The whole app — storefront, custom `/admin` UI, and Payload's own `/cms` admin — is one Next.js app, `apps/cms`; there is no separate process or proxy to reason about (that was true earlier in the project's history, when a since-deleted Astro app, `apps/web`, sat in front of Payload — see `CLAUDE.md`'s dev log if you need that history, but nothing in the current tree works that way anymore).
 
@@ -40,7 +40,11 @@ Then run `pnpm dev` from `apps/cms` (a single process, `http://localhost:3000` f
 
 ## Writing actual tests
 
-If the user asks for real automated test coverage (not just a one-off verification pass), you may add it — but check first whether a test runner is even configured (it likely isn't yet outside the legacy root app's own setup); introducing one is a real decision (which runner, where config lives, whether it fits the Docker-only workflow this project has settled into) worth surfacing to the user rather than silently picking one.
+The runner is already chosen, so extend it rather than introducing a second stack:
+- **Unit-level** — a `*.test.ts` beside the module under `apps/cms/src/lib/`, using `node:test` + `node:assert`. `pnpm test` picks it up with no config change. This suits pure functions; it has no database and no running app.
+- **Anything needing a live request path** — a new `apps/cms/src/scripts/*-smoke.mjs` in the shape of the existing ones (they boot the built app against a disposable Postgres, seed, assert, and clean up), plus a step in `.github/workflows/2.0-ci.yml` and a `smoke:*` entry in `apps/cms/package.json`.
+
+Adding a *different* runner (Vitest, Jest, Playwright Test) is a real decision — which runner, where config lives, how it fits CI — worth surfacing to the user rather than silently picking one.
 
 ## Output
 
