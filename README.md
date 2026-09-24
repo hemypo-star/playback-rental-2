@@ -1,13 +1,17 @@
 # Playback Rental — 2.0
 
 Camera and video equipment rental storefront + admin for Playback Rental (Kemerovo, Russia).
-This branch (`2.0`) is a full rewrite of the production app: a single **Next.js** app
+This is a full rewrite of the production app: a single **Next.js** app
 (storefront + admin, built on **Payload CMS 3**), with product/stock data driven by
-**МойСклад** (the business's existing inventory system).
+**МойСклад** (the business's existing inventory system). All of it lives under
+`apps/cms`.
 
-> The `main`/`prod` branch (and the `src/`, `server/`, `supabase/` directories still
-> present at this repo's root) is the **current live app**. It stays untouched until
-> this rewrite is cut over. Everything for the rewrite lives under `apps/cms`.
+> **Branches.** `dev` is where work lands. `prod` is deploy-only and regenerated from
+> `dev` by `scripts/make-release.sh` — never hand-edited. `main` holds the **current
+> live app**, the legacy Vite + Supabase SPA, and is not to be touched: every push to
+> it triggers `.github/workflows/deploy.yml`, which deploys that app to the live VDS.
+> The legacy sources were deleted from `dev` on 2026-09-24, so `dev` must not be
+> merged into `main`.
 
 ## Monorepo layout
 

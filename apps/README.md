@@ -40,6 +40,7 @@ npx payload generate:importmap
 - `docs/ROADMAP-CURRENT.md` — current execution state;
 - `docs/SMOKE-TEST-2.0.md` — the acceptance checklist.
 
-The root `src/`, `server/` and `supabase/` directories are the **legacy** Vite +
-Supabase app that `main`/`prod` still deploys. They are out of scope for this
-rewrite and stay untouched until cutover.
+The legacy Vite + Supabase app that is still live used to sit in this repository's
+root (`src/`, `server/`, `supabase/`). It was deleted from `dev` on 2026-09-24 and
+now exists only on `main`, which is the branch `.github/workflows/deploy.yml`
+deploys it from. Nothing in this tree references it.

@@ -20,10 +20,17 @@ file, `docs/DEV-LOG.md` (see the pointer at the bottom).
 ## What this is
 
 A full rewrite of the Playback Rental storefront + admin (camera/video equipment rental,
-Kemerovo). Old app: React/Vite SPA + self-hosted Supabase, on `main`/`prod`, still live.
-New app: a single Next.js app, `apps/cms` — storefront, custom `/admin` UI, and Payload
-CMS's own `/cms` admin all in one process — on this branch (`2.0`), cut over once verified
-end-to-end.
+Kemerovo). The old app — a React/Vite SPA on self-hosted Supabase — is still the live
+site; it is deployed from `main` and its source lives only there, deleted from `dev` on
+2026-09-24. This tree is the new app: a single Next.js app, `apps/cms` — storefront,
+custom `/admin` UI, and Payload CMS's own `/cms` admin all in one process — to be cut
+over once verified end to end.
+
+**Hazard worth knowing before you touch branches**: `.github/workflows/deploy.yml` fires
+on every push to `main`, SSHes to the live VDS and runs `npm run build` (the legacy
+`vite build`) plus `pm2 reload`. Since `dev` no longer contains that app, merging `dev`
+into `main` would break the live deploy. Production for the rewrite goes through `prod`
+and `compose.yaml`, never through that workflow.
 
 `apps/cms` didn't start this way: Phase 2 (see `docs/DEV-LOG.md`) built the storefront as
 a separate Astro app, `apps/web`, talking to Payload over REST — Payload's Local API

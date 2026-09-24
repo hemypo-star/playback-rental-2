@@ -67,14 +67,6 @@ drop scripts compose.dev.yaml compose.preview.yaml render.yaml .env.preview apps
 drop docs design_handoff_swiss_bento tools .claude .github CLAUDE.md
 drop "Playback Rental - прокат техники.html"
 
-# The legacy root Vite/Supabase app — a different application, the one
-# main/prod deploys. Already excluded from the image by .dockerignore; this
-# removes it from the branch too.
-drop src server supabase public dist index.html components.json eslint.config.js \
-     postcss.config.js tailwind.config.ts tsconfig.json tsconfig.app.json \
-     tsconfig.node.json vite.config.ts vercel.json bun.lockb package-lock.json \
-     ecosystem.config.cjs
-
 # ---------------------------------------------------------- transformations
 # 1. styles/prototype.css imports a token sheet that lived in docs/ — the only
 #    runtime dependency the app had on that directory. It moves into the
@@ -91,22 +83,7 @@ perl -0pi -e 's{^# prototype\.css imports docs/.*?^COPY docs docs\n}{}ms' apps/c
 ! grep -q '^COPY docs docs' apps/cms/Dockerfile \
   || { echo "make-release: Dockerfile still copies docs/" >&2; exit 1; }
 
-# 3. The workspace root carried the legacy app's manifest — 50-odd
-#    dependencies this application never loads. It becomes a bare workspace
-#    root, and the lockfile is regenerated to match.
-node -e '
-  const fs = require("fs");
-  const old = JSON.parse(fs.readFileSync("package.json", "utf8"));
-  fs.writeFileSync("package.json", JSON.stringify({
-    name: "playback-rental",
-    private: true,
-    version: old.version ?? "0.0.0",
-    type: "module",
-    packageManager: old.packageManager,
-  }, null, 2) + "\n");
-'
-
-# 4. Drop the package scripts whose files this branch no longer has.
+# 3. Drop the package scripts whose files this branch no longer has.
 node -e '
   const fs = require("fs");
   const p = "apps/cms/package.json";
@@ -116,10 +93,7 @@ node -e '
   fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + "\n");
 '
 
-# 5. .dockerignore excluded the legacy app path by path; those paths are gone.
-perl -0pi -e 's{^# Legacy root Vite app.*?\n(?:^/\S+\n)+\n}{}ms' .dockerignore
-
-# 6. The development README points at preview scripts, blueprints and docs
+# 4. The development README points at preview scripts, blueprints and docs
 #    that this branch does not carry. Replace it with what a deploy needs.
 cat > README.md <<'README'
 # Playback Rental 2.0 — release
