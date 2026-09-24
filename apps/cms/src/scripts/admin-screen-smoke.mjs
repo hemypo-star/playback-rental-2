@@ -4,6 +4,9 @@ import os from 'node:os'
 import path from 'node:path'
 
 const baseUrl = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3000'
+// The customer browser-smoke fills into checkout; this script finds that
+// order by name instead of by id.
+const smokeCustomerName = 'Смоук Тест'
 const adminEmail = process.env.SMOKE_ADMIN_EMAIL
 const adminPassword = process.env.SMOKE_ADMIN_PASSWORD
 const debugBase = 'http://127.0.0.1:9223'
@@ -292,14 +295,27 @@ async function main() {
     }
     console.log(`PASS product admin detail ${productHref}`)
 
-    page = await navigate('/admin/orders/1')
-    if (page.pathname !== '/admin/orders/1' || page.body.length < 40) {
-      throw new Error(`/admin/orders/1: order detail did not render; ended at ${page.pathname}`)
+    // Look the order up rather than assuming an id. It used to navigate to
+    // /admin/orders/1, which held only when the checkout order happened to be
+    // the first row in the database. In CI it is not: visual:seed creates five
+    // orders before this, and the "Clean prototype visual data" step deletes
+    // them again, so id 1 does not exist by the time this runs and the page
+    // redirects to the list. Same lookup-by-name approach as the product
+    // detail check above.
+    page = await navigate(`/admin/orders?q=${encodeURIComponent(smokeCustomerName)}`)
+    const orderHref = await evaluate(
+      session,
+      `Array.from(document.querySelectorAll('a[href^="/admin/orders/"]')).find((a) => a.textContent?.includes(${JSON.stringify(smokeCustomerName)}))?.getAttribute('href') || ''`,
+    )
+    if (!orderHref) throw new Error(`/admin/orders has no row for ${smokeCustomerName}`)
+    page = await navigate(orderHref)
+    if (page.pathname !== orderHref || page.body.length < 40) {
+      throw new Error(`${orderHref}: order detail did not render; ended at ${page.pathname}`)
     }
     if (page.scrollWidth > page.clientWidth + 1) {
-      throw new Error(`/admin/orders/1: horizontal page overflow at 375px (${page.scrollWidth}px > ${page.clientWidth}px)`)
+      throw new Error(`${orderHref}: horizontal page overflow at 375px (${page.scrollWidth}px > ${page.clientWidth}px)`)
     }
-    console.log('PASS cancelled smoke order remains readable in admin detail')
+    console.log(`PASS cancelled smoke order remains readable in admin detail ${orderHref}`)
 
     const logout = await evaluate(
       session,
