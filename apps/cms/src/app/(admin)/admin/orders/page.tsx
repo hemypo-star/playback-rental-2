@@ -7,7 +7,7 @@ import AdminMobileCard from '../../../../components/admin/AdminMobileCard'
 import { getAdminKpi } from '../../../../lib/admin/data/kpi'
 import { getAdminOrders } from '../../../../lib/admin/data/orders'
 import { rub, formatDate, ORDER_STATUS_TONE, type OrderStatus } from '../../../../lib/admin/format'
-import { pluralizeRu } from '../../../../lib/dateRange'
+import { pluralRu } from '../../../../lib/text/plural'
 
 // Ported from apps/web/src/pages/admin/orders.astro (docs/PLAN-next-
 // migration.md Stage 3.5, page group 3 — "самая сложная", most complex).
@@ -70,9 +70,9 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
         title="Очередь заявок"
         // totalDocs, not docs.length: with paging the latter is just this
         // page's row count, so page 2 of 3 would claim "50 заказов" as if
-        // that were the whole result. pluralizeRu because 1/2/5 take three
+        // that were the whole result. pluralRu because 1/2/5 take three
         // different forms — the same helper the catalog and homepage use.
-        subtitle={Boolean(process.env.VISUAL_BASE_URL) ? '7 новых заявок · 4 выдачи сегодня' : `${result.totalDocs} ${pluralizeRu(result.totalDocs, 'заказ', 'заказа', 'заказов')}${hasFilters ? ' по фильтру' : ''}`}
+        subtitle={Boolean(process.env.VISUAL_BASE_URL) ? '7 новых заявок · 4 выдачи сегодня' : `${result.totalDocs} ${pluralRu(result.totalDocs, 'заказ', 'заказа', 'заказов')}${hasFilters ? ' по фильтру' : ''}`}
         actionLabel="Создать заказ"
         actionHref="/admin/orders/new"
       />

@@ -12,7 +12,7 @@ import type { SiteSetting } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
 import { saveSiteSettings } from '../../app/(admin)/admin/settings/actions'
-import { DEFAULT_BUSINESS_HOURS } from '../../lib/dateRange'
+import { DEFAULT_BUSINESS_HOURS } from '../../lib/businessHours'
 
 interface Step {
   title: string

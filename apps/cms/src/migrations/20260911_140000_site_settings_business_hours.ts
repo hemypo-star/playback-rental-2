@@ -2,11 +2,12 @@ import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
 
 // B4 (design_handoff_swiss_bento/08-instruction.md, audit N5) — adds the two
 // numeric fields (`businessHoursOpen`/`businessHoursClose`,
-// apps/cms/src/globals/SiteSettings.ts) that RentalDatePicker's time grid and
+// apps/cms/src/globals/SiteSettings.ts) that the date picker's time grid and
 // its "Рабочие часы …" caption both now read from a single source, instead
-// of the old `BUSINESS_HOURS = { open: 9, close: 21 }` constant
-// (lib/dateRange.ts) disagreeing with a hardcoded "10:00 — 21:00" string in
-// RentalDatePicker.tsx's JSX.
+// of the old `BUSINESS_HOURS = { open: 9, close: 21 }` constant (then in
+// lib/dateRange.ts, deleted 2026-09-24) disagreeing with a hardcoded
+// "10:00 — 21:00" string in the picker's own JSX. Both values are threaded
+// as props today; the picker is prototype/PrototypeDatePicker.tsx.
 //
 // `numeric`, matching every other Payload `type: 'number'` field on this
 // table's family (e.g. products.price/quantity — see

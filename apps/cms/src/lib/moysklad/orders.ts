@@ -30,17 +30,6 @@ async function msPost<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>
 }
 
-async function msDelete(path: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${getToken()}`, 'Accept-Encoding': 'gzip' },
-  })
-  if (!res.ok && res.status !== 404) {
-    const errBody = await res.text().catch(() => '')
-    throw new Error(`МойСклад API error ${res.status} on DELETE ${path}: ${errBody}`)
-  }
-}
-
 // МойСклад returns every created/fetched entity with at least these two
 // fields — enough for what this module does with the response (link it
 // into other entities' `assortment`/`agent` refs by href, store the id).
@@ -64,7 +53,7 @@ export interface OrderItemForPush {
  * (the one field we can reasonably expect to be a stable, unique-ish key
  * for a given customer across repeat orders).
  */
-export async function findOrCreateCounterparty(
+async function findOrCreateCounterparty(
   name: string,
   email: string,
   phone: string,
@@ -144,12 +133,4 @@ export async function pushOrderToMoySklad(params: {
   })
 
   return { id: created.id, href: created.meta.href }
-}
-
-export async function deleteCustomerOrder(id: string): Promise<void> {
-  await msDelete(`/entity/customerorder/${id}`)
-}
-
-export async function deleteCounterparty(id: string): Promise<void> {
-  await msDelete(`/entity/counterparty/${id}`)
 }

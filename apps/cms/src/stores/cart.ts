@@ -78,7 +78,3 @@ function lineTotal(item: CartItem, dates: { startDate: Date | null; endDate: Dat
 export const $cartTotal = computed([$cart, $selectedDates], (items, dates) =>
   Math.round(items.reduce((sum, item) => sum + lineTotal(item, dates), 0)),
 )
-
-export function getLineTotal(item: CartItem): number {
-  return lineTotal(item, $selectedDates.get())
-}

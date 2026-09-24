@@ -95,3 +95,4 @@ security rules and VDS acceptance checks.
 - `docs/ROADMAP-CURRENT.md` — current execution state and remaining owner/deployment gates.
 - `docs/SMOKE-TEST-2.0.md` — manual acceptance checklist.
 - `docs/NOTIFICATIONS.md` — direct notification worker configuration.
+- `docs/ERROR-MONITORING.md` — optional GlitchTip/Sentry-compatible error reporting.

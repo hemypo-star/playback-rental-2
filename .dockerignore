@@ -9,7 +9,6 @@
 # image; a copied-in host node_modules can carry macOS-built native addons
 # (sharp, @swc/core) that silently break in the Linux container.
 **/node_modules
-**/.astro
 **/.next
 **/dist
 **/*.tsbuildinfo
