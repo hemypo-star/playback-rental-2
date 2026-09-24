@@ -1,7 +1,7 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
 
 // A2 (design_handoff_swiss_bento/08-instruction.md — rate-limiting half
-// only, see CLAUDE.md's A2 dev log entry for the booking-lifetime half that
+// only, see docs/DEV-LOG.md's A2 entry for the booking-lifetime half that
 // was explicitly ruled out). Backs lib/security/rateLimit.ts's sliding-
 // window counter for checkout (by IP and by phone), the contact form (by
 // IP), and admin login (by IP).

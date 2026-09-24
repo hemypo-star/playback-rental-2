@@ -21,9 +21,9 @@ export const Promotions: CollectionConfig = {
     },
     {
       // Powers /promotions/:slug (the standalone landing page — ported from
-      // the prod branch, absent on the stale main branch; see CLAUDE.md dev
-      // log). Auto-generated from title on create if left blank, same as
-      // prod's promotionService.ts.
+      // the legacy Vite app, which had it; see docs/DEV-LOG.md, 2026-08-14).
+      // Auto-generated from title on create if left blank, same as the legacy
+      // promotionService.ts did.
       name: 'slug',
       type: 'text',
       unique: true,

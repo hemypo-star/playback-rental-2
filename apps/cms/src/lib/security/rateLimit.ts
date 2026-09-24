@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto'
 // брони" filter) was explicitly ruled out by the owner: every order is
 // processed manually as soon as the notification webhook fires, so a stale
 // unconfirmed order sitting around isn't a real scenario here. Don't extend
-// this module toward that — see CLAUDE.md's A2 dev log entry.
+// this module toward that — see docs/DEV-LOG.md's A2 entry.
 //
 // Storage: a bare Postgres table (`rate_limit_hits`, migration
 // 20260910_120000_rate_limit_hits, index added in

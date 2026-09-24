@@ -12,7 +12,7 @@ import type { Product, Category } from '../../../../payload-types'
 // Ported from apps/web/src/pages/promotions/[slug].astro (docs/PLAN-next-
 // migration.md Stage 2). The Promotions collection, its admin CRUD, and
 // this route's content model already existed before this migration (see
-// CLAUDE.md's 2026-08-14 dev-log entry, "Страница акции /promotions/:slug")
+// docs/DEV-LOG.md's 2026-08-14 entry, "Страница акции /promotions/:slug")
 // — this is purely the storefront route's port to apps/cms, no new
 // functionality. Astro.redirect('/404') -> next/navigation's notFound(),
 // which renders the nearest not-found boundary directly rather than

@@ -1,6 +1,6 @@
 // Single source of truth for "what is the real client IP" (A2,
 // design_handoff_swiss_bento/08-instruction.md — the rate-limiting half;
-// see CLAUDE.md's A2 dev log entry for the booking-lifetime half that was
+// see docs/DEV-LOG.md's A2 entry for the booking-lifetime half that was
 // explicitly ruled out). Every rate-limited write path (checkout Server
 // Action, the contact-notification endpoint, the Users collection's login/
 // forgotPassword/unlock beforeOperation hook) must resolve the caller's IP

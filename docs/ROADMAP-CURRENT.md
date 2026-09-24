@@ -13,7 +13,7 @@ _Last updated: 2026-09-21. This is the operational route sheet. `docs/ROADMAP-2.
 
 The design/UX work was a separate initiative from `docs/ROADMAP-2.0.md`, which is why it was easy to miss in the main roadmap. It is explicitly tracked here.
 
-Source of truth: `design_handoff_swiss_bento/08-instruction.md`, backed by `docs/design-reference/` and the dev log in `CLAUDE.md`.
+Source of truth: `design_handoff_swiss_bento/08-instruction.md`, backed by `docs/design-reference/` and the dev log in `docs/DEV-LOG.md`.
 
 | Block | Scope | Status |
 |---|---|---|
@@ -24,7 +24,7 @@ Source of truth: `design_handoff_swiss_bento/08-instruction.md`, backed by `docs
 | E | Screen-by-screen visual reconciliation, motion tokens, mobile admin, legal layout, carousel/product-card variants | ✅ Done |
 | Follow-up | Navbar horizontal overflow at 360–390px (PR #24) | ✅ Done |
 
-A–E were recovered into `2.0` in catch-up commit `eef63c1` after the original PR history was unavailable in the recovered repository. The detailed per-block notes remain in `CLAUDE.md`.
+A–E were recovered into `2.0` in catch-up commit `eef63c1` after the original PR history was unavailable in the recovered repository. The detailed per-block notes remain in `docs/DEV-LOG.md`.
 
 ## Feature backlog — current state
 

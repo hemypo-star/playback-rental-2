@@ -35,7 +35,8 @@ npx payload generate:importmap
 
 ## Where the rest is written down
 
-- root `CLAUDE.md` — architecture facts, gotchas, and the dev log;
+- root `CLAUDE.md` — architecture facts and gotchas;
+- `docs/DEV-LOG.md` — the dated dev log;
 - `docs/ROADMAP-CURRENT.md` — current execution state;
 - `docs/SMOKE-TEST-2.0.md` — the acceptance checklist.
 
