@@ -99,8 +99,10 @@ bugs it surfaced, but nothing in the current tree depends on `apps/web` or
 
 Ported from a delivered design (`Playback Rental - прокат техники.html`, a bundled
 Claude Artifact — not plain HTML; see "extracting the design" below if it needs
-re-reading). Tokens live in `apps/cms/src/styles/global.css` as Tailwind v4 `@theme`
-values:
+re-reading). Tokens live in `apps/cms/src/styles/prototype.css` as Tailwind v4 `@theme`
+values (that file also `@import`s `docs/design-reference/spec/tokens.css` — the one
+runtime dependency the app has on `docs/`, which `scripts/make-release.sh` relocates
+into the package when it generates `prod`):
 
 | Token | Value | Use |
 |---|---|---|
@@ -109,11 +111,21 @@ values:
 | `--color-accent` / `--color-primary-hover` | `#D62410` | the one accent color — links, hover states, savings badges |
 | `--color-card` | `#FFFFFF` | card surfaces |
 | `--color-muted` / `--color-muted-well` | `#F4F3F1` / `#F9F8F7` | wells, inputs |
-| `--color-subtle` | `#75736E` | secondary text |
+| `--color-subtle` | `#6B6964` | secondary text — raised from the delivered `#75736E` for contrast (4.08:1 → 4.73:1) |
 | `--font-sans` | Golos Text | self-hosted variable font, `apps/cms/public/fonts/` |
 
-Radii: cards 22–26px, pills fully rounded. Motion: named keyframes (`bnIn`, `bnFade`,
-`bnPop`, `bnRule`, `bnClip`, `bnMark`, `bnBlink`, `bnRise`, `bnBar`) in the same file.
+Radii: cards 22–26px, pills fully rounded.
+
+**Two keyframe sets, both live, both in `prototype.css`** — don't "deduplicate" them
+without checking which surface uses which. `pb*` (`pbIn`, `pbFade`, `pbPop`, `pbRule`,
+`pbClip`, `pbMark`, `pbBlink`, `pbFloat`, `pbRise`, `pbBar`) belongs to the prototype
+storefront under `src/prototype/`. `bn*` is the same list under the original names and
+is still referenced by the custom `/admin` pages, `EntryAnimationController`, and the
+`components/` that the prototype rewrite did not displace (`ProductCard`,
+`PromoCarousel`, `AdminKpiCards` — the promotions detail page still renders the first
+two). `tools/design-sync.mjs` normalises both spellings onto the design's own names when
+auditing.
+
 The admin panel's accent ramp and font are remapped to match in
 `apps/cms/src/app/(payload)/custom.css`.
 
