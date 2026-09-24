@@ -3,7 +3,7 @@
 // C3 (design_handoff_swiss_bento/08-instruction.md, audit G2) — the entry
 // animation applied to page/section blocks (`bnIn`, plus `bnClip`/`bnRule`
 // used alongside it in the same hero/product-image compositions — see
-// 03-motion.md rule 1 and the CSS comment in styles/global.css this
+// 03-motion.md rule 1 and the CSS comment in styles/prototype.css this
 // component's attribute pairs with) is designed to play once, on a genuine
 // first view of a page. C1 switched the storefront to `next/link`, which
 // made every navigation client-side — including the browser's own
@@ -20,7 +20,7 @@
 // "have I rendered this route before" bookkeeping needed on top of it.
 //
 // On popstate this sets a `data-nav-back` attribute on <html>. styles/
-// global.css redirects the specific `bnIn`/`bnClip`/`bnRule` entry
+// prototype.css redirects the specific `bnIn`/`bnClip`/`bnRule` entry
 // keyframes to `none` while that attribute is present (matched off the
 // literal keyframe name already sitting in each element's own inline
 // `style` attribute — see that file's comment for why this reads as
@@ -99,7 +99,7 @@
 // Net effect: a Back/Forward return sets the flag and leaves it set for as
 // long as that destination stays the current page — a modal or dropdown
 // opened well after landing there is unaffected regardless, because
-// styles/global.css's own selector structurally exempts click-triggered
+// styles/prototype.css's own selector structurally exempts click-triggered
 // entrances (`data-manual-entry`) rather than depending on this flag
 // having cleared in time; see that file's comment. The flag then clears
 // the moment a genuinely new navigation's content commits, so that page's
@@ -140,9 +140,40 @@ export default function EntryAnimationController() {
   // actually removes the attribute. A ref, not state: flipping it must
   // never itself cause a render or compete with React's own scheduling.
   const clearOnNextCommit = useRef(false)
+  // True from the moment a Back/Forward `popstate` fires until that
+  // traversal's own render commits.
+  //
+  // The header above says Next calls pushState/replaceState "for every
+  // client-side navigation that isn't a Back/Forward traversal, and never
+  // for a Back/Forward one." That is not true of Next 16, and this ref is
+  // what stops the difference from breaking the feature. Observed in a real
+  // headless Chrome against a production build, instrumenting
+  // history/setAttribute/removeAttribute on <html>, pressing Back from
+  // /catalog to /:
+  //
+  //   pushState -> /catalog     (the forward nav; arms the ref)
+  //   REMOVE                    (its commit consumes the arm — correct)
+  //   SET true                  (Back: the popstate handler sets the flag)
+  //   replaceState -> /         (Next's own router, mid-traversal)
+  //   REMOVE                    (that commit consumes the new arm and
+  //                              strips the flag it was just given)
+  //
+  // So the traversal re-arms the very mechanism meant to survive it, and
+  // the entry animation replays on Back — exactly the bug this file exists
+  // to prevent. Suppressing arming while a traversal is in flight is
+  // ordering-independent in the same way the wrap itself is: it keys off
+  // popstate, which only a traversal can fire, rather than off which
+  // listener or effect Next happens to run first. If the commit effect ever
+  // runs *before* popstate (the ordering the header documents for an older
+  // Next), this ref is simply false at that point and nothing changes.
+  const traversing = useRef(false)
 
   useEffect(() => {
     const handlePopState = () => {
+      traversing.current = true
+      // A traversal is never the "new navigation" the arm is meant to
+      // represent, so anything armed before it is stale by definition.
+      clearOnNextCommit.current = false
       document.documentElement.setAttribute(NAV_BACK_ATTR, 'true')
     }
 
@@ -152,11 +183,11 @@ export default function EntryAnimationController() {
     const originalPushState = history.pushState.bind(history)
     const originalReplaceState = history.replaceState.bind(history)
     history.pushState = (...args: Parameters<History['pushState']>) => {
-      clearOnNextCommit.current = true
+      if (!traversing.current) clearOnNextCommit.current = true
       return originalPushState(...args)
     }
     history.replaceState = (...args: Parameters<History['replaceState']>) => {
-      clearOnNextCommit.current = true
+      if (!traversing.current) clearOnNextCommit.current = true
       return originalReplaceState(...args)
     }
 
@@ -179,6 +210,13 @@ export default function EntryAnimationController() {
     // reliably run again (the original bug) and, when it does run,
     // restarts the just-suppressed entrance animation in place on content
     // that's supposed to look settled.
+    if (traversing.current) {
+      // This commit is the traversal's own. Its destination keeps the flag
+      // for as long as it stays on screen; end the traversal window here so
+      // the next genuine navigation can arm normally.
+      traversing.current = false
+      return
+    }
     if (clearOnNextCommit.current) {
       document.documentElement.removeAttribute(NAV_BACK_ATTR)
       clearOnNextCommit.current = false

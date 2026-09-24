@@ -16,3 +16,8 @@ payload-types.ts
 # also matched src/app/(admin)/admin/media/ (Stage 3 page group 6), silently
 # dropping that route's actions.ts/page.tsx from `git status` entirely.
 /media/
+
+# Visual-regression output (CI uploads it as a build artifact; never committed).
+# Anchored — an unanchored "artifacts" would match any directory of that name
+# at any depth, the same trap /media/ hit once before.
+/artifacts/

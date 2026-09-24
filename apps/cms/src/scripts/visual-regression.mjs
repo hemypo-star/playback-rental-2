@@ -404,6 +404,22 @@ async function verifyStateDrivenMotion(cdp) {
 async function verifyBackForwardMotion(cdp) {
   await navigate(cdp, new URL('/', actualBase).toString())
   await waitFor(cdp, "Boolean(document.querySelector('a[href=\"/catalog\"]'))", 'motion back-forward home link')
+  // The link exists in the server-rendered HTML long before React hydrates
+  // it. Clicked in that window a next/link is just an <a>, so the browser
+  // does a full document navigation and Back returns a *new document* —
+  // which fires no popstate, so EntryAnimationController never sees the
+  // traversal and this check can only ever fail. Verified by instrumenting
+  // the page: clicking as soon as the element existed left the "did the
+  // document survive" probe reading `<document was replaced>`, while the
+  // same click after hydration produced a real popstate and the flag.
+  // React's own `__reactFiber$` key on the node is the signal that the
+  // click will now be intercepted client-side, which is the navigation
+  // this check is about.
+  await waitFor(
+    cdp,
+    "(()=>{const link=Array.from(document.querySelectorAll('a[href=\"/catalog\"]')).find(a=>a.offsetParent!==null);return Boolean(link)&&Object.keys(link).some(k=>k.startsWith('__reactFiber$'))})()",
+    'motion back-forward hydration',
+  )
   await evaluate(
     cdp,
     "(()=>{const link=Array.from(document.querySelectorAll('a[href=\"/catalog\"]')).find(a=>a.offsetParent!==null);if(!link)throw new Error('visible catalog link missing');link.click();return true})()",
