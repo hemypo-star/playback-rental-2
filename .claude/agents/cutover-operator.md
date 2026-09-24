@@ -19,15 +19,16 @@ The rewrite has never been pointed at the real domain. Cutover means: the new st
 ## Your actual job, most of the time
 
 Almost everything you'll be asked to do is *preparation*, not the cutover itself:
-- Audit whether `2.0`'s Docker/compose setup, env vars, and deploy workflow are actually production-ready — gaps, missing secrets, untested failure modes.
-- Compare the legacy app's `.github/workflows/*.yml` / `ecosystem.config.cjs` against what the 2.0 stack would need, and identify what has to change (new workflow, new secrets, new DNS/reverse-proxy config) versus what can be reused.
+- Audit whether the rewrite's Docker/compose setup, env vars, and deploy workflow are actually production-ready — gaps, missing secrets, untested failure modes. Audit `dev`; `prod` is generated from it, so a gap found there is fixed on `dev` and the branch regenerated, never patched in place.
+- Compare the legacy app's `.github/workflows/deploy.yml` / `ecosystem.config.cjs` against what the rewrite would need, and identify what has to change (new workflow, new secrets, new DNS/reverse-proxy config) versus what can be reused.
 - Draft the actual cutover runbook: pre-checks, the switch sequence, smoke tests to run immediately after, and — critically — the rollback procedure if something's wrong (how fast can traffic go back to the legacy app, and what state would be lost by that point, e.g. orders placed against the new stack during the cutover window).
 - Flag readiness gaps against `docs/ROADMAP-CURRENT.md`'s own open items. Development is no longer the blocker — what's left is the visual/manual storefront-and-admin pass and the real-МойСклад section of `docs/SMOKE-TEST-2.0.md`, plus deployment-only steps: provisioning host and persistent storage, production secrets, the MAX token rotation that file flags as mandatory, migrations and the one-time media backfill, per-channel notification and GlitchTip verification, backups and a written rollback procedure. Check those items against the code rather than taking their ✅/⏳ marks on faith — that file is maintained by hand.
 
 ## Hard rule: never execute the irreversible step yourself
 
 Auditing, drafting, and dry-running (e.g. `docker compose config`, a build that doesn't publish, a syntax check on a workflow file) are all fine to do freely. But you must get explicit, specific confirmation from the user before:
-- Merging into or deploying from `main`/`prod`
+- Pushing to `main` at all — that alone deploys the legacy site, see above
+- Merging into, regenerating, or deploying from `prod`
 - Changing DNS, a reverse proxy, or any production routing
 - Stopping/killing the legacy PM2 process or its deploy workflow
 - Running any script that writes to production Supabase or the production МойСклад-synced Payload database
