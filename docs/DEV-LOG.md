@@ -1862,3 +1862,107 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   and against the database where the claim was about what got stored.
   All seeded data removed after each run; `eslint` is clean for the
   first time in this branch's history, `tsc --noEmit` clean, 39/39 tests.
+- **2026-09-24** — **Dead-code sweep, the legacy app deleted from `dev`, and CI
+  turned on there — which then had to be made to pass for the first time.**
+  Three asked-for tasks; the third turned into most of the work.
+
+  **Dead code** (`c4f51ab`). Everything removed was checked for callers across
+  the whole repository, not just its own package. `lib/dateRange.ts` is gone:
+  15 of its 18 exports were the old date picker's grid/selection/formatting
+  helpers, orphaned when the prototype rewrite replaced the components that
+  called them — its own header had already noticed one ("note it has no
+  callers"). Of the rest, `DateSelection` was shadowed by an identical
+  interface in `stores/dates.ts` and imported by nobody, and `pluralizeRu`
+  duplicated `lib/text/plural.ts`'s `pluralRu` (same output on every input —
+  checked 1, 11, 12, 22, 101, 111 — except `pluralRu` also handles negatives
+  and has a test). `DEFAULT_BUSINESS_HOURS` survives in `lib/businessHours.ts`.
+  `components/BusinessHoursContext.tsx` is gone with it: it existed (B4/N5) to
+  avoid prop-drilling business hours to five components, the rewrite replaced
+  all five, and the new ones take props — so the provider was pushing a value
+  into an empty room. `lib/moysklad/orders.ts` lost `deleteCustomerOrder`,
+  `deleteCounterparty` and `msDelete`: three functions issuing live writes
+  against the shared МойСклад account, called from nowhere. Also
+  `stores/cart.ts`'s `getLineTotal`, `.grid-12` (the one unreferenced class of
+  195 in `prototype.css`), and `**/.astro` in `.dockerignore`.
+
+  **The legacy app** (`a5ccc5f`) — 279 files, ~28k lines: `src/`, `server/`,
+  `supabase/`, `dist/`, `public/`, `index.html`, `vite.config.ts`,
+  `vercel.json`, `ecosystem.config.cjs`, the legacy tsconfigs and build
+  configs, `bun.lockb`, `package-lock.json`. Nothing under `apps/`, `scripts/`
+  or `tools/` imported any of it, and `.dockerignore` and
+  `scripts/make-release.sh` already excluded it. The workspace root carried
+  that app's manifest — 60-odd dependencies `apps/cms` never loads — and is now
+  bare; the lockfile lost 3668 lines and the root `node_modules` is empty.
+  `make-release.sh` lost three steps that no longer had anything to do.
+  **The hazard this creates is recorded in `README.md`, `CLAUDE.md` and
+  `cutover-operator.md`**: `deploy.yml` fires on every push to `main` and
+  builds the legacy SPA there, so `dev` must not be merged into `main`.
+
+  **CI** (`ca04b62`) triggered on `2.0` and `frontend-transfer-unified`,
+  neither of which exists on the remote. Nothing ran on `dev`. Repointing it
+  revealed the larger fact: **CI had failed on all 477 recorded runs, on every
+  branch, always at the same step** — the visual regression, with 20 of 26
+  steps passing. Everything after it had never executed. What follows is what
+  was behind that wall; none of it was caused by this session's own commits.
+
+  **Back/Forward entry-animation suppression** (`524d1df`), three defects at
+  once. `EntryAnimationController` was not mounted on the storefront at all:
+  `eef63c1` had it in `(frontend)/layout.tsx`, and `81cb9b1` — the move onto
+  the prototype — rewrote that layout without it, while `prototype.css` kept
+  the `html[data-nav-back="true"]` rules. Nothing set the attribute those rules
+  key off, so the entry animation replayed on every Back; the same "kept the
+  appearance, dropped the mechanism" shape as the two cases in the 2026-09-21
+  entry above, and the admin layout's comment about "the (frontend) root
+  layout" had been pointing at a mount that no longer existed. Second, the
+  component assumed Next calls `pushState`/`replaceState` only for navigations
+  that are *not* traversals. Next 16 breaks that — instrumenting history and
+  `<html>` in a real headless Chrome against a production build, Back from
+  `/catalog` to `/` gives `pushState -> /catalog`, `REMOVE` (correct),
+  `SET true` (popstate), **`replaceState -> /` from Next's own router**,
+  `REMOVE` — the traversal re-arming the mechanism meant to survive it. Fixed
+  with a `traversing` ref opened by popstate, which only a traversal can fire,
+  so it needs no assumption about listener ordering; this also fixed `/admin`,
+  where the controller *is* mounted and had the flaw live. Third, the check
+  itself clicked the catalog link as soon as it appeared in the server HTML:
+  before hydration a `next/link` is just an `<a>`, so that was a full document
+  navigation and Back returned a new document, which fires no popstate — the
+  check could never observe what it is named for. Proved by instrumenting both
+  timings; it now waits for React's `__reactFiber$` key on the link.
+
+  **Then steps 23-26 ran for the first time** (`6198319`, `e4ff88c`) and found
+  four more. `analytics-ui-smoke` asserts 1 350 ₽ net against the order
+  `browser-smoke` creates, but CI ran it two steps after `order-lifecycle-smoke`,
+  which takes the newest order for that same test customer and cancels it —
+  and a cancelled order is excluded from the report, so it read as a revenue
+  bug. Proved both directions locally (before lifecycle it passes, after it
+  fails with exactly the CI error) and moved into the browser-smoke step, with
+  the shared fixture now written down in both scripts. `/admin/settings`
+  overflowed a 375px viewport to 731px and `/admin/products/1` to 377px: a
+  native file input's intrinsic width is ~338px and a flex item's default
+  `min-width:auto` refuses to shrink below it — found by measuring the ancestor
+  chain in a browser, not by guessing at the grids, which were not the cause.
+  `admin-screen-smoke`'s logout returned HTTP 400 "No User" while every page
+  around it rendered: the job set `WEB_URL=http://localhost:3000` but drove the
+  app on `127.0.0.1:3000`, and Payload's cookie-JWT strategy only checks Origin
+  when the request carries one — navigations do not, browser fetches do. Same
+  mechanism as the 2026-08-20 Server Action auth bug. And that script navigated
+  to a hardcoded `/admin/orders/1`, which only ever pointed at the checkout
+  order when it was the first row; in CI `visual:seed` creates five orders that
+  `visual:cleanup` then deletes, so id 1 does not exist. It looks the order up
+  by customer name now, like the product check beside it already did.
+
+  One flaky check was made deterministic while here: `verifyStateDrivenMotion`
+  sampled the cart badge as soon as it existed, but it is server-rendered `0`
+  and only reaches its real count after the client store hydrates — wide enough
+  a window on a cold server to record 0 and fail. It waits for the hydrated
+  count now, and passes on a cold start.
+
+  **CI is green for the first time on 2026-09-24**: run #4 on `dev`, 30/30
+  steps. Verification throughout was against a real Postgres and production
+  builds, with each smoke run individually in CI order, and — for the order-id
+  bug — against a database seeded the way CI seeds it rather than a clean one,
+  which is what made the checkout order come out as id 6 exactly as in CI. Two
+  intermediate failures were my own test-running mistakes, not the app's:
+  overwriting `.next` under a live server (the replacement failed to bind with
+  `EADDRINUSE`, so the old process kept serving a half-replaced build), and
+  omitting a step's own env. Both were redone cleanly.

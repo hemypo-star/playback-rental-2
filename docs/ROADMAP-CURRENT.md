@@ -68,7 +68,15 @@ A–E were recovered into `2.0` in catch-up commit `eef63c1` after the original 
 
 ## QA / documentation state
 
-- ✅ Full PR CI exists for `2.0`: PostgreSQL service → install → Payload types → migrations → lint → typecheck → tests → production build.
+- ✅ Full CI runs on `dev` (`.github/workflows/ci.yml`): PostgreSQL service → install →
+  Docker offline-pnpm check → Payload types → migrations → lint → typecheck → tests →
+  production build → runtime smoke → visual regression → the browser/security/
+  notification/lifecycle/promo/rate-limit/admin/media/content smokes. **It first went
+  green on 2026-09-24** (run #4 on `dev`, 30/30 steps). Before that it had failed on
+  every one of 477 recorded runs across every branch, always at the visual regression,
+  so the 20 steps after it had never executed — the statuses below were written from
+  the checks existing, not from them passing. It also did not trigger on `dev` at all
+  until then: the triggers still named `2.0` and `frontend-transfer-unified`.
 - ✅ Production runtime smoke verifies core public routes, Payload access, admin auth redirects and malformed contact-request rejection.
 - ✅ Headless-Chrome smoke verifies browser runtime errors, 375px overflow on core storefront routes, reduced-motion rendering, seeded catalog/search/category/product flows and a real checkout submission.
 - ✅ Security/lifecycle smoke verifies public order isolation, order hard-delete denial, final-item cancellation and availability release.
