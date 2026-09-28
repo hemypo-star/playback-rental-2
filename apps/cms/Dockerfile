@@ -71,6 +71,7 @@ ENV NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT=$NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT
 ENV DATABASE_URI=postgresql://build:build@localhost:5432/build
 ENV PAYLOAD_SECRET=build-time-placeholder-not-used-at-runtime
 RUN pnpm payload generate:importmap
+RUN pnpm generate:types
 RUN pnpm build
 
 # ---- runtime ----------------------------------------------------------

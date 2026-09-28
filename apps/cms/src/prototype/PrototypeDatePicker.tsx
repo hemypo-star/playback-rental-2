@@ -1,6 +1,7 @@
 'use client'
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
+import { createPortal } from "react-dom"
 import { useStore } from '@nanostores/react'
 import { $selectedDates, OPEN_DATE_PICKER_EVENT, resetSelectedDates, setSelectedDates } from '../stores/dates'
 import { isBeforeBusinessToday } from '../lib/rental/businessDay'
@@ -49,7 +50,7 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
   useEffect(()=>{if(!open)return;modalRef.current?.focus();const onKeyDown=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();close();return}if(e.key!=='Tab')return;const modal=modalRef.current;if(!modal)return;const focusable=modal.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');if(focusable.length===0)return;const first=focusable[0];const last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}};document.addEventListener('keydown',onKeyDown);return()=>document.removeEventListener('keydown',onKeyDown)},[open,close])
 
   const cells=useMemo(()=>{const first=startOfMonth(month);const days=new Date(first.getFullYear(),first.getMonth()+1,0).getDate();let weekday=first.getDay();weekday=weekday===0?7:weekday;const out:(Date|null)[]=[];for(let i=1;i<weekday;i++)out.push(null);for(let d=1;d<=days;d++)out.push(new Date(first.getFullYear(),first.getMonth(),d));return out},[month])
-  const hours=useMemo(()=>{const out:number[]=[];for(let h=Math.max(0,openHour-1);h<=Math.min(23,closeHour+1);h++)out.push(h);return out},[openHour,closeHour])
+  const hours=useMemo(()=>{const out:number[]=[];for(let h=openHour;h<=closeHour;h++)out.push(h);return out},[openHour,closeHour])
   // Mirrors the server guard in collections/OrderItems.ts: a pickup date on
   // an earlier calendar day than today cannot be fulfilled. The grid below
   // renders those days disabled too, but the check lives here as well so the
@@ -93,7 +94,8 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
 
   return <>
     {trigger}
-    {open&&<div className="pb-modal-backdrop" role="dialog" aria-modal="true" aria-label="Период аренды">
+    {open && typeof document !== "undefined" && createPortal(
+      <div className="pb-modal-backdrop" role="dialog" aria-modal="true" aria-label="Период аренды">
       <button type="button" aria-label="Закрыть" onClick={close} style={{position:'absolute',inset:0,border:0,background:'transparent'}} />
       <div className="pb-modal" ref={modalRef} tabIndex={-1} style={{outline:'none'}}>
         <div className="pb-modal-head"><div><div className="pb-kicker">Период аренды</div><div style={{marginTop:6,fontSize:22,fontWeight:500,letterSpacing:'-.03em'}}>{target==='from'?'День и время выдачи':'День и время возврата'}</div></div><button type="button" className="pb-modal-close" onClick={close}>✕</button></div>
@@ -111,7 +113,9 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
         </div>
         <div className="pb-modal-foot"><div style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:14}}><span style={{fontSize:12.5,color:'var(--pb-sub)',maxWidth:400}}>Рабочие часы {String(openHour).padStart(2,'0')}:00 — {String(closeHour).padStart(2,'0')}:00.</span>{(from||to)&&<button type="button" onClick={reset} className="pb-reset-link" style={{fontSize:11,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'var(--pb-sub)',background:'none',border:0,padding:0,cursor:'pointer'}}>Сбросить</button>}</div><button type="button" className="pb-pill pb-btn pb-modal-done" onClick={done} disabled={!from||!to}><span>Готово · {days} {days===1?'смена':days<5?'смены':'смен'}</span><span>→</span></button></div>
       </div>
-    </div>}
+    </div>,
+      document.body
+    )}
   </>
 })
 export default PrototypeDatePicker
