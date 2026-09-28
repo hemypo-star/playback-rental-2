@@ -45,12 +45,14 @@ function stripEnding(token: string): string {
 }
 
 // Splits the query into words, lowercases them (ё→е), drops stopwords and
-// single characters, and reduces each remaining word to its stem.
+// single characters, and reduces each remaining word to its stem. Words that
+// are already down to two letters (real short nouns like «ccd», «fx») pass
+// through unstemmed so they don't vanish below MIN_QUERY_LENGTH.
 export function foldQuery(raw: string): string[] {
   return normalizeSearchText(raw)
     .split(/[^a-zа-я0-9]+/i)
     .filter((t) => t.length > 1 && !STOPWORDS.has(t))
-    .map(stripEnding)
+    .map((token) => (token.length <= 3 ? token : stripEnding(token)))
 }
 
 // Extra whole-word variants worth ORing onto a stem beyond plain prefix

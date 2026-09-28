@@ -41,14 +41,16 @@ export function buildSearchWhere(raw: string): Where | null {
   const stems = foldQuery(raw)
   if (!stems.length || stems.some((s) => s.length < MIN_QUERY_LENGTH)) return null
   const words = expandStems(stems)
-  const perWord: Where[] = words.map((word) => ({
-    or: [
-      { title: { like: word } },
-      { subtitle: { like: word } },
-      { description: { like: word } },
-      { tag: { like: word } },
-    ],
-  }))
+  // Explicit object literals in a mapped array would infer `undefined` into
+  // the union of the absent keys, which Where's index signature rejects —
+  // build each clause field-by-field instead.
+  const perWord: Where[] = words.map((word) => {
+    const or: Where[] = []
+    for (const field of ['title', 'subtitle', 'description', 'tag'] as const) {
+      or.push({ [field]: { like: word } })
+    }
+    return { or }
+  })
   return { and: [{ available: { equals: true } }, { or: perWord }] }
 }
 
@@ -77,9 +79,13 @@ export async function searchCatalog(options: { raw: string; productLimit?: numbe
       // Same cross-field logic for categories, minus the product-only fields.
       where: (() => {
         const words = expandStems(foldQuery(options.raw))
-        const perWord: Where[] = words.map((word) => ({
-          or: [{ name: { like: word } }, { description: { like: word } }],
-        }))
+        const perWord: Where[] = words.map((word) => {
+          const or: Where[] = []
+          for (const field of ['name', 'description'] as const) {
+            or.push({ [field]: { like: word } })
+          }
+          return { or }
+        })
         return { or: perWord }
       })(),
       limit: SEARCH_LIMITS.categories,

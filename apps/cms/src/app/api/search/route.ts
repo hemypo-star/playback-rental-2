@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { searchCatalog } from '../../../../lib/data/search'
+import { searchCatalog } from '@/lib/data/search'
 
 // JSON feed for the header's live search dropdown. Deliberately a thin route
 // handler over lib/data/search.ts (the same function the /search page calls)
