@@ -69,6 +69,12 @@ services:
   # event. Successful recipients are persisted per job before other channels
   # are retried.
   notifications:
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
     image: playback-rental-2-cms:latest
     restart: unless-stopped
     environment:
@@ -102,6 +108,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
     image: playback-rental-2-cms:latest
     restart: unless-stopped
     environment:
