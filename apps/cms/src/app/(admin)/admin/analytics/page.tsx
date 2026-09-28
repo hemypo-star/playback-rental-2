@@ -72,11 +72,11 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
             className="h-11 rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground"
           />
         </div>
-        <button type="submit" className="btn-primary h-11">
+        <button type="submit" className="btn-primary">
           Применить
         </button>
         {hasRange ? (
-          <Link href="/admin/analytics" className="btn-ghost inline-flex h-11 items-center px-5">
+          <Link href="/admin/analytics" className="btn-ghost px-5">
             Сбросить
           </Link>
         ) : null}

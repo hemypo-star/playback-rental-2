@@ -156,7 +156,7 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
             // would make the reversible action read as the more severe of the
             // two. Same h-*/text-* override shape every other btn-outline in
             // the app uses (CatalogPage, ProductPurchasePanel).
-            className="btn-outline h-9 px-4 text-[11px]"
+            className="btn-outline"
           >
             Отменить заказ
           </button>

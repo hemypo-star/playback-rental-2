@@ -21,11 +21,7 @@ export default function AdminPageHeader({ title, subtitle, actionLabel, actionHr
         {subtitle ? <div className="mt-1.5 text-[12.5px] text-subtle">{subtitle}</div> : null}
       </div>
       {actionLabel ? (
-        <Link
-          href={actionHref ?? '#'}
-          style={{ color: '#fff', transition: 'background 240ms ease, gap 380ms cubic-bezier(0.16,1,0.3,1)' }}
-          className="flex h-[42px] items-center gap-3 rounded-full bg-primary px-5 text-[11px] font-semibold tracking-[0.1em] uppercase hover:gap-5 hover:bg-accent"
-        >
+        <Link href={actionHref ?? '#'} className="btn-primary">
           <span>{actionLabel}</span>
           <span>+</span>
         </Link>

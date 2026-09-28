@@ -66,7 +66,7 @@ export default async function AdminStockPage({ searchParams }: Props) {
             ))}
           </select>
         </div>
-        <button type="submit" className="btn-primary h-11">
+        <button type="submit" className="btn-primary">
           Найти
         </button>
       </form>

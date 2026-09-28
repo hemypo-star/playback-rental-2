@@ -161,7 +161,7 @@ export default function ManualOrderForm({ products }: Props) {
               <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Позиции</div>
               <div className="mt-1 text-[12px] text-subtle">Цена и доступность проверяются сервером при создании.</div>
             </div>
-            <button type="button" onClick={addItem} className="btn-outline h-9 px-4 text-[11px]">
+            <button type="button" onClick={addItem} className="btn-outline">
               Добавить позицию
             </button>
           </div>
