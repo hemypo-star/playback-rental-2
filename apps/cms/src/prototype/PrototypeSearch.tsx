@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import type React from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Global header search. One input, two surfaces: a live dropdown (categories
 // first, then products, fed by GET /api/search) on desktop, and a full-screen
@@ -30,15 +30,25 @@ export default function PrototypeSearch() {
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Debounced fetch. The AbortController drops an in-flight request whenever
-  // a newer keystroke (or a close) supersedes it, so a slow earlier response
-  // can never land after a faster later one and flash stale suggestions.
-  useEffect(() => {
-    const q = query.trim()
-    if (q.length < MIN_QUERY) { setResult(EMPTY); setLoading(false); return }
+  // Debounced fetch, driven from onChange rather than an effect body — all
+  // setState calls happen inside event handlers or async callbacks, never
+  // synchronously during an effect (react-hooks/set-state-in-effect). The
+  // AbortController drops an in-flight request whenever a newer keystroke
+  // supersedes it, so a slow earlier response can never land after a faster
+  // later one and flash stale suggestions.
+  const scheduleFetch = useCallback((raw: string) => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    const q = raw.trim()
+    if (q.length < MIN_QUERY) {
+      abortRef.current?.abort()
+      setResult(EMPTY)
+      setLoading(false)
+      return
+    }
     setLoading(true)
-    const timer = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       abortRef.current?.abort()
       const controller = new AbortController()
       abortRef.current = controller
@@ -47,8 +57,14 @@ export default function PrototypeSearch() {
         .then((data: SearchResponse) => { setResult(data); setLoading(false) })
         .catch(() => { /* aborted or failed — keep the previous list */ setLoading(false) })
     }, DEBOUNCE_MS)
-    return () => clearTimeout(timer)
-  }, [query])
+  }, [])
+
+  // A close/clear/navigation may skip onChange, so drop any pending timer and
+  // in-flight request on unmount; reset state is handled by the callers above.
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    abortRef.current?.abort()
+  }, [])
 
   // Click-outside closes the dropdown; Escape closes it and blurs the input.
   useEffect(() => {
@@ -74,17 +90,16 @@ export default function PrototypeSearch() {
           ref={inputRef}
           type="search"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); scheduleFetch(e.target.value) }}
           onFocus={() => setOpen(true)}
           placeholder="Поиск по каталогу..."
           aria-label="Поиск по каталогу"
-          aria-expanded={showPanel}
           className="pb-search pb-search-header"
         />
-        {query && <button type="button" className="pb-search-clear" aria-label="Очистить поиск" onClick={() => { setQuery(''); inputRef.current?.focus() }}>×</button>}
+        {query && <button type="button" className="pb-search-clear" aria-label="Очистить поиск" onClick={() => { setQuery(''); scheduleFetch(''); inputRef.current?.focus() }}>×</button>}
       </form>
       {showPanel && (
-        <div className="pb-search-panel" role="dialog" aria-modal={undefined}>
+        <div className="pb-search-panel">
           <div className="pb-search-overlay-head">
             <span className="pb-kicker">Поиск</span>
             <button type="button" className="pb-search-close" aria-label="Закрыть поиск" onClick={() => setOpen(false)}>×</button>
