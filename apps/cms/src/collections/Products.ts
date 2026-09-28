@@ -88,6 +88,9 @@ export const Products: CollectionConfig = {
       type: 'upload',
       relationTo: 'media',
       hasMany: true,
+      admin: {
+        description: 'Фотографии витрины. Заполняются один раз при импорте товара из МойСклада; последующие синхронизации галерею не трогают — редактируйте свободно.',
+      },
     },
     {
       name: 'category',

@@ -89,12 +89,11 @@ async function upsertCategory(payload: Payload, folder: MsFolder): Promise<{ id:
   })
 
   if (existing.docs.length) {
-    const doc = await payload.update({
-      collection: 'categories',
-      id: existing.docs[0].id,
-      data: { name: folder.name },
-    })
-    return { id: doc.id as number, created: false }
+    const current = existing.docs[0] as unknown as { id: number | string }
+    // Existing categories are left alone entirely — the storefront owns
+    // name/slug/etc. after the initial import. New folders still get
+    // created with the МойСклад name below.
+    return { id: current.id as number, created: false }
   }
 
   let slug = slugify(folder.name) || folder.id.slice(0, 8)
@@ -200,7 +199,20 @@ async function upsertProduct(payload: Payload, moySkladId: string, data: Require
     limit: 1,
   })
   if (existingDoc.docs.length) {
-    await payload.update({ collection: 'products', id: existingDoc.docs[0].id, data })
+    // Existing products only get the three operational fields refreshed
+    // from МойСклад: price, quantity (stock) and availability (derived
+    // below — in stock again means it can be un-paused). Everything else —
+    // title, description, images, category, subtitle/tag — belongs to the
+    // storefront after the initial import and is never overwritten.
+    const updateData: Partial<RequiredDataFromCollectionSlug<'products'>> = {
+      price: data.price,
+      quantity: data.quantity,
+      lastSyncedAt: data.lastSyncedAt,
+    }
+    if ((data as { available?: boolean }).available !== undefined) {
+      updateData.available = (data as { available?: boolean }).available
+    }
+    await payload.update({ collection: 'products', id: existingDoc.docs[0].id, data: updateData })
     return 'updated' as const
   }
   await payload.create({ collection: 'products', data })

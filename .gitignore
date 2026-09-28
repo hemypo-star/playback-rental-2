@@ -1,15 +1,1 @@
-# Dependencies
-node_modules/
-
-# Build outputs
-dist/
-build/
-.next/
-
-# Environment files
-.env
-.env.local
-.env.*.local
-# Stray logs and npm lockfile (project uses pnpm)
-job*.log
-package-lock.json
+(empty)
