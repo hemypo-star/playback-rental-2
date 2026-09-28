@@ -32,8 +32,6 @@ export default function ProductForm({ product, categoryName }: Props) {
 
   const [title, setTitle] = useState(product.title)
   const [description, setDescription] = useState(product.description ?? '')
-  const [price, setPrice] = useState(product.price)
-  const [quantity, setQuantity] = useState(product.quantity)
   const [available, setAvailable] = useState(Boolean(product.available))
   const [subtitle, setSubtitle] = useState(product.subtitle ?? '')
   const [tag, setTag] = useState(product.tag ?? '')
@@ -42,9 +40,6 @@ export default function ProductForm({ product, categoryName }: Props) {
       .filter((img): img is Media => typeof img === 'object')
       .map((img) => ({ id: img.id, url: mediaUrl(img) ?? '' })),
   )
-  const [isKit, setIsKit] = useState(Boolean(product.isKit))
-  const [oldPrice, setOldPrice] = useState(product.oldPrice ?? '')
-  const [kitItems, setKitItems] = useState<string[]>((product.kitItems ?? []).map((item) => item.label))
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -76,22 +71,15 @@ export default function ProductForm({ product, categoryName }: Props) {
   const handleSave = async () => {
     setError(null)
     setSaving(true)
+    // Only the storefront-editable fields are sent (see Products collection):
+    // price/quantity/isKit/oldPrice/kitItems and MoySklad* are read-only here.
     const result = await saveProduct(product.id, {
       title: title.trim(),
       description,
-      price: Number(price) || 0,
-      quantity: Number(quantity) || 0,
       available,
       subtitle,
       tag,
       images: images.map((img) => img.id),
-      isKit,
-      ...(isKit
-        ? {
-            oldPrice: Number(oldPrice) || null,
-            kitItems: kitItems.map((label) => label.trim()).filter(Boolean).map((label) => ({ label })),
-          }
-        : {}),
     })
     setSaving(false)
     if (!result.success) {
@@ -131,25 +119,16 @@ export default function ProductForm({ product, categoryName }: Props) {
               Название и описание приходят из МойСклада — следующие правки в них будут перезаписаны следующим прогоном синхронизации.
             </p>
 
-            <label htmlFor={`${uid}-price`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Цена, ₽</label>
-            <input
-              id={`${uid}-price`}
-              type="number"
-              min={0}
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
-              className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
-            />
-
-            <label htmlFor={`${uid}-quantity`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Остаток</label>
-            <input
-              id={`${uid}-quantity`}
-              type="number"
-              min={0}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              className="mt-1.5 h-11 w-40 rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
-            />
+            <div className="mt-4 flex gap-6">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Цена, ₽ (из МойСклада)</div>
+                <div className="mt-1 text-[14px] tabular-nums">{product.price}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Остаток (из МойСклада)</div>
+                <div className="mt-1 text-[14px] tabular-nums">{product.quantity}</div>
+              </div>
+            </div>
 
             <label className="mt-4 flex items-center gap-2 text-[13px]">
               <input type="checkbox" checked={available} onChange={(e) => setAvailable(e.target.checked)} className="h-4 w-4" />
@@ -198,69 +177,20 @@ export default function ProductForm({ product, categoryName }: Props) {
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-6">
-            <label className="flex items-center gap-2 text-[13px]">
-              <input type="checkbox" checked={isKit} onChange={(e) => setIsKit(e.target.checked)} className="h-4 w-4" />
-              Это набор (Наборы на витрине)
-            </label>
-
-            {isKit ? (
-              <div className="mt-4">
-                <label htmlFor={`${uid}-old-price`} className="block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Цена по отдельности (для зачёркнутой цены), ₽</label>
-                <input
-                  id={`${uid}-old-price`}
-                  type="number"
-                  min={0}
-                  value={oldPrice}
-                  onChange={(e) => setOldPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
-                />
-
-                <label className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Что в комплекте</label>
-                <div className="mt-1.5 flex flex-col gap-2">
-                  {kitItems.map((label, i) => (
-                    <div key={i} className="flex gap-2">
-                      <input
-                        value={label}
-                        onChange={(e) => setKitItems((prev) => prev.map((v, idx) => (idx === i ? e.target.value : v)))}
-                        className="h-10 flex-1 rounded-xl border border-input bg-muted-well px-3 text-[13.5px] outline-none focus:border-foreground focus:bg-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setKitItems((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="w-9 shrink-0 rounded-xl bg-muted text-[13px] text-subtle hover:text-accent"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button type="button" onClick={() => setKitItems((prev) => [...prev, ''])} className="mt-2 text-[12.5px] font-semibold text-subtle hover:text-foreground">
-                  + добавить позицию
-                </button>
+            <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Набор</div>
+            {product.isKit ? (
+              <div className="mt-2 text-[13px]">
+                <p>Этот товар — набор{product.oldPrice != null ? <>, цена по отдельности: <span className="tabular-nums">{product.oldPrice} ₽</span></> : null}.</p>
+                {(product.kitItems ?? []).length > 0 && (
+                  <ol className="mt-2 list-decimal pl-5 text-[12.5px] text-subtle">
+                    {(product.kitItems ?? []).map((item, i) => <li key={i}>{item.label}</li>)}
+                  </ol>
+                )}
+                <p className="mt-2 text-[11.5px] text-subtle">Состав набора редактируется только через API (в админке — на чтение).</p>
               </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3.5">
-          <div className="rounded-3xl border border-border bg-card p-6">
-            <button type="button" onClick={handleSave} disabled={saving} className="btn-primary w-full justify-center">
-              Сохранить
-            </button>
-            <a href={`/product/${product.id}`} target="_blank" rel="noopener noreferrer" className="mt-3 block text-center text-[12px] text-subtle hover:text-accent">
-              Открыть на сайте →
-            </a>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card p-6">
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">МойСклад — системные поля, только чтение</div>
-            <div className="mt-2 flex flex-col gap-1 text-[12.5px] text-subtle">
-              <span>Тип: {product.listingType === 'rental' ? 'Аренда' : 'Продажа'}</span>
-              <span>ID: {product.moySkladId}</span>
-              {product.moySkladInventoryProductId ? <span>ID «для учета»: {product.moySkladInventoryProductId}</span> : null}
-              {product.moySkladCode ? <span>Код: {product.moySkladCode}</span> : null}
-              {product.lastSyncedAt ? <span>Синхронизирован: {new Date(product.lastSyncedAt).toLocaleString('ru-RU')}</span> : null}
-            </div>
+            ) : (
+              <p className="mt-2 text-[13px] text-subtle">Не набор.</p>
+            )}
           </div>
         </div>
       </div>

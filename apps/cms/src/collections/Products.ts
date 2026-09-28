@@ -50,6 +50,9 @@ export const Products: CollectionConfig = {
         { label: 'Rental (по датам)', value: 'rental' },
         { label: 'Sale (на продажу)', value: 'sale' },
       ],
+      admin: {
+        readOnly: true,
+      },
     },
     {
       name: 'description',
@@ -83,6 +86,7 @@ export const Products: CollectionConfig = {
       required: true,
       min: 0,
       admin: {
+        readOnly: true,
         description: 'RUB. For rental listings this is the per-day rate; for sale listings, the one-time price. Synced from МойСклад salePrice (stored there in kopecks; divided by 100 on import).',
       },
     },
@@ -100,6 +104,9 @@ export const Products: CollectionConfig = {
       type: 'relationship',
       relationTo: 'categories',
       required: true,
+      admin: {
+        readOnly: true,
+      },
     },
     {
       name: 'quantity',
@@ -108,6 +115,7 @@ export const Products: CollectionConfig = {
       min: 0,
       defaultValue: 0,
       admin: {
+        readOnly: true,
         description: 'Total units owned, synced from МойСклад stock. NOT the same as availability for a given rental date range — that\'s computed from overlapping bookings (see the bookings collection).',
       },
     },
@@ -132,6 +140,7 @@ export const Products: CollectionConfig = {
       type: 'checkbox',
       defaultValue: false,
       admin: {
+        readOnly: true,
         description: 'Marks this product as a bundled kit ("Наборы" on the storefront) rather than a single item. Not synced.',
       },
     },
@@ -140,6 +149,7 @@ export const Products: CollectionConfig = {
       type: 'number',
       min: 0,
       admin: {
+        readOnly: true,
         description: 'Combined price of the items if rented separately — shown struck through next to the kit price. Kits only. Not synced.',
         condition: (data) => Boolean(data?.isKit),
       },
@@ -148,6 +158,7 @@ export const Products: CollectionConfig = {
       name: 'kitItems',
       type: 'array',
       admin: {
+        readOnly: true,
         description: 'What\'s included, shown as a numbered list ("Что в комплекте"). Kits only. Not synced.',
         condition: (data) => Boolean(data?.isKit),
       },

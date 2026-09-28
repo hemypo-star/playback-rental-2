@@ -27,19 +27,16 @@ async function requireAdmin() {
 }
 
 export interface ProductInput {
-  // Storefront-facing fields only. The MoySklad* / lastSyncedAt fields stay
-  // system/read-only — see the Products collection comment.
+  // Storefront-editable fields only (per product owner: title, description,
+  // subtitle, tag, images, available). price/quantity/category/listingType/
+  // kit fields and MoySklad* / lastSyncedAt are read-only in the admin UI —
+  // see the Products collection comment.
   title: string
   description: string
-  price: number
-  quantity: number
   available: boolean
   subtitle: string
   tag: string
   images: number[]
-  isKit: boolean
-  oldPrice?: number | null
-  kitItems?: { label: string }[]
 }
 
 export async function saveProduct(id: number, data: ProductInput): Promise<ActionResult> {
