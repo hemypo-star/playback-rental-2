@@ -27,6 +27,10 @@ async function requireAdmin() {
 }
 
 export interface ProductInput {
+  // Storefront-facing fields only. The MoySklad* / lastSyncedAt fields stay
+  // system/read-only — see the Products collection comment.
+  title: string
+  description: string
   price: number
   quantity: number
   available: boolean

@@ -31,6 +31,9 @@ export const Products: CollectionConfig = {
       name: 'title',
       type: 'text',
       required: true,
+      admin: {
+        description: 'Название на витрине. ВНИМАНИЕ: правки будут перезаписаны следующим прогоном sync:moysklad (источник — МойСклад).',
+      },
     },
     {
       // МойСклад has two parallel, non-overlapping subtrees under
@@ -47,13 +50,13 @@ export const Products: CollectionConfig = {
         { label: 'Rental (по датам)', value: 'rental' },
         { label: 'Sale (на продажу)', value: 'sale' },
       ],
-      admin: {
-        readOnly: true,
-      },
     },
     {
       name: 'description',
       type: 'textarea',
+      admin: {
+        description: 'Описание на витрине. ВНИМАНИЕ: правки будут перезаписаны следующим прогоном sync:moysklad.',
+      },
     },
     {
       // Short spec line shown under the title on cards/product page (e.g.
@@ -156,7 +159,10 @@ export const Products: CollectionConfig = {
         },
       ],
     },
-    // Sync bookkeeping. For listingType 'rental', moySkladId points at a
+    // Sync bookkeeping — SYSTEM fields, intentionally read-only in the admin
+    // UI (moySkladId is the sync matching key; changing it orphans the product
+    // from its МойСклад entity). They stay writable at the API level for the
+    // sync job itself. For listingType 'rental', moySkladId points at a
     // МойСклад *service* entity (Аренда оборудования — rentals are modeled
     // as services there, since ownership never transfers). For 'sale', it
     // points at a *product* entity (На продажу). The two entity types are

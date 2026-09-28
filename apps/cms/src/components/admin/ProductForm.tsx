@@ -30,6 +30,8 @@ export default function ProductForm({ product, categoryName }: Props) {
   const router = useRouter()
   const uid = useId()
 
+  const [title, setTitle] = useState(product.title)
+  const [description, setDescription] = useState(product.description ?? '')
   const [price, setPrice] = useState(product.price)
   const [quantity, setQuantity] = useState(product.quantity)
   const [available, setAvailable] = useState(Boolean(product.available))
@@ -75,6 +77,8 @@ export default function ProductForm({ product, categoryName }: Props) {
     setError(null)
     setSaving(true)
     const result = await saveProduct(product.id, {
+      title: title.trim(),
+      description,
       price: Number(price) || 0,
       quantity: Number(quantity) || 0,
       available,
@@ -104,8 +108,28 @@ export default function ProductForm({ product, categoryName }: Props) {
       <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
         <div className="flex flex-col gap-3.5">
           <div className="rounded-3xl border border-border bg-card p-6">
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Синхронизировано из МойСклад — только чтение</div>
-            <div className="mt-2 text-[13.5px] text-subtle">{product.description || 'Без описания'}</div>
+            <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Витрина</div>
+
+            <label htmlFor={`${uid}-title`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Название</label>
+            <input
+              id={`${uid}-title`}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+            />
+
+            <label htmlFor={`${uid}-description`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Описание</label>
+            <textarea
+              id={`${uid}-description`}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              className="mt-1.5 w-full rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+            />
+
+            <p className="mt-2 text-[11.5px] leading-snug text-subtle">
+              Название и описание приходят из МойСклада — следующие правки в них будут перезаписаны следующим прогоном синхронизации.
+            </p>
 
             <label htmlFor={`${uid}-price`} className="mt-4 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Цена, ₽</label>
             <input
@@ -229,10 +253,12 @@ export default function ProductForm({ product, categoryName }: Props) {
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-6">
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">МойСклад</div>
+            <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">МойСклад — системные поля, только чтение</div>
             <div className="mt-2 flex flex-col gap-1 text-[12.5px] text-subtle">
               <span>Тип: {product.listingType === 'rental' ? 'Аренда' : 'Продажа'}</span>
               <span>ID: {product.moySkladId}</span>
+              {product.moySkladInventoryProductId ? <span>ID «для учета»: {product.moySkladInventoryProductId}</span> : null}
+              {product.moySkladCode ? <span>Код: {product.moySkladCode}</span> : null}
               {product.lastSyncedAt ? <span>Синхронизирован: {new Date(product.lastSyncedAt).toLocaleString('ru-RU')}</span> : null}
             </div>
           </div>
