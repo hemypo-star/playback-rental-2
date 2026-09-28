@@ -172,8 +172,10 @@ export const Products: CollectionConfig = {
     },
     // Sync bookkeeping — SYSTEM fields, intentionally read-only in the admin
     // UI (moySkladId is the sync matching key; changing it orphans the product
-    // from its МойСклад entity). They stay writable at the API level for the
-    // sync job itself. For listingType 'rental', moySkladId points at a
+    // from its МойСклад entity). NOTE: Payload's `readOnly` is a pure admin-UI
+    // flag — REST Local API / payload.update(overrideAccess) still accept these
+    // values, so the sync job is unaffected. For listingType 'rental',
+    // moySkladId points at a
     // МойСклад *service* entity (Аренда оборудования — rentals are modeled
     // as services there, since ownership never transfers). For 'sale', it
     // points at a *product* entity (На продажу). The two entity types are
