@@ -5,6 +5,7 @@ import AdminKpiCards from '../../../../components/admin/AdminKpiCards'
 import { normalizeAnalyticsDateRange } from '../../../../lib/admin/analyticsDateRange'
 import { getAdminKpi } from '../../../../lib/admin/data/kpi'
 import { getAdminAnalytics } from '../../../../lib/admin/data/analytics'
+import { getTopProducts } from '../../../../lib/admin/data/topProducts'
 import { rub } from '../../../../lib/admin/format'
 
 // Ported from apps/web/src/pages/admin/analytics.astro (docs/PLAN-next-
@@ -30,7 +31,7 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
   // cards intentionally remain the same all-time operational KPIs they are
   // on the other admin screens; the form says this explicitly so a filtered
   // chart cannot be mistaken for changing the KPI definitions too.
-  const [kpi, rows] = await Promise.all([getAdminKpi(), getAdminAnalytics(range)])
+  const [kpi, rows, topProducts] = await Promise.all([getAdminKpi(), getAdminAnalytics(range), getTopProducts(range)])
   const maxRevenue = rows.length ? rows[0].revenue : 1
   const totalRevenue = rows.reduce((sum, row) => sum + row.revenue, 0)
 
@@ -121,6 +122,44 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
             </div>
           ) : null}
         </div>
+      </div>
+
+      <div className="rounded-3xl border border-border bg-card p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Топ позиций</div>
+          <div className="text-[12px] text-subtle">{periodLabel} · заказов на позицию (без отменённых)</div>
+        </div>
+        {topProducts.length > 0 ? (
+          <table className="mt-3 w-full border-collapse text-left text-[13.5px]">
+            <thead>
+              <tr className="text-[10.5px] uppercase tracking-[0.14em] text-subtle">
+                <th className="py-2 pr-3 font-semibold">#</th>
+                <th className="py-2 pr-3 font-semibold">Позиция</th>
+                <th className="py-2 pr-3 text-right font-semibold">Заказов</th>
+                <th className="py-2 pr-3 text-right font-semibold">Дней аренды</th>
+                <th className="py-2 text-right font-semibold">Выручка</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topProducts.map((p, i) => (
+                <tr key={p.id} className="border-t border-border">
+                  <td className="py-2.5 pr-3 tabular-nums text-subtle">{i + 1}</td>
+                  <td className="max-w-[320px] truncate py-2.5 pr-3">
+                    <Link href={`/admin/products/${p.id}`} className="hover:underline">{p.title}</Link>
+                    <span className="ml-2 text-[11px] text-subtle">{p.listingType === 'rental' ? 'аренда' : 'продажа'}</span>
+                  </td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums font-semibold">{p.timesOrdered}</td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums">{p.revenueDays || '—'}</td>
+                  <td className="py-2.5 text-right tabular-nums">{rub(p.revenue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="px-2.5 py-8 text-center text-[13.5px] text-subtle">
+            {hasRange ? 'За выбранный период заказов не было' : 'Пока нет ни одного незакрытого заказа'}
+          </div>
+        )}
       </div>
     </>
   )

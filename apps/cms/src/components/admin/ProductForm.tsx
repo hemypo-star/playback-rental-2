@@ -19,6 +19,10 @@ import { saveProduct, syncProduct } from '../../app/(admin)/admin/products/[id]/
 interface Props {
   product: Product
   categoryName: string
+  // All non-kit products (id/title/price/listingType) — the picker source
+  // for "Совместимые аксессуары". Passed from the server page so the client
+  // doesn't hit the REST API itself.
+  accessoryOptions?: { id: number; title: string; price: number; listingType: string }[]
 }
 
 interface ImageItem {
@@ -26,7 +30,7 @@ interface ImageItem {
   url: string
 }
 
-export default function ProductForm({ product, categoryName }: Props) {
+export default function ProductForm({ product, categoryName, accessoryOptions = [] }: Props) {
   const router = useRouter()
   const uid = useId()
 
@@ -40,6 +44,14 @@ export default function ProductForm({ product, categoryName }: Props) {
       .filter((img): img is Media => typeof img === 'object')
       .map((img) => ({ id: img.id, url: mediaUrl(img) ?? '' })),
   )
+  // Compatible accessories: resolved to full docs at page load (depth), so
+  // selected rows show title/price even when the picker list is filtered.
+  const [accessories, setAccessories] = useState<{ id: number; title: string; price: number }[]>(
+    (product.compatibleAccessories ?? [])
+      .filter((a): a is Product => typeof a === 'object' && a !== null)
+      .map((a) => ({ id: a.id, title: a.title, price: Number(a.price ?? 0) })),
+  )
+  const [accessoryQuery, setAccessoryQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -97,11 +109,37 @@ export default function ProductForm({ product, categoryName }: Props) {
     setImages((prev) => prev.filter((_, i) => i !== index))
   }
 
+  // --- Compatible accessories picker -------------------------------------
+  const selectedAccessoryIds = new Set(accessories.map((a) => a.id))
+  const addAccessory = (id: number) => {
+    if (selectedAccessoryIds.has(id)) return
+    const opt = accessoryOptions.find((o) => o.id === id)
+    if (!opt) return
+    setAccessories((prev) => [...prev, { id: opt.id, title: opt.title, price: opt.price }])
+  }
+  const removeAccessory = (id: number) => {
+    setAccessories((prev) => prev.filter((a) => a.id !== id))
+  }
+  const moveAccessory = (index: number, dir: -1 | 1) => {
+    setAccessories((prev) => {
+      const next = [...prev]
+      const target = index + dir
+      if (target < 0 || target >= next.length) return prev
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+  const accessoryCandidates = accessoryOptions
+    .filter((o) => !selectedAccessoryIds.has(o.id))
+    .filter((o) => accessoryQuery.trim() === '' || o.title.toLowerCase().includes(accessoryQuery.trim().toLowerCase()))
+    .slice(0, 30)
+
   const handleSave = async () => {
     setError(null)
     setSaving(true)
     // Only the storefront-editable fields are sent (see Products collection):
     // price/quantity/isKit/oldPrice/kitItems and MoySklad* are read-only here.
+    // compatibleAccessories is curated in this panel too (never synced).
     const result = await saveProduct(product.id, {
       title: title.trim(),
       description,
@@ -109,6 +147,7 @@ export default function ProductForm({ product, categoryName }: Props) {
       subtitle,
       tag,
       images: images.map((img) => img.id),
+      compatibleAccessories: accessories.map((a) => a.id),
     })
     setSaving(false)
     if (!result.success) {
@@ -220,6 +259,55 @@ export default function ProductForm({ product, categoryName }: Props) {
               ))}
             </div>
             <input type="file" accept="image/*" onChange={handleAddImage} className="mt-3 w-full max-w-full text-[13px]" />
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card p-6">
+            <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Совместимые аксессуары</div>
+            <p className="mt-2 text-[12px] leading-snug text-subtle">
+              Товары, которые подходят к этому (напр. стедикам к камере). Показываются на витрине блоком «Подойдёт к этому товару». Не синхронизируются с МойСкладом.
+            </p>
+
+            {accessories.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {accessories.map((a, i) => (
+                  <li key={a.id} className="flex items-center gap-2 rounded-xl border border-border bg-muted-well px-3 py-2 text-[13px]">
+                    <span className="min-w-0 flex-1 truncate">{a.title}</span>
+                    <span className="shrink-0 tabular-nums text-subtle">{a.price} ₽</span>
+                    <button type="button" onClick={() => moveAccessory(i, -1)} disabled={i === 0} className="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">←</button>
+                    <button type="button" onClick={() => moveAccessory(i, 1)} disabled={i === accessories.length - 1} className="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">→</button>
+                    <button type="button" onClick={() => removeAccessory(a.id)} className="text-[11px] text-accent hover:text-status-alert">✕</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <input
+              value={accessoryQuery}
+              onChange={(e) => setAccessoryQuery(e.target.value)}
+              placeholder="Поиск по складу…"
+              className={`mt-3 h-10 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[13px] outline-none focus:border-foreground focus:bg-white`}
+            />
+            {accessoryQuery.trim() !== '' && accessoryCandidates.length === 0 && (
+              <p className="mt-2 text-[12px] text-subtle">Ничего не найдено.</p>
+            )}
+            {accessoryCandidates.length > 0 && (
+              <ul className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-border">
+                {accessoryCandidates.map((o) => (
+                  <li key={o.id}>
+                    <button
+                      type="button"
+                      onClick={() => addAccessory(o.id)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-muted-well"
+                    >
+                      <span className="min-w-0 flex-1 truncate">{o.title}</span>
+                      <span className="shrink-0 text-[11px] text-subtle">{o.listingType === 'rental' ? 'аренда' : 'продажа'}</span>
+                      <span className="shrink-0 tabular-nums text-subtle">{o.price} ₽</span>
+                      <span className="shrink-0 text-accent">+</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-6">

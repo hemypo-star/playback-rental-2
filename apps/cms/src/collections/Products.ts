@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, Where } from 'payload'
 
 export const Products: CollectionConfig = {
   slug: 'products',
@@ -217,6 +217,28 @@ export const Products: CollectionConfig = {
       admin: {
         readOnly: true,
         position: 'sidebar',
+      },
+    },
+    // Curated in the admin panel (product page → "Совместимые аксессуары");
+    // never synced. Rendered on the storefront product page as a
+    // "Подойдёт к этому товару" block. relationTo: 'products' makes Payload
+    // create a join table products_compatible_accessories — see migration
+    // 20260929_120000_products_compatible_accessories.
+    {
+      name: 'compatibleAccessories',
+      type: 'relationship',
+      relationTo: 'products',
+      hasMany: true,
+      filterOptions: ({ id }) => ({
+        // A product can't be its own accessory; kits reference their
+        // components via kitItems, so the accessories list stays plain items.
+        and: [
+          { id: { not_equals: id ?? 0 } },
+          { isKit: { not_equals: true } },
+        ] as Where[],
+      }),
+      admin: {
+        description: 'Аксессуары и оснастка, которые подходят к этому товару (напр. стедикам к камере). Показываются на витрине блоком «Подойдёт к этому товару». Не синхронизируется.',
       },
     },
     {

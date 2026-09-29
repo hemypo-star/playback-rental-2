@@ -5,6 +5,7 @@ import { getCategories } from '../lib/data/categories'
 import { getCategoryProductStats,getProductTotals,getProducts } from '../lib/data/products'
 import { getActivePromotions } from '../lib/data/promotions'
 import { getSiteSettings } from '../lib/data/siteSettings'
+import { getProductOrderStats } from '../lib/data/popularity'
 import { getSubtreeIds } from '../lib/categoryTree'
 import { mediaUrl } from '../lib/mediaUrl'
 import { categoryNameOf } from '../lib/productDisplay'
@@ -28,9 +29,16 @@ const HOW_IT_WORKS_FALLBACK=[
 ]
 
 export default async function PrototypeHome(){
- const [categories,featuredResult,totals,marqueeResult,settings,promotions,kitsResult]=await Promise.all([
-  getCategories(),getProducts({limit:8,sort:'-lastSyncedAt'}),getProductTotals(),getProducts({limit:10,sort:'price',depth:0}),getSiteSettings(),getActivePromotions(),getProducts({isKit:true,limit:3})
+ const [categories,featuredResult,totals,marqueeResult,settings,promotions,kitsResult,orderStats]=await Promise.all([
+  getCategories(),getProducts({limit:24,sort:'-lastSyncedAt'}),getProductTotals(),getProducts({limit:10,sort:'price',depth:0}),getSiteSettings(),getActivePromotions(),getProducts({isKit:true,limit:3}),getProductOrderStats()
  ])
+ // "Популярные позиции" = real demand (distinct non-cancelled orders per
+ // product), not the old -lastSyncedAt proxy which just showed whatever was
+ // synced last. Candidate pool is the 24 most recently synced available
+ // products; ranked by timesOrdered desc, then freshest sync as tie-breaker.
+ // When no order history exists yet every candidate scores 0 and the block
+ // degrades to the previous recency behaviour instead of disappearing.
+ const popular=[...featuredResult.docs].sort((a,b)=>(orderStats.get(b.id)?.timesOrdered??0)-(orderStats.get(a.id)?.timesOrdered??0)||(b.updatedAt??'').localeCompare(a.updatedAt??'')).slice(0,4)
  const featuredCategories=categories.filter(c=>c.parent==null).slice(0,6)
  const statIds=Array.from(new Set(featuredCategories.flatMap(c=>getSubtreeIds(c.id,categories))))
  const catStats=await getCategoryProductStats(statIds)
@@ -49,7 +57,7 @@ export default async function PrototypeHome(){
    {promos.length>0&&<PrototypePromoCarousel promos={promos}/>}
    {featuredCategories.length>0&&<><div className="pb-section-head"><div><div className="pb-kicker">Категории</div><h2 className="pb-h2">Выберите, чем снимать</h2></div><Link href="/catalog" className="pb-pill pb-section-cta"><span>Весь каталог</span><span>→</span></Link></div><div className="pb-section-grid">{featuredCategories.map((c,i)=>{const img=mediaUrl(c.image);return <Link key={c.id} href={`/catalog/${c.slug}`} className="pb-tile" style={{gridColumn:'span 4',animationDelay:`${i*60}ms`}}><div className="pb-tile-media">{img&&<Image src={img} alt={c.name} fill sizes="(min-width:1021px) 30vw,46vw" style={{objectFit:'cover'}}/>}<span className="pb-chip">{(c.slug||c.name).slice(0,4).toUpperCase()}</span></div><div className="pb-tile-body"><div><div className="pb-tile-title">{c.name}</div><div className="pb-tile-meta">{catMeta(c)}</div></div><span className="pb-arrow">→</span></div></Link>})}</div></>}
    {kitsResult.docs.length>0&&<><div className="pb-section-head"><div><div className="pb-kicker">Наборы</div><h2 className="pb-h2">Собрано под сценарий</h2></div><span style={{fontSize:13,color:'var(--pb-sub)'}}>Готовые комплекты техники</span></div><div className="pb-section-grid">{kitsResult.docs.map((p,i)=><div key={p.id} className="pb-kit-col"><PrototypeProductCard delay={i*60} product={{id:p.id,title:p.title,subtitle:p.subtitle,price:p.price,listingType:p.listingType,quantity:p.quantity,available:p.available,tag:p.tag,categoryName:categoryNameOf(p),imageUrl:mediaUrl(p.images?.[0]),unit:p.listingType==='rental'?'набор / сутки':'шт.'}}/></div>)}</div></>}
-   {featuredResult.docs.length>0&&<><div className="pb-section-head"><div><div className="pb-kicker">Берут чаще всего</div><h2 className="pb-h2">Популярные позиции</h2></div></div><div className="pb-section-grid">{featuredResult.docs.slice(0,4).map((p,i)=><div key={p.id} className="pb-popular-col"><PrototypeProductCard delay={i*45} product={{id:p.id,title:p.title,subtitle:p.subtitle,price:p.price,listingType:p.listingType,quantity:p.quantity,available:p.available,tag:p.tag,categoryName:categoryNameOf(p),imageUrl:mediaUrl(p.images?.[0]),unit:p.listingType==='rental'?'смена / 24 часа':'шт.'}}/></div>)}</div></>}
+   {featuredResult.docs.length>0&&<><div className="pb-section-head"><div><div className="pb-kicker">Берут чаще всего</div><h2 className="pb-h2">Популярные позиции</h2></div></div><div className="pb-section-grid">{popular.map((p,i)=><div key={p.id} className="pb-popular-col"><PrototypeProductCard delay={i*45} product={{id:p.id,title:p.title,subtitle:p.subtitle,price:p.price,listingType:p.listingType,quantity:p.quantity,available:p.available,tag:p.tag,categoryName:categoryNameOf(p),imageUrl:mediaUrl(p.images?.[0]),unit:p.listingType==='rental'?'смена / 24 часа':'шт.'}}/></div>)}</div></>}
    <div className="pb-section-head"><div><div className="pb-kicker">Как это работает</div><h2 className="pb-h2">От выбора до возврата</h2></div><Link href="/how-it-works" className="pb-pill pb-section-cta"><span>Подробные условия</span><span>→</span></Link></div>
    <div className="pb-card pb-steps">{steps.map(s=><div key={s.n} className="pb-step"><span className="pb-step-n">{s.n}</span><div><div className="pb-step-title">{s.title}</div><div className="pb-step-text">{s.text}</div></div></div>)}</div>
    <div className="pb-dark-contact"><div><div className="pb-kicker" style={{color:'rgba(255,255,255,.5)'}}>Нужен совет</div><div style={{marginTop:16,fontSize:'clamp(26px,3.2vw,44px)',fontWeight:500,letterSpacing:'-.04em',lineHeight:1.02}}>Не знаете, что взять на съёмку?</div><p style={{marginTop:16,fontSize:14.5,lineHeight:1.55,color:'rgba(255,255,255,.62)',maxWidth:420}}>Опишите задачу — соберём комплект под неё и посчитаем стоимость на ваши даты.</p><Link href="/contact" className="pb-pill pb-btn pb-contact-cta" style={{marginTop:28}}><span>Написать нам</span><span className="pb-contact-icon">→</span></Link></div><div style={{display:'flex',flexDirection:'column',justifyContent:'flex-end',gap:8}}><div className="pb-contact-row"><span style={{color:'rgba(255,255,255,.55)'}}>Телефон</span><span>{contact.phone}</span></div><div className="pb-contact-row"><span style={{color:'rgba(255,255,255,.55)'}}>Telegram</span><span>{contact.telegram}</span></div><div className="pb-contact-row"><span style={{color:'rgba(255,255,255,.55)'}}>Адрес</span><span>{contact.address}</span></div><div className="pb-contact-row"><span style={{color:'rgba(255,255,255,.55)'}}>Часы</span><span>{contact.hours}</span></div></div></div>

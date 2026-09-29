@@ -28,7 +28,8 @@ async function requireAdmin() {
 
 export interface ProductInput {
   // Storefront-editable fields only (per product owner: title, description,
-  // subtitle, tag, images, available). price/quantity/category/listingType/
+  // subtitle, tag, images, available) + the curated compatibleAccessories
+  // list (admin-only, never synced). price/quantity/category/listingType/
   // kit fields and MoySklad* / lastSyncedAt are read-only in the admin UI —
   // see the Products collection comment.
   title: string
@@ -37,6 +38,8 @@ export interface ProductInput {
   subtitle: string
   tag: string
   images: number[]
+  // Product ids of compatible accessories ("Совместимые аксессуары").
+  compatibleAccessories: number[]
 }
 
 export async function saveProduct(id: number, data: ProductInput): Promise<ActionResult> {

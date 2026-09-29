@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { getAccessoryProducts,getProductById,getProducts } from '../lib/data/products'
+import { getAccessoryProducts,getCompatibleAccessories,getProductById,getProducts } from '../lib/data/products'
 import { getSiteSettings } from '../lib/data/siteSettings'
 import { mediaUrl } from '../lib/mediaUrl'
 import { categoryNameOf } from '../lib/productDisplay'
@@ -12,7 +12,7 @@ import PrototypeAddButton from './PrototypeAddButton'
 export default async function PrototypeProduct({id}:{id:number}){
  const product=await getProductById(id);if(!product)return null
  const images=(product.images||[]).map((img)=>mediaUrl(img)).filter((x):x is string=>Boolean(x));const main=images[0];const category=typeof product.category==='object'?product.category:undefined;const categoryId=category?.id??(typeof product.category==='number'?product.category:undefined)
- const [relatedResult,accessories,settings]=await Promise.all([getProducts({categoryId,limit:4}),getAccessoryProducts({excludeId:product.id,maxPrice:Math.max(1200,product.price*.4),limit:3}),getSiteSettings()]);const related=relatedResult.docs.filter(p=>p.id!==product.id).slice(0,3);const kit=product.kitItems||[]
+ const [relatedResult,curatedAccessories,hintAccessories,settings]=await Promise.all([getProducts({categoryId,limit:4}),getCompatibleAccessories(product),getAccessoryProducts({excludeId:product.id,maxPrice:Math.max(1200,product.price*.4),limit:3}),getSiteSettings()]);const related=relatedResult.docs.filter(p=>p.id!==product.id).slice(0,3);const kit=product.kitItems||[];const accessories=curatedAccessories.length>0?curatedAccessories.slice(0,6):hintAccessories
  const inStock=Boolean(product.available)&&product.quantity>0
  return <div className="pb-page"><section className="pb-container pb-grid" style={{paddingTop:14,paddingBottom:80}}>
   <div className="pb-product-left">

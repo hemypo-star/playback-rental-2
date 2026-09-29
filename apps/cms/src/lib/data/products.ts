@@ -248,6 +248,34 @@ export interface GetAccessoryProductsParams {
   limit?: number
 }
 
+// Curated "Совместимые аксессуары" from the admin panel (products.
+// compatibleAccessories, hasMany self-relationship). Payload's postgres
+// adapter stores hasMany relationships in <collection>_rels ordered by the
+// `order` column, and find().docs preserves that order — so the admin's
+// manual ordering survives to the storefront as-is. Only available products
+// are returned; a curated-but-hidden accessory simply drops out of the row
+// rather than showing an unbookable line.
+export async function getCompatibleAccessories(product: Product): Promise<Product[]> {
+  const ids = (product.compatibleAccessories ?? [])
+    .map((a) => (typeof a === 'object' && a !== null ? a.id : (a as number)))
+    .filter((id): id is number => typeof id === 'number')
+  if (ids.length === 0) return []
+  const payload = await getPayload({ config })
+  const { docs } = await payload.find({
+    collection: 'products',
+    where: buildProductWhere([{ id: { in: ids.join(',') } }]),
+    sort: 'createdAt', // irrelevant — the caller renders in docs order, which follows rels.order
+    limit: ids.length,
+    depth: 1,
+    pagination: false,
+  })
+  // Re-apply the curated order explicitly: `in` + sort above doesn't
+  // guarantee it across Payload versions, and the block's whole point is
+  // owner-controlled ordering.
+  const byId = new Map(docs.map((d) => [d.id, d]))
+  return ids.map((id) => byId.get(id)).filter((d): d is Product => Boolean(d))
+}
+
 export async function getAccessoryProducts({ excludeId, maxPrice, limit = 3 }: GetAccessoryProductsParams): Promise<Product[]> {
   const payload = await getPayload({ config })
   const { docs } = await payload.find({
