@@ -14,7 +14,7 @@ import Image from 'next/image'
 import type { Category, Media } from '../../../../payload-types'
 import { mediaUrl } from '../../../../lib/mediaUrl'
 import type { KitEditData, KitComponentOption } from '../../../../lib/admin/data/kits'
-import { saveKit, uploadKitImage, deleteKit, type KitActionResult } from './actions'
+import { saveKit, deleteKit, type KitActionResult } from './actions'
 
 interface ImageItem {
   id: number
@@ -37,7 +37,8 @@ export default function KitForm({ kit, components, categories }: Props) {
   const [subtitle, setSubtitle] = useState(kit?.subtitle ?? '')
   const [tag, setTag] = useState(kit?.tag ?? '')
   const [price, setPrice] = useState(kit ? String(kit.price) : '')
-  const [oldPrice, setOldPrice] = useState(kit?.oldPrice != null ? String(kit.oldPrice) : '')
+  // «По отдельности» считается сервером из состава; храним только сохранённое значение для отображения, пока состав не выбран.
+  const [oldPrice] = useState(kit?.oldPrice != null ? String(kit.oldPrice) : "")
   const [quantity, setQuantity] = useState(kit ? String(kit.quantity) : '1')
   const [available, setAvailable] = useState(kit ? kit.available : true)
   const [category, setCategory] = useState<string>(kit?.category != null ? String(kit.category) : '')
@@ -61,14 +62,23 @@ export default function KitForm({ kit, components, categories }: Props) {
     if (!file) return
     setError(null)
     setUploading(true)
-    const fd = new FormData()
-    fd.append('file', file)
-    const result = await uploadKitImage(fd)
-    setUploading(false)
-    if (result.success && result.id) {
-      setImages((prev) => [...prev, { id: result.id as number, url: result.url ?? '' }])
-    } else {
-      setError(result.error || 'Не удалось загрузить фото')
+    try {
+      // Plain multipart POST to a route handler — NOT a Server Action: RSC
+      // actions serialize FormData through an internal blob store that 500s
+      // on large images (React error #418/#441 seen in production).
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/admin/kits/upload', { method: 'POST', body: fd })
+      const result = (await res.json()) as { success: boolean; id?: number; url?: string; error?: string }
+      if (result.success && result.id) {
+        setImages((prev) => [...prev, { id: result.id as number, url: result.url ?? '' }])
+      } else {
+        setError(result.error || 'Не удалось загрузить фото')
+      }
+    } catch {
+      setError('Не удалось загрузить фото (сетевая ошибка)')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -128,6 +138,9 @@ export default function KitForm({ kit, components, categories }: Props) {
   const selectedComponents = componentIds
     .map((id) => components.find((c) => c.id === id))
     .filter((c): c is KitComponentOption => Boolean(c))
+  // «По отдельности» = сумма цен состава (суточная ставка аренды для
+  // арендных позиций, цена продажи — для товаров «на продажу»).
+  const componentsSum = selectedComponents.reduce((sum, c) => sum + Number(c.price || 0), 0)
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
@@ -198,11 +211,13 @@ export default function KitForm({ kit, components, categories }: Props) {
               type="number"
               min="0"
               step="1"
-              value={oldPrice}
-              onChange={(e) => setOldPrice(e.target.value)}
-              placeholder="Перечёркнутая цена на витрине"
-              className="h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground"
+              readOnly
+              value={componentsSum > 0 ? componentsSum : oldPrice}
+              className="h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none text-subtle cursor-default"
             />
+            <p className="text-[12px] leading-snug text-subtle">
+              Считается автоматически: сумма суточных ставок аренды (или цен продажи) всех товаров состава.
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`${uid}-quantity`} className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Количество наборов</label>

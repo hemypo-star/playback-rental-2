@@ -34,6 +34,8 @@ export interface KitInput {
   subtitle: string
   tag: string
   price: number
+  // null => computed server-side from the chosen components (sum of their
+  // prices: daily rental rate for rental items, sale price for sale items).
   oldPrice: number | null
   quantity: number
   available: boolean
@@ -76,12 +78,18 @@ export async function saveKit(id: number | null, data: KitInput): Promise<KitAct
       where: { id: { in: data.componentIds } },
       limit: data.componentIds.length || 1,
       depth: 0,
-      select: { title: true },
+      select: { title: true, price: true, listingType: true },
     })
     if (components.docs.length !== data.componentIds.length) {
       return { success: false, error: 'Некоторые товары состава не найдены — обновите страницу' }
     }
     const labelById = new Map(components.docs.map((p) => [p.id, p.title]))
+    // «По отдельности» (oldPrice): sum of the components' prices — daily
+    // rental rate for rental items, sale price for sale items. Computed on
+    // the server so it always reflects the current МойСклад-synced prices;
+    // a manual value from the form is only used when it's higher.
+    const computedOldPrice = components.docs.reduce((sum, p) => sum + Number(p.price ?? 0), 0)
+    const oldPrice = data.oldPrice != null && data.oldPrice > computedOldPrice ? data.oldPrice : computedOldPrice
 
     const kitData = {
       title: data.title.trim(),
@@ -90,7 +98,7 @@ export async function saveKit(id: number | null, data: KitInput): Promise<KitAct
       subtitle: data.subtitle,
       tag: data.tag,
       price: data.price,
-      oldPrice: data.oldPrice,
+      oldPrice,
       quantity: data.quantity,
       available: data.available,
       isKit: true,
@@ -120,22 +128,9 @@ export async function saveKit(id: number | null, data: KitInput): Promise<KitAct
   }
 }
 
-// Photo upload for the kit form — server-side Local API with overrideAccess
-// (the client-side uploadMedia() helper POSTs to /api/media, whose access
-// rules aren't guaranteed for this session). Same mechanism as sync's image
-// import.
-export async function uploadKitImage(formData: FormData): Promise<{ success: boolean; id?: number; url?: string; error?: string }> {
-  try {
-    await requireAdmin()
-    const file = formData.get('file')
-    if (!(file instanceof File) || file.size === 0) return { success: false, error: 'Файл не получен' }
-    const { uploadKitImageFromFile } = await import('../../../../lib/admin/data/kits')
-    const uploaded = await uploadKitImageFromFile(file)
-    return { success: true, id: uploaded.id, url: uploaded.url }
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Не удалось загрузить фото' }
-  }
-}
+// Photo upload moved to a route handler (POST /admin/kits/upload) — Server
+// Actions serialize FormData through an internal blob store that 500s on
+// large images. See lib/admin/data/kits.ts handleKitImageUpload.
 
 export async function deleteKit(id: number): Promise<KitActionResult> {
   try {

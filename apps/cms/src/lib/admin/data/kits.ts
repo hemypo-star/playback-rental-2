@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 import type { Category, Media } from '../../../payload-types'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { getAdminUser } from '../auth'
 
 // Read helpers for the /admin/kits pages (kit = a product with isKit:true,
 // assembled from already-synced МойСклад items — see kits/actions.ts).
@@ -44,6 +45,7 @@ export interface KitComponentOption {
   id: number
   title: string
   listingType: string
+  price: number
 }
 
 // Components of a kit are ordinary МойСклад-synced products (a kit of kits
@@ -56,12 +58,13 @@ export async function getKitComponentOptions(): Promise<KitComponentOption[]> {
     sort: 'title',
     limit: 0,
     depth: 0,
-    select: { title: true, listingType: true },
+    select: { title: true, listingType: true, price: true },
   })
   return result.docs.map((p) => ({
     id: p.id,
     title: p.title,
     listingType: String(p.listingType ?? ''),
+    price: Number(p.price ?? 0),
   }))
 }
 
@@ -102,10 +105,12 @@ export async function getKitById(id: number): Promise<KitEditData | null> {
   }
 }
 
-// Server-side image upload for the kit form (the client-side uploadMedia()
-// helper POSTs to /api/media, which enforces media-collection access rules;
-// on the server we use the Local API with overrideAccess instead, same as
-// the sync job does). Returns the new media doc id.
+// Server-side image upload for the kit form. This runs in a plain async
+// function (NOT a React Server Action): RSC actions serialize FormData into
+// an internal blob store and can fail with 500 / "Minified React error #440"
+// when the payload is large. The route handler below receives a regular
+// multipart POST from the client instead. Binary handling mirrors the sync
+// job's media import (payload.create with `file: { data, ... }`).
 export async function uploadKitImageFromFile(file: File): Promise<{ id: number; url: string }> {
   const payload: Payload = await getPayload({ config })
   const buf = Buffer.from(await file.arrayBuffer())
@@ -118,4 +123,30 @@ export async function uploadKitImageFromFile(file: File): Promise<{ id: number; 
     overrideAccess: true,
   })
   return { id: doc.id, url: doc.url ?? '' }
+}
+
+export interface KitUploadResult {
+  success: boolean
+  id?: number
+  url?: string
+  error?: string
+}
+
+// Handler for POST /admin/kits/upload (multipart field "file"). Auth via
+// the same admin session cookie the server actions use. Upload happens in a
+// route handler rather than a Server Action because RSC actions serialize
+// FormData through an internal blob store, which 500s on large images
+// (React error #418/#441 in the browser).
+export async function handleKitImageUpload(req: Request): Promise<KitUploadResult> {
+  const user = await getAdminUser()
+  if (!user) return { success: false, error: 'Не авторизованы' }
+  const formData = await req.formData()
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.size === 0) return { success: false, error: 'Файл не получен' }
+  try {
+    const uploaded = await uploadKitImageFromFile(file)
+    return { success: true, id: uploaded.id, url: uploaded.url }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Не удалось загрузить фото' }
+  }
 }
