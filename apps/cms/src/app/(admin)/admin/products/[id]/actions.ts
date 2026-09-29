@@ -53,3 +53,33 @@ export async function saveProduct(id: number, data: ProductInput): Promise<Actio
     return { success: false, error: errorMessage(error, 'Не удалось сохранить') }
   }
 }
+
+// "Синхронизировать" button on the product page — pulls this one product's
+// МойСклад-side (read-only) fields now instead of waiting for a webhook or
+// the next scheduled run. Same code path as the webhook receiver and the
+// bulk sync (syncSingleEntity -> upsertProduct), so results can't drift.
+// Note: storefront-editable fields (title/description/category/images) are
+// refreshed from МойСклад only while they haven't been edited locally; to
+// re-adopt them after an edit, sync first, then re-edit in the panel.
+export interface SyncResultAction extends ActionResult {
+  synced?: boolean
+  reason?: string
+}
+
+export async function syncProduct(id: number): Promise<SyncResultAction> {
+  try {
+    await requireAdmin()
+    const payload = await getPayload({ config })
+    const { syncProductById } = await import('../../../../../lib/moysklad/sync')
+    const result = await syncProductById(payload, id)
+    if (result.synced) {
+      updateTag(STOREFRONT_CACHE_TAGS.catalogFacets)
+      revalidatePath('/admin/stock')
+      revalidatePath(`/admin/products/${id}`)
+      revalidatePath(`/product/${id}`)
+    }
+    return { success: result.synced, synced: result.synced, reason: result.reason, error: result.synced ? undefined : result.reason }
+  } catch (error) {
+    return { success: false, synced: false, error: errorMessage(error, 'Не удалось синхронизировать') }
+  }
+}

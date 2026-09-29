@@ -1,4 +1,4 @@
-import type { Payload, RequiredDataFromCollectionSlug } from 'payload'
+import type { Payload, Product, RequiredDataFromCollectionSlug } from 'payload'
 import { msGet, msGetBinary, msPaginate } from './client'
 import {
   fetchAllFolders,
@@ -192,30 +192,96 @@ async function uploadImageOnce(
   return doc.id as number
 }
 
-async function upsertProduct(payload: Payload, moySkladId: string, data: RequiredDataFromCollectionSlug<'products'>) {
+// Fields that are "owned" by the admin UI / storefront once a product
+// exists. The sync job may refresh them from МойСклад ONLY when nobody has
+// touched them locally since the previous sync run (i.e. their stored value
+// still equals what the *previous* run imported from МойСклад — see
+// lastSyncedMsValues on the Products collection). Anything edited in the
+// admin panel is therefore preserved across syncs; untouched rows keep
+// following the МойСклад source (renames, re-descriptions, folder moves
+// propagate automatically).
+const SYNC_CANDIDATE_FIELDS = ['title', 'description', 'category', 'images'] as const
+
+function sameImageRefs(a: unknown, b: unknown): boolean {
+  const ids = (v: unknown) =>
+    Array.isArray(v) ? v.map((x) => String(typeof x === 'object' && x !== null ? (x as { id: unknown }).id : x)).join(',') : String(v ?? '')
+  return ids(a) === ids(b)
+}
+
+async function upsertProduct(payload: Payload, moySkladId: string, data: RequiredDataFromCollectionSlug<'products'>, opts: { force?: boolean } = {}) {
   const existingDoc = await payload.find({
     collection: 'products',
     where: { moySkladId: { equals: moySkladId } },
     limit: 1,
+    depth: 0,
   })
   if (existingDoc.docs.length) {
-    // Existing products only get the three operational fields refreshed
-    // from МойСклад: price, quantity (stock) and availability (derived
-    // below — in stock again means it can be un-paused). Everything else —
-    // title, description, images, category, subtitle/tag — belongs to the
-    // storefront after the initial import and is never overwritten.
-    const updateData: Partial<RequiredDataFromCollectionSlug<'products'>> = {
+    const existing = existingDoc.docs[0] as unknown as Product
+    // Operational fields always refresh from МойСклад — they're read-only
+    // in the admin UI, so there's nothing local an admin could lose:
+    // price, quantity (stock), listingType (fixed per entity type anyway).
+    const updateData: Record<string, unknown> = {
       price: data.price,
       quantity: data.quantity,
+      listingType: data.listingType,
       lastSyncedAt: data.lastSyncedAt,
     }
     if ((data as { available?: boolean }).available !== undefined) {
       updateData.available = (data as { available?: boolean }).available
     }
-    await payload.update({ collection: 'products', id: existingDoc.docs[0].id, data: updateData })
+
+    // Storefront-owned fields: overwrite only while they still match the
+    // values the previous sync run recorded in lastSyncedMsValues (null on
+    // legacy rows created before this mechanism — treated as "never
+    // verified", so the current МойСклад value is adopted once and recorded;
+    // from then on local edits stick).
+    const prevMs = (existing as { lastSyncedMsValues?: Record<string, unknown> | null }).lastSyncedMsValues ?? null
+    const newMs: Record<string, unknown> = {}
+    for (const field of SYNC_CANDIDATE_FIELDS) {
+      const incoming = (data as Record<string, unknown>)[field]
+      const stored = (existing as Record<string, unknown>)[field]
+      const unchangedLocally =
+        opts.force || prevMs == null
+          ? true
+          : field === 'images'
+            ? sameImageRefs(stored, prevMs[field])
+            : String(stored ?? '') === String(prevMs[field] ?? '')
+      if (prevMs == null || unchangedLocally) {
+        if (incoming !== undefined && incoming !== null && incoming !== '') {
+          updateData[field] = incoming
+          newMs[field] = incoming
+        } else if (prevMs != null) {
+          // Field missing/blank in МойСклад now — keep whatever we have
+          // rather than blanking a listing over a transient API gap.
+          newMs[field] = prevMs[field]
+        }
+      } else {
+        // Locally edited — keep the stored value, remember it as the new
+        // baseline so future runs compare against reality, not stale data.
+        newMs[field] = stored
+      }
+    }
+    if (prevMs == null) {
+      // First pass for a legacy row: seed the baseline with the stored
+      // values for candidate fields we did NOT adopt (kept local copies).
+      for (const field of SYNC_CANDIDATE_FIELDS) {
+        if (!(field in newMs)) newMs[field] = (existing as Record<string, unknown>)[field] ?? null
+      }
+    }
+    updateData.lastSyncedMsValues = newMs
+
+    await payload.update({ collection: 'products', id: existing.id, data: updateData as never })
     return 'updated' as const
   }
-  await payload.create({ collection: 'products', data })
+  const created = await payload.create({ collection: 'products', data })
+  // Seed the baseline right at import so the very next sync can tell
+  // "unchanged since import" from "edited in the admin panel".
+  const seeded: Record<string, unknown> = {}
+  for (const field of SYNC_CANDIDATE_FIELDS) {
+    const v = (data as Record<string, unknown>)[field]
+    if (v !== undefined && v !== null && v !== '') seeded[field] = v
+  }
+  await payload.update({ collection: 'products', id: created.id, data: { lastSyncedMsValues: seeded } as never })
   return 'created' as const
 }
 
@@ -571,4 +637,20 @@ export async function syncSingleEntity(
   }
 
   return { synced: false, reason: `Unhandled entity type: ${entityType}` }
+}
+
+/**
+ * Admin-initiated single-product resync ("Синхронизировать" button in the
+ * admin panel). Thin wrapper over syncSingleEntity — which is the exact
+ * same code path as the webhook receiver, so a manual click and an
+ * automatic webhook can never behave differently for one product.
+ */
+export async function syncProductById(payload: Payload, productId: number): Promise<{ synced: boolean; reason?: string }> {
+  const doc = await payload.findByID({ collection: 'products', id: productId, depth: 0 })
+  if (!doc) return { synced: false, reason: 'Товар не найден' }
+  if (!doc.moySkladId) return { synced: false, reason: 'У товара нет moySkladId — он не из МойСклада' }
+  // listingType encodes the МойСклад entity type: rental listings are
+  // modeled as services there, sale listings as products (see Products.ts).
+  const entityType = doc.listingType === 'rental' ? 'service' : 'product'
+  return syncSingleEntity(payload, entityType, doc.moySkladId)
 }

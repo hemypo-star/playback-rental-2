@@ -14,7 +14,7 @@ import Image from 'next/image'
 import type { Media, Product } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
-import { saveProduct } from '../../app/(admin)/admin/products/[id]/actions'
+import { saveProduct, syncProduct } from '../../app/(admin)/admin/products/[id]/actions'
 
 interface Props {
   product: Product
@@ -42,6 +42,35 @@ export default function ProductForm({ product, categoryName }: Props) {
   )
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState<string | null>(null)
+
+  // Storefront fields (title/description/subtitle/tag/images/available) are
+  // editable here; sync preserves them once edited locally. "Синхронизировать"
+  // re-adopts title/description/category/images from МойСклад for this row,
+  // discarding local edits to those fields.
+  const handleSync = async () => {
+    setError(null)
+    setSyncMsg(null)
+    if (
+      !window.confirm(
+        'Принудительно подтянуть данные МойСклада для этого товара? Локальные правки названия/описания/категории/фото будут заменены значениями из МойСклада.',
+      )
+    ) {
+      return
+    }
+    setSyncing(true)
+    const result = await syncProduct(product.id)
+    setSyncing(false)
+    if (result.success) {
+      // Pull the freshly synced read-only values (цена/остаток/lastSyncedAt)
+      // into the page — the server component re-runs with force-dynamic.
+      router.refresh()
+      setSyncMsg('Синхронизировано из МойСклада')
+    } else {
+      setError(result.error || 'Не удалось синхронизировать')
+    }
+  }
 
   const handleAddImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -116,8 +145,25 @@ export default function ProductForm({ product, categoryName }: Props) {
             />
 
             <p className="mt-2 text-[11.5px] leading-snug text-subtle">
-              Название и описание приходят из МойСклада — следующие правки в них будут перезаписаны следующим прогоном синхронизации.
+              Название и описание редактируются свободно — синхронизация обновляет их из МойСклада только пока они не менялись из админки. Кнопка «Синхронизировать» принудительно подтягивает данные МойСклада для этого товара (цену, остаток и несменённые вручную название/описание).
             </p>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleSync}
+                disabled={syncing}
+                className="h-10 rounded-xl border border-input bg-muted-well px-4 text-[13px] font-semibold hover:border-foreground disabled:opacity-50"
+              >
+                {syncing ? 'Синхронизация…' : 'Синхронизировать из МойСклада'}
+              </button>
+              {syncMsg && <span className="text-[12.5px] text-status-ok">{syncMsg}</span>}
+              {product.lastSyncedAt && (
+                <span className="text-[11.5px] text-subtle">
+                  Последняя синхронизация: {new Date(product.lastSyncedAt).toLocaleString('ru-RU')}
+                </span>
+              )}
+            </div>
 
             <div className="mt-4 flex gap-6">
               <div>

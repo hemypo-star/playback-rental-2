@@ -32,7 +32,7 @@ export const Products: CollectionConfig = {
       type: 'text',
       required: true,
       admin: {
-        description: 'Название на витрине. ВНИМАНИЕ: правки будут перезаписаны следующим прогоном sync:moysklad (источник — МойСклад).',
+        description: 'Название на витрине. Правки из админки сохраняются: синхронизация обновляет это поле из МойСклада только пока оно не менялось локально (сравнение с lastSyncedMsValues). Кнопка «Синхронизировать» принудительно подтягивает его из МойСклада.',
       },
     },
     {
@@ -58,7 +58,7 @@ export const Products: CollectionConfig = {
       name: 'description',
       type: 'textarea',
       admin: {
-        description: 'Описание на витрине. ВНИМАНИЕ: правки будут перезаписаны следующим прогоном sync:moysklad.',
+        description: 'Описание на витрине. Правки из админки сохраняются (см. title): sync обновляет его из МойСклада, только пока оно не менялось локально.',
       },
     },
     {
@@ -217,6 +217,22 @@ export const Products: CollectionConfig = {
       admin: {
         readOnly: true,
         position: 'sidebar',
+      },
+    },
+    {
+      // Sync bookkeeping — the values title/description/category/images had
+      // at the last sync run, as imported from МойСклад. The bulk/single
+      // sync compares current stored values against this snapshot to decide
+      // whether a field was edited in the admin panel since the previous
+      // run (edited -> left alone; unchanged -> refreshed from МойСклад).
+      // Never written by hand; hidden from the UI entirely.
+      name: 'lastSyncedMsValues',
+      type: 'json',
+      admin: {
+        readOnly: true,
+        hidden: true,
+        disableListColumn: true,
+        disableListFilter: true,
       },
     },
   ],

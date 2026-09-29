@@ -7,6 +7,7 @@ const NAV = [
   { label:'Заказы', href:'/admin/orders', badge:'orders' as const },
   { label:'Календарь', href:'/admin/calendar' },
   { label:'Склад', href:'/admin/stock', badge:'stock' as const },
+  { label:'Наборы', href:'/admin/kits' },
   { label:'Клиенты', href:'/admin/clients', badge:'clients' as const },
   { label:'Аналитика', href:'/admin/analytics' },
   { label:'Контент', href:'/admin/content' },
