@@ -1,4 +1,5 @@
-import type { Payload, Product, RequiredDataFromCollectionSlug } from 'payload'
+import type { Payload, RequiredDataFromCollectionSlug } from 'payload'
+import type { Product } from '../../payload-types'
 import { msGet, msGetBinary, msPaginate } from './client'
 import {
   fetchAllFolders,
@@ -239,7 +240,7 @@ async function upsertProduct(payload: Payload, moySkladId: string, data: Require
     const newMs: Record<string, unknown> = {}
     for (const field of SYNC_CANDIDATE_FIELDS) {
       const incoming = (data as Record<string, unknown>)[field]
-      const stored = (existing as Record<string, unknown>)[field]
+      const stored = (existing as unknown as Record<string, unknown>)[field]
       const unchangedLocally =
         opts.force || prevMs == null
           ? true
@@ -265,7 +266,7 @@ async function upsertProduct(payload: Payload, moySkladId: string, data: Require
       // First pass for a legacy row: seed the baseline with the stored
       // values for candidate fields we did NOT adopt (kept local copies).
       for (const field of SYNC_CANDIDATE_FIELDS) {
-        if (!(field in newMs)) newMs[field] = (existing as Record<string, unknown>)[field] ?? null
+        if (!(field in newMs)) newMs[field] = (existing as unknown as Record<string, unknown>)[field] ?? null
       }
     }
     updateData.lastSyncedMsValues = newMs
@@ -523,6 +524,7 @@ export async function syncSingleEntity(
   payload: Payload,
   entityType: string,
   entityId: string,
+  opts: { force?: boolean } = {},
 ): Promise<{ synced: boolean; reason?: string }> {
   const allFolders = await fetchAllFolders()
   const rentalFolderIds = resolveRentalFolderIds(allFolders)
@@ -582,7 +584,7 @@ export async function syncSingleEntity(
       lastSyncedAt: new Date().toISOString(),
     }
     if (mediaId) data.images = [mediaId]
-    await upsertProduct(payload, s.id, data)
+    await upsertProduct(payload, s.id, data, opts)
     return { synced: true }
   }
 
@@ -612,7 +614,7 @@ export async function syncSingleEntity(
         lastSyncedAt: new Date().toISOString(),
       }
       if (mediaId) data.images = [mediaId]
-      await upsertProduct(payload, p.id, data)
+      await upsertProduct(payload, p.id, data, opts)
       return { synced: true }
     }
 
@@ -652,5 +654,5 @@ export async function syncProductById(payload: Payload, productId: number): Prom
   // listingType encodes the МойСклад entity type: rental listings are
   // modeled as services there, sale listings as products (see Products.ts).
   const entityType = doc.listingType === 'rental' ? 'service' : 'product'
-  return syncSingleEntity(payload, entityType, doc.moySkladId)
+  return syncSingleEntity(payload, entityType, doc.moySkladId, { force: true })
 }

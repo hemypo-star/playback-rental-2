@@ -11,10 +11,10 @@
 import { useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import type { Category } from '../../../../payload-types'
+import type { Category, Media } from '../../../../payload-types'
 import { mediaUrl } from '../../../../lib/mediaUrl'
 import type { KitEditData, KitComponentOption } from '../../../../lib/admin/data/kits'
-import { saveKit, uploadKitImage, deleteKit, type KitActionResult } from '../actions'
+import { saveKit, uploadKitImage, deleteKit, type KitActionResult } from './actions'
 
 interface ImageItem {
   id: number
@@ -316,7 +316,7 @@ export default function KitForm({ kit, components, categories }: Props) {
           {images.map((img, i) => (
             <div key={img.id} className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-muted-well">
               {img.url ? (
-                <Image src={mediaUrl(img) ?? img.url} alt="" fill sizes="160px" className="object-cover" unoptimized />
+                <Image src={mediaUrl({ id: img.id } as Media) ?? img.url} alt="" fill sizes="160px" className="object-cover" unoptimized />
               ) : null}
               <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 bg-black/50 py-1 opacity-0 transition-opacity group-hover:opacity-100">
                 <button type="button" onClick={() => moveImage(i, -1)} className="text-[11px] font-bold text-white">←</button>

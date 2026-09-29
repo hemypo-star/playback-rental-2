@@ -1,4 +1,5 @@
-import type { Category, Media, Payload } from 'payload'
+import type { Payload } from 'payload'
+import type { Category, Media } from '../../../payload-types'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 

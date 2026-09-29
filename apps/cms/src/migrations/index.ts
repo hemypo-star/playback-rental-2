@@ -7,6 +7,7 @@ import * as migration_20260911_090000_rate_limit_hits_uuid_pk from './20260911_0
 import * as migration_20260911_140000_site_settings_business_hours from './20260911_140000_site_settings_business_hours';
 import * as migration_20260912_090000_add_promo_codes from './20260912_090000_add_promo_codes';
 import * as migration_20260918_030000_media_image_sizes from './20260918_030000_media_image_sizes';
+import * as migration_20260929_040000_products_sync_baseline from './20260929_040000_products_sync_baseline';
 
 export const migrations = [
   {
@@ -53,5 +54,10 @@ export const migrations = [
     up: migration_20260918_030000_media_image_sizes.up,
     down: migration_20260918_030000_media_image_sizes.down,
     name: '20260918_030000_media_image_sizes',
+  },
+  {
+    up: migration_20260929_040000_products_sync_baseline.up,
+    down: migration_20260929_040000_products_sync_baseline.down,
+    name: '20260929_040000_products_sync_baseline',
   },
 ];

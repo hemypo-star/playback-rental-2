@@ -8,6 +8,7 @@
 // required+unique sync key without ever colliding with a real МойСклад id —
 // and lastSyncedMsValues stays null, so the sync job never matches this row
 // (МойСклад has no such entity).
+import type { RequiredDataFromCollectionSlug } from 'payload'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { revalidatePath, updateTag } from 'next/cache'
@@ -94,7 +95,7 @@ export async function saveKit(id: number | null, data: KitInput): Promise<KitAct
       available: data.available,
       isKit: true,
       images: data.images,
-      category: data.category ?? undefined,
+      category: data.category as number,
       kitItems: data.componentIds.map((cid) => ({ label: labelById.get(cid) ?? '' })),
     }
 
@@ -102,7 +103,9 @@ export async function saveKit(id: number | null, data: KitInput): Promise<KitAct
     if (id === null) {
       const created = await payload.create({
         collection: 'products',
-        data: { ...kitData, moySkladId: `kit-${randomUUID()}` },
+        // Synthetic sync key: satisfies required+unique moySkladId without
+        // ever matching a real МойСклад entity (see module docblock).
+        data: { ...kitData, moySkladId: `kit-${randomUUID()}` } as RequiredDataFromCollectionSlug<'products'>,
         overrideAccess: true,
       })
       docId = created.id
