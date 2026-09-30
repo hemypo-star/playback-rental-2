@@ -13,7 +13,6 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import type { Media, Product } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
-import { uploadMedia } from '../../lib/admin/mediaUpload'
 import { saveProduct, syncProduct } from '../../app/(admin)/admin/products/[id]/actions'
 
 interface Props {
@@ -54,6 +53,7 @@ export default function ProductForm({ product, categoryName, accessoryOptions = 
   const [accessoryQuery, setAccessoryQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
 
@@ -86,12 +86,28 @@ export default function ProductForm({ product, categoryName, accessoryOptions = 
 
   const handleAddImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
+    setError(null)
+    setUploading(true)
     try {
-      const media = await uploadMedia(file)
-      setImages((prev) => [...prev, { id: media.id, url: media.url }])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось загрузить файл')
+      // Plain multipart POST to the shared route handler — NOT a Server
+      // Action and not the /api/media Payload endpoint: RSC actions serialize
+      // FormData through an internal blob store that 500s on large images
+      // (React error #418/#441 seen in production), same fix as the kits page.
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/admin/kits/upload', { method: 'POST', body: fd })
+      const result = (await res.json()) as { success: boolean; id?: number; url?: string; error?: string }
+      if (result.success && result.id) {
+        setImages((prev) => [...prev, { id: result.id as number, url: result.url ?? '' }])
+      } else {
+        setError(result.error || 'Не удалось загрузить фото')
+      }
+    } catch {
+      setError('Не удалось загрузить фото (сетевая ошибка)')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -161,7 +177,8 @@ export default function ProductForm({ product, categoryName, accessoryOptions = 
     <>
       {error && <p className="rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>}
 
-      <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1.3fr_1fr]">
+      {/* Same layout as the kit editor (KitForm): main column + photos aside */}
+      <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1fr_340px]">
         <div className="flex flex-col gap-3.5">
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Витрина</div>
@@ -240,28 +257,6 @@ export default function ProductForm({ product, categoryName, accessoryOptions = 
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-6">
-            <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Изображения</div>
-            <div className="mt-3 flex flex-wrap gap-3">
-              {images.map((img, i) => (
-                <div key={img.id} className="relative w-24 rounded-xl border border-border p-1.5">
-                  {/* C4 (design_handoff_swiss_bento/08-instruction.md, G3):
-                      fixed 84x84 (w-24 card minus p-1.5 padding on both
-                      sides) — real, server-persisted URLs from
-                      uploadMedia()/mediaUrl(), same as the other admin
-                      previews. */}
-                  {img.url && <Image src={img.url} width={84} height={84} className="aspect-square w-full rounded-lg object-cover" alt="" />}
-                  <div className="mt-1 flex items-center justify-between">
-                    <button type="button" onClick={() => moveImage(i, -1)} disabled={i === 0} className="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">←</button>
-                    <button type="button" onClick={() => removeImage(i)} className="text-[11px] text-accent hover:text-status-alert">✕</button>
-                    <button type="button" onClick={() => moveImage(i, 1)} disabled={i === images.length - 1} className="text-[11px] text-subtle hover:text-foreground disabled:opacity-30">→</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <input type="file" accept="image/*" onChange={handleAddImage} className="mt-3 w-full max-w-full text-[13px]" />
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Совместимые аксессуары</div>
             <p className="mt-2 text-[12px] leading-snug text-subtle">
               Товары, которые подходят к этому (напр. стедикам к камере). Показываются на витрине блоком «Подойдёт к этому товару». Не синхронизируются с МойСкладом.
@@ -326,7 +321,50 @@ export default function ProductForm({ product, categoryName, accessoryOptions = 
               <p className="mt-2 text-[13px] text-subtle">Не набор.</p>
             )}
           </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={handleSave} disabled={saving || uploading} className="btn-primary">
+              {saving ? 'Сохранение…' : 'Сохранить'}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/admin/stock')}
+              className="h-10 rounded-xl border border-input px-4 text-[13px] font-semibold hover:border-foreground"
+            >
+              Отмена
+            </button>
+          </div>
         </div>
+
+        {/* Photos — same aside as the kit editor (KitForm): 2-col previews,
+            hover controls, "+ Добавить фото" button instead of a raw file input. */}
+        <aside className="flex h-fit flex-col gap-3 rounded-3xl border border-border bg-card p-6">
+          <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Фотографии</div>
+          <div className="grid grid-cols-2 gap-3">
+            {images.map((img, i) => (
+              <div key={img.id} className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-muted-well">
+                {img.url ? (
+                  <Image src={mediaUrl({ id: img.id } as Media) ?? img.url} alt="" fill sizes="160px" className="object-cover" unoptimized />
+                ) : null}
+                <div className="absolute inset-x-0 bottom-0 flex justify-center gap-2 bg-black/50 py-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button type="button" onClick={() => moveImage(i, -1)} className="text-[11px] font-bold text-white">←</button>
+                  <button type="button" onClick={() => moveImage(i, 1)} className="text-[11px] font-bold text-white">→</button>
+                  <button
+                    type="button"
+                    onClick={() => setImages((prev) => prev.filter((x) => x.id !== img.id))}
+                    className="text-[11px] font-bold text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <label className="flex h-10 cursor-pointer items-center justify-center rounded-xl border border-dashed border-input text-[13px] font-semibold text-subtle hover:border-foreground hover:text-foreground">
+            {uploading ? 'Загрузка…' : '+ Добавить фото'}
+            <input type="file" accept="image/*" className="hidden" onChange={handleAddImage} disabled={uploading} />
+          </label>
+        </aside>
       </div>
     </>
   )
