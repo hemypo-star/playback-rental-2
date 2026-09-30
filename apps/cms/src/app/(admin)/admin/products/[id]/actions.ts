@@ -46,7 +46,17 @@ export async function saveProduct(id: number, data: ProductInput): Promise<Actio
   try {
     await requireAdmin()
     const payload = await getPayload({ config })
-    await payload.update({ collection: 'products', id, data, overrideAccess: true })
+    // Relationship fields (images -> media, compatibleAccessories -> products)
+    // must be sent as strings or resolved docs; raw numbers are rejected by
+    // Payload's relationship validation ("The following field is invalid:
+    // Compatible Accessories"). Normalize before the update. The cast keeps
+    // payload-types happy (its input type only names number|doc).
+    const normalized = {
+      ...data,
+      images: (data.images ?? []).map((v) => String(v)),
+      compatibleAccessories: (data.compatibleAccessories ?? []).map((v) => String(v)),
+    } as unknown as Record<string, unknown>
+    await payload.update({ collection: 'products', id, data: normalized, overrideAccess: true })
     updateTag(STOREFRONT_CACHE_TAGS.catalogFacets)
     revalidatePath('/admin/stock')
     revalidatePath(`/admin/products/${id}`)
