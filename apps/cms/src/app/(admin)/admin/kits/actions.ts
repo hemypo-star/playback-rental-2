@@ -70,9 +70,11 @@ export async function saveKit(id: number | null, data: KitInput): Promise<KitAct
 
     const payload = await getPayload({ config })
 
-    // Resolve component product ids -> their titles (labels are plain text
-    // on purpose: a kit keeps showing its composition even if a component
-    // is later renamed/deleted in МойСклад).
+    // Resolve component product ids -> their titles + prices (labels are
+    // plain text on purpose: a kit keeps showing its composition even if a
+    // component is later renamed/deleted in МойСклад; productId is stored
+    // alongside so the editor can re-check the components and the
+    // storefront can render them as cards).
     const components = await payload.find({
       collection: 'products',
       where: { id: { in: data.componentIds } },
@@ -83,12 +85,17 @@ export async function saveKit(id: number | null, data: KitInput): Promise<KitAct
     if (components.docs.length !== data.componentIds.length) {
       return { success: false, error: 'Некоторые товары состава не найдены — обновите страницу' }
     }
-    const labelById = new Map(components.docs.map((p) => [p.id, p.title]))
+    const componentById = new Map(components.docs.map((p) => [p.id, p]))
+    // Preserve the picker's selection order (payload.find returns docs in
+    // table order, not the order of the `in` list).
+    const orderedComponents = data.componentIds
+      .map((cid) => componentById.get(cid))
+      .filter((p): p is (typeof components.docs)[number] => Boolean(p))
     // «По отдельности» (oldPrice): sum of the components' prices — daily
     // rental rate for rental items, sale price for sale items. Computed on
     // the server so it always reflects the current МойСклад-synced prices;
     // a manual value from the form is only used when it's higher.
-    const computedOldPrice = components.docs.reduce((sum, p) => sum + Number(p.price ?? 0), 0)
+    const computedOldPrice = orderedComponents.reduce((sum, p) => sum + Number(p.price ?? 0), 0)
     const oldPrice = data.oldPrice != null && data.oldPrice > computedOldPrice ? data.oldPrice : computedOldPrice
 
     const kitData = {
@@ -102,10 +109,12 @@ export async function saveKit(id: number | null, data: KitInput): Promise<KitAct
       quantity: data.quantity,
       available: data.available,
       isKit: true,
-      images: data.images,
-      category: data.category as number,
-      kitItems: data.componentIds.map((cid) => ({ label: labelById.get(cid) ?? '' })),
-    }
+      // Same relationship normalization as saveProduct: raw numbers fail
+      // Payload's relationship validation ("The following field is invalid").
+      images: data.images.map((v) => String(v)),
+      category: String(data.category),
+      kitItems: orderedComponents.map((p) => ({ label: p.title, productId: p.id })),
+    } as unknown as Record<string, unknown>
 
     let docId: number
     if (id === null) {

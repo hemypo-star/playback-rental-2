@@ -101,7 +101,13 @@ export async function getKitById(id: number): Promise<KitEditData | null> {
       .filter((img): img is Media => typeof img === 'object' && img !== null)
       .map((img) => ({ id: img.id, url: img.url ?? '' })),
     category: typeof doc.category === 'object' && doc.category ? (doc.category as Category).id : null,
-    componentIds: (doc.kitItems ?? []).map((item) => Number(item.id)).filter(Number.isFinite),
+    // productId is the component product's id (see Products.ts kitItems);
+    // the array row's own `id` is a synthetic row id and must NOT be used
+    // here — that was the bug that made the editor's composition come back
+    // empty on reload. Rows saved before productId existed are skipped.
+    componentIds: (doc.kitItems ?? [])
+      .map((item) => Number(item.productId))
+      .filter(Number.isFinite),
   }
 }
 

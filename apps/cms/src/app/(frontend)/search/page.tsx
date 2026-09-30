@@ -73,7 +73,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             </div>
           ) : productsResult && productsResult.docs.length > 0 ? (
             <div className="pb-products">{productsResult.docs.map((p, i) => (
-              <PrototypeProductCard key={p.id} delay={i * 45} product={{ id: p.id, title: p.title, subtitle: p.subtitle, price: p.price, listingType: p.listingType, quantity: p.quantity, available: p.available, tag: p.tag, categoryName: categoryNameOf(p), imageUrl: mediaUrl(p.images?.[0]), unit: unitOf(p) }} />
+              <PrototypeProductCard key={p.id} delay={i * 45} product={{ id: p.id, title: p.title, subtitle: p.subtitle, price: p.price, listingType: p.listingType, quantity: p.quantity, available: p.available, tag: p.tag, categoryName: categoryNameOf(p), imageUrl: mediaUrl(p.images?.[0]), unit: unitOf(p), oldPrice: p.isKit ? p.oldPrice : null }} />
             ))}</div>
           ) : null}
           {pageCount > 1 && (
