@@ -1,0 +1,23 @@
+# Applies repo-wide — the build context is the repo root, not apps/cms.
+# Patterns WITHOUT a leading slash match at every depth; anchor anything
+# meant for one specific directory with a leading slash.
+
+# node_modules at any depth — always reinstalled fresh via pnpm inside the
+# image; a copied-in host node_modules can carry macOS-built native addons
+# (sharp, @swc/core) that silently break in the Linux container.
+**/node_modules
+**/.next
+**/dist
+**/*.tsbuildinfo
+
+.git
+.claude
+.pnpm-store
+
+# Real uploaded media and env files — media comes from a mounted volume at
+# runtime (see compose.yaml), never baked into the image; env files supply
+# secrets via compose's `environment`/`env_file`, never copied into a layer.
+apps/cms/media
+**/.env
+**/.env.*
+!**/.env.example

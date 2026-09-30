@@ -1,0 +1,41 @@
+{
+  "$preview": {
+    "width": 1440,
+    "height": 960
+  },
+  "defaultScreen": {
+    "editor": "enum",
+    "options": [
+      "home",
+      "catalog",
+      "product",
+      "cart",
+      "admin"
+    ],
+    "default": "home",
+    "tsType": "string",
+    "section": "Прототип"
+  },
+  "promoAuto": {
+    "editor": "boolean",
+    "default": true,
+    "tsType": "boolean",
+    "section": "Акции"
+  },
+  "showKits": {
+    "editor": "boolean",
+    "default": true,
+    "tsType": "boolean",
+    "section": "Каталог"
+  },
+  "offHoursFee": {
+    "editor": "int",
+    "default": 2500,
+    "min": 0,
+    "max": 6000,
+    "step": 100,
+    "unit": "₽",
+    "tsType": "number",
+    "section": "Условия"
+  }
+}

@@ -1,0 +1,49 @@
+# Local visual preview. Brings up just Postgres and the app, then seeds a
+# demo catalog, a demo admin and a couple of live bookings, so the site is
+# something you can actually click through instead of an empty shell.
+#
+#   docker compose --env-file .env.preview -f compose.yaml -f compose.preview.yaml up --build
+#
+# Everything it needs is in the committed .env.preview — no secrets to invent.
+# See docs/PREVIEW.md.
+
+services:
+  # Published so scripts/preview.sh can run the app straight from the
+  # workspace against this database, without building the app image.
+  db:
+    ports:
+      - '${PREVIEW_DB_PORT:-55432}:5432'
+
+  # Same reasoning as compose.dev.yaml: nothing in a preview stack should be
+  # able to touch the shared МойСклад account or send a real notification.
+  reconcile:
+    profiles: [jobs]
+
+  notifications:
+    profiles: [jobs]
+
+  cms:
+    environment:
+      NOTIFICATIONS_ENABLED: 'false'
+
+  # One-shot. Waits for the app's own healthcheck, which means migrations have
+  # already run, then fills the database. Both seeds are idempotent, so
+  # bringing the stack up again on an existing volume is harmless.
+  seed:
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+    depends_on:
+      cms:
+        condition: service_healthy
+    restart: 'no'
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      MEDIA_STATIC_DIR: /data/media
+      SMOKE_ADMIN_EMAIL: ${PREVIEW_ADMIN_EMAIL:-demo@playback.local}
+      SMOKE_ADMIN_PASSWORD: ${PREVIEW_ADMIN_PASSWORD:-DemoPassw0rd!}
+    volumes:
+      - cms_media:/data/media
+    command: ['sh', '-c', 'pnpm visual:seed && pnpm preview:seed']

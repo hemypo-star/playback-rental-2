@@ -1,0 +1,204 @@
+# Production stack. `cms` is the public Next/Payload app; Postgres and the
+# notification queue remain internal/persistent Docker resources. Run with:
+#   docker compose up --build
+# Dev mode overlays compose.dev.yaml and disables external side-effect workers.
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: playback
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: playback_cms
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U playback -d playback_cms']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  cms:
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      WEB_URL: ${WEB_URL:?set WEB_URL in .env}
+      MEDIA_STATIC_DIR: /data/media
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+      MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
+      # The web process receives no Telegram/MAX/VK/SMTP credentials. It can
+      # only append durable jobs to the shared queue volume.
+      NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-false}
+      NOTIFICATION_QUEUE_DIR: /data/notifications
+    ports:
+      - '${WEB_PORT:-8080}:3000'
+    volumes:
+      - cms_media:/data/media
+      - notification_queue:/data/notifications
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/api/access').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # Direct notification delivery. This is the only service that receives
+  # messenger/API/SMTP secrets. Jobs are durable on notification_queue, so a
+  # provider outage or container restart does not block checkout or lose the
+  # event. Successful recipients are persisted per job before other channels
+  # are retried.
+  notifications:
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
+    image: playback-rental-2-cms:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NOTIFICATION_QUEUE_DIR: /data/notifications
+      NOTIFICATION_RETRY_MAX: ${NOTIFICATION_RETRY_MAX:-5}
+      NOTIFICATION_RETRY_BASE_MS: ${NOTIFICATION_RETRY_BASE_MS:-5000}
+      NOTIFICATION_POLL_MS: ${NOTIFICATION_POLL_MS:-2000}
+      NOTIFICATION_RETENTION_DAYS: ${NOTIFICATION_RETENTION_DAYS:-30}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_IDS: ${TELEGRAM_CHAT_IDS:-}
+      MAX_BOT_TOKEN: ${MAX_BOT_TOKEN:-}
+      MAX_USER_IDS: ${MAX_USER_IDS:-}
+      VK_ACCESS_TOKEN: ${VK_ACCESS_TOKEN:-}
+      VK_PEER_IDS: ${VK_PEER_IDS:-}
+      VK_API_VERSION: ${VK_API_VERSION:-5.199}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_ADMIN_TO: ${SMTP_ADMIN_TO:-}
+      SMTP_TIMEOUT_MS: ${SMTP_TIMEOUT_MS:-15000}
+    volumes:
+      - notification_queue:/data/notifications
+    command: ['pnpm', 'notifications:daemon']
+
+  # Periodic safety-net sync. Disabled in dev by compose.dev.yaml.
+  reconcile:
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
+    image: playback-rental-2-cms:latest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      MEDIA_STATIC_DIR: /data/media
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+      MOYSKLAD_RECONCILE_INTERVAL_MIN: ${MOYSKLAD_RECONCILE_INTERVAL_MIN:-60}
+    volumes:
+      - cms_media:/data/media
+    command: ['pnpm', 'reconcile:moysklad:daemon']
+
+  # One-off МойСклад jobs. `profiles: [jobs]` keeps them out of normal `up`.
+  sync-moysklad:
+    profiles: [jobs]
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      MEDIA_STATIC_DIR: /data/media
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+    volumes:
+      - cms_media:/data/media
+    command: ['pnpm', 'sync:moysklad']
+
+  reconcile-moysklad:
+    profiles: [jobs]
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      MEDIA_STATIC_DIR: /data/media
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+    volumes:
+      - cms_media:/data/media
+    command: ['pnpm', 'reconcile:moysklad']
+
+  register-moysklad-webhook:
+    profiles: [jobs]
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/cms/Dockerfile
+      args:
+        NEXT_PUBLIC_GLITCHTIP_DSN: ${NEXT_PUBLIC_GLITCHTIP_DSN:-}
+        NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT: ${NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT:-production}
+    environment:
+      NODE_ENV: production
+      DATABASE_URI: postgresql://playback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/playback_cms
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+      GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
+      MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
+      MOYSKLAD_WEBHOOK_SECRET: ${MOYSKLAD_WEBHOOK_SECRET:-}
+      WEB_URL: ${WEB_URL:?set WEB_URL in .env}
+    command: ['pnpm', 'register:moysklad-webhook']
+
+volumes:
+  pgdata:
+  cms_media:
+  notification_queue:
