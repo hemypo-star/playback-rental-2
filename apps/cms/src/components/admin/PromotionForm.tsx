@@ -10,6 +10,7 @@ import Image from 'next/image'
 import type { Category, Product, Promotion } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
+import ImageDropzone from './ImageDropzone'
 import { savePromotion, deletePromotion } from '../../app/(admin)/admin/promotions/[id]/actions'
 
 interface Props {
@@ -43,8 +44,9 @@ export default function PromotionForm({ promo, allCategories, allProducts }: Pro
   const linkedProductIds = new Set((promo?.linkedProducts ?? []).map((p) => (typeof p === 'object' ? p.id : p)))
   const linkedCategoryIds = new Set((promo?.linkedCategories ?? []).map((c) => (typeof c === 'object' ? c.id : c)))
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleImageChange = async (files: File[]) => {
+    // Single-image slot: last dropped/picked file wins.
+    const file = files[files.length - 1]
     if (!file) return
     try {
       const media = await uploadMedia(file)
@@ -185,7 +187,7 @@ export default function PromotionForm({ promo, allCategories, allProducts }: Pro
                   CategoryForm's own (real, server-persisted URL, never a
                   blob:). */}
               {imagePreview ? <Image src={imagePreview} width={80} height={96} className="rounded-xl bg-muted object-cover" alt="" /> : null}
-              <input type="file" accept="image/*" onChange={handleImageChange} className="w-full max-w-full text-[13px]" />
+              <ImageDropzone multiple={false} onFiles={handleImageChange} label="+ Загрузить фото" hint="перетащите изображение или нажмите (3:4)" className="flex-1" />
             </div>
           </div>
 

@@ -10,6 +10,7 @@ import Image from 'next/image'
 import type { Category } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
+import ImageDropzone from './ImageDropzone'
 import { saveCategory, deleteCategory } from '../../app/(admin)/admin/categories/[id]/actions'
 
 interface Props {
@@ -34,8 +35,9 @@ export default function CategoryForm({ category, parentOptions, currentParentId 
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleImageChange = async (files: File[]) => {
+    // Single-image slot: last dropped/picked file wins.
+    const file = files[files.length - 1]
     if (!file) return
     try {
       const media = await uploadMedia(file)
@@ -156,7 +158,7 @@ export default function CategoryForm({ category, parentOptions, currentParentId 
                   server-persisted /api/media/file/... path, never a
                   client-only blob: URL next/image couldn't optimize. */}
               {imagePreview ? <Image src={imagePreview} width={80} height={80} className="rounded-xl bg-muted object-cover" alt="" /> : null}
-              <input type="file" accept="image/*" onChange={handleImageChange} className="w-full max-w-full text-[13px]" />
+              <ImageDropzone multiple={false} onFiles={handleImageChange} label="+ Загрузить фото" hint="перетащите изображение или нажмите" className="flex-1" />
             </div>
           </div>
         </div>

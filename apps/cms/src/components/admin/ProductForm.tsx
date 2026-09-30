@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import type { Media, Product } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
+import ImageDropzone from './ImageDropzone'
 import { saveProduct, syncProduct } from '../../app/(admin)/admin/products/[id]/actions'
 
 interface Props {
@@ -84,28 +85,30 @@ export default function ProductForm({ product, categoryName, accessoryOptions = 
     }
   }
 
-  const handleAddImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    setError(null)
+  // Drag-and-drop / click multi-upload via the shared ImageDropzone.
+  // Upload goes to the multipart route handler — NOT a Server Action and
+  // not the /api/media Payload endpoint: RSC actions serialize FormData
+  // through an internal blob store that 500s on large images (React error
+  // #418/#441 seen in production), same fix as the kits page.
+  const uploadOne = async (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/admin/kits/upload', { method: 'POST', body: fd })
+    const result = (await res.json()) as { success: boolean; id?: number; url?: string; error?: string }
+    if (result.success && result.id) {
+      setImages((prev) => [...prev, { id: result.id as number, url: result.url ?? '' }])
+    } else {
+      throw new Error(result.error || 'Не удалось загрузить фото')
+    }
+  }
+
+  const handleAddImages = async (files: File[]) => {
     setUploading(true)
+    setError(null)
     try {
-      // Plain multipart POST to the shared route handler — NOT a Server
-      // Action and not the /api/media Payload endpoint: RSC actions serialize
-      // FormData through an internal blob store that 500s on large images
-      // (React error #418/#441 seen in production), same fix as the kits page.
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/admin/kits/upload', { method: 'POST', body: fd })
-      const result = (await res.json()) as { success: boolean; id?: number; url?: string; error?: string }
-      if (result.success && result.id) {
-        setImages((prev) => [...prev, { id: result.id as number, url: result.url ?? '' }])
-      } else {
-        setError(result.error || 'Не удалось загрузить фото')
-      }
-    } catch {
-      setError('Не удалось загрузить фото (сетевая ошибка)')
+      for (const file of files) await uploadOne(file)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось загрузить фото (сетевая ошибка)')
     } finally {
       setUploading(false)
     }
@@ -119,10 +122,6 @@ export default function ProductForm({ product, categoryName, accessoryOptions = 
       ;[next[index], next[target]] = [next[target], next[index]]
       return next
     })
-  }
-
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index))
   }
 
   // --- Compatible accessories picker -------------------------------------
@@ -360,10 +359,7 @@ export default function ProductForm({ product, categoryName, accessoryOptions = 
               </div>
             ))}
           </div>
-          <label className="flex h-10 cursor-pointer items-center justify-center rounded-xl border border-dashed border-input text-[13px] font-semibold text-subtle hover:border-foreground hover:text-foreground">
-            {uploading ? 'Загрузка…' : '+ Добавить фото'}
-            <input type="file" accept="image/*" className="hidden" onChange={handleAddImage} disabled={uploading} />
-          </label>
+          <ImageDropzone upload={uploading} onFiles={handleAddImages} label="+ Добавить фото" />
         </aside>
       </div>
     </>

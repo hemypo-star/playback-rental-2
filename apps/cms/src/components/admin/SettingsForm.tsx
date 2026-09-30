@@ -11,6 +11,7 @@ import Image from 'next/image'
 import type { SiteSetting } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
+import ImageDropzone from './ImageDropzone'
 import { saveSiteSettings } from '../../app/(admin)/admin/settings/actions'
 import { DEFAULT_BUSINESS_HOURS } from '../../lib/businessHours'
 
@@ -63,8 +64,9 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
   const [success, setSuccess] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>, which: 'desktop' | 'mobile') => {
-    const file = e.target.files?.[0]
+  const handleHeroUpload = async (files: File[], which: 'desktop' | 'mobile') => {
+    // Single-image slot: last dropped/picked file wins.
+    const file = files[files.length - 1]
     if (!file) return
     try {
       const media = await uploadMedia(file)
@@ -140,12 +142,12 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
                     fixed 80x96 admin thumbnails — same reasoning as
                     CategoryForm/PromotionForm's own previews. */}
                 {heroDesktopPreview ? <Image src={heroDesktopPreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
-                <input type="file" accept="image/*" aria-label="Баннер героя: десктопное изображение" onChange={(e) => handleHeroUpload(e, 'desktop')} className="mt-1.5 block w-full max-w-full text-[12px]" />
+                <ImageDropzone multiple={false} onFiles={(files) => handleHeroUpload(files, 'desktop')} label="+ Баннер: десктоп" hint="перетащите изображение или нажмите" className="mt-1.5 w-full" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] text-subtle">Мобильный</div>
                 {heroMobilePreview ? <Image src={heroMobilePreview} width={80} height={96} className="mt-1 rounded-xl bg-muted object-cover" alt="" /> : null}
-                <input type="file" accept="image/*" aria-label="Баннер героя: мобильное изображение" onChange={(e) => handleHeroUpload(e, 'mobile')} className="mt-1.5 block w-full max-w-full text-[12px]" />
+                <ImageDropzone multiple={false} onFiles={(files) => handleHeroUpload(files, 'mobile')} label="+ Баннер: мобильный" hint="перетащите изображение или нажмите" className="mt-1.5 w-full" />
               </div>
             </div>
 
