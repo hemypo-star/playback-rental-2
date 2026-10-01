@@ -25,7 +25,7 @@ export default async function ContactPage() {
   const telegram = s.contactTelegram || '@Playbackrental_admin'
   const telegramUrl = s.contactTelegramUrl || 'https://t.me/Playbackrental_admin'
   const vkUrl = s.contactVkUrl || 'https://vk.com/playbackrental'
-  const address = s.contactAddress || 'г. Кемерово, ул. Демьяна Бедного, 6'
+  const address = s.contactAddress || 'г. Кемерово, ул. Демьяна Бедного, 6, офис 33'
   const hours = s.contactHours || '10:00 — 21:00'
   const yandexMapsUrl = s.yandexMapsUrl || 'https://yandex.ru/maps/-/CHvDmII7'
   const twoGisUrl = s.twoGisUrl || 'https://go.2gis.com/2y9MJ'

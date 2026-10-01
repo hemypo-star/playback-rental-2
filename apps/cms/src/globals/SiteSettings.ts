@@ -94,7 +94,7 @@ export const SiteSettings: GlobalConfig = {
             { name: 'contactTelegram', type: 'text', defaultValue: '@Playbackrental_admin', admin: { description: 'Handle shown in the UI (e.g. "@name").' } },
             { name: 'contactTelegramUrl', type: 'text', defaultValue: 'https://t.me/Playbackrental_admin' },
             { name: 'contactVkUrl', type: 'text', defaultValue: 'https://vk.com/playbackrental' },
-            { name: 'contactAddress', type: 'text', defaultValue: 'г. Кемерово, ул. Демьяна Бедного, 6' },
+            { name: 'contactAddress', type: 'text', defaultValue: 'г. Кемерово, ул. Демьяна Бедного, 6, офис 33' },
             { name: 'contactHours', type: 'text', defaultValue: '10:00 — 21:00' },
             {
               name: 'businessHoursOpen',

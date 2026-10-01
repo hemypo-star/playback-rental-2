@@ -279,17 +279,15 @@ export const OrderItems: CollectionConfig = {
           // full day. This compares calendar days, not raw timestamps: an
           // equal-or-same-calendar-day range (e.g. pick up 10:00, return
           // 18:00 the same day) is a legitimate same-day rental under the
-          // A1 convention — one full day at full rate, not an error — so it
+          // current day-counting convention (see that file's JSDoc, revised
+          // 2026-09-30) — one full day at full rate, not an error — so it
           // must fall through to calculateLineTotal below, not be rejected
-          // here the way it used to be.
+          // here.
           if (differenceInCalendarDays(new Date(data.endDate), new Date(data.startDate)) < 0) {
-            // Message text updated post-A1: A1 narrowed this guard from
-            // `endDate <= startDate` to `< 0`, so a same-calendar-day
-            // rental is now valid — what's actually rejected here is a
-            // return date *earlier* than the pickup date, not merely "not
-            // after" it. The old "must be after" wording stopped being
-            // accurate the moment A1 landed; corrected here rather than
-            // carried forward into the new code's English log text too.
+            // What's rejected here is a return date *earlier* than the
+            // pickup date, not merely "not after" it — a same-calendar-day
+            // rental is valid (see above), so the guard is `< 0`, not
+            // `<= 0`.
             throw new APIError(
               'endDate is earlier than startDate',
               400,

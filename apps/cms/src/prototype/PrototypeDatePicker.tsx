@@ -66,7 +66,7 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
     <button type="button" className="pb-date-card pb-card" onClick={()=>show('from')} style={{width:'100%',textAlign:'left'}}>
       <div className="pb-date-line"><span className="pb-kicker">Даты аренды</span><span className="pb-kicker pb-red">Изменить</span></div>
       <div className="pb-date-line" style={{marginTop:12}}><span className="pb-date-value">{label}</span><span style={{fontSize:13,color:'var(--pb-sub)'}}>{timeOf(shown.startDate,openHour)} — {timeOf(shown.endDate,closeHour)}</span></div>
-      <div style={{marginTop:10,fontSize:12.5,color:'var(--pb-sub)'}}>{shown.startDate&&shown.endDate?`${days} ${days===1?'смена':days<5?'смены':'смен'}`:'Выберите период аренды'}</div>
+      <div style={{marginTop:10,fontSize:12.5,color:'var(--pb-sub)'}}>{shown.startDate&&shown.endDate?`${days} ${days===1?'сутки':'суток'}`:'Выберите период аренды'}</div>
     </button>
   ) : variant==='compact' ? (
     <button
@@ -111,7 +111,7 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
           </div>
           <div><div className="pb-kicker">{target==='from'?'Время выдачи':'Время возврата'}</div><div className="pb-times">{hours.map(h=><button key={h} type="button" className="pb-time" data-active={h===activeHour} onClick={()=>target==='from'?setFromHour(h):setToHour(h)}>{String(h).padStart(2,'0')}:00</button>)}</div></div>
         </div>
-        <div className="pb-modal-foot"><div style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:14}}><span style={{fontSize:12.5,color:'var(--pb-sub)',maxWidth:400}}>Рабочие часы {String(openHour).padStart(2,'0')}:00 — {String(closeHour).padStart(2,'0')}:00.</span>{(from||to)&&<button type="button" onClick={reset} className="pb-reset-link" style={{fontSize:11,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'var(--pb-sub)',background:'none',border:0,padding:0,cursor:'pointer'}}>Сбросить</button>}</div><button type="button" className="pb-pill pb-btn pb-modal-done" onClick={done} disabled={!from||!to}><span>Готово · {days} {days===1?'смена':days<5?'смены':'смен'}</span><span>→</span></button></div>
+        <div className="pb-modal-foot"><div style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:14}}><span style={{fontSize:12.5,color:'var(--pb-sub)',maxWidth:400}}>Рабочие часы {String(openHour).padStart(2,'0')}:00 — {String(closeHour).padStart(2,'0')}:00.</span>{(from||to)&&<button type="button" onClick={reset} className="pb-reset-link" style={{fontSize:11,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'var(--pb-sub)',background:'none',border:0,padding:0,cursor:'pointer'}}>Сбросить</button>}</div><button type="button" className="pb-pill pb-btn pb-modal-done" onClick={done} disabled={!from||!to}><span>Готово · {days} {days===1?'сутки':'суток'}</span><span>→</span></button></div>
       </div>
     </div>,
       document.body

@@ -39,7 +39,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
     if (p.isKit) return 'набор / сутки'
     if (slug === 'film') return 'за плёнку'
     if (slug === 'glasses') return 'сутки'
-    return p.listingType === 'rental' ? 'смена / 24 часа' : 'шт.'
+    return p.listingType === 'rental' ? 'сутки' : 'шт.'
   }
   const totalDocs = productsResult?.totalDocs ?? 0
   const pageCount = Math.max(1, Math.ceil(totalDocs / SEARCH_PAGE_SIZE))

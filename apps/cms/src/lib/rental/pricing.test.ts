@@ -1,6 +1,7 @@
-// Unit tests for the A1 day-counting/pricing convention (see this
-// directory's pricing.ts JSDoc): calendar days of ownership, inclusive of
-// both the pickup day and the return day, floored at one full day, and
+// Unit tests for the day-counting/pricing convention revised 2026-09-30 (see
+// this directory's pricing.ts JSDoc): one calendar-date transition between
+// pickup and return per day (no "+1, inclusive of both ends" — that was the
+// superseded 2026-08-24 "A1" convention), floored at one full day, and
 // independent of the time of day. Run with `pnpm test` (apps/cms/package.json).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -15,14 +16,14 @@ function jan(day: number, hour = 10): Date {
   return new Date(2026, 0, day, hour, 0, 0)
 }
 
-test('calculateRentalPrice(base, d) === base * d for d = 1..30', () => {
+test('calculateRentalPrice(base, d) === base * d for d = 1..29 (n nights => n days)', () => {
   const base = 1000
-  for (let d = 1; d <= 30; d++) {
-    // A d-day rental under the inclusive-both-ends convention: picking up on
-    // day 1 and returning on day d spans d calendar days
-    // (differenceInCalendarDays === d - 1, +1 === d).
+  for (let d = 1; d <= 29; d++) {
+    // A d-day rental: picking up on day 1 and returning on day 1+d spans d
+    // calendar-date transitions (differenceInCalendarDays === d exactly, no
+    // +1). E.g. Oct 1 -> Oct 2 is d=1 (one day, one night), not two.
     const start = jan(1)
-    const end = jan(d)
+    const end = jan(1 + d)
     assert.equal(calculateRentalDays(start, end), d, `calculateRentalDays should be ${d} for a ${d}-day range`)
     assert.equal(calculateRentalPrice(base, start, end), base * d, `price should be ${base * d} for d=${d}`)
   }
@@ -44,20 +45,33 @@ test('same calendar day, different times => still 1 day, full rate', () => {
   assert.equal(calculateRentalPrice(base, start, end), base)
 })
 
-test('time-independence: 12 Aug 10:00 -> 14 Aug 10:00 and 12 Aug 10:00 -> 14 Aug 18:00 both give 3 days, same price', () => {
+test('time-independence: 12 Aug 10:00 -> 14 Aug 10:00 and 12 Aug 10:00 -> 14 Aug 18:00 both give 2 days, same price', () => {
   const base = 4000
   const start = new Date(2026, 7, 12, 10, 0, 0)
   const endSameHour = new Date(2026, 7, 14, 10, 0, 0)
   const endLaterHour = new Date(2026, 7, 14, 18, 0, 0)
 
-  assert.equal(calculateRentalDays(start, endSameHour), 3)
-  assert.equal(calculateRentalDays(start, endLaterHour), 3)
+  assert.equal(calculateRentalDays(start, endSameHour), 2)
+  assert.equal(calculateRentalDays(start, endLaterHour), 2)
 
   const priceSameHour = calculateRentalPrice(base, start, endSameHour)
   const priceLaterHour = calculateRentalPrice(base, start, endLaterHour)
-  assert.equal(priceSameHour, 3 * base)
-  assert.equal(priceLaterHour, 3 * base)
+  assert.equal(priceSameHour, 2 * base)
+  assert.equal(priceLaterHour, 2 * base)
   assert.equal(priceSameHour, priceLaterHour)
+})
+
+test('owner-reported cases: Oct 1 10:00 -> Oct 2 10:00 is 1 day; Oct 3 -> Oct 8 is 5 days', () => {
+  const base = 1600
+  const oct1 = new Date(2026, 9, 1, 10, 0, 0)
+  const oct2 = new Date(2026, 9, 2, 10, 0, 0)
+  assert.equal(calculateRentalDays(oct1, oct2), 1)
+  assert.equal(calculateRentalPrice(base, oct1, oct2), 1600)
+
+  const oct3 = new Date(2026, 9, 3, 10, 0, 0)
+  const oct8 = new Date(2026, 9, 8, 10, 0, 0)
+  assert.equal(calculateRentalDays(oct3, oct8), 5)
+  assert.equal(calculateRentalPrice(base, oct3, oct8), 8000)
 })
 
 test('missing dates => 0 days, 0 price (not the 1-day minimum — "no rental period chosen" is not "a zero-length rental")', () => {

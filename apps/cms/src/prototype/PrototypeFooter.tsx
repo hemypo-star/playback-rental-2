@@ -30,7 +30,7 @@ export default async function PrototypeFooter(){
    </div>
    <div>
     <div className="pb-kicker">Адрес</div>
-    <p style={{color:'var(--pb-copy)'}}>{s.contactAddress||'г. Кемерово, ул. Демьяна Бедного, 6'}</p>
+    <p style={{color:'var(--pb-copy)'}}>{s.contactAddress||'г. Кемерово, ул. Демьяна Бедного, 6, офис 33'}</p>
     <p style={{color:'var(--pb-sub)'}}>{s.contactHours||'10:00 — 21:00'}</p>
     <div className="pb-map-links">
      <a href={yandexMapsUrl} target="_blank" rel="noopener noreferrer" className="pill">Я.Карты</a>

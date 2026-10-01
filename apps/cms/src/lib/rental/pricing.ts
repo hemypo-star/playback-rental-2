@@ -6,21 +6,30 @@
 import { differenceInCalendarDays } from 'date-fns'
 
 /**
- * Rental convention: calendar days of ownership, inclusive of both the
- * pickup day and the return day. Equivalent to "how many calendar dates did
- * the client have the gear" — the day it goes out and the day it comes back
- * both count, so picking it up and returning it on the same calendar date is
- * one full day, not zero.
+ * Rental convention (revised 2026-09-30, owner-confirmed — supersedes the
+ * 2026-08-24 audit's "A1" inclusive-both-ends convention this function used
+ * to follow): a rental day is one calendar-date transition between pickup
+ * and return — `differenceInCalendarDays(end, start)`, NOT `+ 1`. Picking up
+ * on Oct 1 and returning on Oct 2 is one day (сутки), not two; Oct 3 -> Oct 8
+ * is five days, not six. The previous "+1, inclusive of both the pickup day
+ * and the return day" convention over-counted by exactly one day on every
+ * multi-day rental — reported directly by the business owner against real
+ * pricing (1600₽/day: Oct 1->2 must total 1600₽, not 3200₽).
  *
- * `differenceInCalendarDays` normalizes both dates to midnight before
- * subtracting, so the time of day (10:00 vs 18:00 pickup/return) can never
- * change the result — only the calendar date does. Pickup/return time is
- * kept elsewhere as information for the manager only; it must never affect
- * price.
+ * `differenceInCalendarDays` still normalizes both dates to midnight before
+ * subtracting, so the time of day (10:00 vs 18:00 pickup/return) still can
+ * never change the result — only the calendar date does. Pickup/return time
+ * is kept elsewhere as information for the manager only; it must never
+ * affect price. This time-independence is deliberately preserved from A1:
+ * the old pre-A1 app priced by raw elapsed hours (`Math.ceil(hours / 24)`),
+ * which made the price depend on the exact return hour — that problem is
+ * NOT reintroduced by this revision; only A1's extra `+1` is removed.
  *
  * The minimum is one full day (`Math.max(1, ...)`) — this floor lives here,
  * in the one function that prices a rental, rather than being duplicated
- * (or forgotten) at each of the several places a user can pick dates.
+ * (or forgotten) at each of the several places a user can pick dates. A
+ * same-calendar-day pickup/return (`differenceInCalendarDays` === 0) still
+ * floors to one full day at full rate, same as before.
  *
  * Returns 0 when either date is missing or invalid (`NaN`) — that means "no
  * rental period chosen/known yet", which is a different case from "a
@@ -36,7 +45,7 @@ import { differenceInCalendarDays } from 'date-fns'
  */
 export function calculateRentalDays(startDate: Date | null | undefined, endDate: Date | null | undefined): number {
   if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0
-  return Math.max(1, differenceInCalendarDays(endDate, startDate) + 1)
+  return Math.max(1, differenceInCalendarDays(endDate, startDate))
 }
 
 export function calculateRentalPrice(

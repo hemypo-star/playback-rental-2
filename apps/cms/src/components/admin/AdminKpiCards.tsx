@@ -13,7 +13,7 @@ export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
         { label: 'Выручка, август', value: '412 300 ₽', note: '+18% к июлю', accent: true },
         { label: 'Активных аренд', value: '14', note: '4 возврата сегодня', accent: false },
         { label: 'Загрузка парка', value: '68%', note: '26 из 38 позиций', accent: false },
-        { label: 'Средний чек', value: '5 840 ₽', note: '2,1 смены на заказ', accent: false },
+        { label: 'Средний чек', value: '5 840 ₽', note: '2,1 суток на заказ', accent: false },
       ]
     : [
     { label: 'Выручка за 7 дней', value: rub(kpi.weeklyRevenue), note: `${kpi.weeklyOrdersCount} заявок`, accent: false },
