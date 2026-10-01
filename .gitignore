@@ -1,1 +1,8 @@
-(empty)
+# Environment secrets - never commit
+.env
+.env.*
+!.env.example
+!.env.preview
+
+node_modules
+.pnpm-store
