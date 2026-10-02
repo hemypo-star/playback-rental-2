@@ -116,7 +116,7 @@ export default function ManualOrderForm({ products }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.25fr_0.75fr]">
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
       <div className="flex flex-col gap-3.5">
         <div className="rounded-3xl border border-border bg-card p-6">
           <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Клиент</div>
@@ -183,7 +183,7 @@ export default function ManualOrderForm({ products }: Props) {
                     </button>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_110px]">
+                  <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_110px]">
                     <label className="flex flex-col gap-1.5">
                       <span className="text-[10.5px] font-semibold tracking-[0.12em] text-subtle uppercase">Товар</span>
                       <select
@@ -196,7 +196,7 @@ export default function ManualOrderForm({ products }: Props) {
                             endDate: '',
                           })
                         }
-                        className="h-11 rounded-xl border border-input bg-white px-3.5 text-[14px] outline-none focus:border-foreground"
+                        className="h-11 w-full rounded-xl border border-input bg-white px-3.5 text-[14px] outline-none focus:border-foreground"
                       >
                         <option value="">Выберите товар</option>
                         {products.map((option) => (

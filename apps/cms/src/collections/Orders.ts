@@ -259,6 +259,17 @@ export const Orders: CollectionConfig = {
 
         try {
           const result = await submitOrder(req.payload, orderId, req)
+          // moySkladError is the third-party API's own raw response text
+          // (lib/moysklad/client.ts's msGet) — never a token, but still not
+          // this app's to hand to whoever holds a submitToken for this
+          // order (normally just that order's own customer). Full detail
+          // is already logged server-side inside submitOrder(); an
+          // authenticated admin session (the only caller this check
+          // already exempts from the token requirement above) still gets
+          // it verbatim, same as the submitOrderToMoySklad Server Action.
+          if (!req.user && result.moySkladError) {
+            return Response.json({ ...result, moySkladError: 'МойСклад временно недоступен' })
+          }
           return Response.json(result)
         } catch (error) {
           if (error instanceof SubmitOrderError) {

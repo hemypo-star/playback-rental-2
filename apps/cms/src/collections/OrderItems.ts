@@ -4,6 +4,7 @@ import { differenceInCalendarDays } from 'date-fns'
 import { calculateLineTotal } from '../lib/rental/pricing'
 import { isBeforeBusinessToday } from '../lib/rental/businessDay'
 import { getAvailableRentalQuantity, getAvailableSaleQuantity, lockProductForBooking } from '../lib/rental/availability'
+import { secretsMatch } from '../lib/security/timingSafe'
 
 // Hooks receive relationship fields populated to Payload's default depth
 // (an object), not a plain id — normalize before using it as a query value
@@ -131,7 +132,36 @@ async function recalcOrderTotal(req: PayloadRequest, orderRef: unknown): Promise
 // items are the historical record of what was actually booked/pushed to
 // МойСклад/Telegram, so further public edits must be blocked (only admins
 // can amend a booking after the fact, via /cms).
-async function canModifyOrderItem({ req, id }: { req: PayloadRequest; id?: number | string }): Promise<boolean> {
+//
+// Beyond "not yet submitted", an anonymous caller must also present the
+// order's own submitToken — orders use small sequential ids and are
+// publicly creatable, and orderItems are publicly readable (by design, for
+// the booked-dates availability calendar), so without this check anyone who
+// learns/guesses another customer's in-progress order id could attach,
+// edit, or delete that order's line items before it submits. This is a
+// *different* boundary than the one submitToken already protects (the
+// public `/:id/submit` HTTP endpoint, see Orders.ts) — same token, reused
+// here to gate this collection's own REST surface too. `data`/`req.query`
+// covers both create/update (body) and delete (no body, so the caller must
+// pass it as a query param instead).
+function hasValidSubmitToken(
+  order: { submitToken?: string | null },
+  data: Record<string, unknown> | undefined,
+  req: PayloadRequest,
+): boolean {
+  const provided = (data?.submitToken as string | undefined) ?? (req.query?.submitToken as string | undefined)
+  return secretsMatch(provided, order.submitToken ?? '')
+}
+
+async function canModifyOrderItem({
+  req,
+  id,
+  data,
+}: {
+  req: PayloadRequest
+  id?: number | string
+  data?: Record<string, unknown>
+}): Promise<boolean> {
   if (req.user) return true
   // No id means this is a bulk update/delete (a `where` filter, not a single
   // document) — there's nothing here to check "is this order submitted yet"
@@ -145,22 +175,24 @@ async function canModifyOrderItem({ req, id }: { req: PayloadRequest; id?: numbe
   // could freely edit/delete it.
   if (!orderId) return false
   const order = await req.payload.findByID({ collection: 'orders', id: orderId, overrideAccess: true, depth: 0 })
-  return !order?.submittedAt
+  if (!order || order.submittedAt) return false
+  return hasValidSubmitToken(order, data, req)
 }
 
-// Mirrors canModifyOrderItem's "not yet submitted" rule for creates — public
-// checkout attaches new draft lines to its own just-created order, but once
-// that order has been submitted (pushed to МойСклад, Telegram notified), a
-// new anonymous item must not be attachable: nothing would re-push or
-// re-notify, so the stored total would silently drift from what was
-// actually charged and communicated.
+// Mirrors canModifyOrderItem's "not yet submitted" + submitToken rule for
+// creates — public checkout attaches new draft lines to its own
+// just-created order, but once that order has been submitted (pushed to
+// МойСклад, Telegram notified), a new anonymous item must not be
+// attachable: nothing would re-push or re-notify, so the stored total would
+// silently drift from what was actually charged and communicated.
 async function canCreateOrderItem({ req, data }: { req: PayloadRequest; data?: Record<string, unknown> }): Promise<boolean> {
   if (req.user) return true
   const orderRef = data?.order
   const orderId = typeof orderRef === 'object' && orderRef !== null ? (orderRef as { id: number }).id : orderRef
   if (!orderId) return false
   const order = await req.payload.findByID({ collection: 'orders', id: orderId as number, overrideAccess: true, depth: 0 })
-  return !order?.submittedAt
+  if (!order || order.submittedAt) return false
+  return hasValidSubmitToken(order, data, req)
 }
 
 export const OrderItems: CollectionConfig = {

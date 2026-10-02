@@ -146,7 +146,7 @@ export default function KitForm({ kit, components, categories }: Props) {
   const componentsSum = selectedComponents.reduce((sum, c) => sum + Number(c.price || 0), 0)
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="flex flex-col gap-5 rounded-3xl border border-border bg-card p-6">
         <div className="flex flex-col gap-1.5">
           <label htmlFor={`${uid}-title`} className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-subtle">Название *</label>

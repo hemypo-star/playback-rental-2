@@ -102,6 +102,15 @@ export default buildConfig({
   // Guaranteed set — see the throw above.
   secret: process.env.PAYLOAD_SECRET,
   sharp,
+  // No size limit was set anywhere (busboy's own default is unbounded),
+  // so an authenticated-but-malicious/compromised admin session could POST
+  // an oversized file straight into Node's memory — this process also
+  // serves the public storefront, so that's a DoS risk, not just a storage
+  // one. 15 MB comfortably covers a real photo; this only governs Payload's
+  // own REST upload pipeline (e.g. /api/media) — the kit image route
+  // handler (lib/admin/data/kits.ts) parses multipart itself via
+  // `req.formData()` and needs its own, separate check (see there).
+  upload: { limits: { fileSize: 15 * 1024 * 1024 } },
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },

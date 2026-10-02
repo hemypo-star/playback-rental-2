@@ -126,8 +126,9 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
     // access control) — this is a genuinely public, anonymous checkout, so
     // it should be evaluated under the same collection access rules a real
     // anonymous REST caller would hit (orders.create is public; orderItems'
-    // canCreateOrderItem allows it as long as the order isn't submitted
-    // yet, which a just-created order never is), not silently bypass them.
+    // canCreateOrderItem allows it as long as the order isn't submitted yet
+    // *and* the caller presents the order's submitToken — see OrderItems.ts
+    // for why that second check exists), not silently bypass them.
     const order = await payload.create({
       collection: 'orders',
       data: {
@@ -178,22 +179,38 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
     const createdItemIds: number[] = []
     try {
       for (const item of input.items) {
-        const created = await payload.create({
+        const itemData = {
+          order: order.id,
+          product: item.productId,
+          quantity: item.quantity,
+          startDate: item.startDate,
+          endDate: item.endDate,
+          // Not a persisted field (hence the cast below) — canCreateOrderItem
+          // (OrderItems.ts) reads it off the raw create payload to authorize
+          // this anonymous write, same token order.create just minted.
+          submitToken: order.submitToken,
+        } as unknown as Record<string, unknown>
+        // The extra `submitToken` key (not a declared field) defeats
+        // create()'s overload resolution (its draft/non-draft discriminated
+        // union) the same way products/kits' relationship-normalization
+        // casts did before — escape via `any` at the call, same precedent.
+        const created = (await (payload.create as (args: unknown) => Promise<{ id: number }>)({
           collection: 'orderItems',
-          data: {
-            order: order.id,
-            product: item.productId,
-            quantity: item.quantity,
-            startDate: item.startDate,
-            endDate: item.endDate,
-          },
+          data: itemData,
           overrideAccess: false,
-        })
+        }))
         createdItemIds.push(created.id)
       }
     } catch (itemError) {
       await Promise.all(
-        createdItemIds.map((id) => payload.delete({ collection: 'orderItems', id, overrideAccess: false }).catch(() => {})),
+        createdItemIds.map((id) =>
+          // Local API delete() has no `data` option — canModifyOrderItem
+          // falls back to req.query for exactly this case (no body to put
+          // a token in), so thread it through there instead.
+          payload
+            .delete({ collection: 'orderItems', id, overrideAccess: false, req: { query: { submitToken: order.submitToken } } })
+            .catch(() => {}),
+        ),
       )
       throw itemError
     }

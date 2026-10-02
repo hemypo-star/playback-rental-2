@@ -65,10 +65,30 @@ async function revalidate(id: number) {
 export async function saveKit(id: number | null, data: KitInput): Promise<KitActionResult> {
   try {
     await requireAdmin()
+    const payload = await getPayload({ config })
+
+    // validate()'s own componentIds.length === 0 check already stops a save
+    // from silently wiping a kit's composition (confirmed: this is not the
+    // live data-loss risk a prior audit pass assumed it might be) — but its
+    // generic "add at least one product" message is confusing for a kit
+    // whose composition genuinely exists, just as legacy label-only rows
+    // that predate the productId field (see lib/admin/data/kits.ts —
+    // getKitById() can't resolve those to componentIds, so the picker shows
+    // 0 selected even though kitItems is non-empty). Give that case its own
+    // message instead of the generic one.
+    if (id !== null && data.componentIds.length === 0) {
+      const existing = await payload.findByID({ collection: 'products', id, depth: 0, select: { kitItems: true } })
+      if (existing?.kitItems && existing.kitItems.length > 0) {
+        return {
+          success: false,
+          error:
+            'У набора есть состав, сохранённый без привязки к товарам (устаревшие записи) — редактор не может показать его как выбранные позиции. Пересоберите состав вручную из списка товаров, прежде чем сохранять: старые записи будут заменены.',
+        }
+      }
+    }
+
     const problem = validate(data)
     if (problem) return { success: false, error: problem }
-
-    const payload = await getPayload({ config })
 
     // Resolve component product ids -> their titles + prices (labels are
     // plain text on purpose: a kit keeps showing its composition even if a

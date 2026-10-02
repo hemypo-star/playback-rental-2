@@ -58,8 +58,19 @@ cp .env.example .env
 pnpm dev
 ```
 
-Payload's schema is pushed automatically in `pnpm dev`. After adding/changing a custom
-Payload admin component, regenerate the import map:
+Payload's schema is pushed automatically in `pnpm dev` — except `rate_limit_hits`
+(`payload.config.ts`'s `tablesFilter` deliberately excludes it from push), which only
+exists after running migrations once:
+
+```bash
+cd apps/cms
+pnpm migrate
+```
+
+Skipping this on a fresh database makes the first login/checkout/contact-form
+submission 500 with `relation "rate_limit_hits" does not exist`.
+
+After adding/changing a custom Payload admin component, regenerate the import map:
 
 ```bash
 cd apps/cms

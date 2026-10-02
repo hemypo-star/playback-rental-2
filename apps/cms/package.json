@@ -21,6 +21,7 @@
     "smoke:manual-order": "tsx --env-file-if-exists=.env src/scripts/manual-order-smoke.ts",
     "payload": "payload",
     "generate:types": "payload generate:types",
+    "migrate": "payload migrate",
     "sync:moysklad": "tsx --env-file-if-exists=.env src/scripts/sync-moysklad.ts",
     "register:moysklad-webhook": "tsx --env-file-if-exists=.env src/scripts/register-moysklad-webhook.ts",
     "reconcile:moysklad": "tsx --env-file-if-exists=.env src/scripts/reconcile-moysklad.ts",

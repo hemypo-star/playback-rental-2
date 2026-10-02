@@ -177,7 +177,7 @@ export default function ProductForm({ product, categoryName, accessoryOptions = 
       {error && <p className="rounded-2xl bg-status-alert-bg px-4 py-3 text-[13px] text-status-alert">{error}</p>}
 
       {/* Same layout as the kit editor (KitForm): main column + photos aside */}
-      <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[1fr_340px]">
+      <div className="mt-3.5 grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-3.5">
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Витрина</div>

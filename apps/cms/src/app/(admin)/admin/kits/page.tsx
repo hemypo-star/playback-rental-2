@@ -4,6 +4,7 @@ import AdminPageHeader from '../../../../components/admin/AdminPageHeader'
 import AdminMobileCard from '../../../../components/admin/AdminMobileCard'
 import { getAdminKits } from '../../../../lib/admin/data/kits'
 import { rub } from '../../../../lib/admin/format'
+import { pluralRu } from '../../../../lib/text/plural'
 
 // Kits ("Наборы") management — kits are ordinary products (isKit:true)
 // assembled by hand from already-synced МойСклад items; this is the only
@@ -17,7 +18,7 @@ export default async function AdminKitsPage() {
 
   return (
     <>
-      <AdminPageHeader title="Наборы" subtitle={`${kits.length} наборов`} />
+      <AdminPageHeader title="Наборы" subtitle={`${kits.length} ${pluralRu(kits.length, 'набор', 'набора', 'наборов')}`} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-[12.5px] leading-snug text-subtle">

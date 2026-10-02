@@ -4,6 +4,7 @@ import AdminPageHeader from '../../../../components/admin/AdminPageHeader'
 import AdminMobileCard from '../../../../components/admin/AdminMobileCard'
 import { getAdminCategories } from '../../../../lib/admin/data/categories'
 import { buildCategoryTree, flattenCategoryTree } from '../../../../lib/categoryTree'
+import { pluralRu } from '../../../../lib/text/plural'
 
 // Ported from apps/web/src/pages/admin/categories/index.astro (docs/PLAN-
 // next-migration.md Stage 3.5, page group 5). Категории isn't in the
@@ -20,7 +21,7 @@ export default async function AdminCategoriesPage() {
 
   return (
     <>
-      <AdminPageHeader title="Категории" subtitle={`${categories.length} категорий`} actionLabel="Новая категория" actionHref="/admin/categories/new" />
+      <AdminPageHeader title="Категории" subtitle={`${categories.length} ${pluralRu(categories.length, 'категория', 'категории', 'категорий')}`} actionLabel="Новая категория" actionHref="/admin/categories/new" />
 
       <div className="rounded-3xl border border-border bg-card p-6">
         <div className="hidden grid-cols-[2fr_1.2fr_1fr_90px] gap-3.5 px-2.5 pb-3 text-[10px] font-semibold tracking-[0.13em] text-subtle uppercase lg:grid">
