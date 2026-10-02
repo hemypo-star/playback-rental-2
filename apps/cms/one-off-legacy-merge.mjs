@@ -11,9 +11,15 @@
 import { getPayload } from 'payload'
 import config from './src/payload.config.ts'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
 const DRY_RUN = process.argv.includes('--dry-run')
-const CSV_PATH = '/Users/a1234/Desktop/playback-rental/db-migration/products_rows.csv'
+// Relative to this file, not the machine it was written on — must resolve
+// the same way whether run from a local checkout or inside the Docker
+// container (where this script lands at /repo/apps/cms and the CSV at
+// /repo/db-migration, the same relative layout as the repo root).
+const CSV_PATH = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'db-migration', 'products_rows.csv')
 
 function parseCsv(text) {
   const rows = []
