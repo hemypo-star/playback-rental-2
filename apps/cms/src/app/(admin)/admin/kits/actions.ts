@@ -109,10 +109,12 @@ export async function saveKit(id: number | null, data: KitInput): Promise<KitAct
       quantity: data.quantity,
       available: data.available,
       isKit: true,
-      // Same relationship normalization as saveProduct: raw numbers fail
-      // Payload's relationship validation ("The following field is invalid").
-      images: data.images.map((v) => String(v)),
-      category: String(data.category),
+      // Raw numeric ids — this Postgres setup's relationship validation
+      // (idType 'number', see Products.ts) wants numbers, not strings; a
+      // prior "normalization" here that stringified these was backwards
+      // and broke kit creation/category entirely (2026-10 audit finding).
+      images: data.images,
+      category: data.category,
       kitItems: orderedComponents.map((p) => ({ label: p.title, productId: p.id })),
     } as unknown as Record<string, unknown>
 

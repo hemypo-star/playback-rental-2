@@ -1,21 +1,5 @@
 import type { CollectionConfig, Where } from 'payload'
 
-// Payload's relationship validation rejects raw ids that arrive as JSON
-// *numbers* ("The following field is invalid: Compatible Accessories") — it
-// only accepts them as strings (what the admin UI itself sends) or populated
-// docs. The kit/product admin panels post plain number[] over Server Actions,
-// so normalize before validation on every write path.
-function toRelationId(v: unknown): string | number | null | undefined {
-  return typeof v === 'number' ? String(v) : (v as string | number | null | undefined)
-}
-
-function normalizeCompatibleAccessories(data: Record<string, unknown>): Record<string, unknown> {
-  if (Array.isArray(data.compatibleAccessories)) {
-    data.compatibleAccessories = data.compatibleAccessories.map(toRelationId)
-  }
-  return data
-}
-
 export const Products: CollectionConfig = {
   slug: 'products',
   access: {
@@ -23,11 +7,6 @@ export const Products: CollectionConfig = {
     create: ({ req }) => Boolean(req.user),
     update: ({ req }) => Boolean(req.user),
     delete: ({ req }) => Boolean(req.user),
-  },
-  hooks: {
-    beforeChange: [
-      ({ data }) => normalizeCompatibleAccessories(data as Record<string, unknown>),
-    ],
   },
   admin: {
     useAsTitle: 'title',

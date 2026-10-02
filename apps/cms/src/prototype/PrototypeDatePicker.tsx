@@ -5,6 +5,7 @@ import { createPortal } from "react-dom"
 import { useStore } from '@nanostores/react'
 import { $selectedDates, OPEN_DATE_PICKER_EVENT, resetSelectedDates, setSelectedDates } from '../stores/dates'
 import { isBeforeBusinessToday } from '../lib/rental/businessDay'
+import { calculateRentalDays } from '../lib/pricing'
 
 export interface PrototypeDatePickerHandle { open: (target?: 'from' | 'to') => void }
 interface Props { variant?: 'navbar' | 'compact' | 'hero' | 'hidden'; openHour: number; closeHour: number }
@@ -58,7 +59,7 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
   const choose=(d:Date)=>{if(isBeforeBusinessToday(d))return;if(target==='from'){setFrom(d);if(to && d>=to)setTo(null);setTarget('to')}else{if(from && d<from){setFrom(d);setTo(null);setTarget('to')}else setTo(d)}}
   const done=()=>{if(from&&to){setSelectedDates(withHour(from,fromHour),withHour(to,toHour))}close()}
   const reset=()=>{resetSelectedDates();setFrom(null);setTo(null);setFromHour(openHour);setToHour(closeHour);setTarget('from');setMonth(startOfMonth(new Date()))}
-  const days=Math.max(1,from&&to?Math.ceil((to.getTime()-from.getTime())/86400000)+1:1)
+  const days=from&&to?calculateRentalDays(from,to):1
   const label=fmtRange(shown.startDate,shown.endDate)
   const activeHour=target==='from'?fromHour:toHour
 
