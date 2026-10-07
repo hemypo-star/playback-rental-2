@@ -3,7 +3,7 @@
 #
 #   ./scripts/make-release.sh [target-branch] [source-ref]
 #
-# Defaults: builds `prod` from the current branch (`dev`).
+# Defaults: builds `prod` from the current branch (`main`).
 #
 # The release branch is GENERATED, never hand-edited. Everything below is a
 # deletion or a mechanical transformation of the development branch, so cutting

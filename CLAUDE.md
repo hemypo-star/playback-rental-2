@@ -11,26 +11,22 @@ file, `docs/DEV-LOG.md` (see the pointer at the bottom).
 
 ## Branches (owner's rule)
 
-- **`dev`** — the development branch. All work, docs and tooling land here.
+- **`main`** — the development branch (there is no `dev` any more). All work, docs and
+  tooling land here.
 - **`prod`** — deploy-only, gets **code changes only**. Never push docs, `CLAUDE.md`,
   `.claude/`, CI or other dev scaffolding to it; never hand-edit it. It is regenerated
-  from `dev` by `scripts/make-release.sh`, which already strips all of that.
-- **`main`** — do not touch at all: no pushes, merges, or rebases.
+  from `main` by `scripts/make-release.sh`, which already strips all of that.
 
 ## What this is
 
 A full rewrite of the Playback Rental storefront + admin (camera/video equipment rental,
-Kemerovo). The old app — a React/Vite SPA on self-hosted Supabase — is still the live
-site; it is deployed from `main` and its source lives only there, deleted from `dev` on
-2026-09-24. This tree is the new app: a single Next.js app, `apps/cms` — storefront,
-custom `/admin` UI, and Payload CMS's own `/cms` admin all in one process — to be cut
-over once verified end to end.
-
-**Hazard worth knowing before you touch branches**: `.github/workflows/deploy.yml` fires
-on every push to `main`, SSHes to the live VDS and runs `npm run build` (the legacy
-`vite build`) plus `pm2 reload`. Since `dev` no longer contains that app, merging `dev`
-into `main` would break the live deploy. Production for the rewrite goes through `prod`
-and `compose.yaml`, never through that workflow.
+Kemerovo). It replaced the old app — a React/Vite SPA on self-hosted Supabase — whose
+source was deleted from the tree on 2026-09-24 and which lived on `main` until `dev` was
+moved onto `main` (the old history is kept under the tag `legacy-main-2026-10-07`). This
+tree is the new app: a single Next.js app, `apps/cms` — storefront, custom `/admin` UI,
+and Payload CMS's own `/cms` admin all in one process. Production goes through `prod`
+and `compose.yaml`; there is no automatic deploy workflow, a release is cut with
+`scripts/make-release.sh` and rolled out by hand on the server.
 
 `apps/cms` didn't start this way: Phase 2 (see `docs/DEV-LOG.md`) built the storefront as
 a separate Astro app, `apps/web`, talking to Payload over REST — Payload's Local API
