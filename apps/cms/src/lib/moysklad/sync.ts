@@ -97,11 +97,17 @@ async function upsertCategory(payload: Payload, folder: MsFolder): Promise<{ id:
     return { id: current.id as number, created: false }
   }
 
-  let slug = slugify(folder.name) || folder.id.slice(0, 8)
+  // Every category folder in this account sits under "Аренда" (owner
+  // request, 2026-10-02) — repeating that on every single category name
+  // adds nothing, so strip it the same way product titles already do.
+  // Existing categories were bulk-renamed once by hand (they're frozen
+  // after creation, see above) — this only shapes new ones going forward.
+  const name = stripRentalPrefix(folder.name)
+  let slug = slugify(name) || folder.id.slice(0, 8)
   try {
     const doc = await payload.create({
       collection: 'categories',
-      data: { name: folder.name, slug, moySkladFolderId: folder.id },
+      data: { name, slug, moySkladFolderId: folder.id },
     })
     return { id: doc.id as number, created: true }
   } catch {
@@ -110,7 +116,7 @@ async function upsertCategory(payload: Payload, folder: MsFolder): Promise<{ id:
     slug = `${slug}-${folder.id.slice(0, 6)}`
     const doc = await payload.create({
       collection: 'categories',
-      data: { name: folder.name, slug, moySkladFolderId: folder.id },
+      data: { name, slug, moySkladFolderId: folder.id },
     })
     return { id: doc.id as number, created: true }
   }
@@ -358,7 +364,13 @@ export async function syncProducts(
         const mediaId = await uploadImageOnce(payload, imageSource, s.name)
 
         const data: RequiredDataFromCollectionSlug<'products'> = {
-          title: s.name,
+          // Storefront display shouldn't repeat "rental" on every single
+          // listing title — stripRentalPrefix() already existed for the
+          // inventory-match lookup above; reuse it here too (owner request,
+          // 2026-10-02). `title` is in SYNC_CANDIDATE_FIELDS, so an existing
+          // row only adopts this if its current title still matches what
+          // the last sync recorded — a title an admin hand-edited stays put.
+          title: stripRentalPrefix(s.name),
           listingType: 'rental',
           description: s.description || '',
           price: Math.round(priceKopecks) / 100,
@@ -398,7 +410,10 @@ export async function syncProducts(
         const mediaId = await uploadImageOnce(payload, stock?.image, p.name)
 
         const data: RequiredDataFromCollectionSlug<'products'> = {
-          title: p.name,
+          // Harmless no-op for sale listings in practice (the prefix is a
+          // rental-service naming convention), but applied unconditionally
+          // so a renamed/miscategorized item doesn't silently keep it.
+          title: stripRentalPrefix(p.name),
           listingType: 'sale',
           description: p.description || '',
           price: Math.round(priceKopecks) / 100,
@@ -572,7 +587,7 @@ export async function syncSingleEntity(
     const mediaId = await uploadImageOnce(payload, stock?.image, s.name)
 
     const data: RequiredDataFromCollectionSlug<'products'> = {
-      title: s.name,
+      title: stripRentalPrefix(s.name),
       listingType: 'rental',
       description: s.description || '',
       price: Math.round(priceKopecks) / 100,
@@ -603,7 +618,7 @@ export async function syncSingleEntity(
       const mediaId = await uploadImageOnce(payload, stock?.image, p.name)
 
       const data: RequiredDataFromCollectionSlug<'products'> = {
-        title: p.name,
+        title: stripRentalPrefix(p.name),
         listingType: 'sale',
         description: p.description || '',
         price: Math.round(priceKopecks) / 100,
