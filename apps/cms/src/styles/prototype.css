@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "../../../../docs/design-reference/spec/tokens.css";
+@import "./design-tokens.css";
 @theme {
   --font-sans: "Golos Text", Helvetica, Arial, sans-serif;
   --color-background:#EFEEEB; --color-foreground:#0A0A0A; --color-primary:#0A0A0A; --color-primary-hover:#D62410; --color-primary-foreground:#FFFFFF; --color-accent:#D62410; --color-card:#FFFFFF; --color-muted:#F4F3F1; --color-muted-well:#F9F8F7; --color-muted-foreground:#4A4844; --color-subtle:#6B6964; --color-faint:#A3A099; --color-border:rgba(10,10,10,.07); --color-input:rgba(10,10,10,.1); --color-destructive:#D62410;
