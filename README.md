@@ -13,6 +13,8 @@ This is a full rewrite of the production app: a single **Next.js** app
 > The legacy sources were deleted from `dev` on 2026-09-24, so `dev` must not be
 > merged into `main`.
 
+> **Понятное описание проекта** (что где, как работает синк, цена, выкладка, что делать при сбоях) — в [`docs/PROJECT-GUIDE.md`](docs/PROJECT-GUIDE.md).
+
 ## Monorepo layout
 
 ```text
