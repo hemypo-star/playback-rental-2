@@ -1966,3 +1966,92 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   overwriting `.next` under a live server (the replacement failed to bind with
   `EADDRINUSE`, so the old process kept serving a half-replaced build), and
   omitting a step's own env. Both were redone cleanly.
+
+- **2026-09-30 → 2026-10-07** — **Audit pass, owner-reported fixes, legacy-data merge, and `dev` folded into `main`.**
+  The storefront went live on a test domain and the owner started feeding real
+  bookings back in; this stretch is mostly what that surfaced.
+
+  *Kits and a bad "fix".* The kit-component cards (components rendered as
+  product cards, struck-through "по отдельности" price, `kitItems[].productId`
+  so the editor can reload its composition) were recovered from an orphan
+  commit by `qwen.ai[bot]` on branch `set-typo-correction-39c34` — a whole-tree
+  snapshot with no parent and an unrelated commit message. Content was reviewed
+  and re-applied as an ordinary commit rather than merging the branch. One part
+  of it was wrong, though: it stringified relationship ids (`category`,
+  `images`, `compatibleAccessories`) and added a `beforeChange` hook doing the
+  same. This Postgres setup has `payload.db.defaultIDType === 'number'`, so
+  Payload's own validator (`isValidID`) rejects a string id — kit creation
+  failed 100% ("Category is invalid"), saving any product with a photo failed,
+  and the original "Compatible Accessories is invalid" error was caused by the
+  hook, not cured by it. Found by patching a debug line into
+  `payload/dist/fields/validations.js` and watching `requestedID` arrive as a
+  string. Removed all three; the admin forms always sent numbers. Lesson: a
+  validator that rejects both types means look for something upstream
+  rewriting the value, not for the right type.
+
+  *Pricing convention, third revision.* The owner's real bookings showed the
+  `+1` "A1" convention (inclusive of both ends) overcharged by a day; dropping
+  the `+1` fixed those but still ignored the return hour. The rule that fits all
+  reported cases (1 Oct 10:00→2 Oct 10:00 = 1; 3→8 Oct = 5; 15 Oct 10:00→23 Oct
+  21:00 = 9) is the old app's own: `Math.ceil(elapsedHours / 24)`, minimum 1.
+  Price therefore depends on the return hour, deliberately.
+  `PrototypeDatePicker` had its own copy of the old formula and kept showing the
+  wrong count after the shared function changed; it calls `calculateRentalDays`
+  now. Copy changes in the same pass: "смена" → "сутки" everywhere (with
+  singular/plural handled by hand — it does not decline like "смена"), the stale
+  "longer rental, cheaper rate" claim removed, the real 5% (story mention /
+  2ГИС review) added, "офис 33" added to the pickup address. Stored
+  `SiteSettings` values override code defaults, so the address also had to be
+  re-saved in `/admin/settings`.
+
+  *Audit (security + QA, two agents).* Fixed: `orderItems` create/update/delete
+  now require the order's `submitToken` from anonymous callers (orders have
+  sequential ids and `orderItems` are publicly readable, so anyone could tamper
+  with someone else's in-progress cart); 15 MB upload limit (Payload config for
+  `/api/media`, plus an explicit `file.size` check in the kit-image route
+  handler, which parses multipart itself); the public `/:id/submit` response no
+  longer echoes МойСклад's raw error text; checkout button text names a missing
+  email; three admin grids use `minmax(0,1fr)`; `pluralRu` on "наборов" /
+  "категорий"; `pnpm migrate` script and README note, because `rate_limit_hits`
+  is excluded from dev push-sync and a fresh database 500s without migrations.
+  Re-examined and downgraded: kit #220's legacy rows (null `productId`) cannot
+  be wiped by a save — `validate()` already rejects an empty composition; only
+  its error message was unhelpful. Root `.gitignore` was empty; `.env` now
+  ignored. Real credentials (`.env.production.bek`: Supabase keys, a Telegram
+  bot token) still sit in the history of the old `main`/`prod`; Supabase is
+  decommissioned, the bot token should be rotated via @BotFather.
+
+  *Legacy-data merge and the "Аренда " prefix.* The old Supabase catalog
+  (CSV export, 222 products) was merged into the МойСклад-synced products by
+  title after stripping the "Аренда " prefix (192 exact matches), plus 20
+  hand-reviewed aliases for reworded titles; lookalikes with a different
+  brand/model were deliberately not matched (a fuzzy matcher would have put a
+  Synco intercom's photo on a Hollyland listing). Only empty `description` /
+  `images` were filled; prices, stock, titles are sync-owned and untouched.
+  Run once on production via `docker cp` + `docker compose exec cms npx tsx …`
+  (dry-run first, idempotent), then deleted — they were never part of the app.
+  Separately, the owner asked for the prefix to go from product titles and
+  category names: `sync.ts` now applies the existing `stripRentalPrefix()` to
+  titles and to newly created categories; products self-heal on the next sync
+  (`title` is a `SYNC_CANDIDATE_FIELD` still equal to its recorded baseline),
+  but existing categories are frozen after creation by design, so the 28 of
+  them were renamed once by a throwaway script (root folder → "Оборудование").
+  Slugs of existing categories were left alone to keep URLs stable.
+
+  *Pills.* On product cards the category pill is the first `.pb-tag`; long
+  МойСклад category names wrapped to three lines, ballooned it and squeezed the
+  status pill into an oval. One line with ellipsis, status pill `flex:none`.
+  Verified by injecting the rule into the live test site and measuring 24 cards
+  at 1440/820/390px.
+
+  *Branches and release.* The repo moved to `hemypo-star/playback-rental-2`.
+  `dev` was folded into `main` and deleted; the old Vite/Supabase `main` is kept
+  as tag `legacy-main-2026-10-07`. The legacy SSH `deploy.yml` was removed, CI
+  and `scripts/make-release.sh` now track `main`, and `prod` is regenerated
+  from `main`. The `gh` token needed the `workflow` scope to push workflow-file
+  changes. `prod` is rewritten from scratch each release, so servers must
+  `git fetch && git reset --hard origin/prod` rather than `git pull`.
+  Hazards hit on the way: a `.git/config` or `.claude/skills` write needs the
+  sandbox off; `git checkout` of a branch that tracks a file deletes the
+  untracked copy of it; `docker cp` does not create missing parent
+  directories.
