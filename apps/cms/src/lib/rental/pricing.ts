@@ -3,33 +3,28 @@
 // source of truth for day-counting/pricing — `lib/pricing.ts` re-exports
 // from here rather than keeping its own copy (see that file's header for
 // the history of why there were once two).
-import { differenceInCalendarDays } from 'date-fns'
 
 /**
- * Rental convention (revised 2026-09-30, owner-confirmed — supersedes the
- * 2026-08-24 audit's "A1" inclusive-both-ends convention this function used
- * to follow): a rental day is one calendar-date transition between pickup
- * and return — `differenceInCalendarDays(end, start)`, NOT `+ 1`. Picking up
- * on Oct 1 and returning on Oct 2 is one day (сутки), not two; Oct 3 -> Oct 8
- * is five days, not six. The previous "+1, inclusive of both the pickup day
- * and the return day" convention over-counted by exactly one day on every
- * multi-day rental — reported directly by the business owner against real
- * pricing (1600₽/day: Oct 1->2 must total 1600₽, not 3200₽).
+ * Rental convention (revised 2026-10-07, owner-confirmed with real bookings):
+ * a rental day (сутки) is a full 24 hours of elapsed time between pickup and
+ * return, rounded UP — `Math.ceil(hours / 24)`, minimum one. This is the old
+ * app's own rule (`Math.ceil(hours / 24)`), restored. Examples at 1600 RUB/day:
+ *   Oct  1 10:00 -> Oct  2 10:00 = exactly 24h            = 1 day
+ *   Oct  3 10:00 -> Oct  8 10:00 = 120h                   = 5 days
+ *   Oct 15 10:00 -> Oct 23 21:00 = 8 days 11h             = 9 days
+ *   any period up to 24h (even the 4h minimum booking)    = 1 day
  *
- * `differenceInCalendarDays` still normalizes both dates to midnight before
- * subtracting, so the time of day (10:00 vs 18:00 pickup/return) still can
- * never change the result — only the calendar date does. Pickup/return time
- * is kept elsewhere as information for the manager only; it must never
- * affect price. This time-independence is deliberately preserved from A1:
- * the old pre-A1 app priced by raw elapsed hours (`Math.ceil(hours / 24)`),
- * which made the price depend on the exact return hour — that problem is
- * NOT reintroduced by this revision; only A1's extra `+1` is removed.
+ * History: the 2026-08-24 audit's "A1" replaced this with calendar days
+ * inclusive of both ends (`+1`), then 2026-09-30 dropped the `+1` leaving a
+ * plain calendar-date difference. Both ignored the return hour, so a return
+ * at 21:00 priced the same as one at 10:00 — the owner's real tariff charges
+ * the extra started day, hence this revision. The deliberate consequence:
+ * the price DOES depend on pickup/return time, and returning later than the
+ * pickup hour on the last day costs another day.
  *
  * The minimum is one full day (`Math.max(1, ...)`) — this floor lives here,
  * in the one function that prices a rental, rather than being duplicated
- * (or forgotten) at each of the several places a user can pick dates. A
- * same-calendar-day pickup/return (`differenceInCalendarDays` === 0) still
- * floors to one full day at full rate, same as before.
+ * (or forgotten) at each of the several places a user can pick dates.
  *
  * Returns 0 when either date is missing or invalid (`NaN`) — that means "no
  * rental period chosen/known yet", which is a different case from "a
@@ -43,9 +38,11 @@ import { differenceInCalendarDays } from 'date-fns'
  * pickers cannot currently produce such a range. Any new caller that can
  * must do its own check rather than expect one here.
  */
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
 export function calculateRentalDays(startDate: Date | null | undefined, endDate: Date | null | undefined): number {
   if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0
-  return Math.max(1, differenceInCalendarDays(endDate, startDate))
+  return Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / MS_PER_DAY))
 }
 
 export function calculateRentalPrice(
