@@ -1,115 +1,244 @@
-# Playback Rental — 2.0
+# Playback Rental 2.0
 
-Camera and video equipment rental storefront + admin for Playback Rental (Kemerovo, Russia).
-This is a full rewrite of the production app: a single **Next.js** app
-(storefront + admin, built on **Payload CMS 3**), with product/stock data driven by
-**МойСклад** (the business's existing inventory system). All of it lives under
-`apps/cms`.
+Сайт проката фото- и видеотехники Playback Rental (Кемерово): витрина, админка и интеграция с МойСклад в одном приложении (Next.js + Payload CMS 3 + Postgres). Весь код в `apps/cms`.
 
-> **Branches.** `dev` is where work lands. `prod` is deploy-only and regenerated from
-> `dev` by `scripts/make-release.sh` — never hand-edited. `main` holds the **current
-> live app**, the legacy Vite + Supabase SPA, and is not to be touched: every push to
-> it triggers `.github/workflows/deploy.yml`, which deploys that app to the live VDS.
-> The legacy sources were deleted from `dev` on 2026-09-24, so `dev` must not be
-> merged into `main`.
+Этот файл объясняет, **что это за система, как она устроена, как с ней работать и что делать, когда что-то пошло не так**. Технические детали для разработчиков: [`CLAUDE.md`](CLAUDE.md) (архитектура и подводные камни), [`docs/DEV-LOG.md`](docs/DEV-LOG.md) (журнал разработки), в конце этого файла раздел «Для разработчика».
 
-> **Понятное описание проекта** (что где, как работает синк, цена, выкладка, что делать при сбоях) — в [`docs/PROJECT-GUIDE.md`](docs/PROJECT-GUIDE.md).
+---
 
-## Monorepo layout
+## 1. Что это
+
+Сайт проката фото- и видеотехники Playback Rental (Кемерово):
+
+- **Витрина** — каталог, карточка товара, выбор дат, корзина и оформление заявки. Клиент заявку отправляет, оплата происходит в офисе при выдаче.
+- **Админка** (`/admin`) — заказы, календарь занятости, остатки, клиенты, аналитика, категории, наборы, акции, промокоды, настройки сайта.
+- **Служебная админка Payload** (`/cms`) — «сырой» доступ ко всем данным. Нужна редко; обычно хватает `/admin`.
+- **Интеграция с МойСклад** — товары, цены и остатки приходят оттуда автоматически, заказы уходят туда же.
+
+Всё это одно приложение (`apps/cms`) на Next.js и Payload CMS, база данных — Postgres.
+
+## 2. Откуда берутся данные
+
+| Что | Откуда | Можно править в админке? |
+|---|---|---|
+| Товары (название, цена, остаток) | МойСклад, автоматически | Цена и остаток нет, они из МойСклад. Название, описание, фото можно, правка сохраняется |
+| Категории | Папки МойСклад, один раз при появлении | Да, после создания синк их не трогает |
+| Наборы (комплекты) | Создаются вручную в `/admin/kits` из готовых товаров | Да |
+| Акции, промокоды, тексты сайта, контакты | Только в админке | Да |
+| Заказы | Клиенты с сайта, а также вручную в админке | Статусы и состав |
+
+**Главное правило:** товар нельзя создать вручную, он должен появиться в МойСклад. Исключение, наборы.
+
+### Как работает синхронизация с МойСклад
+
+- Из аккаунта МойСклад берётся **только папка «PlayBack Rental»** (аккаунт общий для нескольких бизнесов).
+- Прокатные позиции в МойСклад — это **услуги** с названием «Аренда …». Префикс «Аренда » при переносе на сайт убирается. Остатки берутся из параллельного учётного дерева «Оборудование (для учета)» и сопоставляются по названию.
+- Контейнер `reconcile` перепроверяет всё раз в час (интервал задаётся `MOYSKLAD_RECONCILE_INTERVAL_MIN`).
+- Если зарегистрирован вебхук (`register-moysklad-webhook`), изменения в МойСклад подтягиваются сразу, не дожидаясь часа.
+- Синк **не затирает ваши правки**: название, описание, категория и фото обновляются из МойСклад, только пока вы их не меняли руками. Цена, остаток и тип позиции всегда берутся из МойСклад.
+
+## 3. Как считается цена аренды
+
+Цена на карточке — за **сутки**. Количество суток считается по прошедшему времени от выдачи до возврата, **с округлением вверх**, минимум одни сутки:
+
+| Выдача → возврат | Прошло | Суток |
+|---|---|---|
+| 1 окт 10:00 → 2 окт 10:00 | ровно 24 ч | 1 |
+| 3 окт 10:00 → 8 окт 10:00 | 120 ч | 5 |
+| 15 окт 10:00 → 23 окт 21:00 | 8 дн. 11 ч | **9** |
+| любой срок до 24 ч (минимальное бронирование 4 часа) | | 1 |
+
+Важно: **час возврата влияет на цену**. Вернуть в 21:00 вместо 10:00 в последний день стоит ещё одни сутки. Скидок за длительный срок нет. Единственная постоянная скидка: 5% за отметку в сторис или отзыв в 2ГИС (оформляется при выдаче). Есть ещё **промокоды** (раздел «Промокоды»): процент или фиксированная сумма, с минимальной суммой заказа.
+
+Расчёт реализован в одном месте, `apps/cms/src/lib/rental/pricing.ts`. Тот же код считает цену в модалке дат, корзине, заказе и при отправке в МойСклад.
+
+## 4. Заказ: что происходит после «Отправить заявку»
+
+1. Клиент заполняет имя, телефон, email, отмечает согласия и отправляет.
+2. Сервер проверяет даты, занятость техники (с блокировкой, чтобы два клиента не взяли последнюю единицу одновременно) и считает итог.
+3. Заказ сохраняется со статусом **«в ожидании»** (`pending`) и уходит в МойСклад.
+4. Менеджеру приходит уведомление (Telegram, MAX, VK, почта — что настроено).
+5. Менеджер звонит клиенту, подтверждает; далее статусы: подтверждён → выполнен либо отменён.
+
+Заказы **не удаляются**, только отменяются: это учётная запись. Защита от спама: на оформление, контактную форму и вход стоят лимиты запросов.
+
+## 5. Админка: что где
+
+Вход: `/admin/login`. Первого администратора регистрируют на `/admin/first-register` (только на пустой базе).
+
+| Раздел | Для чего |
+|---|---|
+| Заказы | Список, карточка, смена статуса; «Новый заказ» — ручное оформление по звонку |
+| Календарь | Занятость техники по датам |
+| Остатки | Остатки и статусы по позициям |
+| Клиенты | Кто и сколько заказывал |
+| Аналитика | Выручка, популярные позиции |
+| Категории | Названия, порядок, описания |
+| Наборы | Составные предложения («Влог-сет»): выбираете товары, цена набора и «по отдельности» (сумма цен компонентов) |
+| Товары | Правка названия, описания, фото, «совместимых аксессуаров». Цена и остаток только из МойСклад |
+| Акции | Баннеры и страницы акций |
+| Промокоды | Скидочные коды |
+| Медиа | Загруженные изображения (до 15 МБ каждое) |
+| Контент / Настройки | Тексты главной, контакты, адрес, часы работы, баннеры |
+| Пользователи | Администраторы |
+
+**Адрес выдачи и контакты** меняются в «Настройки». Значение из базы всегда важнее значения по умолчанию в коде, поэтому после изменения текста по умолчанию его нужно пересохранить в настройках.
+
+## 6. Устройство репозитория и ветки
 
 ```text
-apps/
-  cms/    Payload CMS 3 + Next.js — storefront, custom admin panel,
-          REST/GraphQL API, МойСклад sync, order/pricing/availability logic
+apps/cms/           единственное приложение
+  src/app/          страницы: (frontend) витрина, (admin) админка, (payload) /cms и API
+  src/collections/  модели данных: товары, заказы, позиции заказа, категории, акции, промокоды, пользователи
+  src/globals/      настройки сайта
+  src/lib/          бизнес-логика: цены (rental/), МойСклад (moysklad/), уведомления, защита от злоупотреблений
+  src/migrations/   миграции базы (применяются автоматически при старте контейнера)
+  src/scripts/      фоновые процессы и разовые задачи (синк, сверка, уведомления)
+compose.yaml        промышленный запуск (Docker Compose)
+scripts/            make-release.sh и вспомогательные скрипты (только в dev)
+docs/               документация и журнал разработки (только в dev)
 ```
 
-## Stack
+**Ветки (правило владельца):**
 
-Payload CMS 3, Next.js App Router, Postgres, Tailwind CSS v4, Docker Compose.
-Storefront, custom `/admin`, Payload `/cms` and API are one application/origin.
+- `dev` — основная. Вся работа, документация и инструменты живут здесь.
+- `prod` — **только для выкладки**. Содержит только то, что нужно на сервере. Её нельзя править руками: она **пересобирается с нуля** из `dev` командой `./scripts/make-release.sh`.
+- `main` — старое приложение (Vite + Supabase). Не трогать: любой пуш туда запускает старый автодеплой на боевой сервер.
 
-## Local development
+## 7. Запуск и выкладка
 
-Recommended full-stack workflow (closest to production):
+### Контейнеры (`compose.yaml`)
 
-```bash
-cp .env.example .env
-# Fill POSTGRES_PASSWORD and PAYLOAD_SECRET.
+| Контейнер | Что делает |
+|---|---|
+| `cms` | Само приложение (порт 8080 → 3000). При каждом старте применяет миграции |
+| `db` | Postgres 17, данные в томе `pgdata` |
+| `notifications` | Единственный, у кого есть ключи мессенджеров и почты: берёт задания из очереди и рассылает уведомления |
+| `reconcile` | Раз в час сверяет товары и остатки с МойСклад |
 
-Just want to look at the site? `./scripts/preview.sh` starts Postgres, runs
-the app and fills it with a demo catalog and an admin login; add `--tunnel`
-for a temporary public https URL you can open on a phone — see
-`docs/PREVIEW.md`. For a permanent hosted preview URL on free plans there is a ready
-`render.yaml` blueprint — see `docs/DEPLOY-PREVIEW.md`. The stack below is
-the full containerized dev setup.
+Разовые задачи (профиль `jobs`): `sync-moysklad` (полный синк), `reconcile-moysklad`, `register-moysklad-webhook`.
 
+### Обычная выкладка новой версии
 
-docker compose -f compose.yaml -f compose.dev.yaml up --build
-```
+1. На своей машине из `dev`: `./scripts/make-release.sh` — пересобрать ветку `prod` (дерево должно быть чистым).
+2. Отправить `prod` в GitHub. Ветка каждый раз создаётся заново, поэтому нужен принудительный пуш (`--force`); делать это осознанно.
+3. На сервере:
+   ```bash
+   cd /var/www/playback-rental-2
+   git fetch origin
+   git reset --hard origin/prod     # обычный pull не сработает: история prod переписывается
+   docker compose up -d --build
+   docker compose ps                # все контейнеры должны быть Up/healthy
+   ```
+4. Проверить сайт и логи: `docker compose logs --tail=50 cms`.
 
-Open `http://localhost:8080` (or the forwarded Codespaces port 8080).
-`compose.dev.yaml` deliberately disables real МойСклад reconciliation and direct
-notification delivery, so ordinary local testing cannot message real recipients.
+Автоматического деплоя для `prod` нет. Файл `.github/workflows/deploy.yml` относится к старому приложению и срабатывает только на `main`.
 
-A non-Docker development path is also possible with Node, pnpm and local Postgres:
+### Обязательные переменные `.env` на сервере
+
+`POSTGRES_PASSWORD`, `PAYLOAD_SECRET`, `WEB_URL` (публичный https-адрес сайта), `WEB_PORT`, `MOYSKLAD_API_TOKEN`. Дополнительно: `MOYSKLAD_WEBHOOK_SECRET`, каналы уведомлений (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `MAX_*`, `VK_*`, `SMTP_*`), `NOTIFICATIONS_ENABLED`. Полный список с комментариями в `.env.example`.
+
+Два подводных камня:
+
+- `WEB_URL` должен совпадать с адресом сайта. Иначе страницы открываются, но оформление заказа и сохранения в админке не работают (проверка источника запроса).
+- За обратным прокси (TLS) нужно `TRUST_PROXY_HEADERS=true`, иначе лимитер видит всех посетителей как один адрес.
+
+Файл `.env` никогда не коммитится (корневой `.gitignore` это исключает). Секреты не должны попадать в репозиторий.
+
+### Локальная разработка
 
 ```bash
 pnpm install
 cd apps/cms
-cp .env.example .env
+cp .env.example .env     # задать DATABASE_URI и PAYLOAD_SECRET
+pnpm migrate             # один раз на пустой базе: создаёт таблицу rate_limit_hits
 pnpm dev
 ```
 
-Payload's schema is pushed automatically in `pnpm dev` — except `rate_limit_hits`
-(`payload.config.ts`'s `tablesFilter` deliberately excludes it from push), which only
-exists after running migrations once:
+Без `pnpm migrate` на чистой базе первый вход, оформление заказа или форма обратной связи завершатся ошибкой `relation "rate_limit_hits" does not exist`.
+
+Проверки перед отправкой изменений: `npx tsc --noEmit`, `npx eslint .`, `pnpm test`, `pnpm build`. Те же и дополнительные смоук-тесты выполняет CI на каждый пуш в `dev`.
+
+## 8. Уведомления
+
+Приложение само ничего не рассылает: оно кладёт задание в очередь (общий том), а контейнер `notifications` его забирает и отправляет по настроенным каналам с повторами при сбоях. Так ключи от мессенджеров не доступны веб-приложению. Если уведомления не приходят: проверьте `NOTIFICATIONS_ENABLED`, токены и `docker compose logs notifications`.
+
+## 9. Разовые задачи и миграция данных
+
+Единоразовые скрипты (перенос фото и описаний из старой базы, массовое переименование) не являются частью приложения: их кладут на сервер на время запуска и удаляют. Принципы:
+
+- сначала `--dry-run` (ничего не меняет, показывает счётчики), потом реальный запуск;
+- заполняются только пустые поля, цены, остатки и названия из МойСклад не затрагиваются;
+- скрипты идемпотентны (повторный запуск ничего не дублирует).
+
+## 10. Что делать, если…
+
+| Симптом | Куда смотреть |
+|---|---|
+| Сайт не открывается | `docker compose ps`, `docker compose logs --tail=100 cms` |
+| Оформление заказа или сохранение в админке падает, страницы открываются | `WEB_URL` в `.env` |
+| Ошибка про `rate_limit_hits` | `pnpm migrate` (локально) / контейнер при старте мигрирует сам, проверьте логи миграций |
+| Товара нет или остаток не обновился | Есть ли он в папке «PlayBack Rental» МойСклад; логи `reconcile`; для немедленного обновления запустить `sync-moysklad` |
+| Товар остался со старым названием | Если название меняли руками в админке, синк его не перезапишет (так задумано) |
+| Новый товар без фото | Фото берётся из МойСклад при первом создании; потом редактируется в админке |
+| Адрес или контакты на сайте старые | Раздел «Настройки» в админке: значение в базе важнее значения по умолчанию |
+| `git pull` на сервере выдаёт «divergent branches» | Нормально для `prod`: `git fetch && git reset --hard origin/prod` |
+| Уведомления не приходят | См. раздел 8 |
+
+## 11. Безопасность: коротко
+
+- Все изменяющие действия в админке проверяют вход; публичные заказы защищены лимитами запросов и токеном заказа.
+- Позиции чужого незавершённого заказа изменить нельзя (нужен токен, выдаваемый при создании заказа).
+- Загрузки изображений ограничены 15 МБ.
+- Раньше в историю веток `prod` и `main` по ошибке попал файл с ключами старого приложения (Supabase, Telegram-бот). Supabase выведена из эксплуатации; токен Telegram-бота, если бот ещё используется, нужно перевыпустить через @BotFather.
+- Не кладите `.env` и ключи в репозиторий и в чат.
+
+## 12. Что ещё не доделано / на что обратить внимание
+
+- Не нашли пары (название изменилось) и поэтому не получили фото/описание из старой базы 9 товаров: заполняются вручную в админке.
+- Для двух позиций с изменившейся комплектацией (Canon R6 Mark II, DJI Mic) пара подобрана по смыслу; проверьте глазами карточки.
+- Автоматического деплоя новой версии на сервер нет; выкладка выполняется вручную по разделу 7.
+
+---
+
+## Для разработчика
+
+### Полный стек в Docker (ближе всего к продакшену)
 
 ```bash
-cd apps/cms
-pnpm migrate
+cp .env.example .env     # заполнить POSTGRES_PASSWORD и PAYLOAD_SECRET
+docker compose -f compose.yaml -f compose.dev.yaml up --build
 ```
 
-Skipping this on a fresh database makes the first login/checkout/contact-form
-submission 500 with `relation "rate_limit_hits" does not exist`.
+Сайт на `http://localhost:8080`. `compose.dev.yaml` намеренно отключает настоящую сверку с МойСклад и прямую доставку уведомлений, поэтому локальные проверки не могут написать реальным получателям.
 
-After adding/changing a custom Payload admin component, regenerate the import map:
+Быстро посмотреть сайт с демо-каталогом и логином администратора: `./scripts/preview.sh` (с `--tunnel` даёт временную публичную https-ссылку для телефона), подробнее в [`docs/PREVIEW.md`](docs/PREVIEW.md); постоянное превью на бесплатном хостинге: `render.yaml`, [`docs/DEPLOY-PREVIEW.md`](docs/DEPLOY-PREVIEW.md).
+
+### После изменения кастомного админ-компонента Payload
 
 ```bash
 cd apps/cms
 npx payload generate:importmap
 ```
 
-## МойСклад sync
+### МойСклад: ручные команды
 
-Only the Playback Rental folder subtree is synced from the shared МойСклад account.
-From `apps/cms`:
+Из `apps/cms`:
 
 ```bash
-pnpm sync:moysklad
-pnpm reconcile:moysklad
-pnpm register:moysklad-webhook
+pnpm sync:moysklad               # полный синк
+pnpm reconcile:moysklad          # сверка
+pnpm register:moysklad-webhook   # регистрация вебхука
 ```
 
-## Notifications
+### Уведомления
 
-n8n is not part of the 2.0 notification path. Checkout and the contact form write
-notification jobs to a persistent local queue; a separate Docker worker on the VDS
-delivers them directly to configured destinations:
+n8n в пути уведомлений 2.0 не участвует. Оформление заказа и контактная форма пишут задания в постоянную очередь, отдельный Docker-воркер на сервере доставляет их напрямую: Telegram Bot API, MAX Bot API, SMTP (письмо админу и подтверждение клиенту), сообщения сообщества VK (необязательно). Публичный контейнер `cms` ключей ботов и SMTP не получает. Переменные, повторы и проверки на сервере: [`docs/NOTIFICATIONS.md`](docs/NOTIFICATIONS.md).
 
-- Telegram Bot API;
-- MAX Bot API;
-- SMTP (admin email + order confirmation to the customer);
-- VK community messages (optional).
+### Дополнительные документы
 
-The public `cms` container does not receive bot/API/SMTP credentials. See
-[`docs/NOTIFICATIONS.md`](docs/NOTIFICATIONS.md) for environment variables, retries,
-security rules and VDS acceptance checks.
-
-## More context
-
-- `CLAUDE.md` — architecture notes, gotchas and design-system reference.
-- `docs/DEV-LOG.md` — the dated dev log: what was done, what broke, how it was verified.
-- `docs/ROADMAP-CURRENT.md` — current execution state and remaining owner/deployment gates.
-- `docs/SMOKE-TEST-2.0.md` — manual acceptance checklist.
-- `docs/NOTIFICATIONS.md` — direct notification worker configuration.
-- `docs/ERROR-MONITORING.md` — optional GlitchTip/Sentry-compatible error reporting.
+- [`CLAUDE.md`](CLAUDE.md) — архитектурные заметки, подводные камни, дизайн-система.
+- [`docs/DEV-LOG.md`](docs/DEV-LOG.md) — журнал: что сделано, что сломалось, как проверено.
+- [`docs/ROADMAP-CURRENT.md`](docs/ROADMAP-CURRENT.md) — текущее состояние и оставшиеся шаги.
+- [`docs/SMOKE-TEST-2.0.md`](docs/SMOKE-TEST-2.0.md) — ручной чек-лист приёмки.
+- [`docs/ERROR-MONITORING.md`](docs/ERROR-MONITORING.md) — необязательная отправка ошибок в GlitchTip/Sentry.
