@@ -39,10 +39,14 @@ export default async function PrototypeHome(){
  // When no order history exists yet every candidate scores 0 and the block
  // degrades to the previous recency behaviour instead of disappearing.
  const popular=[...featuredResult.docs].sort((a,b)=>(orderStats.get(b.id)?.timesOrdered??0)-(orderStats.get(a.id)?.timesOrdered??0)||(b.updatedAt??'').localeCompare(a.updatedAt??'')).slice(0,4)
- const featuredCategories=categories.filter(c=>c.parent==null).slice(0,6)
- const statIds=Array.from(new Set(featuredCategories.flatMap(c=>getSubtreeIds(c.id,categories))))
+ // Stats are read for every root category's subtree BEFORE the six tiles are
+ // picked: a category with no products is left out of the homepage entirely,
+ // so the choice of which six to show has to know which ones are empty.
+ const rootCategories=categories.filter(c=>c.parent==null)
+ const statIds=Array.from(new Set(rootCategories.flatMap(c=>getSubtreeIds(c.id,categories))))
  const catStats=await getCategoryProductStats(statIds)
  const catMeta=(c:Category)=>{let count=0,min:number|undefined;for(const id of getSubtreeIds(c.id,categories)){const s=catStats.get(id);if(!s)continue;count+=s.count;min=min===undefined?s.minPrice:Math.min(min,s.minPrice)}return count&&min!==undefined?`${count} позиций · от ${formatCurrency(min)}`:''}
+ const featuredCategories=rootCategories.filter(c=>catMeta(c)!=='').slice(0,6)
  const hero=mediaUrl(settings.heroBannerImage),heroMobile=mediaUrl(settings.heroBannerImageMobile)||hero
  const stats=[{value:String(totals.total),label:'Позиций в парке'},{value:String(totals.inStock),label:'Свободны сегодня'},{value:settings.depositLabel||'0 ₽',label:settings.depositCaption||'Залог'},{value:settings.pickupTimeLabel||'10 мин',label:settings.pickupTimeCaption||'Выдача по паспорту'}]
  const promos=promotions.map(p=>({id:p.id,title:p.title,kicker:p.kicker||undefined,text:p.text||undefined,imageUrl:mediaUrl(p.image),linkUrl:p.linkUrl||(p.slug?`/promotions/${p.slug}`:undefined)}))

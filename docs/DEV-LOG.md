@@ -2129,3 +2129,14 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   one-off script (27 matched by name or by explicit alias, empty fields only;
   "Светоформирующие насадки" and "Одноразовые пленочные фотоаппараты" have no
   counterpart on the new site).
+
+- **2026-10-09** — **Empty categories are hidden on the storefront.** Homepage: the six
+  category tiles used to be the first six root categories, counted afterwards,
+  so an empty one still took a tile (with a blank meta line). Stats are now
+  read for every root category's subtree first and only non-empty ones are
+  eligible for the six slots. Catalog: the sidebar drops categories whose
+  subtree count (`counts`) is 0, except the one currently open, so a direct
+  link to an empty category still shows where you are. "Count" is the same
+  number the page already used (available products, parent = sum of its
+  subtree). Not changed: `sitemap.ts` still lists every category URL, and the
+  search page's category facets are untouched.
