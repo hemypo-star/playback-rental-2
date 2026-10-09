@@ -88,3 +88,16 @@ export function getSubtreeIds(categoryId: number, categories: Category[]): numbe
   }
   return ids
 }
+
+// Keeps only the categories that hold at least one product somewhere in
+// their subtree, given each category's own (direct) product count — a parent
+// whose products all sit in its children still counts as non-empty. Order of
+// `candidates` is preserved. Used by the storefront search so it never
+// suggests a category that opens onto an empty page.
+export function filterNonEmptyCategories(
+  candidates: Category[],
+  allCategories: Category[],
+  directCounts: Map<number, number>,
+): Category[] {
+  return candidates.filter((c) => getSubtreeIds(c.id, allCategories).some((id) => (directCounts.get(id) ?? 0) > 0))
+}

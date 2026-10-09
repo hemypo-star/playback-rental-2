@@ -5,6 +5,9 @@ import type { Category, Product } from '../../payload-types'
 import { categoryNameOf } from '../productDisplay'
 import { mediaUrl } from '../mediaUrl'
 import { foldQuery, expandStems, MIN_QUERY_LENGTH } from '../searchMorphology'
+import { filterNonEmptyCategories } from '../categoryTree'
+import { getCategories } from './categories'
+import { getCategoryProductCounts } from './products'
 
 // Server-only global search for the storefront (header dropdown + /search
 // page). Deliberately independent of any category context: every query runs
@@ -88,7 +91,9 @@ export async function searchCatalog(options: { raw: string; productLimit?: numbe
         })
         return { or: perWord }
       })(),
-      limit: SEARCH_LIMITS.categories,
+      // Wider than the dropdown's cap: empty categories are dropped below,
+      // so the cap has to apply after that, not before.
+      limit: 50,
       sort: 'order',
       depth: 0,
     }),
@@ -102,8 +107,16 @@ export async function searchCatalog(options: { raw: string; productLimit?: numbe
     }),
   ])
 
+  // Only categories with products somewhere in their subtree are suggested.
+  const allCategories = await getCategories()
+  const directCounts = await getCategoryProductCounts(allCategories.map((c) => c.id))
+  const suggestedCategories = filterNonEmptyCategories(categoriesResult.docs, allCategories, directCounts).slice(
+    0,
+    SEARCH_LIMITS.categories,
+  )
+
   return {
-    categories: categoriesResult.docs.map((c: Category) => ({ id: c.id, name: c.name, slug: c.slug })),
+    categories: suggestedCategories.map((c: Category) => ({ id: c.id, name: c.name, slug: c.slug })),
     products: productsResult.docs.map((p: Product) => ({
       id: p.id,
       title: p.title,

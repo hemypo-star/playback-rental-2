@@ -2140,3 +2140,11 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   number the page already used (available products, parent = sum of its
   subtree). Not changed: `sitemap.ts` still lists every category URL, and the
   search page's category facets are untouched.
+
+- **2026-10-09** — **Search no longer suggests empty categories.** The header dropdown's
+  category list (`searchCatalog`) matched categories by name/description and took
+  the first three, without looking at their products. It now fetches up to 50
+  name matches, drops those with no product anywhere in their subtree
+  (`filterNonEmptyCategories` in `lib/categoryTree.ts`, fed by the same
+  cached `getCategoryProductCounts` the catalog sidebar uses), and only then
+  applies the cap of three. The `/search` page itself never listed categories.
