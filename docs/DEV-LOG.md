@@ -2055,3 +2055,36 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   sandbox off; `git checkout` of a branch that tracks a file deletes the
   untracked copy of it; `docker cp` does not create missing parent
   directories.
+
+- **2026-10-09** — **First real order pushes on the VDS: kits, MAX TLS, notification
+  delivery.** Wiring the notification worker and МойСклад on the production box
+  surfaced three things the tests could not.
+
+  *Kits never reached МойСклад.* Kits are created in `/admin/kits` with a
+  synthetic `kit-<uuid>` `moySkladId`; `pushOrderToMoySklad` built
+  `…/entity/service/kit-…` from it and МойСклад answered 400 (error 2013, bad
+  `assortment` href). Plain products were fine (order 3 landed, order 2 — a kit —
+  did not). `lib/moysklad/kits.ts` now expands a kit line into its component
+  products' real positions (`kitItems[].productId`), spreading the kit line total
+  over them in proportion to their current prices so Σ(positions) still equals
+  the line total; the promo discount factor is applied on top, as for any line.
+  Components that cannot be resolved (legacy kits with a null `productId`, a
+  deleted product, a nested kit) are skipped with a logged warning and named in
+  the order comment; if nothing resolves, the push throws (visible in
+  `moySkladError`) rather than creating an empty МойСклад order. The order's
+  МойСклад *comment* is now built by `buildOrderDescription`: customer note,
+  line items with rental period, kit composition and kit saving, subtotal, promo
+  code with its terms and the roubles taken off, and the amount due.
+
+  *MAX failed with `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`.* `platform-api2.max.ru`
+  is signed by the Russian Trusted Root CA, absent from Node's bundled store.
+  The root cert is vendored in `certs/` and mounted into the `notifications`
+  container with `NODE_EXTRA_CA_CERTS`; TLS verification stays on (the bot token
+  is in an `Authorization` header). Telegram is simply unreachable from the VDS
+  (connect timeout) — leave its variables empty there.
+
+  *Hazards.* A VK community cannot message itself; to receive orders "in the
+  community" add the community to a conversation and put the chat's `peer_id`
+  (`2000000000 + chat id`) into `VK_PEER_IDS`. Hand edits to `compose.yaml` on
+  the server are wiped by the next `git reset --hard origin/prod`, so anything
+  the server needs lives in the repo.

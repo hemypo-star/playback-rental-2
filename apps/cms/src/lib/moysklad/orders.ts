@@ -85,9 +85,13 @@ export async function pushOrderToMoySklad(params: {
   customerName: string
   customerEmail: string
   customerPhone: string
-  notes?: string
+  // Free text for the order's comment field; see buildOrderDescription
+  description?: string
   items: OrderItemForPush[]
 }): Promise<{ id: string; href: string }> {
+  if (params.items.length === 0) {
+    throw new Error('No pushable positions: every line was a kit without resolvable components')
+  }
   const counterparty = await findOrCreateCounterparty(
     params.customerName,
     params.customerEmail,
@@ -128,7 +132,7 @@ export async function pushOrderToMoySklad(params: {
       },
     },
     agent: { meta: { href: counterparty.href, type: 'counterparty', mediaType: 'application/json' } },
-    description: params.notes || '',
+    description: params.description || '',
     positions,
   })
 

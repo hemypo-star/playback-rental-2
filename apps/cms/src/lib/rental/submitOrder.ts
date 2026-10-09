@@ -1,5 +1,6 @@
 import type { Payload, PayloadRequest } from 'payload'
-import { pushOrderToMoySklad } from '../moysklad/orders'
+import { pushOrderToMoySklad, type OrderItemForPush } from '../moysklad/orders'
+import { buildOrderDescription, expandKitLine, type DescriptionLine, type KitComponent } from '../moysklad/kits'
 import { sendOrderNotification } from '../notifications/webhook'
 import { calculateRentalDays } from './pricing'
 import type { CheckoutErrorCode } from '../checkoutErrors'
@@ -80,7 +81,14 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
   // generated (gitignored), not checked in — this shape is only what the
   // pushes below actually read from each line.
   const items = itemsResult.docs as unknown as Array<{
-    product: { moySkladId: string; title: string }
+    product: {
+      moySkladId: string
+      title: string
+      price: number
+      isKit?: boolean | null
+      oldPrice?: number | null
+      kitItems?: Array<{ label: string; productId?: number | null }> | null
+    }
     listingType: 'rental' | 'sale'
     quantity: number
     lineTotal: number
@@ -142,19 +150,92 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
   let moySkladOrderId: string | null = null
   let moySkladError: string | null = null
   try {
+    // A kit has no МойСклад entity of its own (synthetic `kit-<uuid>` id), so
+    // each kit line is replaced by positions for its component products,
+    // the kit's price spread over them (see moysklad/kits.ts).
+    const componentIds = [
+      ...new Set(
+        items.flatMap((item) =>
+          item.product.isKit ? (item.product.kitItems ?? []).flatMap((k) => (k.productId ? [k.productId] : [])) : [],
+        ),
+      ),
+    ]
+    const componentProducts = new Map<number, { moySkladId: string; title: string; price: number; listingType: 'rental' | 'sale' }>()
+    if (componentIds.length > 0) {
+      const found = await payload.find({
+        collection: 'products',
+        where: { id: { in: componentIds } },
+        limit: componentIds.length,
+        depth: 0,
+        req,
+        overrideAccess: true,
+      })
+      for (const doc of found.docs as unknown as Array<{ id: number; moySkladId: string; title: string; price: number; listingType: 'rental' | 'sale' }>) {
+        componentProducts.set(doc.id, doc)
+      }
+    }
+
+    const pushItems: OrderItemForPush[] = []
+    const descriptionLines: DescriptionLine[] = []
+    for (const item of items) {
+      const base = {
+        title: item.product.title,
+        quantity: item.quantity,
+        listingType: item.listingType,
+        lineTotal: item.lineTotal,
+        startDate: item.startDate,
+        endDate: item.endDate,
+      }
+      if (!item.product.isKit) {
+        pushItems.push({
+          moySkladId: item.product.moySkladId,
+          listingType: item.listingType,
+          quantity: item.quantity,
+          unitPrice: frozenUnitPrice(item) * discountFactor,
+          startDate: item.startDate,
+          endDate: item.endDate,
+        })
+        descriptionLines.push(base)
+        continue
+      }
+
+      const components: KitComponent[] = (item.product.kitItems ?? []).map((k) => {
+        const c = k.productId ? componentProducts.get(k.productId) : undefined
+        return { label: c?.title ?? k.label, moySkladId: c?.moySkladId ?? null, listingType: c?.listingType ?? 'rental', price: c?.price ?? 0 }
+      })
+      const expansion = expandKitLine({ ...item, components })
+      if (expansion.unresolved.length > 0 || expansion.items.length === 0) {
+        payload.logger.warn(
+          { orderId, kit: item.product.title, unresolved: expansion.unresolved },
+          'Kit components missing from МойСклад — not included in pushed positions',
+        )
+      }
+      for (const position of expansion.items) {
+        pushItems.push({ ...position, unitPrice: position.unitPrice * discountFactor })
+      }
+      descriptionLines.push({
+        ...base,
+        kit: { resolved: expansion.resolved, unresolved: expansion.unresolved, price: item.product.price, oldPrice: item.product.oldPrice },
+      })
+    }
+
     const pushed = await pushOrderToMoySklad({
       customerName: order.customerName,
       customerEmail: order.customerEmail,
       customerPhone: order.customerPhone,
-      notes: order.notes || undefined,
-      items: items.map((item) => ({
-        moySkladId: item.product.moySkladId,
-        listingType: item.listingType,
-        quantity: item.quantity,
-        unitPrice: frozenUnitPrice(item) * discountFactor,
-        startDate: item.startDate,
-        endDate: item.endDate,
-      })),
+      description: buildOrderDescription({
+        orderId,
+        customerNotes: order.notes,
+        lines: descriptionLines,
+        gross,
+        totalPrice: order.totalPrice ?? 0,
+        promoCode: order.promoCode,
+        promoDiscountType: order.promoDiscountType,
+        promoDiscountValue: order.promoDiscountValue,
+        promoMinOrderAmount: order.promoMinOrderAmount,
+        promoDiscount,
+      }),
+      items: pushItems,
     })
     moySkladOrderId = pushed.id
   } catch (error) {

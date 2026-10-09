@@ -99,8 +99,12 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_ADMIN_TO: ${SMTP_ADMIN_TO:-}
       SMTP_TIMEOUT_MS: ${SMTP_TIMEOUT_MS:-15000}
+      # MAX's TLS chain is issued by the Russian Trusted Root CA, which is not
+      # in Node's bundled store (certs/README.md).
+      NODE_EXTRA_CA_CERTS: /certs/russian_trusted_root_ca.crt
     volumes:
       - notification_queue:/data/notifications
+      - ./certs/russian_trusted_root_ca.crt:/certs/russian_trusted_root_ca.crt:ro
     command: ['pnpm', 'notifications:daemon']
 
   # Periodic safety-net sync. Disabled in dev by compose.dev.yaml.
