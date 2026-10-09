@@ -1,6 +1,6 @@
 import type { Payload, PayloadRequest } from 'payload'
 import { pushOrderToMoySklad, type OrderItemForPush } from '../moysklad/orders'
-import { buildOrderDescription, expandKitLine, type DescriptionLine, type KitComponent } from '../moysklad/kits'
+import { buildOrderDescription, expandKitLine, kitLabelKey, type DescriptionLine, type KitComponent } from '../moysklad/kits'
 import { sendOrderNotification } from '../notifications/webhook'
 import { calculateRentalDays } from './pricing'
 import type { CheckoutErrorCode } from '../checkoutErrors'
@@ -175,6 +175,31 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
       }
     }
 
+    // Legacy kits keep only a text label per component (productId null, or
+    // pointing at a product that no longer exists). Match those by title,
+    // the way the sync matches services to inventory — loaded lazily, once.
+    type ComponentProduct = { moySkladId: string; title: string; price: number; listingType: 'rental' | 'sale' }
+    let productsByTitle: Map<string, ComponentProduct> | null = null
+    const findByLabel = async (label: string): Promise<ComponentProduct | undefined> => {
+      if (!productsByTitle) {
+        const all = await payload.find({
+          collection: 'products',
+          limit: 0,
+          depth: 0,
+          select: { title: true, moySkladId: true, price: true, listingType: true },
+          req,
+          overrideAccess: true,
+        })
+        productsByTitle = new Map()
+        for (const doc of all.docs as unknown as ComponentProduct[]) {
+          if (!doc.moySkladId || doc.moySkladId.startsWith('kit-')) continue
+          const key = kitLabelKey(doc.title)
+          if (!productsByTitle.has(key)) productsByTitle.set(key, doc)
+        }
+      }
+      return productsByTitle.get(kitLabelKey(label))
+    }
+
     const pushItems: OrderItemForPush[] = []
     const descriptionLines: DescriptionLine[] = []
     for (const item of items) {
@@ -199,10 +224,11 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
         continue
       }
 
-      const components: KitComponent[] = (item.product.kitItems ?? []).map((k) => {
-        const c = k.productId ? componentProducts.get(k.productId) : undefined
-        return { label: c?.title ?? k.label, moySkladId: c?.moySkladId ?? null, listingType: c?.listingType ?? 'rental', price: c?.price ?? 0 }
-      })
+      const components: KitComponent[] = []
+      for (const k of item.product.kitItems ?? []) {
+        const c = (k.productId ? componentProducts.get(k.productId) : undefined) ?? (await findByLabel(k.label))
+        components.push({ label: c?.title ?? k.label, moySkladId: c?.moySkladId ?? null, listingType: c?.listingType ?? 'rental', price: c?.price ?? 0 })
+      }
       const expansion = expandKitLine({ ...item, components })
       if (expansion.unresolved.length > 0 || expansion.items.length === 0) {
         payload.logger.warn(

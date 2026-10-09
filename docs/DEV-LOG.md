@@ -2104,3 +2104,15 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   non-cancelled order. The period is still the order's `createdAt` (there is no
   completion timestamp), so an order created last week and completed today
   falls into last week's figure.
+
+- **2026-10-09** — **Legacy kits: components matched by title.** First real kit order
+  after the kit-expansion fix (order 5) still failed ("No pushable positions"):
+  the kit's `kitItems` rows had no usable `productId` (a legacy kit — only the
+  imported "Аренда <name>" label survived), so no component could be tied to a
+  МойСклад entity. `submitOrder` now falls back to matching the label against
+  product titles (`kitLabelKey`: prefix "Аренда " stripped, case and whitespace
+  folded — the same rule the sync uses to match services to inventory), loading
+  the product list once and only when some component lacks a resolvable
+  `productId`. This is a safety net; the durable fix is data — give such rows a
+  real `productId` (re-save the kit in `/admin/kits`, or backfill by title) so
+  the order path never has to guess.

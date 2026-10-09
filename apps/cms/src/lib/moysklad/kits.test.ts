@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildOrderDescription, expandKitLine } from './kits'
+import { buildOrderDescription, expandKitLine, kitLabelKey } from './kits'
 
 const REAL_A = '79e8782a-4686-11f0-0a80-11bc00051b6d'
 const REAL_B = 'a7cd7cda-42c3-11f0-0a80-143100050775'
@@ -120,4 +120,10 @@ test('buildOrderDescription stays minimal for a plain order without promo', () =
   assert.doesNotMatch(text, /Промокод/)
   assert.doesNotMatch(text, /Комментарий клиента/)
   assert.match(text, /Итого к оплате: 500 ₽/)
+})
+
+test('kitLabelKey matches a legacy "Аренда ..." label with the synced product title', () => {
+  assert.equal(kitLabelKey('Аренда 7Artisans MRC Black mist 1/8 67mm'), kitLabelKey('7Artisans MRC Black mist 1/8 67mm'))
+  assert.equal(kitLabelKey('  аренда   Apple Box  Set 4 in 1 '), kitLabelKey('Apple Box Set 4 in 1'))
+  assert.notEqual(kitLabelKey('Аренда Canon G7X'), kitLabelKey('Canon G7X Mark III'))
 })

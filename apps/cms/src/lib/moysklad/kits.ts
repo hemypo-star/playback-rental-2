@@ -13,6 +13,20 @@ export function isSyntheticMoySkladId(id: string | null | undefined): boolean {
   return !id || id.startsWith('kit-')
 }
 
+const RENTAL_NAME_PREFIX = 'аренда '
+
+/**
+ * Key for matching a kit row's label (kept as it was typed or imported, often
+ * still "Аренда <name>") against a product title (the sync strips that
+ * prefix). Same rule as the sync's stripRentalPrefix, plus case and
+ * whitespace folding.
+ */
+export function kitLabelKey(label: string): string {
+  const trimmed = label.trim().toLowerCase()
+  const bare = trimmed.startsWith(RENTAL_NAME_PREFIX) ? trimmed.slice(RENTAL_NAME_PREFIX.length) : trimmed
+  return bare.replace(/\s+/g, ' ').trim()
+}
+
 export interface KitComponent {
   label: string
   // null when the component product could not be resolved to a real
