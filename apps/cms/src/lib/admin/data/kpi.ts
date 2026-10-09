@@ -11,9 +11,17 @@ import config from '@payload-config'
 // apps/web's REST-based admin until Stage 4) is untouched.
 const ACTIVE_STATUSES = ['pending', 'confirmed']
 
+// Money figures (revenue, average check) count COMPLETED orders only —
+// pending/confirmed orders may still be cancelled, and cancelled ones never
+// bring in money. Request counts (weeklyOrdersCount, pendingCount,
+// submittedCount) deliberately keep covering every order. The same rule is
+// mirrored in components/admin/AdminKpiWidget.tsx (Payload dashboard).
+const REVENUE_STATUS = 'completed'
+
 export interface AdminKpi {
   weeklyRevenue: number
   weeklyOrdersCount: number
+  weeklyCompletedCount: number
   pendingCount: number
   utilization: number
   activeRentalQty: number
@@ -53,9 +61,11 @@ export async function getAdminKpi(): Promise<AdminKpi> {
           depth: 0,
         })
 
-  const weeklyRevenue = weeklyOrders.docs.reduce((sum, o) => sum + (o.totalPrice || 0), 0)
-  const avgOrderValue = submittedOrders.totalDocs
-    ? submittedOrders.docs.reduce((sum, o) => sum + (o.totalPrice || 0), 0) / submittedOrders.totalDocs
+  const weeklyCompleted = weeklyOrders.docs.filter((o) => o.status === REVENUE_STATUS)
+  const weeklyRevenue = weeklyCompleted.reduce((sum, o) => sum + (o.totalPrice || 0), 0)
+  const submittedCompleted = submittedOrders.docs.filter((o) => o.status === REVENUE_STATUS)
+  const avgOrderValue = submittedCompleted.length
+    ? submittedCompleted.reduce((sum, o) => sum + (o.totalPrice || 0), 0) / submittedCompleted.length
     : 0
 
   const totalRentalStock = rentalProducts.docs.reduce((sum, p) => sum + (p.quantity || 0), 0)
@@ -65,6 +75,7 @@ export async function getAdminKpi(): Promise<AdminKpi> {
   return {
     weeklyRevenue,
     weeklyOrdersCount: weeklyOrders.totalDocs,
+    weeklyCompletedCount: weeklyCompleted.length,
     pendingCount: pendingOrders.totalDocs,
     utilization,
     activeRentalQty,

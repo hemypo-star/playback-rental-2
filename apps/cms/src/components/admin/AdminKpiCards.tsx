@@ -16,7 +16,7 @@ export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
         { label: 'Средний чек', value: '5 840 ₽', note: '2,1 суток на заказ', accent: false },
       ]
     : [
-    { label: 'Выручка за 7 дней', value: rub(kpi.weeklyRevenue), note: `${kpi.weeklyOrdersCount} заявок`, accent: false },
+    { label: 'Выручка за 7 дней', value: rub(kpi.weeklyRevenue), note: `${kpi.weeklyCompletedCount} завершено из ${kpi.weeklyOrdersCount} заявок`, accent: false },
     {
       label: 'Заявок в обработке',
       value: String(kpi.pendingCount),
@@ -24,7 +24,7 @@ export default function AdminKpiCards({ kpi }: { kpi: AdminKpi }) {
       accent: kpi.pendingCount > 0,
     },
     { label: 'Загрузка парка', value: `${kpi.utilization}%`, note: `${kpi.activeRentalQty} из ${kpi.totalRentalStock} ед.`, accent: false },
-    { label: 'Средний чек', value: rub(kpi.avgOrderValue), note: `${kpi.submittedCount} оформленных`, accent: false },
+    { label: 'Средний чек', value: rub(kpi.avgOrderValue), note: `${kpi.submittedCount} оформлено, считаем завершённые`, accent: false },
   ]
 
   return (

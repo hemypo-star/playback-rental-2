@@ -89,10 +89,13 @@ export const AdminKpiWidget: React.FC<ServerProps> = async ({ payload }) => {
           depth: 0,
         })
 
-  const weeklyRevenue = weeklyOrders.docs.reduce((sum, o) => sum + (o.totalPrice || 0), 0)
+  // Money figures count COMPLETED orders only (same rule as lib/admin/data/kpi.ts).
+  const weeklyCompleted = weeklyOrders.docs.filter((o) => o.status === 'completed')
+  const weeklyRevenue = weeklyCompleted.reduce((sum, o) => sum + (o.totalPrice || 0), 0)
   const pendingCount = pendingOrders.totalDocs
-  const avgOrderValue = submittedOrders.totalDocs
-    ? submittedOrders.docs.reduce((sum, o) => sum + (o.totalPrice || 0), 0) / submittedOrders.totalDocs
+  const submittedCompleted = submittedOrders.docs.filter((o) => o.status === 'completed')
+  const avgOrderValue = submittedCompleted.length
+    ? submittedCompleted.reduce((sum, o) => sum + (o.totalPrice || 0), 0) / submittedCompleted.length
     : 0
 
   const totalRentalStock = rentalProducts.docs.reduce((sum, p) => sum + (p.quantity || 0), 0)
@@ -101,10 +104,10 @@ export const AdminKpiWidget: React.FC<ServerProps> = async ({ payload }) => {
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, padding: '0 2.5rem', marginTop: '1.5rem' }}>
-      <Card label="Выручка за 7 дней" value={RUB(weeklyRevenue)} sub={`${weeklyOrders.totalDocs} заявок`} />
+      <Card label="Выручка за 7 дней" value={RUB(weeklyRevenue)} sub={`${weeklyCompleted.length} завершено из ${weeklyOrders.totalDocs} заявок`} />
       <Card label="Заявок в обработке" value={String(pendingCount)} sub={pendingCount > 0 ? 'ждут звонка' : undefined} />
       <Card label="Занятость парка" value={`${utilization}%`} sub={`${activeRentalQty} из ${totalRentalStock} ед.`} />
-      <Card label="Средний чек" value={RUB(avgOrderValue)} sub={`${submittedOrders.totalDocs} оформленных`} />
+      <Card label="Средний чек" value={RUB(avgOrderValue)} sub={`${submittedOrders.totalDocs} оформлено, считаем завершённые`} />
     </div>
   )
 }

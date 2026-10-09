@@ -2088,3 +2088,19 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   (`2000000000 + chat id`) into `VK_PEER_IDS`. Hand edits to `compose.yaml` on
   the server are wiped by the next `git reset --hard origin/prod`, so anything
   the server needs lives in the repo.
+
+- **2026-10-09** — **Revenue counts only COMPLETED orders.** The owner saw cancelled
+  orders inside revenue. Cause: `getAdminKpi` (`weeklyRevenue`, `avgOrderValue`)
+  and the Payload dashboard widget (`AdminKpiWidget`) summed `totalPrice` over
+  every order with no status filter, so cancelled — and still-open pending /
+  confirmed — orders were included; the category report (`analytics.ts`,
+  `AnalyticsView`) and `topProducts.ts` only excluded `cancelled`, so open orders
+  still counted there. All money figures on the admin analytics screens now use
+  `status = completed`. Request counts (`weeklyOrdersCount`, `pendingCount`,
+  `submittedCount`) still cover every order, and the card note now reads
+  "N завершено из M заявок" so the two numbers are not mistaken for the same
+  set. Deliberately unchanged: `lib/data/popularity.ts`, the storefront's
+  "popular" ranking, which is a demand signal, not revenue, and keeps every
+  non-cancelled order. The period is still the order's `createdAt` (there is no
+  completion timestamp), so an order created last week and completed today
+  falls into last week's figure.

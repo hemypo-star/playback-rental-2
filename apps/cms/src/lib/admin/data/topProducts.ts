@@ -4,8 +4,10 @@ import type { Product } from '../../../payload-types'
 import { getProductOrderStats, type ProductOrderStats } from '../../data/popularity'
 
 // "Топ позиций" — per-product demand for the admin analytics screen. Same
-// counting rules as lib/data/popularity.ts (distinct non-cancelled orders;
-// rental days = calendar days × qty); this module only adds the product
+// counting rules as lib/data/popularity.ts (distinct orders; rental days =
+// calendar days × qty) EXCEPT the status filter: this screen reports money,
+// so it counts COMPLETED orders only, while the storefront's popularity
+// ranking (a demand signal) keeps every non-cancelled order. This module only adds the product
 // join + ranking. Date-range filtering happens at the ORDER level via
 // AnalyticsDateRange, so a line counts only if its order was created inside
 // the period (backlog item 14's rule, shared with analytics.ts).
@@ -21,7 +23,7 @@ export interface TopProductRow extends ProductOrderStats {
 export async function getTopProducts(range: AnalyticsDateRange = {}, limit = 15): Promise<TopProductRow[]> {
   const payload = await getPayload({ config })
 
-  const orderConditions: Where[] = [{ status: { not_equals: 'cancelled' } }]
+  const orderConditions: Where[] = [{ status: { equals: 'completed' } }]
   if (range.fromIso) orderConditions.push({ createdAt: { greater_than_equal: range.fromIso } })
   if (range.toExclusiveIso) orderConditions.push({ createdAt: { less_than: range.toExclusiveIso } })
 

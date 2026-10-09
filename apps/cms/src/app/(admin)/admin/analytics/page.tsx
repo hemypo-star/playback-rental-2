@@ -45,7 +45,7 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
 
   return (
     <>
-      <AdminPageHeader title="Аналитика" subtitle="Выручка по категориям, кроме отменённых заказов" />
+      <AdminPageHeader title="Аналитика" subtitle="Выручка по категориям, только завершённые заказы" />
       <AdminKpiCards kpi={kpi} />
 
       <form method="GET" className="flex flex-wrap items-end gap-3 rounded-3xl border border-border bg-card p-6">
@@ -127,7 +127,7 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
       <div className="rounded-3xl border border-border bg-card p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Топ позиций</div>
-          <div className="text-[12px] text-subtle">{periodLabel} · заказов на позицию (без отменённых)</div>
+          <div className="text-[12px] text-subtle">{periodLabel} · заказов на позицию (только завершённые)</div>
         </div>
         {topProducts.length > 0 ? (
           <table className="mt-3 w-full border-collapse text-left text-[13.5px]">

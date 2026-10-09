@@ -4,29 +4,31 @@ import type { AdminViewServerProps } from 'payload'
 
 const RUB = (n: number) => Math.round(n).toLocaleString('ru-RU') + ' ₽'
 
-// Revenue by category, computed live from order items on non-cancelled
+// Revenue by category, computed live from order items on COMPLETED
 // orders — no invented figures (unlike the design reference's Analytics
 // tab, which used placeholder numbers with no backing data model).
 export const AnalyticsView = async (props: AdminViewServerProps) => {
   const { initPageResult, params, searchParams } = props
   const { req } = initPageResult
 
-  const cancelledOrders = await req.payload.find({
+  const completedOrders = await req.payload.find({
     collection: 'orders',
-    where: { status: { equals: 'cancelled' } },
+    where: { status: { equals: 'completed' } },
     limit: 0,
     depth: 0,
     req,
   })
-  const cancelledIds = cancelledOrders.docs.map((o) => o.id)
+  const completedIds = completedOrders.docs.map((o) => o.id)
 
-  const items = await req.payload.find({
-    collection: 'orderItems',
-    where: cancelledIds.length ? { order: { not_in: cancelledIds } } : {},
-    limit: 0,
-    depth: 2,
-    req,
-  })
+  const items = completedIds.length
+    ? await req.payload.find({
+        collection: 'orderItems',
+        where: { order: { in: completedIds } },
+        limit: 0,
+        depth: 2,
+        req,
+      })
+    : { docs: [] }
 
   const byCategory = new Map<string, number>()
   for (const item of items.docs) {
@@ -54,7 +56,7 @@ export const AnalyticsView = async (props: AdminViewServerProps) => {
         <div>
           <h1 style={{ margin: 0, fontSize: 23, fontWeight: 700, letterSpacing: '-0.03em' }}>Аналитика</h1>
           <p style={{ margin: '0.2rem 0 0', fontSize: 13, color: 'var(--theme-elevation-500)' }}>
-            Выручка по категориям — сумма позиций заказов, кроме отменённых.
+            Выручка по категориям — сумма позиций завершённых заказов.
           </p>
         </div>
 

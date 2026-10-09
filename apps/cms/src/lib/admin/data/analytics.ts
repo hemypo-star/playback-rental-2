@@ -5,7 +5,8 @@ import type { AnalyticsDateRange } from '../analyticsDateRange'
 
 // Ported near-verbatim from apps/cms/src/endpoints/admin/analytics.ts
 // (docs/PLAN-next-migration.md Stage 3.5, page group 4) — revenue by
-// category, computed live from order items on non-cancelled orders. No
+// category, computed live from order items on COMPLETED orders only (changed
+// 2026-10-09: pending/confirmed orders can still be cancelled). No
 // invented figures.
 export interface AdminAnalyticsRow {
   name: string
@@ -40,7 +41,7 @@ export async function getAdminAnalytics(range: AnalyticsDateRange = {}): Promise
   // analytics. Filtering individual rental-line dates could split a single
   // discounted order across periods and make the category totals stop
   // reconciling with its net order total.
-  const orderConditions: Where[] = [{ status: { not_equals: 'cancelled' } }]
+  const orderConditions: Where[] = [{ status: { equals: 'completed' } }]
   if (range.fromIso) orderConditions.push({ createdAt: { greater_than_equal: range.fromIso } })
   if (range.toExclusiveIso) orderConditions.push({ createdAt: { less_than: range.toExclusiveIso } })
 
