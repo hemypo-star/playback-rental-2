@@ -2116,3 +2116,16 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   `productId`. This is a safety net; the durable fix is data — give such rows a
   real `productId` (re-save the kit in `/admin/kits`, or backfill by title) so
   the order path never has to guess.
+
+- **2026-10-09** — **Category tiles showed "AREN".** The homepage category tile built its
+  corner chip from the first four letters of the slug
+  (`(c.slug||c.name).slice(0,4)`). Slugs of the МойСклад-synced categories still
+  start with the old "Аренда …" folder name (`arenda-…`), so most tiles read
+  "AREN". The chip now shows the category's own `tag` field (the admin-editable
+  badge — "35мм", "SONY") and is omitted when empty, rather than inventing an
+  abbreviation. Set badges per category in `/admin` if wanted. Same day: the
+  legacy category pictures (29 rows in `db-migration/categories_rows.csv`,
+  files on `api.playbackrental.ru`) were copied into `categories.image` by a
+  one-off script (27 matched by name or by explicit alias, empty fields only;
+  "Светоформирующие насадки" and "Одноразовые пленочные фотоаппараты" have no
+  counterpart on the new site).
