@@ -2148,3 +2148,34 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   (`filterNonEmptyCategories` in `lib/categoryTree.ts`, fed by the same
   cached `getCategoryProductCounts` the catalog sidebar uses), and only then
   applies the cap of three. The `/search` page itself never listed categories.
+
+- **2026-10-15** — **Security hardening pass (code-modernization harden).** An
+  anonymous `POST /api/orders` could write its own promo snapshot
+  (`promoDiscountValue: 100` → a 0 ₽ order pushed to МойСклад) and mass-create
+  pending orders that hold stock outside checkout's rate limits. Order create
+  is now allowed anonymously only when `req.context.trustedCheckout` is set,
+  which only the checkout Server Action does through the Local API (REST and
+  GraphQL start with an empty `req.context`). Checked and dropped: a reported
+  "partial `orderItems` PATCH skips repricing" — over REST a
+  `{"lineTotal":0}` PATCH keeps the stored total and `{"quantity":999}` is
+  rejected by the availability check, so it is not exploitable; whether admin
+  partial edits through the Local API should reprice is a pricing decision,
+  left as is. Payload skips its login redirect for every custom
+  admin view (`isCustomAdminView` ignores `public`), so `/cms/clients`,
+  `/cms/calendar` and `/cms/analytics` rendered customer contacts and revenue
+  to anonymous visitors; each view now redirects to `/cms/login` before any
+  query. `/admin/login?next=` was assigned to `window.location.href` unchecked
+  (`javascript:` / open redirect); it is resolved against a dummy origin and
+  kept only if it stays same-origin. Dependencies: payload and `@payloadcms/*`
+  3.88.0 → 3.90.2, next → `~16.3.8`, sharp → `^0.35.5`, plus range-scoped
+  pnpm overrides for transitive advisories (`pnpm audit --prod`: 57 → 8, no
+  critical; `braces` has no fixed release). Payload 3.90 selects
+  `users.reset_password_requested_at` on every users query, so the bump needs
+  migration `20261015_090000_payload_3_90_reset_password_requested_at` or
+  login and `/cms` return 500. Regression checks were added to
+  `public-security-smoke.mjs`; on the unpatched code they fail (forged order
+  created with HTTP 201, `/cms/clients` serving customer emails, `nextPath`
+  passing `javascript:` and `//` through). Noted, not
+  changed: `analytics-ui-smoke.mjs` still expects revenue from the pending
+  checkout order, but analytics counts completed orders only since
+  `7a1c39cb3`; and `.nvmrc` pins Node 22.12.0 while pnpm 11.21 needs ≥ 22.13.
