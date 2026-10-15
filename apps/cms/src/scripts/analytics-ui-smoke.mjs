@@ -77,18 +77,48 @@ async function main() {
   // it runs between those two, which is why CI keeps it in the browser-smoke
   // step rather than with the other admin smokes. Run out of order it reports
   // "0 ₽ / Пока нет данных" and reads as a revenue bug that isn't one.
-  let text = await fetchAnalytics('/admin/analytics', auth)
-  if (!text.includes('за всё время · 1 350 ₽')) {
-    throw new Error(`all-time analytics did not show expected net 1 350 ₽ total: ${text.slice(0, 1500)}`)
+  //
+  // Since 7a1c39cb3 revenue counts COMPLETED orders only, so the pending
+  // checkout order must first be shown NOT to count, then be completed for the
+  // net-revenue checks and put back to pending afterwards so
+  // order-lifecycle-smoke still finds it in the state the browser smoke left.
+  const ordersResponse = await fetch(url('/api/orders?sort=-createdAt&limit=1&depth=0'), { headers: auth })
+  const order = (await json(ordersResponse))?.docs?.[0]
+  if (!ordersResponse.ok || !order?.id || order.status !== 'pending') {
+    throw new Error(`Analytics smoke expected the pending browser-smoke order: ${JSON.stringify(order)}`)
   }
-  console.log('PASS analytics all-time uses NET revenue: 1 350 ₽')
+  const setStatus = async (status) => {
+    const response = await fetch(url(`/api/orders/${order.id}`), {
+      method: 'PATCH',
+      headers: { ...auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    if (!response.ok) throw new Error(`Could not set smoke order ${order.id} to ${status}: HTTP ${response.status}`)
+  }
+
+  let text = await fetchAnalytics('/admin/analytics', auth)
+  if (!text.includes('за всё время · 0 ₽')) {
+    throw new Error(`all-time analytics counted a pending order: ${text.slice(0, 1500)}`)
+  }
+  console.log('PASS analytics all-time ignores pending orders: 0 ₽')
 
   const today = kemerovoDate()
-  text = await fetchAnalytics(`/admin/analytics?from=${today}&to=${today}`, auth)
-  if (!text.includes('1 350 ₽')) {
-    throw new Error(`Kemerovo same-day analytics did not include checkout order for ${today}: ${text.slice(0, 1500)}`)
+  await setStatus('completed')
+  try {
+    text = await fetchAnalytics('/admin/analytics', auth)
+    if (!text.includes('за всё время · 1 350 ₽')) {
+      throw new Error(`all-time analytics did not show expected net 1 350 ₽ total: ${text.slice(0, 1500)}`)
+    }
+    console.log('PASS analytics all-time uses NET revenue of completed orders: 1 350 ₽')
+
+    text = await fetchAnalytics(`/admin/analytics?from=${today}&to=${today}`, auth)
+    if (!text.includes('1 350 ₽')) {
+      throw new Error(`Kemerovo same-day analytics did not include checkout order for ${today}: ${text.slice(0, 1500)}`)
+    }
+    console.log(`PASS analytics same-day Kemerovo range includes checkout order (${today})`)
+  } finally {
+    await setStatus('pending')
   }
-  console.log(`PASS analytics same-day Kemerovo range includes checkout order (${today})`)
 
   text = await fetchAnalytics('/admin/analytics?from=2099-01-01&to=2099-01-02', auth)
   if (!text.includes('01.01.2099 — 02.01.2099 · 0 ₽') || !text.includes('За выбранный период данных нет')) {
