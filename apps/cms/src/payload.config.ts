@@ -35,36 +35,13 @@ if (!process.env.PAYLOAD_SECRET) {
 export default buildConfig({
   admin: {
     user: Users.slug,
-    components: {
-      afterNavLinks: [
-        '/src/components/admin/CalendarNavLink#CalendarNavLink',
-        '/src/components/admin/ClientsNavLink#ClientsNavLink',
-        '/src/components/admin/AnalyticsNavLink#AnalyticsNavLink',
-      ],
-      beforeDashboard: ['/src/components/admin/AdminKpiWidget#AdminKpiWidget'],
-      views: {
-        calendar: {
-          Component: '/src/components/admin/CalendarView#CalendarView',
-          path: '/calendar',
-        },
-        clients: {
-          Component: '/src/components/admin/ClientsView#ClientsView',
-          path: '/clients',
-        },
-        analytics: {
-          Component: '/src/components/admin/AnalyticsView#AnalyticsView',
-          path: '/analytics',
-        },
-      },
-    },
   },
-  // Payload's own admin UI moves to /cms — it stays reachable as a fallback/
-  // safety net alongside the custom admin UI at /admin (this same app's own
-  // (admin) route group, see docs/PLAN-docker-admin.md and docs/PLAN-next-
-  // migration.md Stage 3). Requires the app/(payload)/admin route folder to
-  // be renamed to app/(payload)/cms to match, and importMap regenerated.
-  // Retiring this fallback (docker-admin Step 8) is a live, not-yet-taken
-  // decision — see docs/ROADMAP-2.0.md's open items.
+  // Payload's own admin panel is retired (docs/PLAN-docker-admin.md Step 8,
+  // 2026-10-15): app/(payload) keeps only the REST/GraphQL API routes, which
+  // is how Payload documents disabling the panel, and the custom UI at /admin
+  // is the only admin. routes.admin stays off /admin so Payload never treats
+  // the custom admin's paths (or links it builds, e.g. in auth emails) as its
+  // own; nothing is served at /cms any more.
   routes: {
     admin: '/cms',
   },

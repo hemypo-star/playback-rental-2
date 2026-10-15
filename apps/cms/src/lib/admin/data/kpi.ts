@@ -14,8 +14,7 @@ const ACTIVE_STATUSES = ['pending', 'confirmed']
 // Money figures (revenue, average check) count COMPLETED orders only —
 // pending/confirmed orders may still be cancelled, and cancelled ones never
 // bring in money. Request counts (weeklyOrdersCount, pendingCount,
-// submittedCount) deliberately keep covering every order. The same rule is
-// mirrored in components/admin/AdminKpiWidget.tsx (Payload dashboard).
+// submittedCount) deliberately keep covering every order.
 const REVENUE_STATUS = 'completed'
 
 export interface AdminKpi {

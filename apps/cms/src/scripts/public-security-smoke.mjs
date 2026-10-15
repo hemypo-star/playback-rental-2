@@ -16,24 +16,20 @@ async function expectDenied(label, pathname, options = {}) {
   console.log(`PASS ${label}: HTTP ${response.status}`)
 }
 
-// SEC-019: Payload skips its own login redirect for custom admin views, so
-// each view guards itself. A guarded view either answers 3xx to the login
-// page or (when the redirect fires mid-render) streams a NEXT_REDIRECT
-// marker; either way no customer contact data may appear in the HTML.
-async function expectCustomViewGuarded(pathname) {
+// SEC-019: Payload's own admin panel used to live at /cms, and its custom
+// views (clients, calendar, analytics) skipped Payload's login redirect and
+// served customer contacts to anyone. The panel is retired; none of its
+// routes may answer, and none may leak customer data.
+async function expectRetiredCmsRoute(pathname) {
   const response = await fetch(url(pathname), { redirect: 'manual' })
   const body = await response.text()
-  const location = response.headers.get('location') || ''
-  const redirected =
-    (response.status >= 300 && response.status < 400 && location.includes('/cms/login')) ||
-    (body.includes('NEXT_REDIRECT') && body.includes('/cms/login'))
-  if (!redirected) {
-    throw new Error(`${pathname}: expected a redirect to /cms/login, got HTTP ${response.status}: ${body.slice(0, 500)}`)
+  if (response.status !== 404) {
+    throw new Error(`${pathname}: expected 404 (Payload admin retired), got HTTP ${response.status}: ${body.slice(0, 500)}`)
   }
   if (/[a-z0-9._-]+@example\.invalid/i.test(body)) {
-    throw new Error(`${pathname}: anonymous response contains customer contact data`)
+    throw new Error(`${pathname}: response contains customer contact data`)
   }
-  console.log(`PASS anonymous ${pathname} redirects to login without data: HTTP ${response.status}`)
+  console.log(`PASS ${pathname} -> 404 (Payload admin retired)`)
 }
 
 // SEC-020: the login page hands `next` to window.location.href after a
@@ -120,8 +116,8 @@ async function main() {
   }
   console.log('PASS anonymous GraphQL order create blocked')
 
-  for (const view of ['/cms/clients', '/cms/calendar', '/cms/analytics']) {
-    await expectCustomViewGuarded(view)
+  for (const pathname of ['/cms', '/cms/login', '/cms/clients', '/cms/calendar', '/cms/analytics', '/cms/collections/orders']) {
+    await expectRetiredCmsRoute(pathname)
   }
 
   // The same-origin case proves the nextPath extraction works at all.

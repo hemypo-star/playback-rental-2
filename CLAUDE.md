@@ -23,8 +23,9 @@ A full rewrite of the Playback Rental storefront + admin (camera/video equipment
 Kemerovo). It replaced the old app — a React/Vite SPA on self-hosted Supabase — whose
 source was deleted from the tree on 2026-09-24 and which lived on `main` until `dev` was
 moved onto `main` (the old history is kept under the tag `legacy-main-2026-10-07`). This
-tree is the new app: a single Next.js app, `apps/cms` — storefront, custom `/admin` UI,
-and Payload CMS's own `/cms` admin all in one process. Production goes through `prod`
+tree is the new app: a single Next.js app, `apps/cms` — storefront, the custom `/admin`
+UI and Payload's REST/GraphQL API all in one process (Payload's own admin panel, which
+used to live at `/cms`, was retired on 2026-10-15). Production goes through `prod`
 and `compose.yaml`; there is no automatic deploy workflow, a release is cut with
 `scripts/make-release.sh` and rolled out by hand on the server.
 
@@ -82,14 +83,14 @@ bugs it surfaced, but nothing in the current tree depends on `apps/web` or
   for `position: fixed` descendants — a modal rendered as a normal child anywhere under
   it gets confined to the header's own box instead of the viewport. `RentalDatePicker`'s
   modal uses `createPortal`; follow that pattern for any new modal.
-- **New Payload custom admin component → regenerate the import map.** After adding or
-  changing an `admin.components.*` entry (`payload.config.ts`) or a collection's
-  `admin.components.Cell`, run `npx payload generate:importmap` from `apps/cms`, or the
-  dev server throws `PayloadComponent not found in importMap` on that route.
-- **Payload's own admin UI lives at `/cms`, not `/admin`** — `/admin` is this app's
-  *custom* admin UI (`apps/cms/src/app/(admin)`), a separate, unrelated set of routes.
-  `payload.config.ts`'s `routes.admin: '/cms'` is what moves Payload's default off
-  `/admin` so the two don't collide.
+- **There is no Payload admin panel.** `/admin` is this app's custom admin UI
+  (`apps/cms/src/app/(admin)`); `app/(payload)` holds only the REST/GraphQL API routes,
+  which is how Payload documents disabling its panel. `/cms` answers 404 (asserted by
+  `runtime-smoke` and `public-security-smoke`). Don't add `admin.components` entries or
+  an `app/(payload)/cms` page back: Payload skips its own login redirect for custom
+  admin views, which is how `/cms/clients` once served customer contacts to anyone.
+  `routes.admin: '/cms'` stays in `payload.config.ts` only so Payload never claims
+  `/admin` paths as its own.
 
 ## Design system (light theme, applied 2026-08-13)
 
@@ -121,9 +122,6 @@ is still referenced by the custom `/admin` pages, `EntryAnimationController`, an
 `PromoCarousel`, `AdminKpiCards` — the promotions detail page still renders the first
 two). `tools/design-sync.mjs` normalises both spellings onto the design's own names when
 auditing.
-
-The admin panel's accent ramp and font are remapped to match in
-`apps/cms/src/app/(payload)/custom.css`.
 
 **Extracting the design file, if it needs re-reading**: it's a self-extracting Claude
 Artifact bundle, not renderable by opening it in a browser standalone (it expects a

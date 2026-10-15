@@ -77,10 +77,12 @@ async function main() {
     '/user-agreement',
     '/how-it-works',
     '/admin/first-register',
-    '/cms',
   ]) {
     await expectStatus(pathname, 200)
   }
+
+  // Payload's own admin panel is retired; /admin is the only admin UI.
+  await expectStatus('/cms', 404)
 
   await expectRedirect('/admin', '/admin/login')
   await expectRedirect('/admin/login', '/admin/first-register')

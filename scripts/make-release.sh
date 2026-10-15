@@ -102,8 +102,8 @@ Deploy-only branch. Generated from the development branch; **do not edit it by
 hand** — changes belong upstream, and the next release regenerates this tree.
 
 One Next.js application (`apps/cms`) with Payload CMS in the same process. It
-serves the storefront, the operator admin at `/admin`, Payload's own admin at
-`/cms`, and the REST/GraphQL API from a single origin, with Postgres for data
+serves the storefront, the operator admin at `/admin` and the REST/GraphQL API
+from a single origin (Payload's own admin panel is disabled), with Postgres for data
 and МойСклад for products and stock.
 
 ## Deploy

@@ -61,10 +61,10 @@ const nextConfig = {
   // SEC-002 (docs/audits/2026-08-24-baseline.md): confirmed live via
   // `curl -sD -` that no security response headers were set anywhere in
   // this app. SAMEORIGIN rather than DENY on X-Frame-Options — nothing in
-  // this app currently relies on being iframed cross-origin, but Payload's
-  // own admin UI (/cms) may use same-origin iframes internally for some
-  // panels, so SAMEORIGIN is the safer default that still blocks the actual
-  // threat (third-party clickjacking) without risking breaking that.
+  // this app currently relies on being iframed cross-origin. SAMEORIGIN was
+  // chosen while Payload's own admin UI (/cms, retired 2026-10-15) might use
+  // same-origin iframes; it still blocks the actual threat (third-party
+  // clickjacking).
   // Strict-Transport-Security is a no-op over plain HTTP (browsers ignore
   // it unless the response was actually served over HTTPS) — harmless to
   // set now, and it's the header a reverse proxy/CDN terminating real TLS

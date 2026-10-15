@@ -2175,7 +2175,22 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   login and `/cms` return 500. Regression checks were added to
   `public-security-smoke.mjs`; on the unpatched code they fail (forged order
   created with HTTP 201, `/cms/clients` serving customer emails, `nextPath`
-  passing `javascript:` and `//` through). Noted, not
-  changed: `analytics-ui-smoke.mjs` still expects revenue from the pending
-  checkout order, but analytics counts completed orders only since
-  `7a1c39cb3`; and `.nvmrc` pins Node 22.12.0 while pnpm 11.21 needs ≥ 22.13.
+  passing `javascript:` and `//` through). `analytics-ui-smoke.mjs` failed on
+  `main` (it expected revenue from the pending checkout order, but analytics
+  counts completed orders only since `7a1c39cb3`); it now checks the pending
+  order is not counted, completes it for the net-revenue checks and restores
+  it. Noted, not changed: `.nvmrc` pins Node 22.12.0 while pnpm 11.21 needs
+  ≥ 22.13 (CI and Docker take the latest 22.x).
+
+- **2026-10-15** — **Payload's own admin panel (`/cms`) retired**
+  (docs/PLAN-docker-admin.md Step 8): the owner works in `/admin` only.
+  `app/(payload)` now holds just the REST/GraphQL API routes — Payload's
+  documented way to disable the panel — and the `/cms` page, its layout,
+  `custom.css`, the import map and the panel-only components (calendar,
+  clients and analytics views, their nav links, the dashboard KPI widget) are
+  gone, with their `admin.components` entries. `/cms` answers 404, asserted by
+  `runtime-smoke` and `public-security-smoke`. This also removes the class of
+  bug behind the `/cms/clients` leak: Payload skips its login redirect for
+  custom admin views. `routes.admin` stays `/cms` so Payload never claims
+  `/admin` paths. Forgot-password emails would link to Payload's panel, but no
+  email adapter is configured, so none are sent; `/admin` has no reset flow.
