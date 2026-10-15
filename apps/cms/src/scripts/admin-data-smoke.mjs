@@ -34,6 +34,16 @@ async function main() {
   const authHeaders = { Authorization: `JWT ${loginBody.json.token}` }
   console.log('PASS admin data smoke login')
 
+  // SEC-022: an admin cannot delete their own account (nor the last one), which
+  // would reopen the public first-register page.
+  const self = loginBody.json.user?.id
+  if (!self) throw new Error(`admin login returned no user id: ${loginBody.text.slice(0, 300)}`)
+  const selfDelete = await fetch(url(`/api/users/${self}`), { method: 'DELETE', headers: authHeaders })
+  if (selfDelete.status !== 400) {
+    throw new Error(`self-delete was not rejected: HTTP ${selfDelete.status} ${(await body(selfDelete)).text.slice(0, 300)}`)
+  }
+  console.log('PASS admin cannot delete their own account: HTTP 400')
+
   async function fetchAdminPage(pathname, markers) {
     const response = await fetch(url(pathname), { headers: authHeaders, redirect: 'manual' })
     const result = await body(response)

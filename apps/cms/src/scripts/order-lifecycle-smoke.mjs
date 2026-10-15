@@ -97,6 +97,17 @@ async function main() {
   }
   console.log('PASS admin item edit keeps one-day price/promo totals')
 
+  // SEC-027: quantity must be a whole number of units.
+  const fractional = await fetch(url(`/api/orderItems/${itemId}`), {
+    method: 'PATCH',
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ quantity: 1.5 }),
+  })
+  if (fractional.status !== 400) {
+    throw new Error(`Fractional quantity was not rejected: HTTP ${fractional.status} ${JSON.stringify(await json(fractional))}`)
+  }
+  console.log('PASS fractional item quantity rejected: HTTP 400')
+
   const availabilityUrl = `/api/rental-availability-bulk?productIds=${productId}&start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
   const beforeAvailabilityResponse = await fetch(url(availabilityUrl))
   const beforeAvailability = await json(beforeAvailabilityResponse)

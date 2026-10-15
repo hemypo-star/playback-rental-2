@@ -242,6 +242,10 @@ export const OrderItems: CollectionConfig = {
       required: true,
       min: 1,
       defaultValue: 1,
+      // SEC-027: `min: 1` alone let 1.5 through, priced and counted against
+      // stock as a fractional unit.
+      validate: (value: number | null | undefined) =>
+        value === null || value === undefined || Number.isInteger(value) || 'Количество должно быть целым числом',
     },
     {
       name: 'startDate',

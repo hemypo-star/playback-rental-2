@@ -120,6 +120,24 @@ async function main() {
     await expectRetiredCmsRoute(pathname)
   }
 
+  // SEC-026: the contact endpoint validates before rate limiting, so these
+  // spend no rate-limit slots.
+  const contact = (body, headers = {}) =>
+    fetch(url('/api/contact-notification'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+    })
+  const nonString = await contact({ name: 'Smoke', email: ['x@example.invalid'], phone: '+79000000000', message: 'hi' })
+  if (nonString.status !== 400) throw new Error(`contact with a non-string email: expected 400, got ${nonString.status}`)
+  console.log('PASS contact rejects a non-string field: HTTP 400')
+  const tooLong = await contact({ name: 'Smoke', email: 'long@example.invalid', phone: '+79000000000', message: 'x'.repeat(5001) })
+  if (tooLong.status !== 400) throw new Error(`contact with an over-long message: expected 400, got ${tooLong.status}`)
+  console.log('PASS contact rejects an over-long message: HTTP 400')
+  const oversized = await contact({ name: 'Smoke', email: 'big@example.invalid', phone: '+79000000000', message: 'x'.repeat(40 * 1024) })
+  if (oversized.status !== 413) throw new Error(`contact with a 40 KB body: expected 413, got ${oversized.status}`)
+  console.log('PASS contact rejects an oversized body: HTTP 413')
+
   // The same-origin case proves the nextPath extraction works at all.
   await expectLoginNext('/admin/orders', '/admin/orders')
   for (const next of ['javascript:alert(1)', '//evil.example', 'https://evil.example', '/\t/evil.example', '/admin/../..//evil.example']) {

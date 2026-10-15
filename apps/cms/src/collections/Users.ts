@@ -24,7 +24,19 @@ function accountRateLimitKey(data: unknown): string {
 
 export const Users: CollectionConfig = {
   slug: 'users',
-  auth: true,
+  auth: {
+    // SEC-010: Payload's own lockout (default 5 failures → 10 min) let anyone
+    // who knows an admin email keep that account locked indefinitely. The
+    // rate limiter in beforeOperation below already bounds brute force per
+    // account and per IP with a 429 that does not lock the account itself.
+    maxLoginAttempts: 0,
+    // SEC-012: Secure only when the site is served over HTTPS, so a plain-HTTP
+    // deployment (or local run) keeps working.
+    cookies: {
+      secure: (process.env.WEB_URL || '').startsWith('https://'),
+      sameSite: 'Lax',
+    },
+  },
   access: {
     // No public signup — admin accounts are provisioned via the
     // create-first-user flow / an existing admin, never the public API.
@@ -63,6 +75,21 @@ export const Users: CollectionConfig = {
     // Every other collection operation (create/read/update/delete/refresh/
     // etc.) also runs this hook — it's a no-op for all of them, returning
     // `args` unchanged, so admin CRUD elsewhere is untouched.
+    // SEC-022: deleting the last admin reopens the public first-register page
+    // (lib/admin/auth.ts isAdminInitialized), and deleting yourself is never
+    // what an operator means. Enforced here so REST, GraphQL and the /admin
+    // Server Action (Local API runs hooks even with overrideAccess) all hit it.
+    beforeDelete: [
+      async ({ id, req }) => {
+        if (req.user && String(req.user.id) === String(id)) {
+          throw new APIError('Нельзя удалить собственную учётную запись', 400, undefined, true)
+        }
+        const { totalDocs } = await req.payload.count({ collection: 'users', overrideAccess: true, req })
+        if (totalDocs <= 1) {
+          throw new APIError('Нельзя удалить последнего пользователя админки', 400, undefined, true)
+        }
+      },
+    ],
     beforeOperation: [
       // Deliberately not destructuring `args`/`operation` in the parameter
       // list: `BeforeOperationArg`'s type is a discriminated union keyed on

@@ -12,7 +12,9 @@ services:
   # workspace against this database, without building the app image.
   db:
     ports:
-      - '${PREVIEW_DB_PORT:-55432}:5432'
+      # SEC-011: loopback only — the committed .env.preview password must not
+      # be usable from the LAN.
+      - '127.0.0.1:${PREVIEW_DB_PORT:-55432}:5432'
 
   # Same reasoning as compose.dev.yaml: nothing in a preview stack should be
   # able to touch the shared МойСклад account or send a real notification.

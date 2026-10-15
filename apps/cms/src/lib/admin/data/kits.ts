@@ -145,13 +145,19 @@ export interface KitUploadResult {
 // (React error #418/#441 in the browser).
 // Same limit as payload.config.ts's upload.limits.fileSize — this route
 // bypasses Payload's own REST upload pipeline (parses multipart itself via
-// `req.formData()`), so that config doesn't cover it; checked against
-// `file.size` before `.arrayBuffer()` ever reads the body into memory.
+// `req.formData()`), so that config doesn't cover it.
 const MAX_KIT_IMAGE_BYTES = 15 * 1024 * 1024
+// SEC-028: `req.formData()` buffers the whole body, so `file.size` is only
+// known after the memory is already spent. Refuse on the declared length
+// first; the margin covers multipart boundaries and headers.
+const MAX_KIT_UPLOAD_BODY_BYTES = MAX_KIT_IMAGE_BYTES + 1024 * 1024
 
 export async function handleKitImageUpload(req: Request): Promise<KitUploadResult> {
   const user = await getAdminUser()
   if (!user) return { success: false, error: 'Не авторизованы' }
+  if (Number(req.headers.get('content-length') || 0) > MAX_KIT_UPLOAD_BODY_BYTES) {
+    return { success: false, error: 'Файл слишком большой (максимум 15 МБ)' }
+  }
   const formData = await req.formData()
   const file = formData.get('file')
   if (!(file instanceof File) || file.size === 0) return { success: false, error: 'Файл не получен' }

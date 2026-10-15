@@ -45,13 +45,19 @@ export async function createUser(email: string, password: string): Promise<Creat
 
 export async function deleteUser(id: number): Promise<ActionResult> {
   try {
-    await requireAdmin()
+    const actingUser = await requireAdmin()
+    // SEC-022: the Users beforeDelete hook can't see who is acting here (this
+    // Local API call carries no req.user), so the self-delete check lives here;
+    // the hook still blocks deleting the last account.
+    if (String(actingUser.id) === String(id)) {
+      return { success: false, error: 'Нельзя удалить собственную учётную запись' }
+    }
     const payload = await getPayload({ config })
     await payload.delete({ collection: 'users', id, overrideAccess: true })
     revalidatePath('/admin/users')
     return { success: true }
-  } catch {
-    return { success: false, error: 'Не удалось удалить пользователя' }
+  } catch (error) {
+    return { success: false, error: errorMessage(error, 'Не удалось удалить пользователя') }
   }
 }
 

@@ -43,6 +43,11 @@ export type RateLimitBucket =
   // code itself) would let an attacker exhaust it per-code instead of
   // per-attacker, defeating the point.
   | 'promo_validate_ip'
+  // SEC-026: the contact form's other keys are the caller's IP (skipped when
+  // TRUST_PROXY_HEADERS is off) and an email the caller chooses freely, so
+  // neither bounds a script rotating emails. One shared key caps the total
+  // volume written to the notification queue volume.
+  | 'contact_global'
 
 export interface RateLimitConfig {
   /** Sliding window size in milliseconds. */
@@ -132,6 +137,13 @@ export function getRateLimitConfig(bucket: RateLimitBucket): RateLimitConfig {
       return {
         max: envInt('RATE_LIMIT_PROMO_VALIDATE_IP_MAX', 30),
         windowMs: envInt('RATE_LIMIT_PROMO_VALIDATE_IP_WINDOW_MS', HOUR_MS),
+      }
+    case 'contact_global':
+      // Site-wide, so generous: a small shop's contact form does not see
+      // anywhere near 60 genuine messages an hour.
+      return {
+        max: envInt('RATE_LIMIT_CONTACT_GLOBAL_MAX', 60),
+        windowMs: envInt('RATE_LIMIT_CONTACT_GLOBAL_WINDOW_MS', HOUR_MS),
       }
   }
 }

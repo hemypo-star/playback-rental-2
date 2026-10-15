@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import { CONTACT_MAX_BODY_BYTES, parseContactInput } from '../lib/notifications/contactInput'
 import { sendContactNotification } from '../lib/notifications/webhook'
 import { checkRateLimits, type RateLimitCheck } from '../lib/security/rateLimit'
 import { getClientIp } from '../lib/security/clientIp'
@@ -11,13 +12,16 @@ export const contactNotificationEndpoint: Endpoint = {
   path: '/contact-notification',
   method: 'post',
   handler: async (req) => {
-    const body = (await req.json?.()) as
-      | { name?: string; email?: string; phone?: string; subject?: string; message?: string }
-      | undefined
-
-    if (!body?.name || !body?.email || !body?.phone || !body?.message) {
-      return Response.json({ error: 'name, email, phone and message are required' }, { status: 400 })
+    // SEC-026: refuse oversized bodies before reading them, then validate
+    // types and lengths so nothing unbounded reaches the notification queue.
+    if (Number(req.headers.get('content-length') || 0) > CONTACT_MAX_BODY_BYTES) {
+      return Response.json({ error: 'request body is too large' }, { status: 413 })
     }
+    const parsed = parseContactInput(await Promise.resolve(req.json?.()).catch(() => undefined))
+    if (!parsed.ok) {
+      return Response.json({ error: parsed.error }, { status: 400 })
+    }
+    const body = parsed.value
 
     // A2 (design_handoff_swiss_bento/08-instruction.md, audit G1) — by IP
     // (when trustworthy) and by email, checked and recorded together in one
@@ -25,7 +29,10 @@ export const contactNotificationEndpoint: Endpoint = {
     // This prevents a request rejected on one dimension from spending a slot
     // in another dimension for work that was never accepted.
     const ip = getClientIp(req.headers)
-    const rateLimitChecks: RateLimitCheck[] = [{ bucket: 'contact_email', key: body.email.toLowerCase().trim() }]
+    const rateLimitChecks: RateLimitCheck[] = [
+      { bucket: 'contact_email', key: body.email.toLowerCase() },
+      { bucket: 'contact_global', key: 'all' },
+    ]
     if (ip) rateLimitChecks.push({ bucket: 'contact_ip', key: ip })
     const allowed = await checkRateLimits(req.payload, rateLimitChecks)
     if (!allowed) {

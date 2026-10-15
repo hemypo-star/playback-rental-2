@@ -14,6 +14,23 @@ interface MsWebhookEvent {
 interface MsWebhookBody {
   events?: MsWebhookEvent[]
 }
+
+const WEBHOOK_CONCURRENCY = 4
+
+// Runs `fn` over `items` with at most `limit` in flight, keeping result order.
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const index = next++
+      results[index] = await fn(items[index])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
 export const moyskladWebhookEndpoint: Endpoint = {
   path: '/webhooks/moysklad',
   method: 'post',
@@ -40,8 +57,20 @@ export const moyskladWebhookEndpoint: Endpoint = {
       return Response.json({ received: 0, results: [] })
     }
 
-    const results = await Promise.all(
-      events.map(async (event) => {
+    // SEC-029: one body could carry thousands of events, each one a full
+    // catalogue sync, all started at once. Duplicate deliveries of the same
+    // entity+action collapse to one, and at most WEBHOOK_CONCURRENCY run at a
+    // time. No hard cap: rejecting a large batch would only make МойСклад
+    // redeliver it forever and drop real updates.
+    const seen = new Set<string>()
+    const uniqueEvents = events.filter((event) => {
+      const key = `${event?.action ?? ''} ${event?.meta?.href ?? ''}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+
+    const results = await mapWithConcurrency(uniqueEvents, WEBHOOK_CONCURRENCY, async (event) => {
         const href = event?.meta?.href
         if (!href) return { href: null, synced: false, reason: 'No href in event' }
 
@@ -84,8 +113,7 @@ export const moyskladWebhookEndpoint: Endpoint = {
             reason: error instanceof Error ? error.message : 'Unknown error',
           }
         }
-      }),
-    )
+      })
 
     // Previously always 200, even when every event above threw — a
     // transport-level "success" response meant МойСклад had no reason to
