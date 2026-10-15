@@ -8,6 +8,7 @@
 // /api/contact-notification directly — the same endpoint
 // (apps/cms/src/endpoints/contactNotification.ts), no wrapper needed.
 import { useState } from 'react'
+import Link from 'next/link'
 // A2 (design_handoff_swiss_bento/08-instruction.md) — the rate-limit Russian
 // text is reused from the single checkout translation point rather than
 // re-derived here, even though this form isn't part of checkout: one place
@@ -23,6 +24,9 @@ export default function ContactForm() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
   const [rateLimited, setRateLimited] = useState(false)
+  // The form collects name, phone and email, so it needs the same separate
+  // personal-data consent as checkout (152-FZ art. 9).
+  const [agreeData, setAgreeData] = useState(false)
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -35,6 +39,7 @@ export default function ContactForm() {
     else if (!EMAIL_RE.test(form.email.trim())) errs.email = 'Введите корректный email'
     if (!form.phone.trim()) errs.phone = 'Введите телефон'
     if (!form.message.trim()) errs.message = 'Введите сообщение'
+    if (!agreeData) errs.agreeData = 'Подтвердите согласие на обработку персональных данных'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -55,6 +60,7 @@ export default function ContactForm() {
       if (result.success) {
         setStatus('sent')
         setForm({ name: '', email: '', phone: '', subject: '', message: '' })
+        setAgreeData(false)
       } else {
         setRateLimited(result.code === 'RATE_LIMITED')
         setStatus('failed')
@@ -109,6 +115,21 @@ export default function ContactForm() {
           <textarea rows={4} value={form.message} onChange={set('message')} className="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none transition-[border-color,background-color] duration-240 ease-expo focus:border-foreground focus:bg-white" />
           {errors.message && <span className="mt-1 block text-[12px] text-destructive">{errors.message}</span>}
         </label>
+
+        <label className="flex items-start gap-2.5">
+          <input type="checkbox" checked={agreeData} onChange={(e) => setAgreeData(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-foreground" />
+          <span className="text-[12.5px] leading-[1.45] text-subtle">
+            Даю{' '}
+            <Link href="/personal-data-consent" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-accent">
+              согласие на обработку персональных данных
+            </Link>{' '}
+            и принимаю{' '}
+            <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-accent">
+              политику конфиденциальности
+            </Link>
+          </span>
+        </label>
+        {errors.agreeData && <span className="-mt-2 block text-[12px] text-destructive">{errors.agreeData}</span>}
 
         <button type="submit" disabled={status === 'sending'} className="btn-primary h-11 w-full text-[14px]">
           {status === 'sending' ? 'Отправляем…' : 'Отправить'}

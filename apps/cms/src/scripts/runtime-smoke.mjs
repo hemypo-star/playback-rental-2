@@ -75,6 +75,7 @@ async function main() {
     '/contact',
     '/privacy-policy',
     '/user-agreement',
+    '/personal-data-consent',
     '/how-it-works',
     '/admin/first-register',
   ]) {

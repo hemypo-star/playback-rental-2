@@ -2194,3 +2194,35 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   custom admin views. `routes.admin` stays `/cms` so Payload never claims
   `/admin` paths. Forgot-password emails would link to Payload's panel, but no
   email adapter is configured, so none are sent; `/admin` has no reset flow.
+
+- **2026-10-15** — **Security hardening, second pass.** Contact form: the body is
+  validated before rate limiting (`lib/notifications/contactInput.ts`: string
+  types, length caps, email shape; bodies over 32 KB get 413), so a non-string
+  email no longer 500s and a multi-MB message no longer reaches the
+  notification queue; a site-wide `contact_global` bucket (60/hour,
+  `RATE_LIMIT_CONTACT_GLOBAL_*`) caps scripts that rotate emails. Users: a
+  `beforeDelete` hook refuses deleting the last account (which would reopen
+  `/admin/first-register`) and, over REST, your own; the `/admin` delete
+  action checks self-delete itself because its Local API call carries no
+  `req.user`. Payload's account lockout is off (`maxLoginAttempts: 0`): five
+  bad passwords every ten minutes kept a known admin locked out forever, and the
+  per-account/IP rate limiter already stops brute force without locking.
+  The auth cookie is `Secure` when `WEB_URL` is https. `orderItems.quantity`
+  must be an integer. The МойСклад webhook de-duplicates events by
+  action+href and runs at most four at a time instead of all at once. The kit
+  image upload refuses an oversized `Content-Length` before buffering the
+  body. The preview stack's Postgres binds to 127.0.0.1. Left open, needing
+  the owner's call: roles for admin users, and maximum rental length /
+  lead time / quantity per order.
+
+- **2026-10-15** — **Consent checkboxes link to the documents.** Checkout's two
+  checkboxes now link to a new separate consent page
+  (`/personal-data-consent`, 152-FZ art. 9; required as its own document
+  since 2025-09-01) plus the privacy policy, and to the rental terms
+  (`/how-it-works`) plus the user agreement; links open in a new tab so the
+  filled form survives. The contact form, which collects name, phone and
+  email, had no consent checkbox at all; it now has the same required one.
+  The footer lists the consent page. The consent text is a draft built on the
+  operator details already in the privacy policy — have it checked by a
+  lawyer, in particular whether order notifications sent to staff through
+  foreign messengers count as cross-border transfer.
