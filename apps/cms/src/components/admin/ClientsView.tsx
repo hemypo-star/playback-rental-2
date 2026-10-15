@@ -1,6 +1,7 @@
 import React from 'react'
 import { DefaultTemplate } from '@payloadcms/next/templates'
 import type { AdminViewServerProps } from 'payload'
+import { redirect } from 'next/navigation'
 
 const RUB = (n: number) => Math.round(n).toLocaleString('ru-RU') + ' ₽'
 
@@ -18,6 +19,11 @@ function initials(name: string): string {
 export const ClientsView = async (props: AdminViewServerProps) => {
   const { initPageResult, params, searchParams } = props
   const { req } = initPageResult
+  // SEC-019: Payload skips its login redirect for every custom admin view
+  // (isCustomAdminView in @payloadcms/next ignores `public`), and the Local
+  // API below runs with overrideAccess, so without this anonymous visitors
+  // could read customer contacts, bookings and revenue.
+  if (!req.user) redirect(`${req.payload.config.routes.admin}/login`)
 
   const orders = await req.payload.find({
     collection: 'orders',

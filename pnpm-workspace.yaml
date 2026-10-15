@@ -7,3 +7,11 @@ allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: true
+# SEC-008: transitive advisories left after the payload/next/sharp bump
+# (pnpm audit --prod, 2026-10-15). Range-scoped so no major version moves.
+overrides:
+  'fast-uri@>=3.0.0 <3.1.7': ^3.1.7
+  'undici@>=7.0.0 <7.29.1': ^7.29.1
+  'js-yaml@>=4.0.0 <4.3.2': ^4.3.2
+  'brace-expansion@>=5.0.0 <5.0.11': ^5.0.11
+  'source-map-js@>=1.0.0 <1.2.2': ^1.2.2

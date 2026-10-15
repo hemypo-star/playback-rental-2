@@ -14,7 +14,13 @@ export const Orders: CollectionConfig = {
     // custom endpoints aren't gated by collection access — but requires the
     // caller to present this order's submitToken (see below), so it can't be
     // force-submitted by a third party guessing/enumerating sequential ids.
-    create: () => true,
+    // SEC-004/SEC-006: anonymous creates are allowed only from the checkout
+    // Server Action, which sets req.context.trustedCheckout through the Local
+    // API (a REST/GraphQL caller cannot set req.context). Before this, an
+    // anonymous `POST /api/orders` could write its own promo snapshot
+    // (promoDiscountValue: 100 => 0 ₽ order) and mass-create pending orders
+    // that hold stock, bypassing checkout's rate limits.
+    create: ({ req }) => Boolean(req.user) || req.context?.trustedCheckout === true,
     read: ({ req }) => Boolean(req.user),
     update: ({ req }) => Boolean(req.user),
     delete: ({ req }) => Boolean(req.user),

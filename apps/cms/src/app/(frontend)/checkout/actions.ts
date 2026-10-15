@@ -168,6 +168,9 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
           : {}),
       },
       overrideAccess: false,
+      // SEC-004/SEC-006: the only anonymous path allowed to create an order
+      // (see Orders.ts access.create). Not settable over REST/GraphQL.
+      context: { trustedCheckout: true },
     })
 
     // If a later line item fails (e.g. someone else just took the last unit),

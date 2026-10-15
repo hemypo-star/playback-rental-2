@@ -15,13 +15,33 @@ interface Props {
   searchParams: Promise<{ next?: string }>
 }
 
+const NEXT_BASE = 'http://same-origin.invalid'
+
+function safeNextPath(next: unknown): string {
+  if (typeof next !== 'string' || !next.startsWith('/') || /[\u0000-\u001F\u007F\\]/.test(next)) return '/admin'
+  try {
+    const url = new URL(next, NEXT_BASE)
+    // Dot segments can normalize to a protocol-relative path: /a/../..//evil.example
+    if (url.origin !== NEXT_BASE || url.pathname.startsWith('//')) return '/admin'
+    return url.pathname + url.search + url.hash
+  } catch {
+    return '/admin'
+  }
+}
+
 export default async function AdminLoginPage({ searchParams }: Props) {
   const user = await getAdminUser()
   if (user) redirect('/admin')
   if (!(await isAdminInitialized())) redirect('/admin/first-register')
 
   const { next } = await searchParams
-  const nextPath = next || '/admin'
+  // SEC-020: `next` is assigned to window.location.href after login, so an
+  // unchecked value allowed `?next=javascript:…` (script in the admin's fresh
+  // session) or an open redirect to another site. Resolve it against a dummy
+  // origin and keep it only if it stays on that origin; control characters
+  // and backslashes are rejected first because URL parsing silently strips
+  // tabs/newlines (`/\t/evil.example` would otherwise become `//evil.example`).
+  const nextPath = safeNextPath(next)
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center py-16">

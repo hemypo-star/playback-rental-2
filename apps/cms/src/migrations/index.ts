@@ -10,6 +10,7 @@ import * as migration_20260918_030000_media_image_sizes from './20260918_030000_
 import * as migration_20260929_040000_products_sync_baseline from './20260929_040000_products_sync_baseline';
 import * as migration_20260929_120000_products_compatible_accessories from './20260929_120000_products_compatible_accessories';
 import * as migration_20260930_100000_kit_items_product_id from './20260930_100000_kit_items_product_id';
+import * as migration_20261015_090000_payload_3_90_reset_password_requested_at from './20261015_090000_payload_3_90_reset_password_requested_at';
 
 export const migrations = [
   {
@@ -71,5 +72,10 @@ export const migrations = [
     up: migration_20260930_100000_kit_items_product_id.up,
     down: migration_20260930_100000_kit_items_product_id.down,
     name: '20260930_100000_kit_items_product_id'
+  },
+  {
+    up: migration_20261015_090000_payload_3_90_reset_password_requested_at.up,
+    down: migration_20261015_090000_payload_3_90_reset_password_requested_at.down,
+    name: '20261015_090000_payload_3_90_reset_password_requested_at'
   },
 ];

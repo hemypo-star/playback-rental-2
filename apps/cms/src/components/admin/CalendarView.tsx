@@ -2,6 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { DefaultTemplate } from '@payloadcms/next/templates'
 import type { AdminViewServerProps } from 'payload'
+import { redirect } from 'next/navigation'
 import { getAdminCalendar } from '../../lib/admin/data/calendar'
 import CalendarGrid, { type CalendarGridTheme, type CalendarStatusTone } from './CalendarGrid'
 import type { OrderStatus } from '../../lib/admin/format'
@@ -62,6 +63,11 @@ function parseOffset(raw: string | string[] | undefined): number {
 export const CalendarView = async (props: AdminViewServerProps) => {
   const { initPageResult, params, searchParams } = props
   const { req } = initPageResult
+  // SEC-019: Payload skips its login redirect for every custom admin view
+  // (isCustomAdminView in @payloadcms/next ignores `public`), and the Local
+  // API below runs with overrideAccess, so without this anonymous visitors
+  // could read customer contacts, bookings and revenue.
+  if (!req.user) redirect(`${req.payload.config.routes.admin}/login`)
 
   const offset = parseOffset(searchParams?.offset)
   const { days, products } = await getAdminCalendar(offset)
