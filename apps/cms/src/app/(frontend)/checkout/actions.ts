@@ -129,58 +129,61 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
     // canCreateOrderItem allows it as long as the order isn't submitted yet
     // *and* the caller presents the order's submitToken — see OrderItems.ts
     // for why that second check exists), not silently bypass them.
-    const order = await payload.create({
-      collection: 'orders',
-      data: {
-        customerName: input.customerName,
-        customerEmail: input.customerEmail,
-        customerPhone: input.customerPhone,
-        // `status` has a schema defaultValue ('pending'), applied at
-        // runtime regardless — but Payload's create() Data type still
-        // requires it explicitly for any `required: true` field, defaulted
-        // or not, so it has to be set here too or TS falls through to a
-        // confusing "missing draft property" error trying its other
-        // create() overload.
-        status: 'pending',
-        ...(input.notes ? { notes: input.notes } : {}),
-        // promo.code, not input.promoCode verbatim: normalizes case/
-        // whitespace to what the admin order view displays. promoDiscount
-        // Type/Value are the snapshot recalcOrderTotal will read from now
-        // on — written once, here, from this same resolved promo object,
-        // never re-derived later. Omitted entirely for an invalid/expired
-        // code — no snapshot stored means no discount applied, per the
-        // "never fail checkout over this" rule above.
-        // promoMinOrderAmount is part of the same snapshot, from the same
-        // resolved promo object — never re-read from promoCodes later (see
-        // Orders.ts/OrderItems.ts's recalcOrderTotal for why: re-reading it
-        // live would reintroduce the exact retroactive-repricing bug the
-        // snapshot design exists to prevent). `?? 0` normalizes a
-        // never-set minOrderAmount (a promo row written before this field
-        // existed) to 0 — "no threshold" — matching what omitting the key
-        // entirely already means to recalcOrderTotal.
-        ...(promo
-          ? {
-              promoCode: promo.code,
-              promoDiscountType: promo.discountType,
-              promoDiscountValue: promo.discountValue,
-              promoMinOrderAmount: promo.minOrderAmount ?? 0,
-            }
-          : {}),
-      },
-      overrideAccess: false,
-      // SEC-004/SEC-006: the only anonymous path allowed to create an order
-      // (see Orders.ts access.create). Not settable over REST/GraphQL.
-      context: { trustedCheckout: true },
-    })
-
-    // If a later line item fails (e.g. someone else just took the last unit),
-    // don't leave the earlier ones dangling on an order that never gets
-    // submitted — clean up the orderItems already created before surfacing
-    // the error. The order shell itself is left in place: deleting orders is
-    // admin-only by design (collections/Orders.ts), same as the old REST
-    // flow, which could never delete it either.
-    const createdItemIds: number[] = []
+    //
+    // The order and its line items are written in ONE transaction: if any
+    // line fails (someone just took the last unit, a date rule), everything
+    // rolls back. Before, the items were deleted by hand and the empty order
+    // shell stayed behind as a junk "pending" request in /admin. The МойСклад
+    // push and notifications (submitOrder) run only after the commit.
+    const transactionID = await payload.db.beginTransaction()
+    const txReq = transactionID ? { transactionID } : undefined
+    let orderId: number
     try {
+      const order = await payload.create({
+        collection: 'orders',
+        data: {
+          customerName: input.customerName,
+          customerEmail: input.customerEmail,
+          customerPhone: input.customerPhone,
+          // `status` has a schema defaultValue ('pending'), applied at
+          // runtime regardless — but Payload's create() Data type still
+          // requires it explicitly for any `required: true` field, defaulted
+          // or not, so it has to be set here too or TS falls through to a
+          // confusing "missing draft property" error trying its other
+          // create() overload.
+          status: 'pending',
+          ...(input.notes ? { notes: input.notes } : {}),
+          // promo.code, not input.promoCode verbatim: normalizes case/
+          // whitespace to what the admin order view displays. promoDiscount
+          // Type/Value are the snapshot recalcOrderTotal will read from now
+          // on — written once, here, from this same resolved promo object,
+          // never re-derived later. Omitted entirely for an invalid/expired
+          // code — no snapshot stored means no discount applied, per the
+          // "never fail checkout over this" rule above.
+          // promoMinOrderAmount is part of the same snapshot, from the same
+          // resolved promo object — never re-read from promoCodes later (see
+          // Orders.ts/OrderItems.ts's recalcOrderTotal for why: re-reading it
+          // live would reintroduce the exact retroactive-repricing bug the
+          // snapshot design exists to prevent). `?? 0` normalizes a
+          // never-set minOrderAmount (a promo row written before this field
+          // existed) to 0 — "no threshold" — matching what omitting the key
+          // entirely already means to recalcOrderTotal.
+          ...(promo
+            ? {
+                promoCode: promo.code,
+                promoDiscountType: promo.discountType,
+                promoDiscountValue: promo.discountValue,
+                promoMinOrderAmount: promo.minOrderAmount ?? 0,
+              }
+            : {}),
+        },
+        overrideAccess: false,
+        // SEC-004/SEC-006: the only anonymous path allowed to create an order
+        // (see Orders.ts access.create). Not settable over REST/GraphQL.
+        context: { trustedCheckout: true },
+        ...(txReq ? { req: txReq } : {}),
+      })
+
       for (const item of input.items) {
         const itemData = {
           order: order.id,
@@ -197,29 +200,27 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
         // create()'s overload resolution (its draft/non-draft discriminated
         // union) the same way products/kits' relationship-normalization
         // casts did before — escape via `any` at the call, same precedent.
-        const created = (await (payload.create as (args: unknown) => Promise<{ id: number }>)({
+        await (payload.create as (args: unknown) => Promise<{ id: number }>)({
           collection: 'orderItems',
           data: itemData,
           overrideAccess: false,
-        }))
-        createdItemIds.push(created.id)
+          ...(txReq ? { req: txReq } : {}),
+        })
       }
-    } catch (itemError) {
-      await Promise.all(
-        createdItemIds.map((id) =>
-          // Local API delete() has no `data` option — canModifyOrderItem
-          // falls back to req.query for exactly this case (no body to put
-          // a token in), so thread it through there instead.
-          payload
-            .delete({ collection: 'orderItems', id, overrideAccess: false, req: { query: { submitToken: order.submitToken } } })
-            .catch(() => {}),
-        ),
-      )
-      throw itemError
+
+      if (transactionID) await payload.db.commitTransaction(transactionID)
+      orderId = order.id
+    } catch (writeError) {
+      if (transactionID) {
+        await payload.db.rollbackTransaction(transactionID).catch((rollbackError: unknown) => {
+          payload.logger.error({ err: rollbackError }, 'submitCheckout: rollback failed')
+        })
+      }
+      throw writeError
     }
 
-    await submitOrder(payload, order.id)
-    return { success: true, orderId: order.id }
+    await submitOrder(payload, orderId)
+    return { success: true, orderId }
   } catch (error) {
     // checkoutErrorInfoFromUnknown only recognizes a Payload-originated
     // error's own {code, data} (the same validation/availability rejection

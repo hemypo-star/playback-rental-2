@@ -2226,3 +2226,33 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   operator details already in the privacy policy — have it checked by a
   lawyer, in particular whether order notifications sent to staff through
   foreign messengers count as cross-border transfer.
+
+- **2026-10-16** — **Owner's booking rules: shared kit stock, 90-day limit, МойСклад
+  resilience, no empty orders.** Decided by the owner: no admin roles; rentals
+  are capped at 90 billed days (`lib/rental/limits.ts`, `reason: 'too_long'`);
+  a kit and its components may be booked together while stock lasts. That last
+  rule is `lib/rental/kitStock.ts` (pure, unit-tested) plus
+  `lib/rental/rentalLoad.ts`: a kit booking consumes one unit of each listed
+  component (two if listed twice), a component's free stock drops by the kits
+  booked over it, a kit is capped by its scarcest component, and a booking
+  locks the kit and its components in id order. Free stock is now capacity
+  minus the PEAK concurrent load over the window — the old sum counted a
+  Monday and a Wednesday booking as two units taken all week. The same
+  arithmetic drives the write path, the catalog badges/filter and the product
+  calendar, which now gets only fully-booked stretches as `bookedRanges`
+  (before, any single booking greyed out the day even for a 3-unit item).
+  Kit rows imported with a label but no `productId` don't constrain stock.
+  МойСклад: a failed order push is resent by the reconcile daemon every
+  `MOYSKLAD_PUSH_RETRY_INTERVAL_MIN` (10) minutes for active orders up to 30
+  days old; each customerorder carries `externalCode: playback-site-<id>` and
+  the push looks it up first, so a push that landed but lost its response is
+  not duplicated (externalCode is not verified against the live account).
+  A full sync switches off (`available: false`) local products whose
+  МойСклад id it no longer sees in the synced folders — skipped on a limited
+  run, when МойСклад returns nothing, or when a category failed to sync;
+  products are never re-enabled automatically. Status changes are not sent to
+  МойСклад (owner: not needed). Checkout and manual orders write the order and
+  its items in one transaction, so a failing line no longer leaves an empty
+  "pending" order behind; the orderItems access checks now read through `req`
+  so they see the uncommitted order. New `smoke:kit-stock` covers the kit
+  rules and the 90-day limit end to end.

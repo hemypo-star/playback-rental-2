@@ -63,30 +63,35 @@ export async function createManualOrder(payload: Payload, input: ManualOrderInpu
     throw new ManualOrderError('Промокод недействителен, выключен или истёк.')
   }
 
-  const order = await payload.create({
-    collection: 'orders',
-    data: {
-      customerName,
-      customerEmail,
-      customerPhone,
-      status: 'pending',
-      ...(notes ? { notes } : {}),
-      ...(promo
-        ? {
-            promoCode: promo.code,
-            promoDiscountType: promo.discountType,
-            promoDiscountValue: promo.discountValue,
-            promoMinOrderAmount: promo.minOrderAmount ?? 0,
-          }
-        : {}),
-    },
-    overrideAccess: true,
-  })
-
-  const createdItemIds: number[] = []
+  // One transaction for the order and its items, same as checkout: a failing
+  // line rolls everything back. The old hand-written cleanup swallowed its own
+  // errors and could leave a half-created order behind.
+  const transactionID = await payload.db.beginTransaction()
+  const txReq = transactionID ? { transactionID } : undefined
   try {
+    const order = await payload.create({
+      collection: 'orders',
+      data: {
+        customerName,
+        customerEmail,
+        customerPhone,
+        status: 'pending',
+        ...(notes ? { notes } : {}),
+        ...(promo
+          ? {
+              promoCode: promo.code,
+              promoDiscountType: promo.discountType,
+              promoDiscountValue: promo.discountValue,
+              promoMinOrderAmount: promo.minOrderAmount ?? 0,
+            }
+          : {}),
+      },
+      overrideAccess: true,
+      ...(txReq ? { req: txReq } : {}),
+    })
+
     for (const item of input.items) {
-      const created = await payload.create({
+      await payload.create({
         collection: 'orderItems',
         data: {
           order: order.id,
@@ -96,24 +101,23 @@ export async function createManualOrder(payload: Payload, input: ManualOrderInpu
           endDate: item.endDate || undefined,
         },
         overrideAccess: true,
-      // An operator may legitimately record or correct a rental whose
-      // pickup date has already passed — bookkeeping after the fact, not a
-      // booking of the past — so OrderItems' beforeValidate past-date guard
-      // is waived here. Only the anonymous checkout path is subject to it.
+        // An operator may legitimately record or correct a rental whose
+        // pickup date has already passed — bookkeeping after the fact, not a
+        // booking of the past — so OrderItems' beforeValidate past-date guard
+        // is waived here. Only the anonymous checkout path is subject to it.
         context: { allowPastRentalDates: true },
+        ...(txReq ? { req: txReq } : {}),
       })
-      createdItemIds.push(created.id)
     }
+
+    if (transactionID) await payload.db.commitTransaction(transactionID)
+    return order.id
   } catch (error) {
-    // This is rollback of a creation that never completed, not an operator
-    // deleting a commercial order. Ordinary /admin and /cms hard-delete
-    // remains forbidden by OrdersWithLifecyclePolicy.
-    for (const itemId of createdItemIds.reverse()) {
-      await payload.delete({ collection: 'orderItems', id: itemId, overrideAccess: true }).catch(() => {})
+    if (transactionID) {
+      await payload.db.rollbackTransaction(transactionID).catch((rollbackError: unknown) => {
+        payload.logger.error({ err: rollbackError }, 'createManualOrder: rollback failed')
+      })
     }
-    await payload.delete({ collection: 'orders', id: order.id, overrideAccess: true }).catch(() => {})
     throw error
   }
-
-  return order.id
 }
