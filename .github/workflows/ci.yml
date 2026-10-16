@@ -81,6 +81,12 @@ jobs:
           docker build --target base -t playback-cms-base-ci -f apps/cms/Dockerfile .
           test "$(docker run --rm --network none playback-cms-base-ci pnpm --version)" = "11.21.0"
 
+      # The full production image, the way the server builds it. Building only
+      # the base stage once let a removed `generate:importmap` step break every
+      # deploy while `next build` outside Docker stayed green.
+      - name: Build the production Docker image
+        run: docker build --target runtime -t playback-cms-runtime-ci -f apps/cms/Dockerfile .
+
       - name: Generate Payload types
         run: pnpm --dir apps/cms generate:types
 

@@ -26,12 +26,9 @@ cp .env.example .env         # DATABASE_URI, PAYLOAD_SECRET, WEB_URL
 pnpm dev                     # http://localhost:3000
 ```
 
-`pnpm dev` pushes the Payload schema automatically. After adding or changing a
-custom Payload admin component, regenerate the import map:
-
-```bash
-npx payload generate:importmap
-```
+`pnpm dev` pushes the Payload schema automatically. There is no Payload admin
+panel (retired 2026-10-15), so there is no import map to regenerate; the admin
+UI is the custom `/admin`.
 
 ## Where the rest is written down
 

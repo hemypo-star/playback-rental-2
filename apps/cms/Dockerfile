@@ -63,14 +63,14 @@ ARG NEXT_PUBLIC_GLITCHTIP_DSN=
 ARG NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT=production
 ENV NEXT_PUBLIC_GLITCHTIP_DSN=$NEXT_PUBLIC_GLITCHTIP_DSN
 ENV NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT=$NEXT_PUBLIC_GLITCHTIP_ENVIRONMENT
-# Baked in here, not left to a developer's local `generate:importmap` run,
-# so a forgotten regeneration can never ship stale (see CLAUDE.md gotcha).
 # DATABASE_URI isn't reachable at build time (no db service exists yet in
 # the build stage) — Next's build only needs the config to be syntactically
 # importable, not a live DB connection, so a bogus placeholder is enough.
+# No `payload generate:importmap` step: Payload's own admin panel (/cms) is
+# retired, so there is no import map to generate — the command fails outright
+# when app/(payload)/cms does not exist.
 ENV DATABASE_URI=postgresql://build:build@localhost:5432/build
 ENV PAYLOAD_SECRET=build-time-placeholder-not-used-at-runtime
-RUN pnpm payload generate:importmap
 RUN pnpm generate:types
 RUN pnpm build
 

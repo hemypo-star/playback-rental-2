@@ -212,13 +212,6 @@ docker compose -f compose.yaml -f compose.dev.yaml up --build
 
 Быстро посмотреть сайт с демо-каталогом и логином администратора: `./scripts/preview.sh` (с `--tunnel` даёт временную публичную https-ссылку для телефона), подробнее в [`docs/PREVIEW.md`](docs/PREVIEW.md); постоянное превью на бесплатном хостинге: `render.yaml`, [`docs/DEPLOY-PREVIEW.md`](docs/DEPLOY-PREVIEW.md).
 
-### После изменения кастомного админ-компонента Payload
-
-```bash
-cd apps/cms
-npx payload generate:importmap
-```
-
 ### МойСклад: ручные команды
 
 Из `apps/cms`:
