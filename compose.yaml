@@ -129,6 +129,7 @@ services:
       GLITCHTIP_ENVIRONMENT: ${GLITCHTIP_ENVIRONMENT:-production}
       MOYSKLAD_API_TOKEN: ${MOYSKLAD_API_TOKEN:-}
       MOYSKLAD_RECONCILE_INTERVAL_MIN: ${MOYSKLAD_RECONCILE_INTERVAL_MIN:-60}
+      MOYSKLAD_PUSH_RETRY_INTERVAL_MIN: ${MOYSKLAD_PUSH_RETRY_INTERVAL_MIN:-10}
     volumes:
       - cms_media:/data/media
     command: ['pnpm', 'reconcile:moysklad:daemon']

@@ -4,6 +4,8 @@ import { buildOrderDescription, expandKitLine, kitLabelKey, type DescriptionLine
 import { sendOrderNotification } from '../notifications/webhook'
 import { calculateRentalDays } from './pricing'
 import type { CheckoutErrorCode } from '../checkoutErrors'
+import type { Order } from '../../payload-types'
+import { ACTIVE_ORDER_STATUSES } from './rentalLoad'
 
 // Extracted from the /:id/submit endpoint's handler (collections/Orders.ts)
 // so the new checkout Server Action (docs/PLAN-next-migration.md Stage 2,
@@ -50,52 +52,27 @@ export interface SubmitOrderResult {
   notificationSent: boolean
 }
 
-// `req` is optional and only ever passed by the /:id/submit endpoint, to
-// stay inside that request's own DB connection/transaction (see
-// OrderItems.ts's recalcOrderTotal comment on why that matters) — the
-// checkout Server Action has no such request context of its own to share,
-// same as its separate order/orderItems creates before this call.
-export async function submitOrder(payload: Payload, orderId: number, req?: PayloadRequest): Promise<SubmitOrderResult> {
-  const order = await payload.findByID({ collection: 'orders', id: orderId, req, overrideAccess: true })
-  if (!order) {
-    throw new SubmitOrderError('Order not found', 404, 'ORDER_NOT_FOUND')
+type SubmitItem = {
+  product: {
+    moySkladId: string
+    title: string
+    price: number
+    isKit?: boolean | null
+    oldPrice?: number | null
+    kitItems?: Array<{ label: string; productId?: number | null }> | null
   }
-  if (order.submittedAt) {
-    throw new SubmitOrderError('Order already submitted', 409, 'ORDER_ALREADY_SUBMITTED')
-  }
+  listingType: 'rental' | 'sale'
+  quantity: number
+  lineTotal: number
+  startDate?: string
+  endDate?: string
+}
 
-  const itemsResult = await payload.find({
-    collection: 'orderItems',
-    where: { order: { equals: orderId } },
-    limit: 0,
-    depth: 1,
-    req,
-    overrideAccess: true,
-  })
-  if (itemsResult.docs.length === 0) {
-    throw new SubmitOrderError('Order has no items', 400, 'ORDER_HAS_NO_ITEMS')
-  }
-
-  // depth: 1 above populates the `product` relationship into an object;
-  // itemsResult.docs is typed generically since payload-types.ts is
-  // generated (gitignored), not checked in — this shape is only what the
-  // pushes below actually read from each line.
-  const items = itemsResult.docs as unknown as Array<{
-    product: {
-      moySkladId: string
-      title: string
-      price: number
-      isKit?: boolean | null
-      oldPrice?: number | null
-      kitItems?: Array<{ label: string; productId?: number | null }> | null
-    }
-    listingType: 'rental' | 'sale'
-    quantity: number
-    lineTotal: number
-    startDate?: string
-    endDate?: string
-  }>
-
+// The МойСклад push on its own, so a failed push can be retried later
+// (retryPendingMoySkladPushes) with exactly the positions checkout would
+// have sent. Throws on failure; the caller decides what that means.
+async function pushSiteOrder(payload: Payload, order: Order, items: SubmitItem[], req?: PayloadRequest): Promise<string> {
+  const orderId = order.id
   // Backlog item 5 (docs/ROADMAP-2.0.md, promo codes). frozenUnitPrice()
   // back-derives a per-position price from lineTotal, which OrderItems.ts's
   // beforeValidate hook always stores GROSS (undiscounted) — the discount
@@ -147,126 +124,166 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
   // on which way each position's fractional kopeck rounds. Left here as a
   // comment, not a fix, so whoever reconciles МойСклад totals against this
   // site later finds the explanation instead of hunting a phantom bug.
-  let moySkladOrderId: string | null = null
-  let moySkladError: string | null = null
-  try {
-    // A kit has no МойСклад entity of its own (synthetic `kit-<uuid>` id), so
-    // each kit line is replaced by positions for its component products,
-    // the kit's price spread over them (see moysklad/kits.ts).
-    const componentIds = [
-      ...new Set(
-        items.flatMap((item) =>
-          item.product.isKit ? (item.product.kitItems ?? []).flatMap((k) => (k.productId ? [k.productId] : [])) : [],
-        ),
+  // A kit has no МойСклад entity of its own (synthetic `kit-<uuid>` id), so
+  // each kit line is replaced by positions for its component products,
+  // the kit's price spread over them (see moysklad/kits.ts).
+  const componentIds = [
+    ...new Set(
+      items.flatMap((item) =>
+        item.product.isKit ? (item.product.kitItems ?? []).flatMap((k) => (k.productId ? [k.productId] : [])) : [],
       ),
-    ]
-    const componentProducts = new Map<number, { moySkladId: string; title: string; price: number; listingType: 'rental' | 'sale' }>()
-    if (componentIds.length > 0) {
-      const found = await payload.find({
+    ),
+  ]
+  const componentProducts = new Map<number, { moySkladId: string; title: string; price: number; listingType: 'rental' | 'sale' }>()
+  if (componentIds.length > 0) {
+    const found = await payload.find({
+      collection: 'products',
+      where: { id: { in: componentIds } },
+      limit: componentIds.length,
+      depth: 0,
+      req,
+      overrideAccess: true,
+    })
+    for (const doc of found.docs as unknown as Array<{ id: number; moySkladId: string; title: string; price: number; listingType: 'rental' | 'sale' }>) {
+      componentProducts.set(doc.id, doc)
+    }
+  }
+
+  // Legacy kits keep only a text label per component (productId null, or
+  // pointing at a product that no longer exists). Match those by title,
+  // the way the sync matches services to inventory — loaded lazily, once.
+  type ComponentProduct = { moySkladId: string; title: string; price: number; listingType: 'rental' | 'sale' }
+  let productsByTitle: Map<string, ComponentProduct> | null = null
+  const findByLabel = async (label: string): Promise<ComponentProduct | undefined> => {
+    if (!productsByTitle) {
+      const all = await payload.find({
         collection: 'products',
-        where: { id: { in: componentIds } },
-        limit: componentIds.length,
+        limit: 0,
         depth: 0,
+        select: { title: true, moySkladId: true, price: true, listingType: true },
         req,
         overrideAccess: true,
       })
-      for (const doc of found.docs as unknown as Array<{ id: number; moySkladId: string; title: string; price: number; listingType: 'rental' | 'sale' }>) {
-        componentProducts.set(doc.id, doc)
+      productsByTitle = new Map()
+      for (const doc of all.docs as unknown as ComponentProduct[]) {
+        if (!doc.moySkladId || doc.moySkladId.startsWith('kit-')) continue
+        const key = kitLabelKey(doc.title)
+        if (!productsByTitle.has(key)) productsByTitle.set(key, doc)
       }
     }
+    return productsByTitle.get(kitLabelKey(label))
+  }
 
-    // Legacy kits keep only a text label per component (productId null, or
-    // pointing at a product that no longer exists). Match those by title,
-    // the way the sync matches services to inventory — loaded lazily, once.
-    type ComponentProduct = { moySkladId: string; title: string; price: number; listingType: 'rental' | 'sale' }
-    let productsByTitle: Map<string, ComponentProduct> | null = null
-    const findByLabel = async (label: string): Promise<ComponentProduct | undefined> => {
-      if (!productsByTitle) {
-        const all = await payload.find({
-          collection: 'products',
-          limit: 0,
-          depth: 0,
-          select: { title: true, moySkladId: true, price: true, listingType: true },
-          req,
-          overrideAccess: true,
-        })
-        productsByTitle = new Map()
-        for (const doc of all.docs as unknown as ComponentProduct[]) {
-          if (!doc.moySkladId || doc.moySkladId.startsWith('kit-')) continue
-          const key = kitLabelKey(doc.title)
-          if (!productsByTitle.has(key)) productsByTitle.set(key, doc)
-        }
-      }
-      return productsByTitle.get(kitLabelKey(label))
+  const pushItems: OrderItemForPush[] = []
+  const descriptionLines: DescriptionLine[] = []
+  for (const item of items) {
+    const base = {
+      title: item.product.title,
+      quantity: item.quantity,
+      listingType: item.listingType,
+      lineTotal: item.lineTotal,
+      startDate: item.startDate,
+      endDate: item.endDate,
     }
-
-    const pushItems: OrderItemForPush[] = []
-    const descriptionLines: DescriptionLine[] = []
-    for (const item of items) {
-      const base = {
-        title: item.product.title,
-        quantity: item.quantity,
+    if (!item.product.isKit) {
+      pushItems.push({
+        moySkladId: item.product.moySkladId,
         listingType: item.listingType,
-        lineTotal: item.lineTotal,
+        quantity: item.quantity,
+        unitPrice: frozenUnitPrice(item) * discountFactor,
         startDate: item.startDate,
         endDate: item.endDate,
-      }
-      if (!item.product.isKit) {
-        pushItems.push({
-          moySkladId: item.product.moySkladId,
-          listingType: item.listingType,
-          quantity: item.quantity,
-          unitPrice: frozenUnitPrice(item) * discountFactor,
-          startDate: item.startDate,
-          endDate: item.endDate,
-        })
-        descriptionLines.push(base)
-        continue
-      }
-
-      const components: KitComponent[] = []
-      for (const k of item.product.kitItems ?? []) {
-        const c = (k.productId ? componentProducts.get(k.productId) : undefined) ?? (await findByLabel(k.label))
-        components.push({ label: c?.title ?? k.label, moySkladId: c?.moySkladId ?? null, listingType: c?.listingType ?? 'rental', price: c?.price ?? 0 })
-      }
-      const expansion = expandKitLine({ ...item, components })
-      if (expansion.unresolved.length > 0 || expansion.items.length === 0) {
-        payload.logger.warn(
-          { orderId, kit: item.product.title, unresolved: expansion.unresolved },
-          'Kit components missing from МойСклад — not included in pushed positions',
-        )
-      }
-      for (const position of expansion.items) {
-        pushItems.push({ ...position, unitPrice: position.unitPrice * discountFactor })
-      }
-      descriptionLines.push({
-        ...base,
-        kit: { resolved: expansion.resolved, unresolved: expansion.unresolved, price: item.product.price, oldPrice: item.product.oldPrice },
       })
+      descriptionLines.push(base)
+      continue
     }
 
-    const pushed = await pushOrderToMoySklad({
-      customerName: order.customerName,
-      customerEmail: order.customerEmail,
-      customerPhone: order.customerPhone,
-      description: buildOrderDescription({
-        orderId,
-        customerNotes: order.notes,
-        lines: descriptionLines,
-        gross,
-        totalPrice: order.totalPrice ?? 0,
-        promoCode: order.promoCode,
-        promoDiscountType: order.promoDiscountType,
-        promoDiscountValue: order.promoDiscountValue,
-        promoMinOrderAmount: order.promoMinOrderAmount,
-        promoDiscount,
-      }),
-      items: pushItems,
+    const components: KitComponent[] = []
+    for (const k of item.product.kitItems ?? []) {
+      const c = (k.productId ? componentProducts.get(k.productId) : undefined) ?? (await findByLabel(k.label))
+      components.push({ label: c?.title ?? k.label, moySkladId: c?.moySkladId ?? null, listingType: c?.listingType ?? 'rental', price: c?.price ?? 0 })
+    }
+    const expansion = expandKitLine({ ...item, components })
+    if (expansion.unresolved.length > 0 || expansion.items.length === 0) {
+      payload.logger.warn(
+        { orderId, kit: item.product.title, unresolved: expansion.unresolved },
+        'Kit components missing from МойСклад — not included in pushed positions',
+      )
+    }
+    for (const position of expansion.items) {
+      pushItems.push({ ...position, unitPrice: position.unitPrice * discountFactor })
+    }
+    descriptionLines.push({
+      ...base,
+      kit: { resolved: expansion.resolved, unresolved: expansion.unresolved, price: item.product.price, oldPrice: item.product.oldPrice },
     })
-    moySkladOrderId = pushed.id
+  }
+
+  const pushed = await pushOrderToMoySklad({
+    orderId,
+    customerName: order.customerName,
+    customerEmail: order.customerEmail,
+    customerPhone: order.customerPhone,
+    description: buildOrderDescription({
+      orderId,
+      customerNotes: order.notes,
+      lines: descriptionLines,
+      gross,
+      totalPrice: order.totalPrice ?? 0,
+      promoCode: order.promoCode,
+      promoDiscountType: order.promoDiscountType,
+      promoDiscountValue: order.promoDiscountValue,
+      promoMinOrderAmount: order.promoMinOrderAmount,
+      promoDiscount,
+    }),
+    items: pushItems,
+  })
+  return pushed.id
+}
+
+async function loadSubmitItems(payload: Payload, orderId: number, req?: PayloadRequest): Promise<SubmitItem[]> {
+  const itemsResult = await payload.find({
+    collection: 'orderItems',
+    where: { order: { equals: orderId } },
+    limit: 0,
+    depth: 1,
+    req,
+    overrideAccess: true,
+  })
+  // depth: 1 populates the `product` relationship into an object;
+  // itemsResult.docs is typed generically since payload-types.ts is
+  // generated (gitignored), not checked in — this shape is only what the
+  // pushes read from each line.
+  return itemsResult.docs as unknown as SubmitItem[]
+}
+
+// `req` is optional and only ever passed by the /:id/submit endpoint, to
+// stay inside that request's own DB connection/transaction (see
+// OrderItems.ts's recalcOrderTotal comment on why that matters) — the
+// checkout Server Action has no such request context of its own to share,
+// same as its separate order/orderItems creates before this call.
+export async function submitOrder(payload: Payload, orderId: number, req?: PayloadRequest): Promise<SubmitOrderResult> {
+  const order = await payload.findByID({ collection: 'orders', id: orderId, req, overrideAccess: true })
+  if (!order) {
+    throw new SubmitOrderError('Order not found', 404, 'ORDER_NOT_FOUND')
+  }
+  if (order.submittedAt) {
+    throw new SubmitOrderError('Order already submitted', 409, 'ORDER_ALREADY_SUBMITTED')
+  }
+
+  const items = await loadSubmitItems(payload, orderId, req)
+  if (items.length === 0) {
+    throw new SubmitOrderError('Order has no items', 400, 'ORDER_HAS_NO_ITEMS')
+  }
+
+  const promoDiscount = order.promoDiscount ?? 0
+  let moySkladOrderId: string | null = null
+  let moySkladError: string | null = null
+  try {
+    moySkladOrderId = await pushSiteOrder(payload, order, items, req)
   } catch (error) {
     // Don't let a МойСклад outage block checkout — log and continue;
-    // moySkladOrderId stays null so this is visible/reconcilable later.
+    // moySkladOrderId stays null and retryPendingMoySkladPushes resends it.
     moySkladError = error instanceof Error ? error.message : 'Unknown error'
     payload.logger.error({ err: error, orderId }, 'Failed to push order to МойСклад')
   }
@@ -312,4 +329,57 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
     moySkladError,
     notificationSent: notification.success,
   }
+}
+
+export interface RetryPushResult {
+  attempted: number
+  pushed: number
+  failed: number
+}
+
+// How far back a missed push is still worth resending. An order older than
+// this that never reached МойСклад needs a person to look at it, not a robot.
+const RETRY_MAX_AGE_DAYS = 30
+
+/**
+ * Resends submitted, still-active orders whose МойСклад push failed at
+ * checkout (moySkladOrderId empty). Run by the reconcile daemon. The push
+ * carries the order's externalCode and checks for it first (moysklad/
+ * orders.ts), so a push that actually landed but lost its response is found
+ * instead of duplicated.
+ */
+export async function retryPendingMoySkladPushes(payload: Payload): Promise<RetryPushResult> {
+  const since = new Date(Date.now() - RETRY_MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  const pending = await payload.find({
+    collection: 'orders',
+    where: {
+      and: [
+        { submittedAt: { exists: true } },
+        { submittedAt: { greater_than: since } },
+        { moySkladOrderId: { exists: false } },
+        { status: { in: ACTIVE_ORDER_STATUSES } },
+      ],
+    },
+    limit: 50,
+    depth: 0,
+    sort: 'submittedAt',
+    overrideAccess: true,
+  })
+
+  const result: RetryPushResult = { attempted: 0, pushed: 0, failed: 0 }
+  for (const order of pending.docs) {
+    result.attempted++
+    try {
+      const items = await loadSubmitItems(payload, order.id)
+      if (items.length === 0) continue
+      const moySkladOrderId = await pushSiteOrder(payload, order, items)
+      await payload.update({ collection: 'orders', id: order.id, data: { moySkladOrderId }, overrideAccess: true })
+      result.pushed++
+      payload.logger.info({ orderId: order.id, moySkladOrderId }, 'МойСклад: resent a previously failed order push')
+    } catch (error) {
+      result.failed++
+      payload.logger.error({ err: error, orderId: order.id }, 'МойСклад: order push retry failed, will try again next run')
+    }
+  }
+  return result
 }

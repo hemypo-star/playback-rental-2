@@ -82,6 +82,8 @@ async function findOrCreateCounterparty(
  * distinguishes them (see sync.ts).
  */
 export async function pushOrderToMoySklad(params: {
+  /** Site order id; becomes the customerorder's externalCode (see below). */
+  orderId: number
   customerName: string
   customerEmail: string
   customerPhone: string
@@ -92,6 +94,17 @@ export async function pushOrderToMoySklad(params: {
   if (params.items.length === 0) {
     throw new Error('No pushable positions: every line was a kit without resolvable components')
   }
+
+  // Idempotency for retries (submitOrder.ts retryPendingMoySkladPushes): a
+  // push can land in МойСклад and still fail here (timeout, dropped
+  // response). Tag every order with its site id and look for it first, so a
+  // retry returns the existing customerorder instead of creating a duplicate.
+  const externalCode = `playback-site-${params.orderId}`
+  const existing = await msGet<{ rows: MsEntityRef[] }>(
+    `/entity/customerorder?filter=${encodeURIComponent(`externalCode=${externalCode}`)}&limit=1`,
+  )
+  if (existing.rows?.[0]) return { id: existing.rows[0].id, href: existing.rows[0].meta.href }
+
   const counterparty = await findOrCreateCounterparty(
     params.customerName,
     params.customerEmail,
@@ -132,6 +145,7 @@ export async function pushOrderToMoySklad(params: {
       },
     },
     agent: { meta: { href: counterparty.href, type: 'counterparty', mediaType: 'application/json' } },
+    externalCode,
     description: params.description || '',
     positions,
   })

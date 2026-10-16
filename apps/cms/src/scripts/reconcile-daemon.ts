@@ -19,8 +19,22 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import '../sentry.server.config'
 import { syncAll } from '../lib/moysklad/sync'
+import { retryPendingMoySkladPushes } from '../lib/rental/submitOrder'
 
 const INTERVAL_MS = (Number(process.env.MOYSKLAD_RECONCILE_INTERVAL_MIN) || 60) * 60 * 1000
+// Resending order pushes that failed at checkout is cheap (usually nothing to
+// do) and time-sensitive, so it runs far more often than the full sync.
+const PUSH_RETRY_INTERVAL_MS = (Number(process.env.MOYSKLAD_PUSH_RETRY_INTERVAL_MIN) || 10) * 60 * 1000
+
+async function retryPushes(payload: Awaited<ReturnType<typeof getPayload>>) {
+  try {
+    const result = await retryPendingMoySkladPushes(payload)
+    if (result.attempted > 0) payload.logger.info({ result }, 'МойСклад: order push retry pass')
+  } catch (err) {
+    Sentry.captureException(err, { tags: { process: 'moysklad-push-retry' } })
+    payload.logger.error({ err }, 'МойСклад: order push retry pass failed')
+  }
+}
 
 async function runOnce(payload: Awaited<ReturnType<typeof getPayload>>) {
   const startedAt = Date.now()
@@ -45,6 +59,11 @@ async function main() {
   setInterval(() => {
     void runOnce(payload)
   }, INTERVAL_MS)
+
+  await retryPushes(payload)
+  setInterval(() => {
+    void retryPushes(payload)
+  }, PUSH_RETRY_INTERVAL_MS)
 }
 
 main().catch(async (err) => {

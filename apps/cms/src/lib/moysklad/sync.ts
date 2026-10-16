@@ -75,11 +75,23 @@ export interface SyncOptions {
   // services + image downloads is slow and eats into МойСклад's rate limit;
   // raise/remove once this is proven out).
   limit?: number
+  // Switch off local products missing from МойСклад at the end of the run
+  // (default true). syncAll turns it off when a category failed to sync,
+  // since that category's listings were skipped, not removed.
+  disableMissing?: boolean
 }
 
 export interface SyncResult {
   categories: { created: number; updated: number; failed: string[] }
-  products: { created: number; updated: number; total: number; unmatchedInventory: string[]; failed: string[] }
+  products: {
+    created: number
+    updated: number
+    total: number
+    unmatchedInventory: string[]
+    failed: string[]
+    /** Local products switched off because they are no longer in МойСклад. */
+    disabled: number
+  }
 }
 
 async function upsertCategory(payload: Payload, folder: MsFolder): Promise<{ id: number; created: boolean }> {
@@ -339,6 +351,10 @@ export async function syncProducts(
   let processed = 0
   const unmatchedInventory: string[] = []
   const failed: string[] = []
+  // Every МойСклад id this run saw in scope, upserted or not (a failed upsert
+  // still means the listing exists). Anything local that is not in here is
+  // gone from МойСклад, or moved out of the synced folders.
+  const seen = new Set<string>()
 
   // --- Rental listings (services) ---
   outerServices: for await (const page of msPaginate<MsListing>('/entity/service')) {
@@ -349,6 +365,7 @@ export async function syncProducts(
         continue
       }
       if (opts.limit && processed >= opts.limit) break outerServices
+      seen.add(s.id)
 
       // One bad listing (a malformed stock row, a transient DB error on
       // upsert) must not abort the rest of the run — everything before it
@@ -403,6 +420,7 @@ export async function syncProducts(
         continue
       }
       if (opts.limit && processed >= opts.limit) break outerProducts
+      seen.add(p.id)
 
       try {
         const stock = stockById.get(p.id)
@@ -436,13 +454,44 @@ export async function syncProducts(
     }
   }
 
-  return { created, updated, total: processed, unmatchedInventory, failed }
+  // Owner's rule (2026-10-15): a product that is no longer in МойСклад must not
+  // stay bookable. A missed DELETE webhook used to leave it on sale for good,
+  // since only the webhook ever set `available: false`. Switched off, not
+  // deleted — orders may still reference it. Skipped on a partial run
+  // (opts.limit) or when МойСклад returned nothing at all, so an API hiccup or
+  // a renamed root folder can't switch off the whole catalogue.
+  let disabled = 0
+  if (opts.disableMissing !== false && !opts.limit && seen.size > 0) {
+    const local = await payload.find({
+      collection: 'products',
+      where: { and: [{ available: { equals: true } }, { moySkladId: { exists: true } }] },
+      limit: 0,
+      depth: 0,
+      select: { moySkladId: true, title: true },
+    })
+    for (const product of local.docs) {
+      const id = product.moySkladId
+      if (!id || id.startsWith('kit-') || seen.has(id)) continue
+      try {
+        await payload.update({ collection: 'products', id: product.id, data: { available: false } })
+        disabled++
+        payload.logger.info({ productId: product.id, moySkladId: id, title: product.title }, 'МойСклад sync: product no longer in МойСклад, switched off')
+      } catch (err) {
+        payload.logger.error({ err, productId: product.id }, 'МойСклад sync: failed to switch off a product missing from МойСклад')
+      }
+    }
+  }
+
+  return { created, updated, total: processed, unmatchedInventory, failed, disabled }
 }
 
 export async function syncAll(payload: Payload, opts: SyncOptions = {}): Promise<SyncResult> {
   const allFolders = await fetchAllFolders()
   const categories = await syncCategories(payload, allFolders)
-  const products = await syncProducts(payload, categories.idMap, allFolders, opts)
+  const products = await syncProducts(payload, categories.idMap, allFolders, {
+    ...opts,
+    disableMissing: opts.disableMissing !== false && categories.failed.length === 0,
+  })
   return {
     categories: { created: categories.created, updated: categories.updated, failed: categories.failed },
     products,
