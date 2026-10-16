@@ -67,6 +67,25 @@ async function main() {
   try {
     await expectAvailable('kit limited by its scarcest component (2 lenses)', kit.id, 2)
 
+    // Checkout's cart check: lines see the lines before them, in cart order.
+    const cart = async (items) =>
+      (await api('GET', `/api/rental-availability-bulk?productIds=${items.map(([id]) => id).join(',')}&items=${items.map(([id, q]) => `${id}:${q}`).join(',')}&${range}`)).body?.available
+    const kitThenLenses = await cart([
+      [kit.id, 1],
+      [lens.id, 2],
+    ])
+    if (kitThenLenses?.[kit.id] !== 2 || kitThenLenses?.[lens.id] !== 1) {
+      throw new Error(`cart kit then 2 lenses: expected kit 2 / lens 1, got ${JSON.stringify(kitThenLenses)}`)
+    }
+    const lensesThenKit = await cart([
+      [lens.id, 2],
+      [kit.id, 1],
+    ])
+    if (lensesThenKit?.[lens.id] !== 2 || lensesThenKit?.[kit.id] !== 0) {
+      throw new Error(`cart 2 lenses then kit: expected lens 2 / kit 0, got ${JSON.stringify(lensesThenKit)}`)
+    }
+    console.log('PASS cart check counts a kit and its component in the same cart')
+
     const order = doc(
       (await api('POST', '/api/orders', { customerName: 'Kit Smoke', customerEmail: 'kit-smoke@example.invalid', customerPhone: '+7 (900) 555-00-07', status: 'pending' })).body,
     )

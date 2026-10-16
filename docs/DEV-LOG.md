@@ -2256,3 +2256,18 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   "pending" order behind; the orderItems access checks now read through `req`
   so they see the uncommitted order. New `smoke:kit-stock` covers the kit
   rules and the 90-day limit end to end.
+
+- **2026-10-16** — **Checkout's availability check sees the whole cart.** Nothing is
+  reserved while items sit in the cart (it lives in the browser); stock is
+  taken at submit, against everyone's active orders. But the checkout page
+  used to check each line on its own, so a kit plus its own component (or a
+  kit plus a bare camera that the kit also needs) could both show "свободно"
+  and the second line was refused only at submit. `/api/rental-availability-
+  bulk` now takes an optional `items=id:qty,…` in cart order and answers with
+  `cartLineAvailability` (kitStock.ts): each line sees what the lines before
+  it will take — the order checkout submits and the server books them in — and
+  a short line still claims what is free, matching the "оставить N, остаток
+  по звонку" path. The catalog keeps the old per-product form. Covered by unit
+  tests, `smoke:kit-stock` (cart check) and `smoke:manual-order`, which books
+  a kit and its component in one transaction: refused when short with no
+  empty order left, accepted while stock lasts.

@@ -157,3 +157,48 @@ export function kitSaturatedRanges({ kitId, kit, composition, components, load }
   }
   return mergeRanges(ranges)
 }
+
+export interface CartLine {
+  productId: number
+  quantity: number
+}
+
+export interface CartStock extends StockItem {
+  isKit: boolean
+  composition: KitComposition
+}
+
+/**
+ * Free quantity for each line of one cart over one window, walking the lines
+ * in cart order exactly as checkout submits them: each line sees what the
+ * lines before it will take, kits included, on top of everyone else's
+ * bookings. A line that is short still claims what is free (the "оставить N,
+ * остаток по звонку" path submits that much), so later lines see the stock
+ * that will really be left. `stock` must cover every line's product and every
+ * kit component.
+ */
+export function cartLineAvailability(
+  lines: readonly CartLine[],
+  stock: ReadonlyMap<number, CartStock>,
+  existingLoad: readonly Booking[],
+  window: Range,
+): number[] {
+  const load: Booking[] = [...existingLoad]
+  const kits = new Map<number, KitComposition>()
+  for (const [id, s] of stock) if (s.isKit) kits.set(id, s.composition)
+
+  return lines.map((line) => {
+    const s = stock.get(line.productId)
+    let free = 0
+    if (s?.isKit) {
+      free = kitFreeQuantity({ kitId: line.productId, kit: s, composition: s.composition, components: stock, load, window })
+    } else if (s?.available) {
+      free = Math.max(0, s.quantity - peakLoad(load, line.productId, window))
+    }
+    const claimed = Math.min(line.quantity, free)
+    if (claimed > 0) {
+      load.push(...expandKitBookings([{ productId: line.productId, quantity: claimed, start: window.start, end: window.end }], kits))
+    }
+    return free
+  })
+}

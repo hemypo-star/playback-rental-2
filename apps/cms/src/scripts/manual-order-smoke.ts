@@ -77,8 +77,82 @@ async function main() {
     }
   }
 
+  await kitAndComponentInOneOrder(payload)
+
   console.log('Manual order smoke passed')
   process.exit(0)
+}
+
+// A kit and one of its own components in ONE order, written in one
+// transaction (createManualOrder, same as checkout): each line must see the
+// lines before it, and a refused line must leave no order behind.
+async function kitAndComponentInOneOrder(payload: Awaited<ReturnType<typeof getPayload>>) {
+  const fixtures = await payload.find({
+    collection: 'products',
+    where: { moySkladId: { in: ['smoke-ci-camera-001', 'smoke-ci-lens-001'] } },
+    limit: 10,
+    depth: 0,
+    overrideAccess: true,
+  })
+  const camera = fixtures.docs.find((p) => p.moySkladId === 'smoke-ci-camera-001')
+  const lens = fixtures.docs.find((p) => p.moySkladId === 'smoke-ci-lens-001')
+  if (!camera || !lens || lens.quantity !== 2) throw new Error('Seeded camera/lens fixtures not found (lens stock must be 2)')
+
+  const kit = await payload.create({
+    collection: 'products',
+    data: {
+      title: 'Smoke Txn Kit',
+      listingType: 'rental',
+      price: 2000,
+      quantity: 5,
+      category: typeof camera.category === 'object' ? camera.category.id : camera.category,
+      moySkladId: `kit-smoke-txn-${Date.now()}`,
+      isKit: true,
+      available: true,
+      kitItems: [
+        { label: 'Camera', productId: camera.id },
+        { label: 'Lens', productId: lens.id },
+      ],
+    },
+    overrideAccess: true,
+  })
+
+  const start = new Date(Date.now() + 150 * 24 * 60 * 60 * 1000)
+  start.setUTCHours(3, 0, 0, 0)
+  const end = new Date(start)
+  end.setUTCHours(11, 0, 0, 0)
+  const line = (productId: number, quantity: number) => ({ productId, quantity, startDate: start.toISOString(), endDate: end.toISOString() })
+  const customerEmail = 'smoke-kit-txn@example.invalid'
+  const order = (items: ReturnType<typeof line>[]) =>
+    createManualOrder(payload, { customerName: 'Smoke Kit Txn', customerEmail, customerPhone: '+7 (900) 222-33-55', items })
+  const ordersOfCustomer = async () =>
+    (await payload.find({ collection: 'orders', where: { customerEmail: { equals: customerEmail } }, limit: 0, depth: 0, overrideAccess: true })).docs
+
+  let okOrderId: number | null = null
+  try {
+    // 2 lenses in stock: the kit takes one, so two more must be refused.
+    let refused = false
+    try {
+      await order([line(kit.id, 1), line(lens.id, 2)])
+    } catch {
+      refused = true
+    }
+    if (!refused) throw new Error('kit + 2 lenses was accepted with only 2 lenses in stock')
+    if ((await ordersOfCustomer()).length !== 0) throw new Error('refused order left an empty order behind (transaction not rolled back)')
+    console.log('PASS kit + its component in one order: refused when short, no empty order left')
+
+    okOrderId = await order([line(kit.id, 1), line(lens.id, 1)])
+    const items = await payload.find({ collection: 'orderItems', where: { order: { equals: okOrderId } }, limit: 10, depth: 0, overrideAccess: true })
+    if (items.totalDocs !== 2) throw new Error(`expected 2 items in the kit + lens order, got ${items.totalDocs}`)
+    console.log('PASS kit + its component in one order: accepted while stock lasts')
+  } finally {
+    for (const o of await ordersOfCustomer()) {
+      const items = await payload.find({ collection: 'orderItems', where: { order: { equals: o.id } }, limit: 0, depth: 0, overrideAccess: true })
+      for (const item of items.docs) await payload.delete({ collection: 'orderItems', id: item.id, overrideAccess: true })
+      await payload.delete({ collection: 'orders', id: o.id, overrideAccess: true })
+    }
+    await payload.delete({ collection: 'products', id: kit.id, overrideAccess: true })
+  }
 }
 
 main().catch((error) => {

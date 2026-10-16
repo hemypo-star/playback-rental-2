@@ -26,11 +26,20 @@ export async function getRentalAvailabilityBulk(
   productIds: number[],
   start?: Date,
   end?: Date,
+  /**
+   * Cart quantities, in cart order. When given, each line's availability
+   * accounts for the lines before it (kits share stock with their
+   * components), the way checkout will actually book them.
+   */
+  quantities?: number[],
 ): Promise<Record<number, number>> {
   if (productIds.length === 0) return {}
   const params = new URLSearchParams({ productIds: productIds.join(',') })
   if (start) params.set('start', start.toISOString())
   if (end) params.set('end', end.toISOString())
+  if (quantities && quantities.length === productIds.length) {
+    params.set('items', productIds.map((id, i) => `${id}:${quantities[i]}`).join(','))
+  }
   const res = await fetch(`/api/rental-availability-bulk?${params.toString()}`)
   if (!res.ok) throw new Error(`rental-availability-bulk request failed: ${res.status}`)
   const result = (await res.json()) as { available: Record<number, number> }

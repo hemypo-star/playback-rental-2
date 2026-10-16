@@ -1,5 +1,22 @@
 import type { Endpoint } from 'payload'
 import { getBookedQuantities } from '../lib/rental/bookedQuantity'
+import { cartLineAvailability, type CartLine } from '../lib/rental/kitStock'
+import { loadRentalLoad, loadStock } from '../lib/rental/rentalLoad'
+
+const MAX_CART_LINES = 100
+
+// `items=12:1,5:2` (productId:quantity, in cart order) asks for one cart's
+// availability: each line sees what the lines before it take, kits included,
+// exactly as checkout will book them (kitStock.ts cartLineAvailability).
+function parseCartItems(raw: string | null): CartLine[] | null {
+  if (!raw) return null
+  const lines: CartLine[] = []
+  for (const part of raw.split(',').slice(0, MAX_CART_LINES)) {
+    const [id, qty] = part.split(':').map((s) => Number(s.trim()))
+    if (Number.isInteger(id) && id > 0 && Number.isInteger(qty) && qty > 0) lines.push({ productId: id, quantity: qty })
+  }
+  return lines.length > 0 ? lines : null
+}
 
 // Bulk counterpart to rentalAvailability.ts's single-product endpoint — the
 // catalog's per-card availability badges need live availability for a whole
@@ -19,6 +36,24 @@ export const rentalAvailabilityBulkEndpoint: Endpoint = {
     const idsParam = url.searchParams.get('productIds')
     const startParam = url.searchParams.get('start')
     const endParam = url.searchParams.get('end')
+
+    const cart = parseCartItems(url.searchParams.get('items'))
+    const start = startParam ? new Date(startParam) : undefined
+    const end = endParam ? new Date(endParam) : undefined
+    if (cart && start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+      const window = { start: start.getTime(), end: end.getTime() }
+      const lineIds = [...new Set(cart.map((l) => l.productId))]
+      const stock = await loadStock(req.payload, lineIds, req)
+      const componentIds = [...stock.values()].flatMap((s) => [...s.composition.keys()]).filter((id) => !stock.has(id))
+      for (const [id, s] of await loadStock(req.payload, componentIds, req)) stock.set(id, s)
+      const load = await loadRentalLoad(req.payload, { window, req })
+      const free = cartLineAvailability(cart, stock, load, window)
+      const available: Record<number, number> = {}
+      cart.forEach((line, i) => {
+        available[line.productId] = free[i]
+      })
+      return Response.json({ available })
+    }
 
     const productIds = (idsParam || '')
       .split(',')

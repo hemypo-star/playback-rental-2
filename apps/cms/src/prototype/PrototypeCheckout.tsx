@@ -23,6 +23,10 @@ export default function PrototypeCheckout({openHour,closeHour}:{openHour:number;
  // Per-line rental availability (audit N10 / work-order A4) — restores what the storefront rewrite dropped. Mirrors PrototypePurchasePanel.tsx's own loadFailed precedent: a failed lookup is its own state, never folded into available=0 (that would claim "booked" when we actually just don't know).
  const[avail,setAvail]=useState<Record<number,number>>({}),[availChecking,setAvailChecking]=useState(false),[availChecked,setAvailChecked]=useState(false),[availErr,setAvailErr]=useState(false),[availRetry,setAvailRetry]=useState(0),[ackShort,setAckShort]=useState<Record<number,string>>({})
  const rentalIds=cart.filter(i=>i.listingType==='rental').map(i=>i.productId)
+ // Quantities go along (in cart order) so each line's "свободно" accounts for
+ // the lines before it — a kit and its own component in one cart share stock,
+ // exactly as the server will book them at submit (lib/rental/kitStock.ts).
+ const rentalQtys=cart.filter(i=>i.listingType==='rental').map(i=>i.quantity)
  useEffect(()=>{
   if(!hasDates||rentalIds.length===0){
    // eslint-disable-next-line react-hooks/set-state-in-effect -- one directive covers the whole effect (only the first synchronous setState call in an effect is reported); this branch resets state synchronously when there's nothing to check, same class of exception as PrototypePurchasePanel.tsx's setChecking(true).
@@ -31,10 +35,10 @@ export default function PrototypeCheckout({openHour,closeHour}:{openHour:number;
   }
   let cancelled=false
   setAvailChecking(true);setAvailErr(false);setAvailChecked(false)
-  getRentalAvailabilityBulk(rentalIds,dates.startDate||undefined,dates.endDate||undefined).then(res=>{if(!cancelled){setAvail(res);setAvailChecked(true)}}).catch(()=>{if(!cancelled)setAvailErr(true)}).finally(()=>{if(!cancelled)setAvailChecking(false)})
+  getRentalAvailabilityBulk(rentalIds,dates.startDate||undefined,dates.endDate||undefined,rentalQtys).then(res=>{if(!cancelled){setAvail(res);setAvailChecked(true)}}).catch(()=>{if(!cancelled)setAvailErr(true)}).finally(()=>{if(!cancelled)setAvailChecking(false)})
   return()=>{cancelled=true}
   // eslint-disable-next-line react-hooks/exhaustive-deps
- },[hasDates,dates.startDate?.getTime(),dates.endDate?.getTime(),rentalIds.join(','),availRetry])
+ },[hasDates,dates.startDate?.getTime(),dates.endDate?.getTime(),rentalIds.join(','),rentalQtys.join(','),availRetry])
  type AvailStatus={kind:'na'}|{kind:'loading'}|{kind:'error'}|{kind:'known';available:number}
  const itemAvail=(i:(typeof cart)[number]):AvailStatus=>i.listingType!=='rental'||!hasDates?{kind:'na'}:availErr?{kind:'error'}:availChecking||!availChecked?{kind:'loading'}:{kind:'known',available:avail[i.productId]??0}
  const isShort=(i:(typeof cart)[number],st:AvailStatus):st is{kind:'known';available:number}=>st.kind==='known'&&st.available<i.quantity

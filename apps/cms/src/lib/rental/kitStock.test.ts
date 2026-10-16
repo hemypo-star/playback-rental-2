@@ -2,6 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  cartLineAvailability,
   expandKitBookings,
   kitComposition,
   kitFreeQuantity,
@@ -139,4 +140,67 @@ test('mergeRanges joins overlapping and touching ranges', () => {
       { start: 5, end: 7 },
     ],
   )
+})
+
+test('cart: a kit and its component in one cart share stock in cart order', () => {
+  const stock = new Map([
+    [CAMERA, { quantity: 2, available: true, isKit: false, composition: new Map() }],
+    [LENS, { quantity: 2, available: true, isKit: false, composition: new Map() }],
+    [KIT, { quantity: 5, available: true, isKit: true, composition: kits.get(KIT)! }],
+  ])
+  const window = { start: day(0), end: day(1) }
+  // Kit first takes one camera; then two bare cameras want both, only one is left.
+  assert.deepEqual(
+    cartLineAvailability(
+      [
+        { productId: KIT, quantity: 1 },
+        { productId: CAMERA, quantity: 2 },
+      ],
+      stock,
+      [],
+      window,
+    ),
+    [2, 1],
+  )
+  // Cameras first: the kit then has no camera left.
+  assert.deepEqual(
+    cartLineAvailability(
+      [
+        { productId: CAMERA, quantity: 2 },
+        { productId: KIT, quantity: 1 },
+      ],
+      stock,
+      [],
+      window,
+    ),
+    [2, 0],
+  )
+})
+
+test('cart: a short line still claims what is free for the lines after it', () => {
+  const stock = new Map([
+    [LENS, { quantity: 2, available: true, isKit: false, composition: new Map() }],
+    [CAMERA, { quantity: 5, available: true, isKit: false, composition: new Map() }],
+    [KIT, { quantity: 5, available: true, isKit: true, composition: kits.get(KIT)! }],
+  ])
+  const window = { start: day(0), end: day(1) }
+  // Wants 3 lenses, 2 are free and taken; the kit then has no lens.
+  assert.deepEqual(
+    cartLineAvailability(
+      [
+        { productId: LENS, quantity: 3 },
+        { productId: KIT, quantity: 1 },
+      ],
+      stock,
+      [],
+      window,
+    ),
+    [2, 0],
+  )
+})
+
+test('cart: other customers\' bookings count too', () => {
+  const stock = new Map([[CAMERA, { quantity: 3, available: true, isKit: false, composition: new Map() }]])
+  const others: Booking[] = [{ productId: CAMERA, quantity: 2, start: day(0), end: day(1) }]
+  assert.deepEqual(cartLineAvailability([{ productId: CAMERA, quantity: 2 }], stock, others, { start: day(0), end: day(1) }), [1])
 })
