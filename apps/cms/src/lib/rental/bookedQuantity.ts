@@ -1,4 +1,6 @@
 import type { Payload, PayloadRequest, Where } from 'payload'
+import { kitFreeQuantity, peakLoad } from './kitStock'
+import { ACTIVE_ORDER_STATUSES, activeOrderIds, loadAllKitIds, loadRentalLoad, loadStock } from './rentalLoad'
 
 // How much of each product is already committed over a date window.
 //
@@ -10,18 +12,7 @@ import type { Payload, PayloadRequest, Where } from 'payload'
 // a badge saying it is booked out, or be dropped from a page whose badge said
 // it was free — so they share one implementation rather than two predicates
 // that look alike today.
-export const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed']
-
-async function activeOrderIds(payload: Payload): Promise<number[]> {
-  const orders = await payload.find({
-    collection: 'orders',
-    where: { status: { in: ACTIVE_ORDER_STATUSES } },
-    limit: 0,
-    depth: 0,
-    overrideAccess: true,
-  })
-  return orders.docs.map((o) => o.id as number)
-}
+export { ACTIVE_ORDER_STATUSES }
 
 export interface BookedQuantityParams {
   /** Restrict to these products. Omit to count bookings across all of them. */
@@ -47,35 +38,54 @@ export async function getBookedQuantities(payload: Payload, params: BookedQuanti
   const orderIds = await activeOrderIds(payload)
   if (orderIds.length === 0) return booked
 
-  const and: Where[] = [{ order: { in: orderIds } }]
-  if (params.productIds) and.push({ product: { in: params.productIds } })
-  // Sale items never have startDate/endDate set (unused for sale, per
-  // OrderItems.ts) — scope the date-overlap filter to rental items only, or a
-  // null date fails the comparison and silently drops sale items out of the
-  // booked-quantity count.
-  and.push({
-    or: [
-      { listingType: { equals: 'sale' } },
-      {
-        and: [
-          { startDate: { less_than: params.end.toISOString() } },
-          { endDate: { greater_than: params.start.toISOString() } },
-        ],
-      },
-    ],
-  })
-
-  const items = await payload.find({
+  // Sale items: no date dimension, every active order's quantity counts.
+  const saleAnd: Where[] = [{ order: { in: orderIds } }, { listingType: { equals: 'sale' } }]
+  if (params.productIds) saleAnd.push({ product: { in: params.productIds } })
+  const saleItems = await payload.find({
     collection: 'orderItems',
-    where: { and },
+    where: { and: saleAnd },
     limit: 0,
     depth: 0,
     overrideAccess: true,
     ...(params.req ? { req: params.req } : {}),
   })
-  for (const item of items.docs) {
+  for (const item of saleItems.docs) {
     const productId = typeof item.product === 'object' ? item.product.id : item.product
     booked.set(productId, (booked.get(productId) || 0) + (item.quantity || 0))
+  }
+
+  // Rentals: shared kit/component stock and peak load over the window
+  // (kitStock.ts), the same arithmetic the booking write path uses, so a
+  // badge can't promise what checkout then refuses.
+  const window = { start: params.start.getTime(), end: params.end.getTime() }
+  const load = await loadRentalLoad(payload, { window, req: params.req })
+  const loadedIds = [...new Set(load.map((b) => b.productId))]
+  // A kit can be booked out without a booking of its own (its components
+  // are), so kits are always considered: the requested ones, or every kit.
+  const kitCandidates = params.productIds ?? (await loadAllKitIds(payload, params.req))
+  const domain = [...new Set([...(params.productIds ?? loadedIds), ...kitCandidates])]
+  const stock = await loadStock(payload, domain, params.req)
+  const componentIds = [...stock.values()].flatMap((s) => [...s.composition.keys()])
+  const componentStock = await loadStock(payload, componentIds.filter((id) => !stock.has(id)), params.req)
+  for (const [id, s] of stock) componentStock.set(id, s)
+
+  for (const [productId, s] of stock) {
+    if (booked.has(productId)) continue // a sale product, counted above
+    let used: number
+    if (s.isKit) {
+      const free = kitFreeQuantity({
+        kitId: productId,
+        kit: { quantity: s.quantity, available: s.available },
+        composition: s.composition,
+        components: componentStock,
+        load,
+        window,
+      })
+      used = s.quantity - free
+    } else {
+      used = peakLoad(load, productId, window)
+    }
+    if (used > 0) booked.set(productId, used)
   }
   return booked
 }

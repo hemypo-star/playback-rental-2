@@ -1,9 +1,11 @@
 import type { CollectionConfig, PayloadRequest } from 'payload'
 import { APIError } from 'payload'
 import { differenceInCalendarDays } from 'date-fns'
-import { calculateLineTotal } from '../lib/rental/pricing'
+import { calculateLineTotal, calculateRentalDays } from '../lib/rental/pricing'
 import { isBeforeBusinessToday } from '../lib/rental/businessDay'
-import { getAvailableRentalQuantity, getAvailableSaleQuantity, lockProductForBooking } from '../lib/rental/availability'
+import { getAvailableRentalQuantity, getAvailableSaleQuantity, lockProductsForBooking } from '../lib/rental/availability'
+import { kitComposition } from '../lib/rental/kitStock'
+import { MAX_RENTAL_DAYS } from '../lib/rental/limits'
 import { secretsMatch } from '../lib/security/timingSafe'
 
 // Hooks receive relationship fields populated to Payload's default depth
@@ -167,14 +169,16 @@ async function canModifyOrderItem({
   // document) — there's nothing here to check "is this order submitted yet"
   // against, so an anonymous request can't be allowed through.
   if (!id) return false
-  const item = await req.payload.findByID({ collection: 'orderItems', id, overrideAccess: true, depth: 0 })
+  // `req` threads these reads into the caller's transaction (checkout writes
+  // the order and its items in one), or they couldn't see uncommitted rows.
+  const item = await req.payload.findByID({ collection: 'orderItems', id, overrideAccess: true, depth: 0, req })
   if (!item) return false
   const orderId = typeof item.order === 'object' ? item.order?.id : item.order
   // An orphaned row (no resolvable order) has nothing to check "is this
   // submitted yet" against — fail closed, not open, or any anonymous request
   // could freely edit/delete it.
   if (!orderId) return false
-  const order = await req.payload.findByID({ collection: 'orders', id: orderId, overrideAccess: true, depth: 0 })
+  const order = await req.payload.findByID({ collection: 'orders', id: orderId, overrideAccess: true, depth: 0, req })
   if (!order || order.submittedAt) return false
   return hasValidSubmitToken(order, data, req)
 }
@@ -190,7 +194,7 @@ async function canCreateOrderItem({ req, data }: { req: PayloadRequest; data?: R
   const orderRef = data?.order
   const orderId = typeof orderRef === 'object' && orderRef !== null ? (orderRef as { id: number }).id : orderRef
   if (!orderId) return false
-  const order = await req.payload.findByID({ collection: 'orders', id: orderId as number, overrideAccess: true, depth: 0 })
+  const order = await req.payload.findByID({ collection: 'orders', id: orderId as number, overrideAccess: true, depth: 0, req })
   if (!order || order.submittedAt) return false
   return hasValidSubmitToken(order, data, req)
 }
@@ -292,8 +296,12 @@ export const OrderItems: CollectionConfig = {
         // Serializes concurrent availability checks for this product within
         // the current transaction — see lockProductForBooking's own comment
         // for why this closes RENTAL-001 (docs/audits/2026-08-24-baseline.md)
-        // and why a plain read here isn't safe under concurrent bookings.
-        await lockProductForBooking(req, product.id)
+        // and why a plain read here isn't safe under concurrent bookings. A
+        // kit also locks its components, whose stock it consumes.
+        await lockProductsForBooking(
+          req,
+          product.isKit ? [product.id, ...kitComposition(product.kitItems).keys()] : [product.id],
+        )
 
         if (product.listingType === 'rental') {
           if (!data.startDate || !data.endDate) {
@@ -328,6 +336,16 @@ export const OrderItems: CollectionConfig = {
               'endDate is earlier than startDate',
               400,
               { code: 'RENTAL_DATES_INVALID', reason: 'backwards', productTitle: product.title },
+              true,
+            )
+          }
+          // Owner's limit (lib/rental/limits.ts): counted in billed rental
+          // days, the same unit the customer pays for.
+          if (calculateRentalDays(new Date(data.startDate), new Date(data.endDate)) > MAX_RENTAL_DAYS) {
+            throw new APIError(
+              `rental is longer than ${MAX_RENTAL_DAYS} days`,
+              400,
+              { code: 'RENTAL_DATES_INVALID', reason: 'too_long', productTitle: product.title },
               true,
             )
           }

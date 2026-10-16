@@ -19,6 +19,7 @@
     "smoke:rate-limit-auth": "node src/scripts/rate-limit-auth-smoke.mjs",
     "smoke:admin-data": "node src/scripts/admin-data-smoke.mjs",
     "smoke:manual-order": "tsx --env-file-if-exists=.env src/scripts/manual-order-smoke.ts",
+    "smoke:kit-stock": "node src/scripts/kit-stock-smoke.mjs",
     "payload": "payload",
     "generate:types": "payload generate:types",
     "migrate": "payload migrate",

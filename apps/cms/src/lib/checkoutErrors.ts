@@ -11,6 +11,8 @@
 // actually sees. Keeping this in one module, instead of inline in
 // CheckoutPage.tsx, is what makes it possible to audit "does every checkout
 // error have Russian text" by reading one file.
+import { MAX_RENTAL_DAYS } from './rental/limits'
+
 export type CheckoutErrorCode =
   | 'RENTAL_DATES_INVALID'
   | 'RENTAL_QUANTITY_UNAVAILABLE'
@@ -42,7 +44,7 @@ export interface CheckoutErrorData {
   productTitle?: string
   requested?: number
   available?: number
-  reason?: 'missing' | 'backwards' | 'past'
+  reason?: 'missing' | 'backwards' | 'past' | 'too_long'
 }
 
 export interface CheckoutErrorInfo {
@@ -76,6 +78,12 @@ export function translateCheckoutError({ code, data }: CheckoutErrorInfo): Trans
       if (data?.reason === 'past') {
         return {
           message: 'Дата выдачи уже прошла. Выберите дату не раньше сегодняшней.',
+          canChangeDates: true,
+        }
+      }
+      if (data?.reason === 'too_long') {
+        return {
+          message: `Максимальный срок аренды — ${MAX_RENTAL_DAYS} суток. Выберите период покороче.`,
           canChangeDates: true,
         }
       }
@@ -178,7 +186,8 @@ function pickErrorData(data: object): CheckoutErrorData {
     productTitle: typeof d.productTitle === 'string' ? d.productTitle : undefined,
     requested: typeof d.requested === 'number' ? d.requested : undefined,
     available: typeof d.available === 'number' ? d.available : undefined,
-    reason: d.reason === 'missing' || d.reason === 'backwards' || d.reason === 'past' ? d.reason : undefined,
+    reason:
+      d.reason === 'missing' || d.reason === 'backwards' || d.reason === 'past' || d.reason === 'too_long' ? d.reason : undefined,
   }
 }
 

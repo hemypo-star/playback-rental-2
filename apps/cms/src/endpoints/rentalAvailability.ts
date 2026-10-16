@@ -1,7 +1,7 @@
 import type { Endpoint } from 'payload'
 import { getAvailableRentalQuantity, getAvailableSaleQuantity } from '../lib/rental/availability'
-
-const ACTIVE_STATUSES = ['pending', 'confirmed']
+import { kitComposition, kitSaturatedRanges, saturatedRanges, type Range } from '../lib/rental/kitStock'
+import { loadRentalLoad, loadStock } from '../lib/rental/rentalLoad'
 
 // Public, PII-free counterpart to the admin-only `orders`/`orderItems` reads:
 // the storefront needs to show "N available" and a booked-dates calendar to
@@ -37,34 +37,32 @@ export const rentalAvailabilityEndpoint: Endpoint = {
     const end = endParam ? new Date(endParam) : undefined
     const available = await getAvailableRentalQuantity(req, productId, start, end)
 
-    const orders = await req.payload.find({
-      collection: 'orders',
-      where: { status: { in: ACTIVE_STATUSES } },
-      limit: 0,
-      depth: 0,
-      overrideAccess: true,
-    })
-    const orderIds = orders.docs.map((o) => o.id as number)
-
-    let bookedRanges: { startDate: string; endDate: string; quantity: number }[] = []
-    if (orderIds.length > 0) {
-      const items = await req.payload.find({
-        collection: 'orderItems',
-        where: { and: [{ product: { equals: productId } }, { order: { in: orderIds } }] },
-        limit: 0,
-        depth: 0,
-        req,
+    // The calendar greys out any day a returned range touches, so return only
+    // the stretches with no unit left — kit bookings counted against their
+    // components (kitStock.ts). Returning every booking, as before, blocked a
+    // day for a 3-unit product the moment one unit was booked.
+    const load = await loadRentalLoad(req.payload, { req })
+    let ranges: Range[]
+    if (product.isKit) {
+      const composition = kitComposition(product.kitItems)
+      const components = await loadStock(req.payload, [...composition.keys()], req)
+      ranges = kitSaturatedRanges({
+        kitId: product.id,
+        kit: { quantity: product.quantity, available: Boolean(product.available) },
+        composition,
+        components,
+        load,
       })
-      bookedRanges = items.docs.map((item) => ({
-        // Rental items always have both dates set (required at the
-        // OrderItems collection level for listingType: 'rental') — the
-        // schema types them nullable only because the field is shared with
-        // sale items, which never populate it.
-        startDate: item.startDate!,
-        endDate: item.endDate!,
-        quantity: item.quantity,
-      }))
+    } else {
+      ranges = saturatedRanges(load, product.id, product.available ? product.quantity : 0, 1)
     }
+    const now = Date.now()
+    const horizon = now + 400 * 24 * 60 * 60 * 1000
+    const bookedRanges = ranges.map((r) => ({
+      startDate: new Date(Number.isFinite(r.start) ? r.start : now).toISOString(),
+      endDate: new Date(Number.isFinite(r.end) ? r.end : horizon).toISOString(),
+      quantity: product.quantity,
+    }))
 
     return Response.json({
       listingType: 'rental',

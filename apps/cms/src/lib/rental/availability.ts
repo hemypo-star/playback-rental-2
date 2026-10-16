@@ -1,6 +1,8 @@
 import { sql } from '@payloadcms/db-postgres'
 import type { PostgresAdapter } from '@payloadcms/db-postgres'
 import type { PayloadRequest } from 'payload'
+import { kitComposition, kitFreeQuantity, peakLoad } from './kitStock'
+import { ACTIVE_ORDER_STATUSES, loadRentalLoad, loadStock } from './rentalLoad'
 
 // Ported from the old app's src/utils/availabilityUtils.ts. Status lives only
 // on the parent `orders` record in this rewrite (not duplicated onto every
@@ -14,7 +16,6 @@ import type { PayloadRequest } from 'payload'
 // omitting it caused a real bug in Phase 1 testing (a just-created sibling
 // row wasn't visible to a query made without `req`, since it ran on a
 // separate DB connection outside the parent operation's transaction).
-const ACTIVE_STATUSES = ['pending', 'confirmed']
 
 // Confirmed by live reproduction (docs/audits/2026-08-24-baseline.md,
 // RENTAL-001): getAvailableRentalQuantity/getAvailableSaleQuantity below are
@@ -50,15 +51,25 @@ const ACTIVE_STATUSES = ['pending', 'confirmed']
 // internal getTransaction() utility logic without importing an unexported
 // path from a package that isn't even a direct dependency of this app.
 export async function lockProductForBooking(req: PayloadRequest, productId: number): Promise<void> {
+  await lockProductsForBooking(req, [productId])
+}
+
+// A kit booking consumes its components' stock (kitStock.ts), so it must hold
+// the components' locks too, or a concurrent bare-component booking could take
+// the last unit between this check and its write. Locks are taken in ascending
+// id order so two kits sharing components can never deadlock each other.
+export async function lockProductsForBooking(req: PayloadRequest, productIds: number[]): Promise<void> {
   const adapter = req.payload.db as unknown as PostgresAdapter
   const db = req.transactionID ? (adapter.sessions?.[String(await req.transactionID)]?.db ?? adapter.drizzle) : adapter.drizzle
-  await db.execute(sql`SELECT pg_advisory_xact_lock(${productId})`)
+  for (const id of [...new Set(productIds)].sort((a, b) => a - b)) {
+    await db.execute(sql`SELECT pg_advisory_xact_lock(${id})`)
+  }
 }
 
 async function activeOrderIds(req: PayloadRequest): Promise<number[]> {
   const orders = await req.payload.find({
     collection: 'orders',
-    where: { status: { in: ACTIVE_STATUSES } },
+    where: { status: { in: ACTIVE_ORDER_STATUSES } },
     limit: 0, // 0 = no limit in Payload's find
     depth: 0,
     req,
@@ -70,6 +81,11 @@ async function activeOrderIds(req: PayloadRequest): Promise<number[]> {
  * Available quantity for a rental product over a date range (or total
  * quantity if no range given). Excludes a specific order item (used when
  * re-checking availability while editing an existing booking's own dates).
+ *
+ * Shared stock (kitStock.ts): bookings of kits count against their component
+ * products, and a kit is limited by its components' free stock as well as its
+ * own. Over a window the deduction is the peak concurrent load, not the sum of
+ * every booking that touches the window.
  */
 export async function getAvailableRentalQuantity(
   req: PayloadRequest,
@@ -80,29 +96,25 @@ export async function getAvailableRentalQuantity(
 ): Promise<number> {
   const product = await req.payload.findByID({ collection: 'products', id: productId, req })
   if (!product || !product.available) return 0
-  if (!startDate || !endDate) return product.quantity
+  const window = startDate && endDate ? { start: startDate.getTime(), end: endDate.getTime() } : undefined
 
-  const orderIds = await activeOrderIds(req)
-  if (orderIds.length === 0) return product.quantity
+  if (product.isKit) {
+    const composition = kitComposition(product.kitItems)
+    const components = await loadStock(req.payload, [...composition.keys()], req)
+    const load = window ? await loadRentalLoad(req.payload, { window, excludeOrderItemId, req }) : []
+    return kitFreeQuantity({
+      kitId: product.id,
+      kit: { quantity: product.quantity, available: true },
+      composition,
+      components,
+      load,
+      window,
+    })
+  }
 
-  const overlapping = await req.payload.find({
-    collection: 'orderItems',
-    where: {
-      and: [
-        { product: { equals: productId } },
-        { order: { in: orderIds } },
-        { startDate: { less_than: endDate.toISOString() } },
-        { endDate: { greater_than: startDate.toISOString() } },
-        ...(excludeOrderItemId ? [{ id: { not_equals: excludeOrderItemId } }] : []),
-      ],
-    },
-    limit: 0,
-    depth: 0,
-    req,
-  })
-
-  const bookedQty = overlapping.docs.reduce((sum, item) => sum + (item.quantity || 1), 0)
-  return Math.max(0, product.quantity - bookedQty)
+  if (!window) return product.quantity
+  const load = await loadRentalLoad(req.payload, { window, excludeOrderItemId, req })
+  return Math.max(0, product.quantity - peakLoad(load, productId, window))
 }
 
 /**
