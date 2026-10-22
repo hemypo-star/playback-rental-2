@@ -18,6 +18,6 @@ export default function PrototypeAdminSidebar({badges}:{badges:AdminNavBadges}){
  return <aside className="pb-admin-sidebar">
   <div className="pb-admin-brand"><strong>Playback</strong><span>Admin</span></div>
   <nav className="pb-admin-nav">{NAV.map(item=>{const active=pathname===item.href||pathname.startsWith(item.href+'/');const count=item.badge?badges[item.badge]:undefined;return <Link key={item.href} href={item.href} data-active={active}><span>{item.label}</span>{count?<span className="pb-admin-badge">{count}</span>:null}</Link>})}</nav>
-  <div className="pb-admin-bottom"><Link href="/">← На сайт</Link></div>
+  <div className="pb-admin-bottom"><Link href="/">← На&nbsp;сайт</Link></div>
  </aside>
 }

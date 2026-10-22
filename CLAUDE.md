@@ -92,6 +92,12 @@ bugs it surfaced, but nothing in the current tree depends on `apps/web` or
   `routes.admin: '/cms'` stays in `payload.config.ts` only so Payload never claims
   `/admin` paths as its own.
 
+- **Storefront text gets Russian typography** (`lib/text/typography.ts`,
+  typograf): applied in `lib/data/*` to text fields from the admin and МойСклад;
+  the admin reads raw (`getSiteSettingsRaw`, `getProductByIdRaw`). New static
+  copy in storefront JSX: write `&nbsp;` after short words and before dashes,
+  «» quotes — or wrap JS-string copy in `typo()`.
+
 ## Design system (light theme, applied 2026-08-13)
 
 Ported from a delivered design (`Playback Rental - прокат техники.html`, a bundled

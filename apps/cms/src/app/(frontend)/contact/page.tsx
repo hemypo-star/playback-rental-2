@@ -40,7 +40,7 @@ export default async function ContactPage() {
               <Link href="/" className="pb-link-hover">Главная</Link> / Контакты
             </div>
             <h1 className="pb-h1" style={{ marginTop: 12 }}>Контакты</h1>
-            <p className="pb-lead">Есть вопрос по аренде или нужно подобрать комплект — позвоните, напишите или приезжайте.</p>
+            <p className="pb-lead">Есть вопрос по&nbsp;аренде или&nbsp;нужно подобрать комплект&nbsp;— позвоните, напишите или&nbsp;приезжайте.</p>
           </div>
         </div>
 
@@ -68,7 +68,7 @@ export default async function ContactPage() {
             <span className="pb-kicker">Часы работы</span>
             <span className="pb-contact-value">
               {hours}
-              <span className="pb-contact-sub">Выходные — по записи</span>
+              <span className="pb-contact-sub">Выходные&nbsp;— по&nbsp;записи</span>
             </span>
           </div>
           <div className="pb-contact-actions">
@@ -85,7 +85,7 @@ export default async function ContactPage() {
         <div className="pb-map-card">
           <span className="pb-map-pin" aria-hidden />
           <div className="pb-map-panel">
-            <div className="pb-kicker">Как добраться</div>
+            <div className="pb-kicker">Как&nbsp;добраться</div>
             <div className="pb-map-panel-title">{address}</div>
             <div className="pb-map-panel-links">
               <a href={yandexMapsUrl} target="_blank" rel="noopener noreferrer" className="pb-pill pb-btn" style={{ height: 40, padding: '0 16px', fontSize: 10.5 }}>
@@ -99,17 +99,17 @@ export default async function ContactPage() {
         </div>
 
         <div className="pb-card pb-about-card">
-          <div className="pb-kicker">О компании</div>
+          <div className="pb-kicker">О&nbsp;компании</div>
           <h2 className="pb-h2" style={{ fontSize: 'clamp(24px,2.4vw,32px)' }}>Playback Rental</h2>
           <p>
-            Работаем на рынке фото- и видеопроизводства с 2017 года. Подбираем и обслуживаем технику для съёмок любого масштаба — от
-            небольших проектов до крупных производств.
+            Работаем на&nbsp;рынке фото- и&nbsp;видеопроизводства с&nbsp;2017 года. Подбираем и&nbsp;обслуживаем технику для&nbsp;съёмок любого масштаба&nbsp;— от
+            небольших проектов до&nbsp;крупных производств.
           </p>
-          <p>Работаем с частными клиентами, фотографами, видеографами и продакшн-командами — только проверенная техника и гибкие условия.</p>
+          <p>Работаем с&nbsp;частными клиентами, фотографами, видеографами и&nbsp;продакшн-командами&nbsp;— только проверенная техника и&nbsp;гибкие условия.</p>
           <div className="pb-about-facts">
             <div className="pb-about-fact">
-              <strong>с 2017</strong>
-              <span>на рынке</span>
+              <strong>с&nbsp;2017</strong>
+              <span>на&nbsp;рынке</span>
             </div>
             <div className="pb-about-fact">
               <strong>4 ч</strong>

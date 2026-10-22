@@ -41,7 +41,7 @@ export default async function PrototypeFooter(){
     <div className="pb-kicker">Документы</div>
     <Link href="/how-it-works">Условия проката</Link>
     <Link href="/privacy-policy">Политика конфиденциальности</Link>
-    <Link href="/user-agreement">Пользовательское соглашение</Link>     <Link href="/personal-data-consent">Согласие на обработку персональных данных</Link>
+    <Link href="/user-agreement">Пользовательское соглашение</Link>     <Link href="/personal-data-consent">Согласие на&nbsp;обработку персональных данных</Link>
     <Link href="/contact">Контакты</Link>
    </div>
   </div>

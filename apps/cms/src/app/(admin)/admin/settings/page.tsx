@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import AdminPageHeader from '../../../../components/admin/AdminPageHeader'
 import SettingsForm from '../../../../components/admin/SettingsForm'
-import { getSiteSettings } from '../../../../lib/data/siteSettings'
+import { getSiteSettingsRaw } from '../../../../lib/data/siteSettings'
 
 // Ported from apps/web/src/pages/admin/settings.astro (docs/PLAN-next-
 // migration.md Stage 3.5, page group 6 — last of Stage 3). Reuses
@@ -12,7 +12,8 @@ export const metadata: Metadata = { title: 'Настройки сайта' }
 export const dynamic = 'force-dynamic'
 
 export default async function AdminSettingsPage() {
-  const settings = await getSiteSettings()
+  // Raw: the form edits the text as typed, without storefront typography.
+  const settings = await getSiteSettingsRaw()
 
   return (
     <>

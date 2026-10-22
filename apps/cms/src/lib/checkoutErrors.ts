@@ -137,7 +137,7 @@ export function translateCheckoutError({ code, data }: CheckoutErrorInfo): Trans
       }
     case 'CONSENT_REQUIRED':
       return {
-        message: 'Отметьте согласие на обработку персональных данных и условия проката.',
+        message: 'Отметьте согласие на обработку персональных данных, ознакомление с политикой конфиденциальности и условия проката.',
         canChangeDates: false,
       }
     case 'ITEM_QUANTITY_INVALID':

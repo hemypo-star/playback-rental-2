@@ -48,11 +48,13 @@ export interface CheckoutInput {
   // discountType/discountValue never reaches the server at all, only the
   // code string itself.
   promoCode?: string
-  // Both checkboxes on the checkout form (personal-data consent + privacy
-  // policy; rental terms + user agreement). Checked here as well as in the
+  // The checkout form's checkboxes: personal-data consent, privacy policy
+  // and rental terms + user agreement. Consent and policy are separate
+  // checkboxes (Roskomnadzor: consent must not be bundled with other
+  // documents). Checked here as well as in the
   // browser — the action is POST-able directly — and recorded on the order
   // with the document revisions (152-FZ art. 9).
-  consent?: { personalData?: boolean; terms?: boolean }
+  consent?: { personalData?: boolean; privacyPolicy?: boolean; terms?: boolean }
 }
 
 export interface CheckoutResult {
@@ -99,7 +101,7 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
   if (items.some((item) => !Number.isInteger(item?.quantity) || item.quantity < 1 || item.quantity > MAX_ITEM_QUANTITY)) {
     return { success: false, errorCode: 'ITEM_QUANTITY_INVALID' }
   }
-  if (input?.consent?.personalData !== true || input?.consent?.terms !== true) {
+  if (input?.consent?.personalData !== true || input?.consent?.privacyPolicy !== true || input?.consent?.terms !== true) {
     return { success: false, errorCode: 'CONSENT_REQUIRED' }
   }
   // Bounds on what a direct POST can send: every cart line takes a lock and

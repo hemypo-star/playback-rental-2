@@ -95,7 +95,7 @@ export default async function PromotionPage({ params }: Props) {
 
       {linkedProducts.length > 0 && (
         <div className="mt-16">
-          <h2 className="text-[clamp(22px,2.6vw,32px)] font-medium tracking-[-0.03em]">Товары по акции</h2>
+          <h2 className="text-[clamp(22px,2.6vw,32px)] font-medium tracking-[-0.03em]">Товары по&nbsp;акции</h2>
           <div className="mt-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4">
             {linkedProducts.map((p, i) => (
               <ProductCard key={p.id} product={p} delay={i * 60} />
@@ -106,7 +106,7 @@ export default async function PromotionPage({ params }: Props) {
 
       {linkedCategories.length > 0 && (
         <div className="mt-16">
-          <h2 className="text-[clamp(22px,2.6vw,32px)] font-medium tracking-[-0.03em]">Категории по акции</h2>
+          <h2 className="text-[clamp(22px,2.6vw,32px)] font-medium tracking-[-0.03em]">Категории по&nbsp;акции</h2>
           <div className="mt-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3">
             {linkedCategories.map((c) => {
               const catImageUrl = mediaUrl(c.image)

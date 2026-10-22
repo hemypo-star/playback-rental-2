@@ -8,6 +8,7 @@ import { foldQuery, expandStems, MIN_QUERY_LENGTH } from '../searchMorphology'
 import { filterNonEmptyCategories } from '../categoryTree'
 import { getCategories } from './categories'
 import { getCategoryProductCounts } from './products'
+import { typo } from '../text/typography'
 
 // Server-only global search for the storefront (header dropdown + /search
 // page). Deliberately independent of any category context: every query runs
@@ -116,13 +117,13 @@ export async function searchCatalog(options: { raw: string; productLimit?: numbe
   )
 
   return {
-    categories: suggestedCategories.map((c: Category) => ({ id: c.id, name: c.name, slug: c.slug })),
+    categories: suggestedCategories.map((c: Category) => ({ id: c.id, name: typo(c.name), slug: c.slug })),
     products: productsResult.docs.map((p: Product) => ({
       id: p.id,
-      title: p.title,
+      title: typo(p.title),
       price: p.price,
       listingType: p.listingType,
-      categoryName: categoryNameOf(p),
+      categoryName: typo(categoryNameOf(p)),
       imageUrl: mediaUrl(p.images?.[0], 'card'),
     })),
     totalProducts: productsResult.totalDocs,

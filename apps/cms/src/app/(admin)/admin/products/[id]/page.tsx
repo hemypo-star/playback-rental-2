@@ -5,7 +5,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import AdminPageHeader from '../../../../../components/admin/AdminPageHeader'
 import ProductForm from '../../../../../components/admin/ProductForm'
-import { getProductById } from '../../../../../lib/data/products'
+import { getProductByIdRaw } from '../../../../../lib/data/products'
 import { getProductOrderStats } from '../../../../../lib/data/popularity'
 import { rub } from '../../../../../lib/admin/format'
 
@@ -24,7 +24,7 @@ interface Props {
 async function loadProduct(idParam: string) {
   const id = Number(idParam)
   if (!Number.isFinite(id)) redirect('/admin/stock')
-  const product = await getProductById(id)
+  const product = await getProductByIdRaw(id)
   if (!product) redirect('/admin/stock')
   return product
 }

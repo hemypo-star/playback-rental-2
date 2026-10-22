@@ -46,7 +46,7 @@ export default async function AdminLoginPage({ searchParams }: Props) {
   return (
     <div className="flex min-h-[70vh] items-center justify-center py-16">
       <div className="card-surface w-full max-w-[380px] p-8">
-        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Вход в админку</h1>
+        <h1 className="text-[22px] font-bold tracking-[-0.03em]">Вход в&nbsp;админку</h1>
         <p className="mt-1.5 text-[13px] text-subtle">Playback Rental</p>
         <AdminLoginForm nextPath={nextPath} />
       </div>

@@ -18,5 +18,8 @@ export async function getAdminPromotions(): Promise<Promotion[]> {
 export async function getAdminPromotionById(id: number): Promise<Promotion | null> {
   await requireAdminSession()
   const payload = await getPayload({ config })
-  return payload.findByID({ collection: 'promotions', id, depth: 0, disableErrors: true })
+  // depth 1: the edit form previews the saved image from the populated media
+  // doc's url. At depth 0 `image` was a bare id, so an existing promotion
+  // opened with an empty photo slot (the image itself was still saved).
+  return payload.findByID({ collection: 'promotions', id, depth: 1, disableErrors: true })
 }

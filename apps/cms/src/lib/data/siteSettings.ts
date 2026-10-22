@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import type { SiteSetting } from '../../payload-types'
 import { STOREFRONT_CACHE_REVALIDATE_SECONDS, STOREFRONT_CACHE_TAGS } from './cacheTags'
+import { typoFields } from '../text/typography'
 
 // Server-only data layer (docs/PLAN-next-migration.md Stage 2 "Данные") —
 // Local API instead of apps/web/src/lib/payload.ts's REST client. No
@@ -24,4 +25,32 @@ const getSiteSettingsCached = unstable_cache(
 // React cache still dedupes concurrent reads inside one render tree; the
 // persistent Next data cache underneath removes the same global query from
 // subsequent requests as well.
-export const getSiteSettings = cache(getSiteSettingsCached)
+//
+// The admin edits the text as typed (getSiteSettingsRaw); the storefront gets
+// it with Russian typography applied (lib/text/typography.ts) to the text
+// fields only — phones, e-mails, URLs and hours numbers are left alone.
+export const getSiteSettingsRaw = cache(getSiteSettingsCached)
+
+const TEXT_FIELDS = [
+  'heroKicker',
+  'heroCity',
+  'heroHeadline',
+  'heroSubtext',
+  'depositLabel',
+  'depositCaption',
+  'pickupTimeLabel',
+  'pickupTimeCaption',
+  'ctaKicker',
+  'ctaHeadline',
+  'ctaSubtext',
+  'contactAddress',
+  'contactHours',
+] as const satisfies readonly (keyof SiteSetting)[]
+
+export const getSiteSettings = cache(async (): Promise<SiteSetting> => {
+  const settings = typoFields(await getSiteSettingsRaw(), TEXT_FIELDS)
+  return {
+    ...settings,
+    howItWorksSteps: settings.howItWorksSteps?.map((step) => typoFields(step, ['title', 'text'])),
+  }
+})

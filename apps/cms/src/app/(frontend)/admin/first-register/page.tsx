@@ -18,7 +18,7 @@ export default async function AdminFirstRegisterPage() {
     <div className="flex min-h-[70vh] items-center justify-center py-16">
       <div className="card-surface w-full max-w-[380px] p-8">
         <h1 className="text-[22px] font-bold tracking-[-0.03em]">Создать администратора</h1>
-        <p className="mt-1.5 text-[13px] text-subtle">Первый запуск — учётных записей ещё нет.</p>
+        <p className="mt-1.5 text-[13px] text-subtle">Первый запуск&nbsp;— учётных записей ещё&nbsp;нет.</p>
         <AdminRegisterForm />
       </div>
     </div>

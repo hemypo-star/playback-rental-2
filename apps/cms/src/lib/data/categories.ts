@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import type { Category } from '../../payload-types'
 import { STOREFRONT_CACHE_REVALIDATE_SECONDS, STOREFRONT_CACHE_TAGS } from './cacheTags'
+import { typoFields } from '../text/typography'
 
 // Server-only data layer (docs/PLAN-next-migration.md Stage 2 "Данные"),
 // same pattern as lib/data/siteSettings.ts — Local API instead of
@@ -44,8 +45,12 @@ const getCategoriesCached = unstable_cache(
   },
 )
 
+// Storefront copies with Russian typography (lib/text/typography.ts). Applied
+// outside the data cache so the cached rows stay as stored.
+const typoCategory = (c: Category): Category => typoFields(c, ['name', 'description', 'tag'])
+
 export async function getCategories(): Promise<Category[]> {
-  return getCategoriesCached()
+  return (await getCategoriesCached()).map(typoCategory)
 }
 
 const getCategoryBySlugCached = unstable_cache(
@@ -68,4 +73,7 @@ const getCategoryBySlugCached = unstable_cache(
 
 // React cache keeps the generateMetadata()/page pair deduped within one
 // render; unstable_cache underneath extends that reuse across requests.
-export const getCategoryBySlug = cache(getCategoryBySlugCached)
+export const getCategoryBySlug = cache(async (slug: string): Promise<Category | undefined> => {
+  const category = await getCategoryBySlugCached(slug)
+  return category ? typoCategory(category) : undefined
+})

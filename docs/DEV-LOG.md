@@ -2389,3 +2389,32 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   Skip link to `#main`; contact form status has role status/alert and fields
   point at their errors (`aria-invalid`/`aria-describedby`); /how-it-works
   step numbers reach 3:1; settings section titles are h2.
+
+- **2026-10-22** — **Consent and privacy policy are separate checkboxes**
+  (owner, Roskomnadzor: consent to personal-data processing must not be
+  bundled with other documents). Checkout now has three — consent, "Ознакомлен(а)
+  с политикой конфиденциальности", rental terms + user agreement — and the
+  contact form two; each is required by the server too (`consent.privacyPolicy`
+  in the checkout action, `agreePolicy` in the contact endpoint).
+
+- **2026-10-22** — **Editing a promotion showed no photo.** `getAdminPromotionById`
+  loaded at depth 0, so `image` was a bare id and `PromotionForm`'s preview
+  (`mediaUrl(promo.image)`) was empty — the image itself was saved and kept
+  on save. Loaded at depth 1 now, like the category, kit and product editors.
+  `smoke:admin-data` uploads an image, creates a promotion with it and checks
+  the edit page renders it.
+
+- **2026-10-22** — **Russian typography on the storefront** (owner). `typograf`
+  7.8.0 (MIT) behind `lib/text/typography.ts` (`typo`, `typoFields`, memoised;
+  HTML rules, phone reformatting, digit grouping and fractions off, so model
+  names, "10000 мАч" and "1/4" stay as typed). Dynamic text gets it in the
+  storefront data layer: site-settings text fields, product title/subtitle/
+  description/tag/kit labels, categories, promotions (and their linked
+  products), search results. The admin reads raw (`getSiteSettingsRaw`,
+  `getProductByIdRaw`), so no invisible characters reach its inputs or get
+  saved back. Static JSX text in storefront files was run through the same
+  rules once, by the TypeScript AST (JsxText nodes only — a regex pass
+  mangled code and was thrown away); non-breaking spaces are written as
+  `&nbsp;`. JS-string copy (/how-it-works steps, prices, FAQ) goes through
+  `typo()` at render. The owner's SBOLTypograph suggestion was not usable: no
+  licence, Sketch/Figma plugin code.

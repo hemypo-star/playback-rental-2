@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { CONTACT_LIMITS, parseContactInput } from './contactInput'
 
-const valid = { name: ' Иван ', email: 'ivan@example.ru', phone: '+7 900 000-00-00', message: 'Есть ли камера?', agreeData: true }
+const valid = { name: ' Иван ', email: 'ivan@example.ru', phone: '+7 900 000-00-00', message: 'Есть ли камера?', agreeData: true, agreePolicy: true }
 
 test('accepts a valid payload and trims fields', () => {
   const result = parseContactInput(valid)
@@ -23,6 +23,7 @@ test('keeps an optional subject when present', () => {
 test('requires the personal-data consent', () => {
   assert.equal(parseContactInput({ ...valid, agreeData: undefined }).ok, false)
   assert.equal(parseContactInput({ ...valid, agreeData: 'true' }).ok, false)
+  assert.equal(parseContactInput({ ...valid, agreePolicy: undefined }).ok, false)
 })
 
 test('rejects missing required fields', () => {

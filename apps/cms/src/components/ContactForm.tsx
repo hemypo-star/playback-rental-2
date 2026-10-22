@@ -27,6 +27,7 @@ export default function ContactForm() {
   // The form collects name, phone and email, so it needs the same separate
   // personal-data consent as checkout (152-FZ art. 9).
   const [agreeData, setAgreeData] = useState(false)
+  const [agreePolicy, setAgreePolicy] = useState(false)
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -40,6 +41,7 @@ export default function ContactForm() {
     if (!form.phone.trim()) errs.phone = 'Введите телефон'
     if (!form.message.trim()) errs.message = 'Введите сообщение'
     if (!agreeData) errs.agreeData = 'Подтвердите согласие на обработку персональных данных'
+    if (!agreePolicy) errs.agreePolicy = 'Подтвердите, что ознакомились с политикой конфиденциальности'
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -54,13 +56,14 @@ export default function ContactForm() {
       const res = await fetch('/api/contact-notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, agreeData }),
+        body: JSON.stringify({ ...form, agreeData, agreePolicy }),
       })
       const result = (await res.json()) as { success: boolean; code?: string }
       if (result.success) {
         setStatus('sent')
         setForm({ name: '', email: '', phone: '', subject: '', message: '' })
         setAgreeData(false)
+        setAgreePolicy(false)
       } else {
         setRateLimited(result.code === 'RATE_LIMITED')
         setStatus('failed')
@@ -78,7 +81,7 @@ export default function ContactForm() {
       <h2 className="pb-h2" style={{ fontSize: 'clamp(24px,2.4vw,32px)' }}>Напишите нам</h2>
 
       {status === 'sent' && (
-        <div className="pb-form-status" data-tone="ok" role="status">Сообщение отправлено — мы свяжемся с вами в ближайшее время.</div>
+        <div className="pb-form-status" data-tone="ok" role="status">Сообщение отправлено&nbsp;— мы&nbsp;свяжемся с&nbsp;вами в&nbsp;ближайшее время.</div>
       )}
       {status === 'failed' && (
         <div className="pb-form-status" data-tone="error" role="alert">
@@ -104,7 +107,7 @@ export default function ContactForm() {
             {errors.email && <em id="cf-email-error" className="pb-field-error">{errors.email}</em>}
           </label>
           <label className="pb-field">
-            <span>Тема — необязательно</span>
+            <span>Тема&nbsp;— необязательно</span>
             <input value={form.subject} onChange={set('subject')} />
           </label>
         </div>
@@ -119,15 +122,22 @@ export default function ContactForm() {
           <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'var(--pb-copy)' }}>
             Даю{' '}
             <Link href="/personal-data-consent" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>
-              согласие на обработку персональных данных
-            </Link>{' '}
-            и принимаю{' '}
-            <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>
-              политику конфиденциальности
+              согласие на&nbsp;обработку персональных данных
             </Link>
           </span>
         </label>
         {errors.agreeData && <em id="cf-consent-error" className="pb-field-error">{errors.agreeData}</em>}
+
+        <label className="pb-consent" style={{ marginTop: 4 }}>
+          <input type="checkbox" checked={agreePolicy} onChange={(e) => setAgreePolicy(e.target.checked)} aria-invalid={!!errors.agreePolicy} aria-describedby={errors.agreePolicy ? 'cf-policy-error' : undefined} />
+          <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'var(--pb-copy)' }}>
+            Ознакомлен (а) с{' '}
+            <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>
+              политикой конфиденциальности
+            </Link>
+          </span>
+        </label>
+        {errors.agreePolicy && <em id="cf-policy-error" className="pb-field-error">{errors.agreePolicy}</em>}
 
         <button type="submit" disabled={status === 'sending'} className="pb-submit">
           {status === 'sending' ? 'Отправляем…' : 'Отправить'}

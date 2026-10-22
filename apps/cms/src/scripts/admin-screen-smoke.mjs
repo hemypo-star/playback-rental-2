@@ -217,7 +217,7 @@ async function main() {
         `({
           pathname: location.pathname,
           search: location.search,
-          body: document.body?.innerText || '',
+          body: (document.body?.innerText || '').replace(/\u00a0/g, ' '),
           scrollWidth: Math.max(document.documentElement.scrollWidth, document.body?.scrollWidth || 0),
           clientWidth: document.documentElement.clientWidth
         })`,

@@ -27,6 +27,7 @@ async function main() {
       subject: 'Notification boundary smoke',
       message: 'This must stay in the local queue until a worker claims it.',
       agreeData: true,
+      agreePolicy: true,
     }),
   })
   const contactBody = await contactResponse.json().catch(() => null)

@@ -4,6 +4,16 @@ import type { Where } from 'payload'
 import config from '@payload-config'
 import type { Product } from '../../payload-types'
 import { STOREFRONT_CACHE_REVALIDATE_SECONDS, STOREFRONT_CACHE_TAGS } from './cacheTags'
+import { typo, typoFields } from '../text/typography'
+
+// Storefront copy of a product with Russian typography on its text (names and
+// descriptions come from МойСклад as typed). The admin reads products raw.
+export function typoProduct(product: Product): Product {
+  const out = typoFields(product, ['title', 'subtitle', 'description', 'tag'])
+  if (out.category && typeof out.category === 'object') out.category = typoFields(out.category, ['name', 'description'])
+  if (out.kitItems) out.kitItems = out.kitItems.map((item) => ({ ...item, label: typo(item.label) }))
+  return out
+}
 
 // Server-only data layer (docs/PLAN-next-migration.md Stage 2 "Данные"),
 // same pattern as lib/data/siteSettings.ts. Local API `where` takes a
@@ -64,7 +74,7 @@ export async function getProducts(params: GetProductsParams = {}) {
   if (params.inStockOnly) extra.push({ quantity: { greater_than: 0 } })
   if (params.excludeIds?.length) extra.push({ id: { not_in: params.excludeIds } })
 
-  return payload.find({
+  const result = await payload.find({
     collection: 'products',
     where: buildProductWhere(extra),
     limit: params.limit ?? 100,
@@ -72,6 +82,7 @@ export async function getProducts(params: GetProductsParams = {}) {
     sort: params.sort ?? '-lastSyncedAt',
     depth: params.depth ?? 1,
   })
+  return { ...result, docs: result.docs.map(typoProduct) }
 }
 
 // C5 (design_handoff_swiss_bento/08-instruction.md, N9): the catalog sidebar
@@ -273,7 +284,7 @@ export async function getCompatibleAccessories(product: Product): Promise<Produc
   // guarantee it across Payload versions, and the block's whole point is
   // owner-controlled ordering.
   const byId = new Map(docs.map((d) => [d.id, d]))
-  return ids.map((id) => byId.get(id)).filter((d): d is Product => Boolean(d))
+  return ids.map((id) => byId.get(id)).filter((d): d is Product => Boolean(d)).map(typoProduct)
 }
 
 export async function getAccessoryProducts({ excludeId, maxPrice, limit = 3 }: GetAccessoryProductsParams): Promise<Product[]> {
@@ -292,7 +303,7 @@ export async function getAccessoryProducts({ excludeId, maxPrice, limit = 3 }: G
     depth: 1,
     pagination: false,
   })
-  return docs
+  return docs.map(typoProduct)
 }
 
 // disableErrors: true returns null for a missing/invalid id instead of
@@ -300,7 +311,13 @@ export async function getAccessoryProducts({ excludeId, maxPrice, limit = 3 }: G
 // missing-product logic than importing and instanceof-checking that error
 // class, which the old REST client's PayloadApiError-based equivalent had
 // to do (a REST 404 has no other way to signal "not found" to the caller).
-export async function getProductById(id: number): Promise<Product | null> {
+export async function getProductByIdRaw(id: number): Promise<Product | null> {
   const payload = await getPayload({ config })
   return payload.findByID({ collection: 'products', id, depth: 1, disableErrors: true })
+}
+
+/** Storefront: with typography. The admin editor uses getProductByIdRaw. */
+export async function getProductById(id: number): Promise<Product | null> {
+  const product = await getProductByIdRaw(id)
+  return product ? typoProduct(product) : null
 }

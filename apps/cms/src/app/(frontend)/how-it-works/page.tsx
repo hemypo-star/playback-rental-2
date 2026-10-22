@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { buildMetadata } from '../../../lib/seo'
 import { MAX_RENTAL_DAYS } from '../../../lib/rental/limits'
+import { typo } from '../../../lib/text/typography'
 
 // S5 "Как это работает" (design_handoff_swiss_bento/04-screens.md): head card →
 // four steps 3+3+3+3 (big muted number, 18px title, 14px text) → pricing →
@@ -70,10 +71,10 @@ export default function HowItWorksPage() {
         <div className="pb-card pb-page-head">
           <div>
             <div className="pb-kicker">
-              <Link href="/" className="pb-link-hover">Главная</Link> / Как мы работаем
+              <Link href="/" className="pb-link-hover">Главная</Link> / Как&nbsp;мы&nbsp;работаем
             </div>
-            <h1 className="pb-h1" style={{ marginTop: 12 }}>Как мы работаем</h1>
-            <p className="pb-lead">Аренда профессиональной техники в четыре шага — от каталога до возврата.</p>
+            <h1 className="pb-h1" style={{ marginTop: 12 }}>Как&nbsp;мы&nbsp;работаем</h1>
+            <p className="pb-lead">Аренда профессиональной техники в&nbsp;четыре шага&nbsp;— от&nbsp;каталога до&nbsp;возврата.</p>
           </div>
           <Link href="/catalog" className="pb-pill pb-btn pb-hero-cta">
             <span>Смотреть каталог</span>
@@ -84,25 +85,25 @@ export default function HowItWorksPage() {
         {steps.map((step, i) => (
           <div key={step.title} className="pb-card pb-info-step" style={{ animationDelay: `${0.06 * (i + 1)}s` }}>
             <span className="pb-info-step-n">{String(i + 1).padStart(2, '0')}</span>
-            <div className="pb-info-step-title">{step.title}</div>
-            <p className="pb-info-step-text">{step.text}</p>
+            <div className="pb-info-step-title">{typo(step.title)}</div>
+            <p className="pb-info-step-text">{typo(step.text)}</p>
           </div>
         ))}
 
         <div className="pb-section-head">
           <div>
             <div className="pb-kicker">Цена</div>
-            <h2 className="pb-h2">Как считается стоимость</h2>
+            <h2 className="pb-h2">Как&nbsp;считается стоимость</h2>
           </div>
           <p className="pb-lead" style={{ maxWidth: 420, margin: 0 }}>
-            Точную сумму на ваши даты корзина показывает до отправки заявки.
+            Точную сумму на&nbsp;ваши даты корзина показывает до&nbsp;отправки заявки.
           </p>
         </div>
         {pricing.map((p) => (
           <div key={p.title} className="pb-price-card">
-            <div className="pb-kicker">{p.kicker}</div>
-            <div className="pb-price-card-title">{p.title}</div>
-            <p className="pb-price-card-text">{p.text}</p>
+            <div className="pb-kicker">{typo(p.kicker)}</div>
+            <div className="pb-price-card-title">{typo(p.title)}</div>
+            <p className="pb-price-card-text">{typo(p.text)}</p>
           </div>
         ))}
 
@@ -115,8 +116,8 @@ export default function HowItWorksPage() {
         <div className="pb-card pb-faq">
           {faq.map((item) => (
             <details key={item.q}>
-              <summary>{item.q}</summary>
-              <p>{item.a}</p>
+              <summary>{typo(item.q)}</summary>
+              <p>{typo(item.a)}</p>
             </details>
           ))}
         </div>
@@ -125,7 +126,7 @@ export default function HowItWorksPage() {
           <div>
             <div className="pb-kicker" style={{ color: 'rgba(255,255,255,.5)' }}>Готовы?</div>
             <div style={{ marginTop: 16, fontSize: 'clamp(26px,3.2vw,44px)', fontWeight: 500, letterSpacing: '-.04em', lineHeight: 1.02 }}>
-              Выберите технику на свои даты
+              Выберите технику на&nbsp;свои даты
             </div>
             <p style={{ marginTop: 16, fontSize: 14.5, lineHeight: 1.55, color: 'rgba(255,255,255,.62)', maxWidth: 420 }}>
               Наличие видно сразу, бронь подтверждает менеджер.

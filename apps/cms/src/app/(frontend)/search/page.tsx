@@ -67,8 +67,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         <div className="pb-catalog-main" style={{ gridColumn: '1 / -1' }}>
           {where && productsResult && productsResult.docs.length === 0 ? (
             <div className="pb-card" style={{ padding: '70px 24px', textAlign: 'center' }}>
-              <strong style={{ fontSize: 17 }}>Ничего не найдено</strong>
-              <p style={{ color: 'var(--pb-sub)' }}>Измените запрос — поиск идёт по всему каталогу: названиям, подзаголовкам и описаниям.</p>
+              <strong style={{ fontSize: 17 }}>Ничего не&nbsp;найдено</strong>
+              <p style={{ color: 'var(--pb-sub)' }}>Измените запрос&nbsp;— поиск идёт по&nbsp;всему каталогу: названиям, подзаголовкам и&nbsp;описаниям.</p>
               <Link href="/catalog" className="pb-pill pb-btn pb-btn-light" style={{ height: 42 }}>Открыть каталог</Link>
             </div>
           ) : productsResult && productsResult.docs.length > 0 ? (

@@ -107,7 +107,7 @@ export default function PrototypeSearch() {
           {loading && result === EMPTY ? (
             <div className="pb-search-note">Ищем…</div>
           ) : !hasResults ? (
-            <div className="pb-search-note">Ничего не найдено. Попробуйте другой запрос.</div>
+            <div className="pb-search-note">Ничего не&nbsp;найдено. Попробуйте другой запрос.</div>
           ) : (
             <>
               {result.categories.length > 0 && (

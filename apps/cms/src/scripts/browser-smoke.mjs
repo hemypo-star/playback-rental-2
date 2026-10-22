@@ -212,7 +212,7 @@ async function main() {
         }
         await sleep(250)
       }
-      const body = await evaluate(session, 'document.body?.innerText || ""').catch(() => '')
+      const body = await evaluate(session, '(document.body?.innerText || "").replace(/\u00a0/g, " ")').catch(() => '')
       throw new Error(`${description}: timed out${lastError ? `; ${lastError.message}` : ''}\n${body.slice(0, 2000)}`)
     }
 
@@ -233,7 +233,7 @@ async function main() {
       await sleep(650)
 
       await assertNoRuntimeErrors(pathname)
-      const bodyText = await evaluate(session, 'document.body?.innerText || ""')
+      const bodyText = await evaluate(session, '(document.body?.innerText || "").replace(/\u00a0/g, " ")')
       if (!bodyText || bodyText.trim().length < 20) throw new Error(`${pathname}: page body is unexpectedly empty`)
       return bodyText
     }
@@ -338,7 +338,7 @@ async function main() {
       throw new Error('/checkout did not hydrate the seeded cart')
     }
     await waitForExpression(
-      `document.body.innerText.includes('свободно на ваши даты')`,
+      `document.body.innerText.replace(/\u00a0/g, ' ').includes('свободно на ваши даты')`,
       'checkout availability check',
     )
     console.log(`PASS checkout cart/date hydration and availability (${checkoutDate})`)
@@ -358,6 +358,7 @@ async function main() {
         setValue('input[placeholder="email@example.com"]', 'smoke-customer@example.invalid')
         setValue('input[placeholder="Промокод"]', 'SMOKE10')
         document.querySelector('#agree-data')?.click()
+        document.querySelector('#agree-policy')?.click()
         document.querySelector('#agree-terms')?.click()
         const promoInput = document.querySelector('input[placeholder="Промокод"]')
         const applyButton = promoInput?.parentElement?.querySelector('button')
@@ -369,7 +370,7 @@ async function main() {
     if (!filled) throw new Error('Checkout form setup failed')
 
     await waitForExpression(
-      `Boolean(document.querySelector('input[placeholder="Промокод"]')?.disabled) && document.body.innerText.includes('Скидка')`,
+      `Boolean(document.querySelector('input[placeholder="Промокод"]')?.disabled) && document.body.innerText.replace(/\u00a0/g, ' ').includes('Скидка')`,
       'checkout promo application',
     )
     console.log('PASS checkout promo UI applied SMOKE10')
@@ -384,11 +385,11 @@ async function main() {
       })()`,
     )
     await waitForExpression(
-      `document.body.innerText.includes('Заявка отправлена!')`,
+      `document.body.innerText.replace(/\u00a0/g, ' ').includes('Заявка отправлена!')`,
       'checkout submit success',
       30_000,
     )
-    body = await evaluate(session, 'document.body.innerText')
+    body = await evaluate(session, 'document.body.innerText.replace(/\u00a0/g, " ")')
     const orderMatch = body.match(/Заявка №(\d+)/)
     if (!orderMatch) throw new Error('Checkout success card has no order number')
     const orderId = Number(orderMatch[1])

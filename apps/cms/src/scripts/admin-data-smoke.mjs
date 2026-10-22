@@ -192,6 +192,35 @@ async function main() {
   if (usersAfterDelete.includes(secondEmail)) throw new Error('deleted second admin is still rendered in /admin/users')
   console.log('PASS second admin delete; own account remains')
 
+  // Editing an existing promotion must show its saved photo. The loader used
+  // depth 0, so `image` was a bare id and the form's preview stayed empty.
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  )
+  const upload = new FormData()
+  upload.append('file', new Blob([png], { type: 'image/png' }), 'smoke-promo.png')
+  upload.append('_payload', JSON.stringify({ alt: 'smoke promo image' }))
+  const mediaResponse = await fetch(url('/api/media'), { method: 'POST', headers: authHeaders, body: upload })
+  const media = (await body(mediaResponse)).json?.doc
+  if (!mediaResponse.ok || !media?.id || !media?.url) {
+    throw new Error(`promo image upload failed: HTTP ${mediaResponse.status}`)
+  }
+  const promoResponse = await fetch(url('/api/promotions'), {
+    method: 'POST',
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'Smoke Promo With Photo', slug: `smoke-promo-${Date.now()}`, image: media.id, active: false }),
+  })
+  const promo = (await body(promoResponse)).json?.doc
+  if (!promoResponse.ok || !promo?.id) throw new Error(`promotion create failed: HTTP ${promoResponse.status}`)
+  try {
+    await fetchAdminPage(`/admin/promotions/${promo.id}`, ['Smoke Promo With Photo', media.filename])
+    console.log('PASS promotion edit page shows the saved photo')
+  } finally {
+    await fetch(url(`/api/promotions/${promo.id}`), { method: 'DELETE', headers: authHeaders })
+    await fetch(url(`/api/media/${media.id}`), { method: 'DELETE', headers: authHeaders })
+  }
+
   console.log('Admin data/UI smoke passed')
 }
 

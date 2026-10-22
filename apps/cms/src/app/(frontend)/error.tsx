@@ -17,13 +17,13 @@ export default function StorefrontError({ error, reset }: { error: Error & { dig
         <div className="pb-card pb-page-head">
           <div>
             <div className="pb-kicker">Ошибка</div>
-            <h1 className="pb-h1" style={{ marginTop: 12 }}>Что-то пошло не так</h1>
+            <h1 className="pb-h1" style={{ marginTop: 12 }}>Что-то пошло не&nbsp;так</h1>
             <p className="pb-lead">
-              Страница не загрузилась. Попробуйте ещё раз — если не выйдет, позвоните нам, и мы оформим заявку по телефону.
+              Страница не&nbsp;загрузилась. Попробуйте ещё раз&nbsp;— если&nbsp;не&nbsp;выйдет, позвоните нам, и&nbsp;мы&nbsp;оформим заявку по&nbsp;телефону.
             </p>
           </div>
           <div className="pb-actions">
-            <Link href="/" className="pb-pill pb-btn pb-btn-light">На главную</Link>
+            <Link href="/" className="pb-pill pb-btn pb-btn-light">На&nbsp;главную</Link>
             <button type="button" onClick={reset} className="pb-pill pb-btn pb-hero-cta">
               <span>Попробовать снова</span>
               <span aria-hidden>↻</span>

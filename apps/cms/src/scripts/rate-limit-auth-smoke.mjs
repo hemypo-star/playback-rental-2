@@ -85,6 +85,7 @@ async function contactAttempt(email) {
       subject: 'CI rate-limit smoke',
       message: 'Disposable CI contact notification',
       agreeData: true,
+      agreePolicy: true,
     }),
     redirect: 'manual',
   })

@@ -65,6 +65,9 @@ importers:
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
+      typograf:
+        specifier: 7.8.0
+        version: 7.8.0
     devDependencies:
       '@types/node':
         specifier: ^22
@@ -4501,6 +4504,10 @@ packages:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  typograf@7.8.0:
+    resolution: {integrity: sha512-Eo+Fu7iM0ASkYOgsI3veGtdkxI+QhMgJBmyftB16Or+g6B2pC4NgsAPT7nP36BzVx7720IMmvkWf7N9O33HNHg==}
+    engines: {node: '>= 4'}
 
   uint8array-extras@1.5.0:
     resolution: {integrity: sha512-rvKSBiC5zqCCiDZ9kAOszZcDvdAHwwIKJG33Ykj43OKcWsnmcBRL09YTU4nOeHZ8Y2a7l1MgTd08SBe9A8Qj6A==}
@@ -9346,6 +9353,8 @@ snapshots:
       - supports-color
 
   typescript@5.9.3: {}
+
+  typograf@7.8.0: {}
 
   uint8array-extras@1.5.0: {}
 

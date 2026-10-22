@@ -81,7 +81,7 @@ export default function PrototypeFreeToggle({ href, active, from, to }: { href: 
         </span>
       </Link>
       {filteredWithoutDates && (
-        <p className="pb-free-hint">Даты не выбраны — показываем всё, что есть в наличии.</p>
+        <p className="pb-free-hint">Даты не&nbsp;выбраны&nbsp;— показываем всё, что есть в&nbsp;наличии.</p>
       )}
     </>
   )

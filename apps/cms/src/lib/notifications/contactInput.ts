@@ -52,9 +52,11 @@ export function parseContactInput(body: unknown): ContactInputResult {
     if (value instanceof Error) return { ok: false, error: value.message }
   }
   if (!EMAIL_PATTERN.test(email as string)) return { ok: false, error: 'email is not a valid address' }
-  // 152-FZ art. 9: the form collects name, phone and email, so the consent
-  // checkbox is required server-side too, not only in the browser.
+  // 152-FZ art. 9: the form collects name, phone and email, so both
+  // checkboxes — consent and the privacy policy, kept separate as
+  // Roskomnadzor requires — are required server-side too.
   if (raw.agreeData !== true) return { ok: false, error: 'personal-data consent is required' }
+  if (raw.agreePolicy !== true) return { ok: false, error: 'privacy policy acknowledgement is required' }
 
   return {
     ok: true,
