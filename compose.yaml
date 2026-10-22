@@ -3,6 +3,15 @@
 #   docker compose up --build
 # Dev mode overlays compose.dev.yaml and disables external side-effect workers.
 
+# Shared by every service: bounded json-file logs (the default grows without
+# limit and can fill the disk), and an init process so SIGTERM from
+# `docker compose stop/up` reaches node instead of dying at `sh`/`pnpm`.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
 services:
   db:
     image: postgres:17-alpine
@@ -11,6 +20,7 @@ services:
       POSTGRES_USER: playback
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: playback_cms
+    logging: *logging
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -45,8 +55,16 @@ services:
       # only append durable jobs to the shared queue volume.
       NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-false}
       NOTIFICATION_QUEUE_DIR: /data/notifications
+    init: true
+    stop_grace_period: 30s
+    mem_limit: ${CMS_MEM_LIMIT:-2g}
+    logging: *logging
+    # Published on loopback only: the reverse proxy on this host is the one
+    # public entry point. On 0.0.0.0 the app was reachable around it, past TLS
+    # and with a forgeable X-Real-IP. Set WEB_BIND=0.0.0.0 only if the proxy
+    # runs on another machine.
     ports:
-      - '${WEB_PORT:-8080}:3000'
+      - '${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:3000'
     volumes:
       - cms_media:/data/media
       - notification_queue:/data/notifications
@@ -56,7 +74,7 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://localhost:3000/api/access').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
@@ -105,12 +123,27 @@ services:
     volumes:
       - notification_queue:/data/notifications
       - ./certs/russian_trusted_root_ca.crt:/certs/russian_trusted_root_ca.crt:ro
+    init: true
+    stop_grace_period: 30s
+    mem_limit: ${NOTIFICATIONS_MEM_LIMIT:-512m}
+    logging: *logging
+    # The worker touches /tmp/heartbeat on every poll; stale = stuck.
+    healthcheck:
+      test: ['CMD-SHELL', 'test -n "$$(find /tmp/heartbeat -mmin -2 2>/dev/null)"']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     command: ['pnpm', 'notifications:daemon']
 
   # Periodic safety-net sync. Disabled in dev by compose.dev.yaml.
   reconcile:
+    # cms applies migrations on start; syncing before that would write to an
+    # old schema.
     depends_on:
       db:
+        condition: service_healthy
+      cms:
         condition: service_healthy
     build:
       context: .
@@ -132,7 +165,53 @@ services:
       MOYSKLAD_PUSH_RETRY_INTERVAL_MIN: ${MOYSKLAD_PUSH_RETRY_INTERVAL_MIN:-10}
     volumes:
       - cms_media:/data/media
+    init: true
+    stop_grace_period: 30s
+    mem_limit: ${RECONCILE_MEM_LIMIT:-1g}
+    logging: *logging
+    healthcheck:
+      test: ['CMD-SHELL', 'test -n "$$(find /tmp/heartbeat -mmin -3 2>/dev/null)"']
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
     command: ['pnpm', 'reconcile:moysklad:daemon']
+
+  # Nightly pg_dump + media/queue archives into BACKUP_DIR on the host,
+  # kept BACKUP_RETENTION_DAYS. Restore and checks: ops/README.md.
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    # cms applies migrations on start; the first set must not be a dump of a
+    # half-migrated (or, on a fresh install, empty) database.
+    depends_on:
+      db:
+        condition: service_healthy
+      cms:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: playback
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PGDATABASE: playback_cms
+      TZ: ${BACKUP_TZ:-Asia/Novokuznetsk}
+      BACKUP_TIME: ${BACKUP_TIME:-03:30}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ${BACKUP_DIR:-/var/backups/playback}:/backups
+      - cms_media:/data/media:ro
+      - notification_queue:/data/notifications:ro
+      - ./ops/backup/backup.sh:/backup.sh:ro
+    init: true
+    logging: *logging
+    healthcheck:
+      # Last good set younger than 26 h.
+      test: ['CMD-SHELL', 'test $$(( $$(date +%s) - $$(cat /backups/.last-success 2>/dev/null || echo 0) )) -lt 93600']
+      interval: 10m
+      timeout: 5s
+      retries: 1
+      start_period: 30m
+    entrypoint: ['sh', '/backup.sh']
 
   # One-off МойСклад jobs. `profiles: [jobs]` keeps them out of normal `up`.
   sync-moysklad:

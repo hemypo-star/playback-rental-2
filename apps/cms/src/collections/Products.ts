@@ -1,4 +1,5 @@
 import type { CollectionConfig, Where } from 'payload'
+import { APIError } from 'payload'
 
 export const Products: CollectionConfig = {
   slug: 'products',
@@ -11,6 +12,24 @@ export const Products: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'category', 'quantity', 'price', 'stockStatus'],
+  },
+  hooks: {
+    // Order lines reference their product (NOT NULL), so the database refuses
+    // the delete anyway — with an English constraint error. Say why, and what
+    // to do instead, before trying.
+    beforeDelete: [
+      async ({ id, req }) => {
+        const { totalDocs } = await req.payload.count({ collection: 'orderItems', where: { product: { equals: id } }, overrideAccess: true, req })
+        if (totalDocs > 0) {
+          throw new APIError(
+            `Нельзя удалить: позиция есть в заказах (${totalDocs}). Чтобы убрать её с сайта, снимите отметку «Доступен».`,
+            400,
+            undefined,
+            true,
+          )
+        }
+      },
+    ],
   },
   fields: [
     {

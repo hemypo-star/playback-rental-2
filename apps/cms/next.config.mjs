@@ -22,7 +22,22 @@ const webUrl = process.env.WEB_URL || 'http://localhost:3000'
 const allowedOrigin = new URL(webUrl).host
 
 /** @type {import('next').NextConfig} */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https:",
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+].join('; ')
+
 const nextConfig = {
+  // No `X-Powered-By: Next.js` advertising the stack.
+  poweredByHeader: false,
   // C4 (design_handoff_swiss_bento/08-instruction.md, G3): no `images.
   // remotePatterns` here, deliberately — checked, not assumed. mediaUrl()
   // (lib/mediaUrl.ts) only ever returns a Media doc's own `url`, and
@@ -78,10 +93,40 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // The site uses none of these browser features.
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()' },
+          // Report-only first: it logs violations in the browser console
+          // without blocking anything, so the policy can be checked against
+          // real pages before it is enforced.
+          { key: 'Content-Security-Policy-Report-Only', value: CSP },
         ],
+      },
+      {
+        // Self-hosted fonts under public/ were served with max-age=0 and
+        // revalidated on every page. Rename the file if a font ever changes.
+        source: '/fonts/:file*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
     ]
   },
 }
 
-export default withPayload(nextConfig, { devBundleServerPackages: false })
+const config = withPayload(nextConfig, { devBundleServerPackages: false })
+
+// withPayload adds Accept-CH / Critical-CH / Vary: Sec-CH-Prefers-Color-Scheme
+// to every response, for its own admin panel's theme — retired here. Critical-CH
+// makes Chrome repeat the first request of every visit, and the Vary splits
+// CDN caches, including for static fonts. Drop exactly those entries.
+const PAYLOAD_THEME_HINTS = new Set(['Accept-CH', 'Critical-CH'])
+const payloadHeaders = config.headers
+config.headers = async () =>
+  (await payloadHeaders())
+    .map((rule) => ({
+      ...rule,
+      headers: rule.headers.filter(
+        (h) => !PAYLOAD_THEME_HINTS.has(h.key) && !(h.key === 'Vary' && h.value === 'Sec-CH-Prefers-Color-Scheme'),
+      ),
+    }))
+    .filter((rule) => rule.headers.length > 0)
+
+export default config

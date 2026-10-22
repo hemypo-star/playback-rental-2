@@ -26,6 +26,7 @@ async function main() {
       phone: '+7 (900) 222-33-44',
       subject: 'Notification boundary smoke',
       message: 'This must stay in the local queue until a worker claims it.',
+      agreeData: true,
     }),
   })
   const contactBody = await contactResponse.json().catch(() => null)

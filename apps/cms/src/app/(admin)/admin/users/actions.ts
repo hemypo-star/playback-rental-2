@@ -61,10 +61,18 @@ export async function deleteUser(id: number): Promise<ActionResult> {
   }
 }
 
-export async function changeOwnPassword(password: string): Promise<ActionResult> {
+export async function changeOwnPassword(currentPassword: string, password: string): Promise<ActionResult> {
   try {
     const user = await requireAdmin()
     const payload = await getPayload({ config })
+    // A session left open on someone else's screen must not be enough to take
+    // the account over: confirm the current password first (a real login,
+    // so it is rate-limited like any other attempt).
+    try {
+      await payload.login({ collection: 'users', data: { email: user.email, password: currentPassword } })
+    } catch {
+      return { success: false, error: 'Текущий пароль указан неверно' }
+    }
     await payload.update({ collection: 'users', id: user.id, data: { password }, overrideAccess: true })
     return { success: true }
   } catch (error) {

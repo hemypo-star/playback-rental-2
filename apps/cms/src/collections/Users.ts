@@ -22,6 +22,8 @@ function accountRateLimitKey(data: unknown): string {
   return raw.toLowerCase().trim() || 'unknown'
 }
 
+export const MIN_PASSWORD_LENGTH = 8
+
 export const Users: CollectionConfig = {
   slug: 'users',
   auth: {
@@ -79,6 +81,18 @@ export const Users: CollectionConfig = {
     // (lib/admin/auth.ts isAdminInitialized), and deleting yourself is never
     // what an operator means. Enforced here so REST, GraphQL and the /admin
     // Server Action (Local API runs hooks even with overrideAccess) all hit it.
+    // SEC: the 8-character minimum lived only in the browser form; Payload's
+    // own check accepts 3. Enforced here so REST, first-register and the
+    // admin Server Actions all hit it.
+    beforeValidate: [
+      ({ data }) => {
+        const password = (data as { password?: unknown } | undefined)?.password
+        if (typeof password === 'string' && password.length < MIN_PASSWORD_LENGTH) {
+          throw new APIError(`Пароль должен быть не короче ${MIN_PASSWORD_LENGTH} символов`, 400, undefined, true)
+        }
+        return data
+      },
+    ],
     beforeDelete: [
       async ({ id, req }) => {
         if (req.user && String(req.user.id) === String(id)) {

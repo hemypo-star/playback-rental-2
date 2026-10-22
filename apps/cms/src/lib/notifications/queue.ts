@@ -77,7 +77,14 @@ export async function enqueueNotification(
   }
 
   const root = notificationQueueRoot(env)
-  await ensureNotificationQueue(root)
+  // Inside the result contract like the write below: callers run this after
+  // the order is committed, so a throw here (queue volume missing or
+  // read-only) used to fail checkout for an order that already existed.
+  try {
+    await ensureNotificationQueue(root)
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Notification queue unavailable' }
+  }
 
   const id = randomUUID()
   // Delivery targets are intentionally NOT resolved in the web process.

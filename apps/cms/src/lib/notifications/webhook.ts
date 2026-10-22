@@ -5,6 +5,7 @@
 // transport details.
 import { enqueueNotification } from './queue'
 import type { OrderNotificationItem } from './types'
+import { consentDocumentsStamp } from '../legal/documents'
 
 interface NotificationResult {
   success: boolean
@@ -63,6 +64,8 @@ export async function sendContactNotification(params: {
     phone: params.phone,
     subject: params.subject?.trim() || null,
     message: params.message,
+    consentAt: new Date().toISOString(),
+    consentDocuments: consentDocumentsStamp(),
   })
   return { success: result.success, error: result.error }
 }

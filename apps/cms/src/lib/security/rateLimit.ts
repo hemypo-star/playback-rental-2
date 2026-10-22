@@ -1,7 +1,7 @@
 import { sql } from '@payloadcms/db-postgres'
 import type { PostgresAdapter } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
-import { createHash } from 'node:crypto'
+import { createHmac } from 'node:crypto'
 
 // A2 (design_handoff_swiss_bento/08-instruction.md, audit finding G1) — the
 // rate-limiting half only. The instruction's other half (a `holdUntil`
@@ -48,6 +48,12 @@ export type RateLimitBucket =
   // neither bounds a script rotating emails. One shared key caps the total
   // volume written to the notification queue volume.
   | 'contact_global'
+  // Same reasoning for checkout and the promo oracle: without a trusted
+  // proxy (TRUST_PROXY_HEADERS off) the IP dimension is skipped, the phone
+  // is caller-chosen, and the promo lookup had no limit at all. A shared key
+  // bounds the total either way.
+  | 'checkout_global'
+  | 'promo_validate_global'
 
 export interface RateLimitConfig {
   /** Sliding window size in milliseconds. */
@@ -145,6 +151,18 @@ export function getRateLimitConfig(bucket: RateLimitBucket): RateLimitConfig {
         max: envInt('RATE_LIMIT_CONTACT_GLOBAL_MAX', 60),
         windowMs: envInt('RATE_LIMIT_CONTACT_GLOBAL_WINDOW_MS', HOUR_MS),
       }
+    case 'checkout_global':
+      // A rental shop takes a handful of orders an hour; 60 leaves room for a
+      // rush while capping a script that rotates phone numbers.
+      return {
+        max: envInt('RATE_LIMIT_CHECKOUT_GLOBAL_MAX', 60),
+        windowMs: envInt('RATE_LIMIT_CHECKOUT_GLOBAL_WINDOW_MS', HOUR_MS),
+      }
+    case 'promo_validate_global':
+      return {
+        max: envInt('RATE_LIMIT_PROMO_VALIDATE_GLOBAL_MAX', 300),
+        windowMs: envInt('RATE_LIMIT_PROMO_VALIDATE_GLOBAL_WINDOW_MS', HOUR_MS),
+      }
   }
 }
 
@@ -157,29 +175,16 @@ function getAdapter(payload: Payload): PostgresAdapter {
   return payload.db as unknown as PostgresAdapter
 }
 
-// rate_key is varchar(255) (migration 20260910_120000_rate_limit_hits). A
-// Server Action is independently POST-able regardless of what the browser
-// form limits, so e.g. checkout's customerPhone (fed into
-// normalizePhoneForRateLimit's fallthrough branch) can carry an arbitrary-
-// length digit string. Without a cap, the SELECT below succeeds (reporting
-// 0 — no prior rows can possibly match an over-length value that was never
-// inserted before) and the subsequent INSERT then throws on the column's
-// length constraint: fails closed and leaks nothing, but it's avoidable
-// noise, and it happens *after* the advisory lock below is taken, holding
-// it uselessly until the transaction unwinds. Cap once, here, for every
-// caller and every bucket, rather than trusting each call site to remember.
-//
-// Hashing (not truncating) an over-length key avoids a different bug a
-// naive slice(0, 255) would introduce: two different over-length values
-// sharing the first 255 characters would collide into the same bucket.
-// Ordinary keys (an IP, a normalized phone/email) are always far under this
-// limit and pass through unchanged, so no test or real request ever
-// observes an 'rl:' key today — hashing only ever activates on abuse input.
-const MAX_RATE_KEY_LENGTH = 255
-
-function capRateLimitKey(key: string): string {
-  if (key.length <= MAX_RATE_KEY_LENGTH) return key
-  return `rl:${createHash('sha256').update(key).digest('hex')}`
+// What is stored in rate_limit_hits.rate_key: an HMAC of the key, never the
+// key itself. Keys are e-mail addresses, phone numbers and IPs, and the table
+// used to hold them in clear for the two-day window — personal data in a
+// table nothing else needs to read. Keyed with PAYLOAD_SECRET so a leaked
+// table can't be reversed by hashing every phone number. Also bounds the
+// length (the column is varchar(255) and a Server Action can send any
+// length). Exported for the code that has to find a key's rows: tests and
+// lib/admin/erasePersonalData.ts.
+export function storedRateLimitKey(key: string): string {
+  return `rl:${createHmac('sha256', process.env.PAYLOAD_SECRET || '').update(key).digest('hex')}`
 }
 
 // Advisory-lock id for a given bucket+key pair. pg_advisory_xact_lock's
@@ -275,7 +280,7 @@ export async function checkRateLimits(payload: Payload, checks: RateLimitCheck[]
     const config = getRateLimitConfig(check.bucket)
     return {
       bucket: check.bucket,
-      rateKey: capRateLimitKey(check.key),
+      rateKey: storedRateLimitKey(check.key),
       config,
       cutoff: new Date(now - config.windowMs).toISOString(),
     }

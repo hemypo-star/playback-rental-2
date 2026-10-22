@@ -84,6 +84,7 @@ async function contactAttempt(email) {
       phone: '+7 (900) 222-33-44',
       subject: 'CI rate-limit smoke',
       message: 'Disposable CI contact notification',
+      agreeData: true,
     }),
     redirect: 'manual',
   })

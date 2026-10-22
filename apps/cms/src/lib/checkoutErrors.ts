@@ -11,7 +11,7 @@
 // actually sees. Keeping this in one module, instead of inline in
 // CheckoutPage.tsx, is what makes it possible to audit "does every checkout
 // error have Russian text" by reading one file.
-import { MAX_RENTAL_DAYS } from './rental/limits'
+import { MAX_ITEM_QUANTITY, MAX_RENTAL_DAYS, MIN_RENTAL_HOURS } from './rental/limits'
 
 export type CheckoutErrorCode =
   | 'RENTAL_DATES_INVALID'
@@ -20,6 +20,15 @@ export type CheckoutErrorCode =
   | 'ORDER_NOT_FOUND'
   | 'ORDER_ALREADY_SUBMITTED'
   | 'ORDER_HAS_NO_ITEMS'
+  // A cart line whose quantity isn't a whole number from 1 to
+  // MAX_ITEM_QUANTITY — checkout/actions.ts rejects it before creating
+  // anything. The storefront never sends one; a crafted request does.
+  | 'ITEM_QUANTITY_INVALID'
+  // A consent checkbox was not ticked (checkout/actions.ts re-checks them).
+  | 'CONSENT_REQUIRED'
+  // Empty cart, too many lines, or a contact field missing/too long/not a
+  // phone number. The storefront form never sends one.
+  | 'CHECKOUT_INPUT_INVALID'
   // A2 (design_handoff_swiss_bento/08-instruction.md) — thrown when
   // checkout/actions.ts's own IP or phone rate-limit check
   // (lib/security/rateLimit.ts) rejects the attempt, before any order is
@@ -29,22 +38,17 @@ export type CheckoutErrorCode =
   | 'RATE_LIMITED'
   | 'UNKNOWN'
 
-// RENTAL_DATES_INVALID covers three real throw sites in OrderItems.ts's
-// beforeValidate hook: dates missing entirely, a return date earlier than
-// the pickup date (a backwards range — same-calendar-day is valid since
-// A1, see that throw site's own comment), and a pickup date on an earlier
-// calendar day than today. `reason` distinguishes them so the Russian text
-// can be specific instead of a generic "check your dates". There is no RENTAL_MIN_DURATION here on purpose: A1 turned the
-// old "minimum one day" rejection into a Math.max(1, ...) floor in
-// lib/rental/pricing.ts, so nothing in this codebase rejects a too-short
-// rental anymore — a too-short range is priced as one day, not an error.
-// Adding a code with no throw site would be inventing a rejection path A1
-// deliberately removed, which isn't this task's job.
+// RENTAL_DATES_INVALID covers the throw sites in OrderItems.ts's
+// beforeValidate hook: dates missing entirely, a return time earlier than
+// the pickup time, a rental shorter than MIN_RENTAL_HOURS (still billed as
+// one day when it is long enough), longer than MAX_RENTAL_DAYS, and a pickup
+// date on an earlier calendar day than today. `reason` distinguishes them so
+// the Russian text can be specific instead of a generic "check your dates".
 export interface CheckoutErrorData {
   productTitle?: string
   requested?: number
   available?: number
-  reason?: 'missing' | 'backwards' | 'past' | 'too_long'
+  reason?: 'missing' | 'backwards' | 'past' | 'too_long' | 'too_short'
 }
 
 export interface CheckoutErrorInfo {
@@ -87,6 +91,12 @@ export function translateCheckoutError({ code, data }: CheckoutErrorInfo): Trans
           canChangeDates: true,
         }
       }
+      if (data?.reason === 'too_short') {
+        return {
+          message: `Минимальный срок аренды — ${MIN_RENTAL_HOURS} часа. Выберите время возврата позже.`,
+          canChangeDates: true,
+        }
+      }
       if (data?.reason === 'backwards') {
         return {
           message: 'Дата возврата раньше даты выдачи. Выберите даты ещё раз.',
@@ -118,6 +128,21 @@ export function translateCheckoutError({ code, data }: CheckoutErrorInfo): Trans
     case 'ORDER_ALREADY_SUBMITTED':
       return {
         message: 'Эта заявка уже отправлена — повторная отправка не требуется.',
+        canChangeDates: false,
+      }
+    case 'CHECKOUT_INPUT_INVALID':
+      return {
+        message: 'Проверьте имя, телефон и email и что в корзине есть техника (не больше 30 позиций).',
+        canChangeDates: false,
+      }
+    case 'CONSENT_REQUIRED':
+      return {
+        message: 'Отметьте согласие на обработку персональных данных и условия проката.',
+        canChangeDates: false,
+      }
+    case 'ITEM_QUANTITY_INVALID':
+      return {
+        message: `Количество каждой позиции должно быть от 1 до ${MAX_ITEM_QUANTITY}. Обновите корзину и попробуйте снова.`,
         canChangeDates: false,
       }
     case 'RATE_LIMITED':
@@ -187,7 +212,9 @@ function pickErrorData(data: object): CheckoutErrorData {
     requested: typeof d.requested === 'number' ? d.requested : undefined,
     available: typeof d.available === 'number' ? d.available : undefined,
     reason:
-      d.reason === 'missing' || d.reason === 'backwards' || d.reason === 'past' || d.reason === 'too_long' ? d.reason : undefined,
+      d.reason === 'missing' || d.reason === 'backwards' || d.reason === 'past' || d.reason === 'too_long' || d.reason === 'too_short'
+        ? d.reason
+        : undefined,
   }
 }
 
@@ -199,6 +226,9 @@ function isCheckoutErrorCode(value: string): value is CheckoutErrorCode {
     value === 'ORDER_NOT_FOUND' ||
     value === 'ORDER_ALREADY_SUBMITTED' ||
     value === 'ORDER_HAS_NO_ITEMS' ||
+    value === 'ITEM_QUANTITY_INVALID' ||
+    value === 'CONSENT_REQUIRED' ||
+    value === 'CHECKOUT_INPUT_INVALID' ||
     value === 'RATE_LIMITED' ||
     value === 'UNKNOWN'
   )

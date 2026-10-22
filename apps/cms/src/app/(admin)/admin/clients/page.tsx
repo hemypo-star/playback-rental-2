@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import AdminPageHeader from '../../../../components/admin/AdminPageHeader'
 import { getAdminClients } from '../../../../lib/admin/data/clients'
 import { rub } from '../../../../lib/admin/format'
+import ErasePersonalDataPanel from '../../../../components/admin/ErasePersonalDataPanel'
 
 // Ported from apps/web/src/pages/admin/clients.astro (docs/PLAN-next-
 // migration.md Stage 3.5, page group 4).
@@ -21,6 +22,7 @@ export default async function AdminClientsPage() {
   return (
     <>
       <AdminPageHeader title="Клиенты" subtitle={`${clients.length} по не отменённым заказам, сгруппировано по email`} />
+      <ErasePersonalDataPanel />
 
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
         {clients.map((c, i) => (

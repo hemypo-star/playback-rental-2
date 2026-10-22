@@ -54,7 +54,7 @@ export default function ContactForm() {
       const res = await fetch('/api/contact-notification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, agreeData }),
       })
       const result = (await res.json()) as { success: boolean; code?: string }
       if (result.success) {
@@ -70,68 +70,66 @@ export default function ContactForm() {
     }
   }
 
+  // Laid out in the storefront's pb-* vocabulary (the same field, consent and
+  // submit styles as checkout); the contact page wraps it in its own card.
   return (
-    <div className="card-surface p-6">
-      <h2 className="text-[17px] font-semibold">Напишите нам</h2>
+    <div>
+      <div className="pb-kicker">Обратная связь</div>
+      <h2 className="pb-h2" style={{ fontSize: 'clamp(24px,2.4vw,32px)' }}>Напишите нам</h2>
 
       {status === 'sent' && (
-        <div className="mt-4 rounded-xl bg-success-bg px-4 py-3 text-[13.5px] text-success">
-          Сообщение отправлено — мы свяжемся с вами в ближайшее время.
-        </div>
+        <div className="pb-form-status" data-tone="ok" role="status">Сообщение отправлено — мы свяжемся с вами в ближайшее время.</div>
       )}
       {status === 'failed' && (
-        <div className="mt-4 rounded-xl bg-danger-bg px-4 py-3 text-[13.5px] text-destructive">
+        <div className="pb-form-status" data-tone="error" role="alert">
           {rateLimited ? RATE_LIMITED_MESSAGE : 'Не удалось отправить сообщение. Попробуйте ещё раз или напишите на почту.'}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className="text-[12.5px] font-semibold text-subtle">Имя</span>
-            <input value={form.name} onChange={set('name')} className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none transition-[border-color,background-color] duration-240 ease-expo focus:border-foreground focus:bg-white" />
-            {errors.name && <span className="mt-1 block text-[12px] text-destructive">{errors.name}</span>}
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="pb-fields" style={{ marginTop: 18 }}>
+          <label className="pb-field">
+            <span>Имя</span>
+            <input value={form.name} onChange={set('name')} autoComplete="name" aria-invalid={!!errors.name} aria-describedby={errors.name ? 'cf-name-error' : undefined} />
+            {errors.name && <em id="cf-name-error" className="pb-field-error">{errors.name}</em>}
           </label>
-          <label className="block">
-            <span className="text-[12.5px] font-semibold text-subtle">Телефон</span>
-            <input value={form.phone} onChange={set('phone')} placeholder="+7 (___) ___-__-__" className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none transition-[border-color,background-color] duration-240 ease-expo focus:border-foreground focus:bg-white" />
-            {errors.phone && <span className="mt-1 block text-[12px] text-destructive">{errors.phone}</span>}
+          <label className="pb-field">
+            <span>Телефон</span>
+            <input value={form.phone} onChange={set('phone')} placeholder="+7 (___) ___-__-__" autoComplete="tel" inputMode="tel" aria-invalid={!!errors.phone} aria-describedby={errors.phone ? 'cf-phone-error' : undefined} />
+            {errors.phone && <em id="cf-phone-error" className="pb-field-error">{errors.phone}</em>}
+          </label>
+          <label className="pb-field">
+            <span>Email</span>
+            <input type="email" value={form.email} onChange={set('email')} autoComplete="email" aria-invalid={!!errors.email} aria-describedby={errors.email ? 'cf-email-error' : undefined} />
+            {errors.email && <em id="cf-email-error" className="pb-field-error">{errors.email}</em>}
+          </label>
+          <label className="pb-field">
+            <span>Тема — необязательно</span>
+            <input value={form.subject} onChange={set('subject')} />
           </label>
         </div>
-
-        <label className="block">
-          <span className="text-[12.5px] font-semibold text-subtle">Email</span>
-          <input type="email" value={form.email} onChange={set('email')} className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none transition-[border-color,background-color] duration-240 ease-expo focus:border-foreground focus:bg-white" />
-          {errors.email && <span className="mt-1 block text-[12px] text-destructive">{errors.email}</span>}
+        <label className="pb-field" style={{ display: 'block', marginTop: 14 }}>
+          <span>Сообщение</span>
+          <textarea rows={4} value={form.message} onChange={set('message')} aria-invalid={!!errors.message} aria-describedby={errors.message ? 'cf-message-error' : undefined} />
+          {errors.message && <em id="cf-message-error" className="pb-field-error">{errors.message}</em>}
         </label>
 
-        <label className="block">
-          <span className="text-[12.5px] font-semibold text-subtle">Тема (необязательно)</span>
-          <input value={form.subject} onChange={set('subject')} className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none transition-[border-color,background-color] duration-240 ease-expo focus:border-foreground focus:bg-white" />
-        </label>
-
-        <label className="block">
-          <span className="text-[12.5px] font-semibold text-subtle">Сообщение</span>
-          <textarea rows={4} value={form.message} onChange={set('message')} className="mt-1.5 w-full resize-y rounded-xl border border-input bg-muted-well px-3.5 py-2.5 text-[14px] outline-none transition-[border-color,background-color] duration-240 ease-expo focus:border-foreground focus:bg-white" />
-          {errors.message && <span className="mt-1 block text-[12px] text-destructive">{errors.message}</span>}
-        </label>
-
-        <label className="flex items-start gap-2.5">
-          <input type="checkbox" checked={agreeData} onChange={(e) => setAgreeData(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-foreground" />
-          <span className="text-[12.5px] leading-[1.45] text-subtle">
+        <label className="pb-consent" style={{ marginTop: 10 }}>
+          <input type="checkbox" checked={agreeData} onChange={(e) => setAgreeData(e.target.checked)} aria-invalid={!!errors.agreeData} aria-describedby={errors.agreeData ? 'cf-consent-error' : undefined} />
+          <span style={{ fontSize: 12.5, lineHeight: 1.45, color: 'var(--pb-copy)' }}>
             Даю{' '}
-            <Link href="/personal-data-consent" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-accent">
+            <Link href="/personal-data-consent" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>
               согласие на обработку персональных данных
             </Link>{' '}
             и принимаю{' '}
-            <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-accent">
+            <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>
               политику конфиденциальности
             </Link>
           </span>
         </label>
-        {errors.agreeData && <span className="-mt-2 block text-[12px] text-destructive">{errors.agreeData}</span>}
+        {errors.agreeData && <em id="cf-consent-error" className="pb-field-error">{errors.agreeData}</em>}
 
-        <button type="submit" disabled={status === 'sending'} className="btn-primary h-11 w-full text-[14px]">
+        <button type="submit" disabled={status === 'sending'} className="pb-submit">
           {status === 'sending' ? 'Отправляем…' : 'Отправить'}
         </button>
       </form>

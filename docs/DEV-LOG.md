@@ -2271,3 +2271,121 @@ rewritten; a correction to an earlier entry goes in a new dated one.
   tests, `smoke:kit-stock` (cart check) and `smoke:manual-order`, which books
   a kit and its component in one transaction: refused when short with no
   empty order left, accepted while stock lasts.
+
+- **2026-10-21** — **Audit fix round, stage 1 (critical).** A five-way audit
+  (design, security, payments, data, runtime) found three critical problems;
+  all are fixed here, each with a test that failed before.
+  *Admin data readable anonymously:* the admin layout's `getAdminUser()` check
+  does not run on a client-side navigation — Next renders only the changed
+  page segment — so an RSC request with `Next-Router-State-Tree` claiming the
+  admin layout was mounted got page data (customer contacts, orders, promo
+  codes) with no session. Every loader in `lib/admin/data/` now calls
+  `requireAdminSession()` first (`getAdminUser` is wrapped in React `cache()`
+  so that is one `payload.auth()` per request), and `src/proxy.ts` sends
+  cookieless `/admin/*` requests to the login page before anything runs.
+  `smoke:public-security` probes nine admin routes anonymously and with a
+  forged cookie. *Zero/negative quantities:* the custom `validate` on
+  `orderItems.quantity` (added for SEC-027) replaces Payload's built-in number
+  validation, so `min: 1` was no longer enforced and 0/-1 lines priced orders
+  down to 0 ₽. The validator now checks 1…`MAX_ITEM_QUANTITY` (99) itself,
+  checkout rejects such a cart up front with `ITEM_QUANTITY_INVALID`, and
+  stock sums ignore non-positive rows. *Reconcile daemon crash loop:* under
+  tsx, `@sentry/nextjs`'s namespace has `init` but not `captureException`
+  (only on `default`), so the first failed sync threw a TypeError inside its
+  own catch and killed the process; push retries never ran. Reporting goes
+  through `lib/monitoring/serverErrors.ts` (resolves the API, never throws);
+  push retries start without waiting for the first sync, passes don't overlap,
+  SIGTERM exits cleanly. Also the home promo slider: inline `span 8/4`
+  survived the 6-column tablet grid and collapsed the slide to 2px on phones;
+  layout moved to `.pb-promo-slide`/`.pb-promo-rows` (420px, 620px ≤760px per
+  04-screens.md), rows take their natural height.
+
+- **2026-10-21** — **Audit fix round, stage 2 (operations).** *Backups:* new
+  `backup` service (postgres image + `ops/backup/backup.sh`) writes a nightly
+  `pg_dump -Fc` plus tarballs of `cms_media` and the notification queue into
+  `BACKUP_DIR` on the host (default `/var/backups/playback`, 14 days); it
+  backs up at once when the last good set is older than 26 h and turns
+  unhealthy after that. Copies stay on the same server — the owner has no
+  off-server location yet. `ops/backup/restore.sh check|db|media`; `db` moves
+  `orders_id_seq` 10 000 past the old range so a restored database never
+  reuses an order number already pushed to МойСклад as `playback-site-<id>`.
+  `ops/` ships with prod (`ops/README.md`: backups, restore, deploy, rollback).
+  *Rollback:* `make-release.sh` tags each release `release-<utc>-<sha>`.
+  *Health:* `/api/health` runs `select 1` (3 s cap) and is the cms
+  healthcheck — `/api/access` answered 200 with the database down. The
+  notifications and reconcile workers touch `/tmp/heartbeat` and have
+  healthchecks on its age. *Shutdown:* `init: true` + `exec next start`
+  (SIGTERM used to die at `sh`/`pnpm`, exit 137). *Compose:* bounded json-file
+  logs, memory limits (`*_MEM_LIMIT`), cms published on `WEB_BIND`
+  (default 127.0.0.1), reconcile waits for a healthy cms (migrations).
+  *МойСклад:* every request has `AbortSignal.timeout` (15 s; 60 s for image
+  downloads) and checkout waits at most 8 s for the inline push before leaving
+  it to the retry pass; full syncs take a session advisory lock so the daemon
+  and a manual run never overlap. *Notifications:* a missing/read-only queue
+  volume no longer throws after the order is committed. *Rate limits:*
+  `checkout_global` (60/h) and `promo_validate_global` (300/h) cap volume
+  when the per-IP buckets are skipped (no trusted proxy). *Errors:* storefront
+  `not-found.tsx` + `[...unmatched]` catch-all give unknown URLs, missing
+  products and categories a real 404 inside the site layout (missing products
+  used to 307 to /catalog); `error.tsx` for storefront and admin,
+  `global-error.tsx`. Admin order rows go two-column on phones (743px at
+  375px before).
+
+- **2026-10-21** — **Audit fix round, stage 3 (personal data, terms).** Owner's
+  decisions: rentals up to one year, minimum 4 hours, no "без залога" on the
+  storefront (the 30% deposit in the user agreement stands), personal data
+  kept until consent is withdrawn, no off-server backup location, no promo
+  usage limits. *Consent:* checkout and the contact form now require the
+  consent checkboxes server-side (`CONSENT_REQUIRED`; contact form 400) and
+  record them — `orders.consentAt` + `consentDocuments` (revisions from
+  `lib/legal/documents.ts`; the contact job carries the same two fields). The
+  privacy policy no longer shows today's date as its revision. *Withdrawal:*
+  `/admin/clients` → "Удалить данные клиента" blanks name/email/phone/notes
+  on every order of that e-mail or phone (`lib/admin/erasePersonalData.ts`),
+  stamps `personalDataErasedAt/By`, and deletes the matching rate-limit rows;
+  the order detail shows consent and erasure. *Rate-limit keys* are stored as
+  an HMAC (`storedRateLimitKey`) instead of clear e-mails/phones/IPs.
+  *Limits:* `MAX_RENTAL_DAYS` 365, `MIN_RENTAL_HOURS` 4 (`too_short`); the
+  backwards check compares timestamps, so a same-day backwards range is
+  refused too; the date picker blocks both before checkout. Migration
+  `20261021_090000_consent_erasure_hero` adds the four order columns and
+  replaces the hero headline only where it is still the old default.
+
+- **2026-10-21** — **Audit fix round, stage 4 (edge cases, hardening).**
+  Promo codes run through the end of their last day in Kemerovo (the date
+  input used to become 00:00 UTC = 07:00 local). Checkout rejects an empty
+  cart, more than 30 lines, and missing/over-long contact fields or a phone
+  that isn't 10–15 digits (`CHECKOUT_INPUT_INVALID`); orders carry matching
+  `maxLength`s. SEC-005 is actually fixed now: a PATCH that omits `product`
+  gets the stored pricing inputs filled in and is re-priced instead of
+  keeping the sent `lineTotal`. Manual order editing and manual order
+  creation stay as they are (owner) — the order total is not locked against
+  admin writes. The МойСклад counterparty lookup filters on a copy of the
+  phone stripped to phone characters (a `;` used to add filter conditions in
+  a shared account); the counterparty itself still gets the phone as typed
+  (owner: it is needed there). Passwords: 8 characters enforced by a Users
+  `beforeValidate` hook (REST, first-register, admin), and changing your own
+  password asks for the current one. Headers: `Permissions-Policy`, a
+  report-only CSP, no `X-Powered-By`; Payload's `Accept-CH`/`Critical-CH`/
+  `Vary` theme hints are filtered out of `withPayload`'s headers; `/fonts/*`
+  cached for a year. The runtime image runs as `node`: `docker-entrypoint.sh`
+  chowns the media and queue volumes (root-owned by earlier releases) and
+  drops privileges with `setpriv`; `COREPACK_HOME` moved out of /root so pnpm
+  stays offline. Migration `20261021_100000_schema_drift_fixes` (jsonb,
+  address default, media size indexes). Deleting a product used in orders or
+  a category with products/subcategories now fails with a Russian
+  explanation instead of a constraint error. Not done: `pnpm audit`'s eight
+  findings — all build/dev-only (owner told; optional overrides later).
+
+- **2026-10-22** — **Audit fix round, stage 5 (performance, accessibility).**
+  `/checkout` renders its head and a placeholder until the cart is read from
+  localStorage instead of the full form for an empty cart (CLS at 390px
+  0.448 → 0); its empty and success states have an H1. The client GlitchTip
+  SDK is a dynamic import behind the inlined DSN check, so without a DSN it
+  is no longer in every page's shared bundle. Product and home hero images
+  use `preload` (Next 16's replacement for `priority`). Below 1020px the
+  admin sidebar is a compact bar with a horizontally scrolling 44px tab strip
+  (it used to fill the first screen). Fields are 16px on phones (iOS zoom).
+  Skip link to `#main`; contact form status has role status/alert and fields
+  point at their errors (`aria-invalid`/`aria-describedby`); /how-it-works
+  step numbers reach 3:1; settings section titles are h2.

@@ -113,12 +113,26 @@ async function main() {
     if (!lensCalendar?.bookedRanges?.length) throw new Error(`lens calendar shows no busy range: ${JSON.stringify(lensCalendar)}`)
     console.log('PASS calendar marks the fully used lens as busy')
 
-    const longEnd = new Date(start.getTime() + 91 * 24 * 60 * 60 * 1000)
-    const tooLong = await book(camera.id, 1, new Date(start.getTime() + 200 * 24 * 60 * 60 * 1000), new Date(longEnd.getTime() + 200 * 24 * 60 * 60 * 1000))
+    const DAY = 24 * 60 * 60 * 1000
+    const later = (days) => new Date(start.getTime() + days * DAY)
+    const tooLong = await book(camera.id, 1, later(400), later(400 + 366))
     if (tooLong.status !== 400 || tooLong.body?.errors?.[0]?.data?.reason !== 'too_long') {
-      throw new Error(`91-day rental not refused as too_long: HTTP ${tooLong.status} ${JSON.stringify(tooLong.body)}`)
+      throw new Error(`366-day rental not refused as too_long: HTTP ${tooLong.status} ${JSON.stringify(tooLong.body)}`)
     }
-    console.log('PASS 91-day rental refused (limit 90 days)')
+    console.log('PASS 366-day rental refused (limit 365 days)')
+
+    // Owner's minimum: 4 hours. A same-day backwards range used to slip
+    // through (calendar-day comparison).
+    const pickup = later(800)
+    const tooShort = await book(camera.id, 1, pickup, new Date(pickup.getTime() + 2 * 60 * 60 * 1000))
+    if (tooShort.status !== 400 || tooShort.body?.errors?.[0]?.data?.reason !== 'too_short') {
+      throw new Error(`2-hour rental not refused as too_short: HTTP ${tooShort.status} ${JSON.stringify(tooShort.body)}`)
+    }
+    const backwards = await book(camera.id, 1, pickup, new Date(pickup.getTime() - 6 * 60 * 60 * 1000))
+    if (backwards.status !== 400 || backwards.body?.errors?.[0]?.data?.reason !== 'backwards') {
+      throw new Error(`same-day backwards range not refused: HTTP ${backwards.status} ${JSON.stringify(backwards.body)}`)
+    }
+    console.log('PASS 2-hour rental and a same-day backwards range refused')
   } finally {
     if (orderId) await api('PATCH', `/api/orders/${orderId}`, { status: 'cancelled' })
     await api('PATCH', `/api/products/${kit.id}`, { available: false })

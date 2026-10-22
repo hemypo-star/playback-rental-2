@@ -18,6 +18,7 @@ export default function UsersPanel({ users: initialUsers, ownId }: Props) {
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [ownPassword, setOwnPassword] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -56,18 +57,23 @@ export default function UsersPanel({ users: initialUsers, ownId }: Props) {
   const handleChangeOwnPassword = async () => {
     setError(null)
     setSuccess(null)
+    if (!currentPassword) {
+      setError('Введите текущий пароль')
+      return
+    }
     if (ownPassword.length < 8) {
       setError('Пароль должен быть не короче 8 символов')
       return
     }
     setChanging(true)
-    const result = await changeOwnPassword(ownPassword)
+    const result = await changeOwnPassword(currentPassword, ownPassword)
     setChanging(false)
     if (!result.success) {
       setError(result.error || 'Не удалось сменить пароль')
       return
     }
     setOwnPassword('')
+    setCurrentPassword('')
     setSuccess('Пароль изменён.')
   }
 
@@ -125,10 +131,20 @@ export default function UsersPanel({ users: initialUsers, ownId }: Props) {
 
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Сменить свой пароль</div>
+            <label htmlFor={`${uid}-current-password`} className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Текущий пароль</label>
+            <input
+              id={`${uid}-current-password`}
+              type="password"
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="mt-1.5 h-11 w-full rounded-xl border border-input bg-muted-well px-3.5 text-[14px] outline-none focus:border-foreground focus:bg-white"
+            />
             <label htmlFor={`${uid}-own-password`} className="mt-3 block text-[11px] font-bold uppercase tracking-[0.06em] text-subtle">Новый пароль</label>
             <input
               id={`${uid}-own-password`}
-              type="text"
+              type="password"
+              autoComplete="new-password"
               minLength={8}
               value={ownPassword}
               onChange={(e) => setOwnPassword(e.target.value)}

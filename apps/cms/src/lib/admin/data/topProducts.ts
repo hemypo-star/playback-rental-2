@@ -13,6 +13,7 @@ import { getProductOrderStats, type ProductOrderStats } from '../../data/popular
 // the period (backlog item 14's rule, shared with analytics.ts).
 import type { Where } from 'payload'
 import type { AnalyticsDateRange } from '../analyticsDateRange'
+import { requireAdminSession } from '../auth'
 
 export interface TopProductRow extends ProductOrderStats {
   id: number
@@ -21,6 +22,7 @@ export interface TopProductRow extends ProductOrderStats {
 }
 
 export async function getTopProducts(range: AnalyticsDateRange = {}, limit = 15): Promise<TopProductRow[]> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
 
   const orderConditions: Where[] = [{ status: { equals: 'completed' } }]

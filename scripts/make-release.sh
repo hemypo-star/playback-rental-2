@@ -116,14 +116,17 @@ cp .env.example .env     # fill in the values below
 docker compose up -d --build
 ```
 
-`compose.yaml` brings up four services: `cms` (the app, published on
+`compose.yaml` brings up five services: `cms` (the app, published on
 `WEB_PORT`), `db` (Postgres), `notifications` (the only service given
 messenger/SMTP credentials — the app itself can only enqueue jobs onto a
-shared volume), and `reconcile` (the periodic МойСклад safety-net sync).
+shared volume), `reconcile` (the periodic МойСклад safety-net sync) and
+`backup` (nightly database and media archives on the host).
 
 Migrations run automatically on every container start, so a deploy is
-`git pull && docker compose up -d --build`. The first start also needs an
-administrator: open `/admin` and register one.
+`git fetch && git reset --hard origin/prod && docker compose up -d --build`
+(this branch is force-pushed on every release, so `git pull` fails). The
+first start also needs an administrator: open `/admin` and register one.
+Backups, restore and rollback: `ops/README.md`.
 
 Required in `.env`: `POSTGRES_PASSWORD`, `PAYLOAD_SECRET`, `WEB_URL`
 (this deployment's public https URL — Payload validates request `Origin`
@@ -169,5 +172,10 @@ image and the compose stack — and nothing that exists only to develop or test
 them.
 
 Do not edit this branch by hand: regenerate it from the development branch."
-echo "make-release: $TARGET is at $(git rev-parse --short HEAD)"
+# A tag per release keeps every deployed tree reachable for rollback even
+# though $TARGET itself is force-pushed (ops/README.md, "Rollback").
+TAG="release-$(date -u +%Y%m%d-%H%M)-$SOURCE_SHA"
+git tag -a "$TAG" -m "Release of $SOURCE_SHA" HEAD
+echo "make-release: $TARGET is at $(git rev-parse --short HEAD), tagged $TAG"
+echo "make-release: publish with: git push origin $TARGET --force && git push origin $TAG"
 echo "make-release: $(git ls-files | wc -l) files, down from $SOURCE_FILES"

@@ -1,3 +1,4 @@
+import type { PostgresAdapter } from '@payloadcms/db-postgres'
 import type { Payload, RequiredDataFromCollectionSlug } from 'payload'
 import type { Product } from '../../payload-types'
 import { msGet, msGetBinary, msPaginate } from './client'
@@ -485,16 +486,42 @@ export async function syncProducts(
   return { created, updated, total: processed, unmatchedInventory, failed, disabled }
 }
 
+// One full sync at a time across every process: the reconcile daemon, a
+// manual `docker compose run sync-moysklad` and a second daemon replica would
+// otherwise run concurrently and race on the same products and media rows.
+// A session-level advisory lock on a dedicated pool connection, released in
+// `finally` (and by Postgres itself if the process dies).
+const SYNC_LOCK_KEY = 0x4d53_5359 // "MSSY"
+
+export class SyncAlreadyRunningError extends Error {
+  constructor() {
+    super('Another МойСклад full sync is already running; skipped')
+    this.name = 'SyncAlreadyRunningError'
+  }
+}
+
 export async function syncAll(payload: Payload, opts: SyncOptions = {}): Promise<SyncResult> {
-  const allFolders = await fetchAllFolders()
-  const categories = await syncCategories(payload, allFolders)
-  const products = await syncProducts(payload, categories.idMap, allFolders, {
-    ...opts,
-    disableMissing: opts.disableMissing !== false && categories.failed.length === 0,
-  })
-  return {
-    categories: { created: categories.created, updated: categories.updated, failed: categories.failed },
-    products,
+  const pool = (payload.db as unknown as PostgresAdapter).pool
+  const client = await pool.connect()
+  try {
+    const { rows } = await client.query<{ locked: boolean }>('select pg_try_advisory_lock($1) as locked', [SYNC_LOCK_KEY])
+    if (!rows[0]?.locked) throw new SyncAlreadyRunningError()
+    try {
+      const allFolders = await fetchAllFolders()
+      const categories = await syncCategories(payload, allFolders)
+      const products = await syncProducts(payload, categories.idMap, allFolders, {
+        ...opts,
+        disableMissing: opts.disableMissing !== false && categories.failed.length === 0,
+      })
+      return {
+        categories: { created: categories.created, updated: categories.updated, failed: categories.failed },
+        products,
+      }
+    } finally {
+      await client.query('select pg_advisory_unlock($1)', [SYNC_LOCK_KEY]).catch(() => {})
+    }
+  } finally {
+    client.release()
   }
 }
 

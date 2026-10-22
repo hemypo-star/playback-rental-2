@@ -1,6 +1,6 @@
 import type { Endpoint } from 'payload'
 import { resolveActivePromoCode } from '../lib/promo/promoCodes'
-import { checkRateLimit } from '../lib/security/rateLimit'
+import { checkRateLimits, type RateLimitCheck } from '../lib/security/rateLimit'
 import { getClientIp } from '../lib/security/clientIp'
 
 // Public — checkout calls this to show "скидка применена" before creating
@@ -42,11 +42,10 @@ export const promoCodeValidateEndpoint: Endpoint = {
     // by counting their own requests, not something a shared response
     // shape could hide.
     const ip = getClientIp(req.headers)
-    if (ip) {
-      const allowed = await checkRateLimit(req.payload, 'promo_validate_ip', ip)
-      if (!allowed) {
-        return Response.json({ valid: false }, { status: 429 })
-      }
+    const checks: RateLimitCheck[] = [{ bucket: 'promo_validate_global', key: 'all' }]
+    if (ip) checks.push({ bucket: 'promo_validate_ip', key: ip })
+    if (!(await checkRateLimits(req.payload, checks))) {
+      return Response.json({ valid: false }, { status: 429 })
     }
 
     const url = new URL(req.url || '', 'http://localhost')

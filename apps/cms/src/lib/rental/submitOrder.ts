@@ -7,6 +7,9 @@ import type { CheckoutErrorCode } from '../checkoutErrors'
 import type { Order } from '../../payload-types'
 import { ACTIVE_ORDER_STATUSES } from './rentalLoad'
 
+// How long checkout waits for the inline МойСклад push (see submitOrder).
+const CHECKOUT_PUSH_DEADLINE_MS = 8_000
+
 // Extracted from the /:id/submit endpoint's handler (collections/Orders.ts)
 // so the new checkout Server Action (docs/PLAN-next-migration.md Stage 2,
 // page group 7) can call the exact same МойСклад-push + notification logic
@@ -280,7 +283,16 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
   let moySkladOrderId: string | null = null
   let moySkladError: string | null = null
   try {
-    moySkladOrderId = await pushSiteOrder(payload, order, items, req)
+    // The customer is waiting on this request, so the inline push gets a
+    // short overall deadline; past it the order is already saved and the
+    // reconcile daemon's retry pass finishes the job (it looks the order up by
+    // externalCode first, so a push that does land late is not duplicated).
+    moySkladOrderId = await Promise.race([
+      pushSiteOrder(payload, order, items, req),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`МойСклад push exceeded ${CHECKOUT_PUSH_DEADLINE_MS} ms; left to the retry pass`)), CHECKOUT_PUSH_DEADLINE_MS),
+      ),
+    ])
   } catch (error) {
     // Don't let a МойСклад outage block checkout — log and continue;
     // moySkladOrderId stays null and retryPendingMoySkladPushes resends it.
@@ -312,6 +324,10 @@ export async function submitOrder(payload: Payload, orderId: number, req?: Paylo
       lineTotal: item.lineTotal,
     })),
   })
+
+  if (!notification.success && notification.error !== 'Direct notifications are disabled') {
+    payload.logger.error({ orderId, error: notification.error }, 'Order notification was not queued')
+  }
 
   await payload.update({
     collection: 'orders',

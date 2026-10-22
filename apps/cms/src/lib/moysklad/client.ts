@@ -3,6 +3,12 @@
 
 const BASE_URL = 'https://api.moysklad.ru/api/remap/1.2'
 
+// Every МойСклад call is bounded. Without a timeout a hung connection held a
+// request for undici's defaults (~5 min) — including a customer's checkout,
+// which pushes the order inline.
+export const MOYSKLAD_TIMEOUT_MS = 15_000
+const MOYSKLAD_DOWNLOAD_TIMEOUT_MS = 60_000
+
 function getToken(): string {
   const token = process.env.MOYSKLAD_API_TOKEN
   if (!token) {
@@ -17,6 +23,7 @@ export async function msGet<T = unknown>(path: string): Promise<T> {
       Authorization: `Bearer ${getToken()}`,
       'Accept-Encoding': 'gzip',
     },
+    signal: AbortSignal.timeout(MOYSKLAD_TIMEOUT_MS),
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
@@ -28,6 +35,7 @@ export async function msGet<T = unknown>(path: string): Promise<T> {
 export async function msGetBinary(url: string): Promise<Buffer> {
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${getToken()}` },
+    signal: AbortSignal.timeout(MOYSKLAD_DOWNLOAD_TIMEOUT_MS),
   })
   if (!res.ok) {
     throw new Error(`МойСклад image download failed ${res.status} on ${url}`)

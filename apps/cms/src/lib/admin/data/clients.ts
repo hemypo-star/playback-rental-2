@@ -1,5 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { requireAdminSession } from '../auth'
 
 // Ported near-verbatim from apps/cms/src/endpoints/admin/clients.ts
 // (docs/PLAN-next-migration.md Stage 3.5, page group 4) — real order
@@ -15,11 +16,13 @@ export interface AdminClientRow {
 }
 
 export async function getAdminClients(): Promise<AdminClientRow[]> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
 
   const orders = await payload.find({
     collection: 'orders',
-    where: { status: { not_equals: 'cancelled' } },
+    // Erased customers (consent withdrawn) are not clients any more.
+    where: { status: { not_equals: 'cancelled' }, personalDataErasedAt: { exists: false } },
     sort: '-createdAt',
     limit: 0,
     depth: 0,

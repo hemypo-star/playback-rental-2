@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import LegalPageLayout, { type LegalTocItem } from '../../../components/LegalPageLayout'
+import { LEGAL_DOCUMENTS, revisionLabel } from '../../../lib/legal/documents'
 import { buildMetadata } from '../../../lib/seo'
 
 // Ported from apps/web/src/pages/privacy-policy.astro (docs/PLAN-next-
@@ -27,10 +28,9 @@ const TOC: LegalTocItem[] = [
 ]
 
 export default function PrivacyPolicyPage() {
-  const updated = new Date().toLocaleDateString('ru-RU')
 
   return (
-    <LegalPageLayout title="Политика конфиденциальности" subtitle={`Последнее обновление: ${updated}`} toc={TOC}>
+    <LegalPageLayout title="Политика конфиденциальности" subtitle={`Редакция от ${revisionLabel(LEGAL_DOCUMENTS.privacyPolicy.revision)}`} toc={TOC}>
       <section>
         <h2 id="intro" className="scroll-mt-[112px] text-[18px] font-semibold text-foreground">Введение</h2>
         <p className="mt-3">

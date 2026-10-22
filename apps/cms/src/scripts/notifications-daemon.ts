@@ -158,6 +158,9 @@ async function main(): Promise<void> {
     } catch (error) {
       console.error('notifications: queue pass failed', error)
     }
+    // compose.yaml's healthcheck reads this file's age; a worker stuck in a
+    // pass stops touching it.
+    await writeFile('/tmp/heartbeat', String(Date.now())).catch(() => {})
     if (!stopping) await sleep(pollMs)
   }
   console.info('notifications: worker stopped')

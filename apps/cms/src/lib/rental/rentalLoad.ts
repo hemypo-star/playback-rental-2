@@ -56,7 +56,7 @@ export async function loadRentalLoad(payload: Payload, params: RentalLoadParams 
     if (!item.startDate || !item.endDate) continue
     bookings.push({
       productId: typeof item.product === 'object' ? item.product.id : item.product,
-      quantity: item.quantity || 0,
+      quantity: Math.max(0, item.quantity || 0),
       start: new Date(item.startDate).getTime(),
       end: new Date(item.endDate).getTime(),
     })

@@ -17,9 +17,16 @@ interface Props {
   promoCodes: PromoCode[]
 }
 
+// "Действует до 31.10" means through the end of that day in Kemerovo. A bare
+// `new Date('2026-10-31')` is midnight UTC — 07:00 local — so codes used to
+// stop working on the morning of their last day.
+function endOfKemerovoDay(date: string): string {
+  return new Date(`${date}T23:59:59.999+07:00`).toISOString()
+}
+
 function formatValidUntil(iso: string | null | undefined): string {
   if (!iso) return 'бессрочно'
-  return `до ${new Date(iso).toLocaleDateString('ru-RU')}`
+  return `до ${new Date(iso).toLocaleDateString('ru-RU', { timeZone: 'Asia/Novokuznetsk' })}`
 }
 
 // Shared icon-button shell — Navbar.tsx's mobile-menu toggle is this app's
@@ -111,7 +118,7 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
       discountType: newDiscountType,
       discountValue: value,
       minOrderAmount,
-      validUntil: newValidUntil ? new Date(newValidUntil).toISOString() : null,
+      validUntil: newValidUntil ? endOfKemerovoDay(newValidUntil) : null,
       description: newDescription.trim(),
     })
     setCreating(false)
@@ -129,7 +136,7 @@ export default function PromoCodesPanel({ promoCodes: initialPromoCodes }: Props
         // hook): a blank threshold ends up equal to discountValue, not 0.
         minOrderAmount: minOrderAmount ?? value,
         active: true,
-        validUntil: newValidUntil ? new Date(newValidUntil).toISOString() : null,
+        validUntil: newValidUntil ? endOfKemerovoDay(newValidUntil) : null,
         description: newDescription.trim() || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

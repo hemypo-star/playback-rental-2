@@ -52,6 +52,9 @@ export function parseContactInput(body: unknown): ContactInputResult {
     if (value instanceof Error) return { ok: false, error: value.message }
   }
   if (!EMAIL_PATTERN.test(email as string)) return { ok: false, error: 'email is not a valid address' }
+  // 152-FZ art. 9: the form collects name, phone and email, so the consent
+  // checkbox is required server-side too, not only in the browser.
+  if (raw.agreeData !== true) return { ok: false, error: 'personal-data consent is required' }
 
   return {
     ok: true,

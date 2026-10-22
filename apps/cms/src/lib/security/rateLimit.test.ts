@@ -25,7 +25,7 @@ import assert from 'node:assert/strict'
 import { sql } from '@payloadcms/db-postgres'
 import type { PostgresAdapter } from '@payloadcms/db-postgres'
 import type { Payload } from 'payload'
-import { checkRateLimit, checkRateLimits } from './rateLimit'
+import { checkRateLimit, checkRateLimits, storedRateLimitKey } from './rateLimit'
 
 // One shared Payload instance for every test in this file, not one per
 // test. `getPayload()` caches globally by `options.key` (default 'default')
@@ -136,13 +136,13 @@ test('checkRateLimit: concurrent callers for the same key never exceed max', asy
     // (e.g. an allow without a matching insert, or the reverse).
     const adapter = payload.db as unknown as PostgresAdapter
     const rowCountResult = await adapter.drizzle.execute(
-      sql`SELECT count(*)::int AS count FROM "rate_limit_hits" WHERE "bucket" = 'checkout_ip' AND "rate_key" = ${key}`,
+      sql`SELECT count(*)::int AS count FROM "rate_limit_hits" WHERE "bucket" = 'checkout_ip' AND "rate_key" = ${storedRateLimitKey(key)}`,
     )
     const rowCount = Number((rowCountResult.rows[0] as { count?: number } | undefined)?.count ?? 0)
     assert.equal(rowCount, MAX, `expected exactly ${MAX} rows actually inserted for this key, got ${rowCount}`)
   } finally {
     const adapter = payload.db as unknown as PostgresAdapter
-    await adapter.drizzle.execute(sql`DELETE FROM "rate_limit_hits" WHERE "rate_key" = ${key}`)
+    await adapter.drizzle.execute(sql`DELETE FROM "rate_limit_hits" WHERE "rate_key" = ${storedRateLimitKey(key)}`)
   }
 })
 
@@ -193,7 +193,7 @@ test('checkRateLimits: a bucket that had room records nothing when a sibling buc
     // would exist even though the overall attempt was rejected.
     const adapter = payload.db as unknown as PostgresAdapter
     const phoneRowCountResult = await adapter.drizzle.execute(
-      sql`SELECT count(*)::int AS count FROM "rate_limit_hits" WHERE "bucket" = 'checkout_phone' AND "rate_key" = ${phoneKey}`,
+      sql`SELECT count(*)::int AS count FROM "rate_limit_hits" WHERE "bucket" = 'checkout_phone' AND "rate_key" = ${storedRateLimitKey(phoneKey)}`,
     )
     const phoneRowCount = Number((phoneRowCountResult.rows[0] as { count?: number } | undefined)?.count ?? 0)
     assert.equal(
@@ -203,6 +203,6 @@ test('checkRateLimits: a bucket that had room records nothing when a sibling buc
     )
   } finally {
     const adapter = payload.db as unknown as PostgresAdapter
-    await adapter.drizzle.execute(sql`DELETE FROM "rate_limit_hits" WHERE "rate_key" IN (${ipKey}, ${phoneKey})`)
+    await adapter.drizzle.execute(sql`DELETE FROM "rate_limit_hits" WHERE "rate_key" IN (${storedRateLimitKey(ipKey)}, ${storedRateLimitKey(phoneKey)})`)
   }
 })

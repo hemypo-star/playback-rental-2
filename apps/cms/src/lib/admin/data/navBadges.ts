@@ -1,6 +1,7 @@
 import { getAdminKpi } from './kpi'
 import { getAdminStock } from './stock'
 import { getAdminClients } from './clients'
+import { requireAdminSession } from '../auth'
 
 // Badge counts for AdminSidebar's nav items. The delivered mockup's sidebar
 // badges (Заказы 7, Склад 38, Клиенты 3 — docs/design-reference/
@@ -17,6 +18,7 @@ export interface AdminNavBadges {
 }
 
 export async function getAdminNavBadges(): Promise<AdminNavBadges> {
+  await requireAdminSession()
   if (Boolean(process.env.VISUAL_BASE_URL)) {
     return { orders: 7, stock: 38, clients: 3 }
   }

@@ -171,8 +171,10 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
             <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Позиции</div>
             <div className="mt-3.5 flex flex-col gap-2.5">
               {items.map((item) => (
-                <div key={item.id} className="grid grid-cols-[1.6fr_100px_1fr_1fr_90px_36px] items-center gap-2.5 rounded-2xl bg-muted p-3">
-                  <span className="truncate text-[13.5px] font-medium">{item.product.title}</span>
+                <div key={item.id} className="grid grid-cols-2 items-center gap-2.5 rounded-2xl bg-muted p-3 md:grid-cols-[1.6fr_100px_1fr_1fr_90px_36px]">
+                  {/* Two columns on phones (title across, then qty/start, end/total): the six-column row
+                      with datetime inputs was 743px wide at 375px. */}
+                  <span className="col-span-2 truncate text-[13.5px] font-medium md:col-span-1">{item.product.title}</span>
                   <input
                     type="number"
                     min={1}
@@ -187,7 +189,8 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
                         e.target.value = String(committedItem(item.id)?.quantity ?? item.quantity)
                       })
                     }}
-                    className="h-9 w-full rounded-lg border border-input bg-white px-2 text-[13px] outline-none focus:border-foreground"
+                    aria-label="Количество"
+                    className="h-9 w-full min-w-0 rounded-lg border border-input bg-white px-2 text-[13px] outline-none focus:border-foreground"
                   />
                   {item.listingType === 'rental' ? (
                     <input
@@ -202,7 +205,7 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
                           e.target.value = toLocalInput(committedItem(item.id)?.startDate ?? item.startDate)
                         })
                       }}
-                      className="h-9 w-full rounded-lg border border-input bg-white px-2 text-[12px] outline-none focus:border-foreground"
+                      className="h-9 w-full min-w-0 rounded-lg border border-input bg-white px-2 text-[12px] outline-none focus:border-foreground"
                     />
                   ) : (
                     <span />
@@ -220,13 +223,13 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
                           e.target.value = toLocalInput(committedItem(item.id)?.endDate ?? item.endDate)
                         })
                       }}
-                      className="h-9 w-full rounded-lg border border-input bg-white px-2 text-[12px] outline-none focus:border-foreground"
+                      className="h-9 w-full min-w-0 rounded-lg border border-input bg-white px-2 text-[12px] outline-none focus:border-foreground"
                     />
                   ) : (
                     <span />
                   )}
                   <span className="text-right text-[13.5px] font-semibold">{rub(item.lineTotal)}</span>
-                  <button type="button" onClick={() => handleRemoveItem(item.id)} className="justify-self-end text-[13px] text-subtle hover:text-accent" aria-label="Удалить позицию">
+                  <button type="button" onClick={() => handleRemoveItem(item.id)} className="col-span-2 justify-self-end text-[13px] text-subtle hover:text-accent md:col-span-1" aria-label="Удалить позицию">
                     ✕
                   </button>
                 </div>
@@ -293,6 +296,26 @@ export default function OrderDetailForm({ order, items: initialItems }: Props) {
               </button>
             )}
             {submitResult && <p className="mt-3 text-[12.5px]">{submitResult}</p>}
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card p-6">
+            <div className="text-[10.5px] font-semibold tracking-[0.16em] text-subtle uppercase">Персональные данные</div>
+            <div className="mt-3 text-[13px] text-subtle">
+              {order.personalDataErasedAt ? (
+                <div className="text-foreground">
+                  Удалены {new Date(order.personalDataErasedAt).toLocaleString('ru-RU')}
+                  {order.personalDataErasedBy ? ` (${order.personalDataErasedBy})` : ''} — клиент отозвал согласие.
+                </div>
+              ) : null}
+              {order.consentAt ? (
+                <div className={order.personalDataErasedAt ? 'mt-1' : ''}>
+                  Согласие получено {new Date(order.consentAt).toLocaleString('ru-RU')}
+                  {order.consentDocuments ? <div className="mt-1 break-words text-[12px]">{order.consentDocuments}</div> : null}
+                </div>
+              ) : (
+                <div>Согласие не записано (заказ создан вручную или до 21.10.2026).</div>
+              )}
+            </div>
           </div>
         </div>
       </div>

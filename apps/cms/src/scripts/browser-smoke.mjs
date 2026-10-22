@@ -317,6 +317,9 @@ async function main() {
         const date = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         date.setUTCHours(10, 0, 0, 0)
         const iso = date.toISOString()
+        // Same-day return, 8 h later: one billed day, and above the 4-hour
+        // minimum (a zero-length range is refused as too_short).
+        const endIso = new Date(date.getTime() + 8 * 60 * 60 * 1000).toISOString()
         localStorage.setItem('pb:cart', JSON.stringify([{
           productId: ${productId},
           title: 'Smoke Camera Alpha',
@@ -325,7 +328,7 @@ async function main() {
           unit: 'шт.',
           quantity: 1
         }]))
-        sessionStorage.setItem('pb:selectedDates', JSON.stringify({ startDate: iso, endDate: iso }))
+        sessionStorage.setItem('pb:selectedDates', JSON.stringify({ startDate: iso, endDate: endIso }))
         return iso
       })()`,
     )

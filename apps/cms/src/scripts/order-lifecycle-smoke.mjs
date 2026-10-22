@@ -108,6 +108,21 @@ async function main() {
   }
   console.log('PASS fractional item quantity rejected: HTTP 400')
 
+  // The custom validate above replaces Payload's own min/max check, so the
+  // range has to be enforced there too: 0 and negative lines used to price an
+  // order down to 0 ₽.
+  for (const quantity of [0, -1, 100]) {
+    const outOfRange = await fetch(url(`/api/orderItems/${itemId}`), {
+      method: 'PATCH',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity }),
+    })
+    if (outOfRange.status !== 400) {
+      throw new Error(`Item quantity ${quantity} was not rejected: HTTP ${outOfRange.status} ${JSON.stringify(await json(outOfRange))}`)
+    }
+  }
+  console.log('PASS item quantity 0, -1 and 100 rejected: HTTP 400')
+
   const availabilityUrl = `/api/rental-availability-bulk?productIds=${productId}&start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
   const beforeAvailabilityResponse = await fetch(url(availabilityUrl))
   const beforeAvailability = await json(beforeAvailabilityResponse)

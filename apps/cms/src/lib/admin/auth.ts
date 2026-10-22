@@ -1,4 +1,6 @@
+import { cache } from 'react'
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 
@@ -15,11 +17,25 @@ export interface AdminUser {
   email: string
 }
 
-export async function getAdminUser(): Promise<AdminUser | null> {
+// cache(): one payload.auth() per request, however many data loaders ask.
+export const getAdminUser = cache(async (): Promise<AdminUser | null> => {
   const payload = await getPayload({ config })
   const { user } = await payload.auth({ headers: await headers() })
   if (!user) return null
   return { id: user.id, email: user.email }
+})
+
+// Every loader in lib/admin/data/ calls this before touching the Local API
+// (which runs with overrideAccess). The admin layout's own check is NOT
+// enough: on a client-side navigation Next renders only the changed page
+// segment, not the layouts above it, so a crafted RSC request (RSC: 1 plus a
+// Next-Router-State-Tree claiming the admin layout is already mounted) used
+// to get page data with no session at all — customer contacts, orders and
+// promo codes were readable anonymously that way.
+export async function requireAdminSession(): Promise<AdminUser> {
+  const user = await getAdminUser()
+  if (!user) redirect('/admin/login')
+  return user
 }
 
 export async function isAdminInitialized(): Promise<boolean> {

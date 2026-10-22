@@ -257,7 +257,7 @@ async function main() {
       ['/admin/analytics', 'Аналитика'],
       ['/admin/media', 'Медиатека'],
       ['/admin/users', 'Пользователи'],
-      ['/admin/settings', 'Настройки'],
+      ['/admin/settings', 'Тексты и контакты сайта'],
     ]
 
     for (const [pathname, marker] of routes) {

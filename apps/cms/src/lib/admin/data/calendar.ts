@@ -2,6 +2,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import type { OrderItem, Product } from '../../../payload-types'
 import type { OrderStatus } from '../format'
+import { requireAdminSession } from '../auth'
 
 // Ported from apps/cms/src/endpoints/admin/calendar.ts (docs/PLAN-next-
 // migration.md Stage 3.5, page group 4) — same reasoning as
@@ -52,6 +53,7 @@ export interface AdminCalendarProduct {
 export async function getAdminCalendar(
   offsetDays = 0,
 ): Promise<{ days: string[]; products: AdminCalendarProduct[] }> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
 
   const clampedOffsetDays = Math.max(0, Math.trunc(offsetDays) || 0)

@@ -3,6 +3,9 @@ import type { CollectionConfig } from 'payload'
 import { submitOrder, SubmitOrderError } from '../lib/rental/submitOrder'
 import { secretsMatch } from '../lib/security/timingSafe'
 
+// Shared with checkout/actions.ts's input check.
+export const ORDER_FIELD_LIMITS = { customerName: 120, customerEmail: 254, customerPhone: 32, notes: 2000 } as const
+
 export const Orders: CollectionConfig = {
   slug: 'orders',
   access: {
@@ -34,6 +37,7 @@ export const Orders: CollectionConfig = {
       name: 'customerName',
       type: 'text',
       required: true,
+      maxLength: ORDER_FIELD_LIMITS.customerName,
     },
     {
       name: 'customerEmail',
@@ -44,6 +48,7 @@ export const Orders: CollectionConfig = {
       name: 'customerPhone',
       type: 'text',
       required: true,
+      maxLength: ORDER_FIELD_LIMITS.customerPhone,
     },
     {
       // Single source of truth for status — line items (orderItems) don't
@@ -83,6 +88,37 @@ export const Orders: CollectionConfig = {
     {
       name: 'notes',
       type: 'textarea',
+      maxLength: ORDER_FIELD_LIMITS.notes,
+    },
+    {
+      // 152-FZ art. 9: proof of the customer's consent — when it was given
+      // and to which revisions of the documents (lib/legal/documents.ts).
+      // Written by the checkout Server Action only; nobody can edit it later.
+      name: 'consentAt',
+      type: 'date',
+      access: { update: () => false },
+      admin: { position: 'sidebar', readOnly: true, date: { pickerAppearance: 'dayAndTime' }, description: 'Когда клиент дал согласие на обработку ПДн и принял условия.' },
+    },
+    {
+      name: 'consentDocuments',
+      type: 'text',
+      access: { update: () => false },
+      admin: { position: 'sidebar', readOnly: true, description: 'Редакции документов, с которыми согласился клиент.' },
+    },
+    {
+      // Set by the admin's "удалить данные клиента" action (lib/admin/
+      // erasePersonalData.ts) when a customer withdraws consent: the order
+      // stays for accounting, the contact fields are blanked.
+      name: 'personalDataErasedAt',
+      type: 'date',
+      access: { update: () => false },
+      admin: { position: 'sidebar', readOnly: true, date: { pickerAppearance: 'dayAndTime' } },
+    },
+    {
+      name: 'personalDataErasedBy',
+      type: 'text',
+      access: { update: () => false },
+      admin: { position: 'sidebar', readOnly: true },
     },
     {
       // Set once at checkout (order creation), never changed afterward —

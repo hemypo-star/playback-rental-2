@@ -6,6 +6,7 @@ import { useStore } from '@nanostores/react'
 import { $selectedDates, OPEN_DATE_PICKER_EVENT, resetSelectedDates, setSelectedDates } from '../stores/dates'
 import { isBeforeBusinessToday } from '../lib/rental/businessDay'
 import { calculateRentalDays } from '../lib/pricing'
+import { MAX_RENTAL_DAYS, MIN_RENTAL_HOURS } from '../lib/rental/limits'
 
 export interface PrototypeDatePickerHandle { open: (target?: 'from' | 'to') => void }
 interface Props { variant?: 'navbar' | 'compact' | 'hero' | 'hidden'; openHour: number; closeHour: number }
@@ -57,9 +58,13 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
   // renders those days disabled too, but the check lives here as well so the
   // rule holds for any other caller of choose().
   const choose=(d:Date)=>{if(isBeforeBusinessToday(d))return;if(target==='from'){setFrom(d);if(to && d>=to)setTo(null);setTarget('to')}else{if(from && d<from){setFrom(d);setTo(null);setTarget('to')}else setTo(d)}}
-  const done=()=>{if(from&&to){setSelectedDates(withHour(from,fromHour),withHour(to,toHour))}close()}
+  const done=()=>{if(rangeError)return;if(from&&to){setSelectedDates(withHour(from,fromHour),withHour(to,toHour))}close()}
   const reset=()=>{resetSelectedDates();setFrom(null);setTo(null);setFromHour(openHour);setToHour(closeHour);setTarget('from');setMonth(startOfMonth(new Date()))}
   const days=from&&to?calculateRentalDays(from,to):1
+  // Same limits the server enforces (OrderItems.ts): refusing here saves the
+  // customer a rejected checkout.
+  const rangeMs=from&&to?(withHour(to,toHour)?.getTime()??0)-(withHour(from,fromHour)?.getTime()??0):null
+  const rangeError=rangeMs===null?null:rangeMs<MIN_RENTAL_HOURS*3600000?`Минимум ${MIN_RENTAL_HOURS} часа — выберите время возврата позже.`:calculateRentalDays(withHour(from,fromHour)!,withHour(to,toHour)!)>MAX_RENTAL_DAYS?`Не дольше ${MAX_RENTAL_DAYS} суток.`:null
   const label=fmtRange(shown.startDate,shown.endDate)
   const activeHour=target==='from'?fromHour:toHour
 
@@ -112,7 +117,7 @@ const PrototypeDatePicker = forwardRef<PrototypeDatePickerHandle,Props>(function
           </div>
           <div><div className="pb-kicker">{target==='from'?'Время выдачи':'Время возврата'}</div><div className="pb-times">{hours.map(h=><button key={h} type="button" className="pb-time" data-active={h===activeHour} onClick={()=>target==='from'?setFromHour(h):setToHour(h)}>{String(h).padStart(2,'0')}:00</button>)}</div></div>
         </div>
-        <div className="pb-modal-foot"><div style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:14}}><span style={{fontSize:12.5,color:'var(--pb-sub)',maxWidth:400}}>Рабочие часы {String(openHour).padStart(2,'0')}:00 — {String(closeHour).padStart(2,'0')}:00.</span>{(from||to)&&<button type="button" onClick={reset} className="pb-reset-link" style={{fontSize:11,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'var(--pb-sub)',background:'none',border:0,padding:0,cursor:'pointer'}}>Сбросить</button>}</div><button type="button" className="pb-pill pb-btn pb-modal-done" onClick={done} disabled={!from||!to}><span>Готово · {days} {days===1?'сутки':'суток'}</span><span>→</span></button></div>
+        <div className="pb-modal-foot"><div style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:14}}><span style={{fontSize:12.5,color:'var(--pb-sub)',maxWidth:400}}>{rangeError?<span style={{color:'var(--pb-red)'}}>{rangeError}</span>:<>Рабочие часы {String(openHour).padStart(2,'0')}:00 — {String(closeHour).padStart(2,'0')}:00.</>}</span>{(from||to)&&<button type="button" onClick={reset} className="pb-reset-link" style={{fontSize:11,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'var(--pb-sub)',background:'none',border:0,padding:0,cursor:'pointer'}}>Сбросить</button>}</div><button type="button" className="pb-pill pb-btn pb-modal-done" onClick={done} disabled={!from||!to||!!rangeError}><span>Готово · {days} {days===1?'сутки':'суток'}</span><span>→</span></button></div>
       </div>
     </div>,
       document.body

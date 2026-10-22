@@ -24,6 +24,10 @@ services:
   notifications:
     profiles: [jobs]
 
+  # Nightly backups write to a host path; not wanted on a dev machine.
+  backup:
+    profiles: [jobs]
+
   cms:
     environment:
       NOTIFICATIONS_ENABLED: 'false'

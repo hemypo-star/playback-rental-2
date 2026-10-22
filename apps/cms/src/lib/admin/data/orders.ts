@@ -2,6 +2,7 @@ import { getPayload } from 'payload'
 import type { Where } from 'payload'
 import config from '@payload-config'
 import type { OrderItem } from '../../../payload-types'
+import { requireAdminSession } from '../auth'
 
 // Ported from apps/cms/src/endpoints/admin/{orders,orderDetail}.ts
 // (docs/PLAN-next-migration.md Stage 3.3) — same reasoning as
@@ -40,6 +41,7 @@ export interface AdminOrdersResult {
 }
 
 export async function getAdminOrders(filters: AdminOrdersFilters = {}): Promise<AdminOrdersResult> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
 
   const and: Where[] = []
@@ -129,6 +131,10 @@ export interface AdminOrderDetail {
   moySkladOrderId: string | null
   submittedAt: string | null
   createdAt: string
+  consentAt: string | null
+  consentDocuments: string | null
+  personalDataErasedAt: string | null
+  personalDataErasedBy: string | null
 }
 
 export interface AdminOrderDetailItem {
@@ -142,6 +148,7 @@ export interface AdminOrderDetailItem {
 }
 
 export async function getAdminOrderDetail(orderId: number): Promise<{ order: AdminOrderDetail; items: AdminOrderDetailItem[] } | null> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
 
   const order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0, disableErrors: true })
@@ -161,6 +168,10 @@ export async function getAdminOrderDetail(orderId: number): Promise<{ order: Adm
       moySkladOrderId: order.moySkladOrderId ?? null,
       submittedAt: order.submittedAt ?? null,
       createdAt: order.createdAt,
+      consentAt: order.consentAt ?? null,
+      consentDocuments: order.consentDocuments ?? null,
+      personalDataErasedAt: order.personalDataErasedAt ?? null,
+      personalDataErasedBy: order.personalDataErasedBy ?? null,
     },
     items: itemsResult.docs.map((item) => ({
       id: item.id,

@@ -24,6 +24,9 @@ import { checkRateLimits, type RateLimitCheck } from '../../../lib/security/rate
 import { getClientIp } from '../../../lib/security/clientIp'
 import { normalizePhoneForRateLimit } from '../../../lib/text/phone'
 import { resolveActivePromoCode } from '../../../lib/promo/promoCodes'
+import { MAX_ITEM_QUANTITY } from '../../../lib/rental/limits'
+import { consentDocumentsStamp } from '../../../lib/legal/documents'
+import { ORDER_FIELD_LIMITS } from '../../../collections/Orders'
 
 export interface CheckoutItem {
   productId: number
@@ -45,6 +48,11 @@ export interface CheckoutInput {
   // discountType/discountValue never reaches the server at all, only the
   // code string itself.
   promoCode?: string
+  // Both checkboxes on the checkout form (personal-data consent + privacy
+  // policy; rental terms + user agreement). Checked here as well as in the
+  // browser — the action is POST-able directly — and recorded on the order
+  // with the document revisions (152-FZ art. 9).
+  consent?: { personalData?: boolean; terms?: boolean }
 }
 
 export interface CheckoutResult {
@@ -63,8 +71,43 @@ export interface CheckoutResult {
   orderId?: number
 }
 
+const MAX_CART_LINES = 30
+
+function isCheckoutInputSane(input: CheckoutInput, items: CheckoutItem[]): boolean {
+  const str = (v: unknown, max: number, required = true) =>
+    typeof v === 'string' ? v.trim().length <= max && (!required || v.trim().length > 0) : !required && v == null
+  const phoneDigits = typeof input.customerPhone === 'string' ? input.customerPhone.replace(/\D/g, '').length : 0
+  return (
+    items.length > 0 &&
+    items.length <= MAX_CART_LINES &&
+    str(input.customerName, ORDER_FIELD_LIMITS.customerName) &&
+    str(input.customerEmail, ORDER_FIELD_LIMITS.customerEmail) &&
+    str(input.customerPhone, ORDER_FIELD_LIMITS.customerPhone) &&
+    phoneDigits >= 10 &&
+    phoneDigits <= 15 &&
+    str(input.notes, ORDER_FIELD_LIMITS.notes, false) &&
+    str(input.promoCode, 64, false)
+  )
+}
+
 export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResult> {
   const payload = await getPayload({ config })
+
+  // The collection re-checks this on every line, but rejecting here first
+  // costs no rate-limit slot and gives the customer a specific message.
+  const items = Array.isArray(input?.items) ? input.items : []
+  if (items.some((item) => !Number.isInteger(item?.quantity) || item.quantity < 1 || item.quantity > MAX_ITEM_QUANTITY)) {
+    return { success: false, errorCode: 'ITEM_QUANTITY_INVALID' }
+  }
+  if (input?.consent?.personalData !== true || input?.consent?.terms !== true) {
+    return { success: false, errorCode: 'CONSENT_REQUIRED' }
+  }
+  // Bounds on what a direct POST can send: every cart line takes a lock and
+  // several queries, and the contact fields land in the order, МойСклад and
+  // notifications. The storefront form stays far inside these.
+  if (!isCheckoutInputSane(input, items)) {
+    return { success: false, errorCode: 'CHECKOUT_INPUT_INVALID' }
+  }
 
   try {
     // A2 (design_handoff_swiss_bento/08-instruction.md, audit G1) — rate
@@ -95,7 +138,10 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
     // belongs.
     const ip = getClientIp(await headers())
     const phoneKey = normalizePhoneForRateLimit(input.customerPhone)
-    const rateLimitChecks: RateLimitCheck[] = [{ bucket: 'checkout_phone', key: phoneKey }]
+    const rateLimitChecks: RateLimitCheck[] = [
+      { bucket: 'checkout_phone', key: phoneKey },
+      { bucket: 'checkout_global', key: 'all' },
+    ]
     if (ip) rateLimitChecks.push({ bucket: 'checkout_ip', key: ip })
     const allowed = await checkRateLimits(payload, rateLimitChecks)
     if (!allowed) {
@@ -153,6 +199,8 @@ export async function submitCheckout(input: CheckoutInput): Promise<CheckoutResu
           // create() overload.
           status: 'pending',
           ...(input.notes ? { notes: input.notes } : {}),
+          consentAt: new Date().toISOString(),
+          consentDocuments: consentDocumentsStamp(),
           // promo.code, not input.promoCode verbatim: normalizes case/
           // whitespace to what the admin order view displays. promoDiscount
           // Type/Value are the snapshot recalcOrderTotal will read from now

@@ -9,7 +9,7 @@
 // and lastSyncedMsValues stays null, so the sync job never matches this row
 // (МойСклад has no such entity).
 import type { RequiredDataFromCollectionSlug } from 'payload'
-import { getPayload } from 'payload'
+import { APIError, getPayload } from 'payload'
 import config from '@payload-config'
 import { revalidatePath, updateTag } from 'next/cache'
 import { randomUUID } from 'node:crypto'
@@ -175,6 +175,8 @@ export async function deleteKit(id: number): Promise<KitActionResult> {
     revalidatePath('/admin/stock')
     return { success: true }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Не удалось удалить набор' }
+    // APIError messages from the collection hooks are written for the operator;
+    // anything else (a raw database error) is not.
+    return { success: false, error: error instanceof APIError ? error.message : 'Не удалось удалить набор' }
   }
 }

@@ -2,7 +2,7 @@ import type { Payload } from 'payload'
 import type { Category, Media } from '../../../payload-types'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { getAdminUser } from '../auth'
+import { getAdminUser, requireAdminSession } from '../auth'
 
 // Read helpers for the /admin/kits pages (kit = a product with isKit:true,
 // assembled from already-synced МойСклад items — see kits/actions.ts).
@@ -21,6 +21,7 @@ export interface AdminKitRow {
 }
 
 export async function getAdminKits(): Promise<AdminKitRow[]> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
   const result = await payload.find({
     collection: 'products',
@@ -51,6 +52,7 @@ export interface KitComponentOption {
 // Components of a kit are ordinary МойСклад-synced products (a kit of kits
 // would make stock math ambiguous, so isKit rows are excluded here).
 export async function getKitComponentOptions(): Promise<KitComponentOption[]> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
   const result = await payload.find({
     collection: 'products',
@@ -84,6 +86,7 @@ export interface KitEditData {
 }
 
 export async function getKitById(id: number): Promise<KitEditData | null> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
   const doc = await payload.findByID({ collection: 'products', id, depth: 1, disableErrors: true })
   if (!doc || !doc.isKit) return null
@@ -118,6 +121,7 @@ export async function getKitById(id: number): Promise<KitEditData | null> {
 // multipart POST from the client instead. Binary handling mirrors the sync
 // job's media import (payload.create with `file: { data, ... }`).
 export async function uploadKitImageFromFile(file: File): Promise<{ id: number; url: string }> {
+  await requireAdminSession()
   const payload: Payload = await getPayload({ config })
   const buf = Buffer.from(await file.arrayBuffer())
   const doc = await payload.create({

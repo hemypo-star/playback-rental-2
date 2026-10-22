@@ -1,4 +1,4 @@
-import { msGet } from './client'
+import { MOYSKLAD_TIMEOUT_MS, msGet } from './client'
 import { calculateRentalDays } from '../rental/pricing'
 
 const BASE_URL = 'https://api.moysklad.ru/api/remap/1.2'
@@ -22,6 +22,7 @@ async function msPost<T>(path: string, body: unknown): Promise<T> {
       'Accept-Encoding': 'gzip',
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(MOYSKLAD_TIMEOUT_MS),
   })
   if (!res.ok) {
     const errBody = await res.text().catch(() => '')
@@ -58,8 +59,15 @@ async function findOrCreateCounterparty(
   email: string,
   phone: string,
 ): Promise<{ id: string; href: string }> {
+  // Only the LOOKUP uses a cleaned copy: in МойСклад's filter syntax `;`
+  // starts another condition, so a crafted value could match (and attach
+  // this order to) another business's counterparty in this shared account.
+  // A real number ("+7 (900) 123-45-67", what the checkout mask produces) is
+  // unchanged by this, so existing counterparties still match. The new
+  // counterparty below gets the phone exactly as the customer typed it.
+  const lookupPhone = phone.replace(/[^\d+()\- ]/g, '').trim()
   const existing = await msGet<{ rows: MsEntityRef[] }>(
-    `/entity/counterparty?filter=${encodeURIComponent(`phone=${phone}`)}&limit=1`,
+    `/entity/counterparty?filter=${encodeURIComponent(`phone=${lookupPhone}`)}&limit=1`,
   )
   if (existing.rows.length > 0) {
     const c = existing.rows[0]

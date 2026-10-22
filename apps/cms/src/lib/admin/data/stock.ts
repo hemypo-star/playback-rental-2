@@ -1,6 +1,7 @@
 import { getPayload } from 'payload'
 import type { Where } from 'payload'
 import config from '@payload-config'
+import { requireAdminSession } from '../auth'
 
 // Ported from apps/cms/src/endpoints/admin/stock.ts (docs/PLAN-next-
 // migration.md Stage 3.5, page group 4) — same reasoning as the other
@@ -24,6 +25,7 @@ export interface AdminStockFilters {
 }
 
 export async function getAdminStock(filters: AdminStockFilters = {}): Promise<AdminStockRow[]> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
 
   const and: Where[] = []

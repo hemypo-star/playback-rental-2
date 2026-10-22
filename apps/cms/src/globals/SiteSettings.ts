@@ -41,7 +41,7 @@ export const SiteSettings: GlobalConfig = {
             },
             { name: 'heroKicker', type: 'text', defaultValue: 'Прокат съёмочной техники' },
             { name: 'heroCity', type: 'text', defaultValue: 'Кемерово' },
-            { name: 'heroHeadline', type: 'text', defaultValue: 'Техника для съёмки без залога' },
+            { name: 'heroHeadline', type: 'text', defaultValue: 'Прокат техники для съёмки' },
             {
               name: 'heroSubtext',
               type: 'textarea',

@@ -44,6 +44,17 @@ async function main() {
   }
   console.log('PASS admin cannot delete their own account: HTTP 400')
 
+  // The 8-character minimum is enforced by the server, not only the form.
+  const shortPassword = await fetch(url('/api/users'), {
+    method: 'POST',
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'short-password@example.invalid', password: 'abc' }),
+  })
+  if (shortPassword.status !== 400) {
+    throw new Error(`a 3-character password was accepted: HTTP ${shortPassword.status} ${(await body(shortPassword)).text.slice(0, 300)}`)
+  }
+  console.log('PASS server rejects a password shorter than 8 characters: HTTP 400')
+
   async function fetchAdminPage(pathname, markers) {
     const response = await fetch(url(pathname), { headers: authHeaders, redirect: 'manual' })
     const result = await body(response)
@@ -66,7 +77,7 @@ async function main() {
   await fetchAdminPage('/admin/categories', ['Категории', 'Smoke Cameras', 'Smoke Lenses'])
   await fetchAdminPage('/admin/promo-codes', ['Промокоды'])
   await fetchAdminPage('/admin/promotions', ['Акции'])
-  await fetchAdminPage('/admin/settings', ['Настройки'])
+  await fetchAdminPage('/admin/settings', ['Тексты и контакты сайта'])
   const usersHtml = await fetchAdminPage('/admin/users', ['Администраторы', adminEmail, 'это вы'])
   if (usersHtml.includes(`>${adminEmail}</span><button`)) {
     throw new Error('current admin unexpectedly renders a delete button beside its own account')

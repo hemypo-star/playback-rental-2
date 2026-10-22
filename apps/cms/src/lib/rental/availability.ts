@@ -147,6 +147,9 @@ export async function getAvailableSaleQuantity(
     req,
   })
 
-  const soldQty = sold.docs.reduce((sum, item) => sum + (item.quantity || 1), 0)
+  // A missing quantity is the field's default (1); a non-positive one can only
+  // be a row written before quantity was range-checked and must not free up
+  // stock.
+  const soldQty = sold.docs.reduce((sum, item) => sum + (item.quantity == null ? 1 : Math.max(0, item.quantity)), 0)
   return Math.max(0, product.quantity - soldQty)
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import LegalPageLayout, { type LegalTocItem } from '../../../components/LegalPageLayout'
+import { LEGAL_DOCUMENTS, revisionLabel } from '../../../lib/legal/documents'
 import { buildMetadata } from '../../../lib/seo'
 
 // Separate consent to personal-data processing (152-FZ art. 9 part 4), linked
@@ -29,7 +30,7 @@ const TOC: LegalTocItem[] = [
 
 export default function PersonalDataConsentPage() {
   return (
-    <LegalPageLayout title="Согласие на обработку персональных данных" subtitle="Редакция от 15.10.2026" toc={TOC}>
+    <LegalPageLayout title="Согласие на обработку персональных данных" subtitle={`Редакция от ${revisionLabel(LEGAL_DOCUMENTS.personalDataConsent.revision)}`} toc={TOC}>
       <section>
         <p>
           Отмечая соответствующую галочку и отправляя заявку на аренду или сообщение через форму обратной связи на

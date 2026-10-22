@@ -16,7 +16,7 @@ export default async function AdminSettingsPage() {
 
   return (
     <>
-      <AdminPageHeader title="Настройки сайта" subtitle="Весь некаталожный текст и картинки сайта" />
+      <AdminPageHeader title="Тексты и контакты сайта" subtitle="Главная страница, контакты и часы работы. Товары и цены приходят из МойСклад." />
       <SettingsForm settings={settings} />
     </>
   )

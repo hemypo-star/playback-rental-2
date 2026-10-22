@@ -51,7 +51,7 @@ export async function getBookedQuantities(payload: Payload, params: BookedQuanti
   })
   for (const item of saleItems.docs) {
     const productId = typeof item.product === 'object' ? item.product.id : item.product
-    booked.set(productId, (booked.get(productId) || 0) + (item.quantity || 0))
+    booked.set(productId, (booked.get(productId) || 0) + Math.max(0, item.quantity || 0))
   }
 
   // Rentals: shared kit/component stock and peak load over the window

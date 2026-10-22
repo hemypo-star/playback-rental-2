@@ -17,8 +17,13 @@ FROM node:22-bookworm-slim AS base
 # container that shim may try to download pnpm from registry.npmjs.org. Bake
 # the exact workspace pnpm version into the base layer so container startup
 # never depends on registry DNS/network availability.
+# COREPACK_HOME outside /root: the runtime runs as `node` (see
+# docker-entrypoint.sh), and a pnpm cached under root's home would be invisible
+# to it and re-downloaded at every start.
+ENV COREPACK_HOME=/usr/local/share/corepack
 RUN corepack enable \
   && corepack prepare pnpm@11.21.0 --activate \
+  && chmod -R a+rX "$COREPACK_HOME" \
   && pnpm --version
 WORKDIR /repo
 
@@ -78,8 +83,13 @@ RUN pnpm build
 FROM base AS runtime
 ENV NODE_ENV=production
 WORKDIR /repo/apps/cms
-COPY --from=build /repo /repo
+# Owned by `node` so the unprivileged process can write Next's runtime cache
+# (.next/cache, image optimisation).
+COPY --from=build --chown=node:node /repo /repo
 EXPOSE 3000
+# Starts as root just long enough to hand the data volumes to `node`, then
+# drops to it for every command (docker-entrypoint.sh).
+ENTRYPOINT ["/repo/apps/cms/docker-entrypoint.sh"]
 # Migrations run before every start, including restarts of an already-
 # migrated container — payload migrate is a no-op when nothing's pending.
 # check:migration-drift runs first: if this database ever had `pnpm dev`'s
@@ -89,4 +99,8 @@ EXPOSE 3000
 # redirected from /dev/null (docs/audits/2026-08-24-baseline.md, DEPLOY-001).
 # The check runs the same underlying query migrate's own CLI does and fails
 # fast with a real exit code and an explanation instead.
-CMD ["sh", "-c", "pnpm check:migration-drift && pnpm payload migrate && pnpm start"]
+# `exec` hands PID 1's place (under compose's `init: true`) to the Next server
+# itself, so `docker compose stop` delivers SIGTERM to it and in-flight
+# requests finish; through `sh` and `pnpm` the signal was lost and Docker
+# killed the process after the grace period (exit 137).
+CMD ["sh", "-c", "pnpm check:migration-drift && pnpm payload migrate && exec ./node_modules/.bin/next start"]

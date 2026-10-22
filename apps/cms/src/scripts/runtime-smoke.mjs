@@ -85,6 +85,14 @@ async function main() {
   // Payload's own admin panel is retired; /admin is the only admin UI.
   await expectStatus('/cms', 404)
 
+  // Unknown URLs, missing products and categories get the site's own 404
+  // page (not a 307 to /catalog, not Next's bare default).
+  for (const pathname of ['/no-such-page', '/product/999999999', '/catalog/no-such-category']) {
+    await expectStatus(pathname, 404)
+    const body = await (await fetch(url(pathname))).text()
+    if (!body.includes('Такой страницы нет')) throw new Error(`${pathname}: 404 is not the storefront not-found page`)
+  }
+
   await expectRedirect('/admin', '/admin/login')
   await expectRedirect('/admin/login', '/admin/first-register')
   await expectContactValidation()

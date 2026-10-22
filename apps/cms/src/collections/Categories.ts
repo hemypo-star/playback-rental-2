@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { APIError } from 'payload'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
@@ -11,6 +12,25 @@ export const Categories: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'moySkladFolderId', 'order'],
+  },
+  hooks: {
+    // Products and subcategories reference their category; the database
+    // would refuse the delete with an English constraint error.
+    beforeDelete: [
+      async ({ id, req }) => {
+        const [products, children] = await Promise.all([
+          req.payload.count({ collection: 'products', where: { category: { equals: id } }, overrideAccess: true, req }),
+          req.payload.count({ collection: 'categories', where: { parent: { equals: id } }, overrideAccess: true, req }),
+        ])
+        if (products.totalDocs > 0 || children.totalDocs > 0) {
+          const parts = [
+            products.totalDocs > 0 ? `товаров: ${products.totalDocs}` : null,
+            children.totalDocs > 0 ? `подкатегорий: ${children.totalDocs}` : null,
+          ].filter(Boolean)
+          throw new APIError(`Нельзя удалить: в категории есть ${parts.join(', ')}. Сначала перенесите их в другую категорию.`, 400, undefined, true)
+        }
+      },
+    ],
   },
   fields: [
     {

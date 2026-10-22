@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import LegalPageLayout, { type LegalTocItem } from '../../../components/LegalPageLayout'
+import { LEGAL_DOCUMENTS, revisionLabel } from '../../../lib/legal/documents'
 import { buildMetadata } from '../../../lib/seo'
 
 // Ported from apps/web/src/pages/user-agreement.astro (docs/PLAN-next-
@@ -33,7 +34,7 @@ const TOC: LegalTocItem[] = [
 
 export default function UserAgreementPage() {
   return (
-    <LegalPageLayout title="Правила пользования сервисом проката оборудования Playback Rental" toc={TOC}>
+    <LegalPageLayout title="Правила пользования сервисом проката оборудования Playback Rental" subtitle={`Редакция от ${revisionLabel(LEGAL_DOCUMENTS.userAgreement.revision)}`} toc={TOC}>
       <section>
         <h2 id="s1" className="scroll-mt-[112px] text-[18px] font-semibold text-foreground">1. Общие положения</h2>
         <p className="mt-3">Арендодатель — ИП Данко Александр Юрьевич, ИНН 421718911238, адрес регистрации: г. Кемерово, пр. Молодежный 19б, кв. 349, действующий на основании внесения записи в ЕГРИП № 320420500076682.</p>

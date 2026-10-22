@@ -32,6 +32,31 @@ async function expectRetiredCmsRoute(pathname) {
   console.log(`PASS ${pathname} -> 404 (Payload admin retired)`)
 }
 
+// The admin layout's session check does not run on a client-side navigation
+// (Next renders only the changed page segment), so a crafted RSC request
+// claiming the admin layout is mounted used to get page data anonymously.
+// Probed with no cookie (stopped by proxy.ts) and with a forged cookie (gets
+// past proxy.ts, so this exercises requireAdminSession() in the loaders).
+const ADMIN_DATA_MARKERS = /[a-z0-9._-]+@example\.invalid|customerPhone|\bSMOKE[A-Z0-9]+\b/i
+async function expectNoAdminRscLeak(pathname) {
+  const sibling = pathname === '/admin/stock' ? 'orders' : 'stock'
+  const tree = ['', { children: ['(admin)', { children: ['admin', { children: [sibling, { children: ['__PAGE__', {}] }] }] }] }]
+  for (const cookie of [undefined, 'payload-token=forged.invalid.token']) {
+    const response = await fetch(url(`${pathname}?_rsc=smoke`), {
+      headers: {
+        RSC: '1',
+        'Next-Router-State-Tree': encodeURIComponent(JSON.stringify(tree)),
+        'Sec-Fetch-Site': 'same-origin',
+        ...(cookie ? { Cookie: cookie } : {}),
+      },
+    })
+    const body = await response.text()
+    const leak = body.match(ADMIN_DATA_MARKERS)?.[0]
+    if (leak) throw new Error(`${pathname} (${cookie ? 'forged cookie' : 'no cookie'}): anonymous RSC response leaked admin data: ${leak}`)
+  }
+  console.log(`PASS ${pathname}: anonymous RSC request gets no admin data`)
+}
+
 // SEC-020: the login page hands `next` to window.location.href after a
 // successful login, so it must never carry an off-origin or script URL. The
 // raw query string is echoed elsewhere in the RSC payload, so read the
@@ -118,6 +143,10 @@ async function main() {
 
   for (const pathname of ['/cms', '/cms/login', '/cms/clients', '/cms/calendar', '/cms/analytics', '/cms/collections/orders']) {
     await expectRetiredCmsRoute(pathname)
+  }
+
+  for (const pathname of ['/admin', '/admin/clients', '/admin/orders', `/admin/orders/${orderId}`, '/admin/promo-codes', '/admin/users', '/admin/analytics', '/admin/stock', '/admin/calendar']) {
+    await expectNoAdminRscLeak(pathname)
   }
 
   // SEC-026: the contact endpoint validates before rate limiting, so these

@@ -1,11 +1,10 @@
 import type { CollectionConfig, PayloadRequest } from 'payload'
 import { APIError } from 'payload'
-import { differenceInCalendarDays } from 'date-fns'
 import { calculateLineTotal, calculateRentalDays } from '../lib/rental/pricing'
 import { isBeforeBusinessToday } from '../lib/rental/businessDay'
 import { getAvailableRentalQuantity, getAvailableSaleQuantity, lockProductsForBooking } from '../lib/rental/availability'
 import { kitComposition } from '../lib/rental/kitStock'
-import { MAX_RENTAL_DAYS } from '../lib/rental/limits'
+import { MAX_ITEM_QUANTITY, MAX_RENTAL_DAYS, MIN_RENTAL_HOURS } from '../lib/rental/limits'
 import { secretsMatch } from '../lib/security/timingSafe'
 
 // Hooks receive relationship fields populated to Payload's default depth
@@ -246,10 +245,18 @@ export const OrderItems: CollectionConfig = {
       required: true,
       min: 1,
       defaultValue: 1,
+      max: MAX_ITEM_QUANTITY,
       // SEC-027: `min: 1` alone let 1.5 through, priced and counted against
-      // stock as a fractional unit.
-      validate: (value: number | null | undefined) =>
-        value === null || value === undefined || Number.isInteger(value) || 'Количество должно быть целым числом',
+      // stock as a fractional unit. A custom `validate` REPLACES Payload's
+      // built-in number check, so min/max above are not enforced on their own
+      // any more — the range is checked here too. Without it 0 and negative
+      // quantities went through and priced an order down to 0 ₽.
+      validate: (value: number | null | undefined) => {
+        if (value === null || value === undefined) return true
+        if (!Number.isInteger(value)) return 'Количество должно быть целым числом'
+        if (value < 1 || value > MAX_ITEM_QUANTITY) return `Количество должно быть от 1 до ${MAX_ITEM_QUANTITY}`
+        return true
+      },
     },
     {
       name: 'startDate',
@@ -281,6 +288,16 @@ export const OrderItems: CollectionConfig = {
   hooks: {
     beforeValidate: [
       async ({ data, req, originalDoc }) => {
+        // SEC-005: a PATCH carries only the fields it changes. Without the
+        // saved values filled in, an update that omitted `product` returned
+        // early here and stored whatever `lineTotal` the request sent. Fill
+        // the pricing inputs from the stored line so every save re-prices.
+        if (data && originalDoc) {
+          const ref = (v: unknown) => (v && typeof v === 'object' && 'id' in v ? (v as { id: number }).id : v)
+          for (const key of ['product', 'order', 'quantity', 'startDate', 'endDate'] as const) {
+            if (data[key] === undefined && originalDoc[key] !== undefined) data[key] = ref(originalDoc[key]) as never
+          }
+        }
         if (!data?.product) return data
 
         const product = await req.payload.findByID({
@@ -316,26 +333,27 @@ export const OrderItems: CollectionConfig = {
               true,
             )
           }
-          // calculateRentalDays (lib/rental/pricing.ts) floors at 1 day for
-          // *any* range — including a genuinely backwards one, where
-          // differenceInCalendarDays would otherwise go negative. Reject a
-          // backwards range here instead of letting it silently price as one
-          // full day. This compares calendar days, not raw timestamps: an
-          // equal-or-same-calendar-day range (e.g. pick up 10:00, return
-          // 18:00 the same day) is a legitimate same-day rental under the
-          // current day-counting convention (see that file's JSDoc, revised
-          // 2026-09-30) — one full day at full rate, not an error — so it
-          // must fall through to calculateLineTotal below, not be rejected
-          // here.
-          if (differenceInCalendarDays(new Date(data.endDate), new Date(data.startDate)) < 0) {
-            // What's rejected here is a return date *earlier* than the
-            // pickup date, not merely "not after" it — a same-calendar-day
-            // rental is valid (see above), so the guard is `< 0`, not
-            // `<= 0`.
+          // Compared as timestamps. calculateRentalDays (lib/rental/pricing.ts)
+          // floors at one day for any range, so without these checks a
+          // backwards or minutes-long range would quietly price as a day.
+          // This used to compare calendar days, which let a same-day
+          // backwards range (10:00 -> 04:00) through and booked nothing
+          // visible in the calendar.
+          const rentalMs = new Date(data.endDate).getTime() - new Date(data.startDate).getTime()
+          if (rentalMs < 0) {
             throw new APIError(
               'endDate is earlier than startDate',
               400,
               { code: 'RENTAL_DATES_INVALID', reason: 'backwards', productTitle: product.title },
+              true,
+            )
+          }
+          // Owner's minimum (user agreement: 4 hours, billed as one day).
+          if (rentalMs < MIN_RENTAL_HOURS * 60 * 60 * 1000) {
+            throw new APIError(
+              `rental is shorter than ${MIN_RENTAL_HOURS} hours`,
+              400,
+              { code: 'RENTAL_DATES_INVALID', reason: 'too_short', productTitle: product.title },
               true,
             )
           }

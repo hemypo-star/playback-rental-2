@@ -38,6 +38,9 @@ export interface ContactNotificationPayload {
   phone: string
   subject: string | null
   message: string
+  /** When the sender ticked the personal-data consent, and to which revisions. */
+  consentAt?: string
+  consentDocuments?: string
 }
 
 export type NotificationPayload = OrderNotificationPayload | ContactNotificationPayload

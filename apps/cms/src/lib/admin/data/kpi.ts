@@ -1,5 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { requireAdminSession } from '../auth'
 
 // Ported from apps/cms/src/endpoints/admin/kpi.ts (docs/PLAN-next-
 // migration.md Stage 3.3) — the endpoint's body, minus the explicit
@@ -30,6 +31,7 @@ export interface AdminKpi {
 }
 
 export async function getAdminKpi(): Promise<AdminKpi> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
   const now = new Date()
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
@@ -68,7 +70,7 @@ export async function getAdminKpi(): Promise<AdminKpi> {
     : 0
 
   const totalRentalStock = rentalProducts.docs.reduce((sum, p) => sum + (p.quantity || 0), 0)
-  const activeRentalQty = activeItems.docs.reduce((sum, i) => sum + (i.quantity || 0), 0)
+  const activeRentalQty = activeItems.docs.reduce((sum, i) => sum + Math.max(0, i.quantity || 0), 0)
   const utilization = totalRentalStock > 0 ? Math.round((activeRentalQty / totalRentalStock) * 100) : 0
 
   return {

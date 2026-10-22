@@ -11,6 +11,8 @@ import * as migration_20260929_040000_products_sync_baseline from './20260929_04
 import * as migration_20260929_120000_products_compatible_accessories from './20260929_120000_products_compatible_accessories';
 import * as migration_20260930_100000_kit_items_product_id from './20260930_100000_kit_items_product_id';
 import * as migration_20261015_090000_payload_3_90_reset_password_requested_at from './20261015_090000_payload_3_90_reset_password_requested_at';
+import * as migration_20261021_090000_consent_erasure_hero from './20261021_090000_consent_erasure_hero';
+import * as migration_20261021_100000_schema_drift_fixes from './20261021_100000_schema_drift_fixes';
 
 export const migrations = [
   {
@@ -77,5 +79,15 @@ export const migrations = [
     up: migration_20261015_090000_payload_3_90_reset_password_requested_at.up,
     down: migration_20261015_090000_payload_3_90_reset_password_requested_at.down,
     name: '20261015_090000_payload_3_90_reset_password_requested_at'
+  },
+  {
+    up: migration_20261021_090000_consent_erasure_hero.up,
+    down: migration_20261021_090000_consent_erasure_hero.down,
+    name: '20261021_090000_consent_erasure_hero'
+  },
+  {
+    up: migration_20261021_100000_schema_drift_fixes.up,
+    down: migration_20261021_100000_schema_drift_fixes.down,
+    name: '20261021_100000_schema_drift_fixes'
   },
 ];

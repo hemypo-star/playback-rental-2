@@ -2,6 +2,7 @@ import { getPayload, type Where } from 'payload'
 import config from '@payload-config'
 import type { OrderItem } from '../../../payload-types'
 import type { AnalyticsDateRange } from '../analyticsDateRange'
+import { requireAdminSession } from '../auth'
 
 // Ported near-verbatim from apps/cms/src/endpoints/admin/analytics.ts
 // (docs/PLAN-next-migration.md Stage 3.5, page group 4) — revenue by
@@ -34,6 +35,7 @@ function addRevenue(byCategory: Map<string, number>, item: OrderItem, amount: nu
 }
 
 export async function getAdminAnalytics(range: AnalyticsDateRange = {}): Promise<AdminAnalyticsRow[]> {
+  await requireAdminSession()
   const payload = await getPayload({ config })
 
   // Backlog item 14: define the period at the order level, by createdAt.
