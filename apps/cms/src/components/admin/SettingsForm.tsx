@@ -390,23 +390,21 @@ export default function SettingsForm({
 
             <div className="mt-5">
               <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle mb-2">
-                Добавить товар в популярные:
+                Добавить товар в популярные (всего в каталоге: {products.length}):
               </div>
               <input
                 type="text"
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="Поиск по названию товара..."
+                placeholder="Поиск по названию товара (например: Sony, Canon, светодиодный...)"
                 className="mb-2 h-9 w-full rounded-xl border border-input bg-muted-well px-3 text-[13px] outline-none focus:border-foreground focus:bg-white"
               />
-              <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto rounded-xl border border-input bg-muted-well p-2.5">
+              <div className="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto rounded-xl border border-input bg-muted-well p-2.5">
                 {products
                   .filter((p) => !featuredProductIds.includes(p.id) && (!productSearch || p.title.toLowerCase().includes(productSearch.toLowerCase())))
-                  .slice(0, 30)
                   .map((p) => (
                     <button
                       key={p.id}
-                      type="button"
                       onClick={() => setFeaturedProductIds([...featuredProductIds, p.id])}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-2.5 py-1 text-[12px] font-medium text-foreground hover:border-foreground hover:bg-muted"
                     >

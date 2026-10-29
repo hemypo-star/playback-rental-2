@@ -18,7 +18,7 @@ export default async function AdminSettingsPage() {
   const [settings, categories, productsResult] = await Promise.all([
     getSiteSettingsRaw(),
     getCategories(),
-    getProducts({ limit: 0, depth: 0 }),
+    getProducts({ limit: 1000, depth: 0, sort: 'title' }),
   ])
 
   return (
