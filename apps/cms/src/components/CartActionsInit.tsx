@@ -11,6 +11,9 @@ import { initCartActions } from '../scripts/cart-actions'
 export default function CartActionsInit() {
   useEffect(() => {
     initCartActions()
+    const noop = () => {}
+    document.addEventListener('touchstart', noop, { passive: true })
+    return () => document.removeEventListener('touchstart', noop)
   }, [])
   return null
 }
