@@ -9,7 +9,7 @@
 // fallback as placeholder, instead of jargon like "Кикер".
 import { useId, useState, type ReactNode } from 'react'
 import Image from 'next/image'
-import type { SiteSetting } from '../../payload-types'
+import type { Category, SiteSetting } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
 import ImageDropzone from './ImageDropzone'
@@ -27,6 +27,7 @@ function imageId(value: SiteSetting['heroBannerImage']): number | null {
 
 const SECTIONS = [
   { id: 'hero', title: 'Первый экран главной' },
+  { id: 'categories', title: 'Категории на главной' },
   { id: 'facts', title: 'Цифры под первым экраном' },
   { id: 'steps', title: 'Шаги «Как это работает»' },
   { id: 'cta', title: 'Блок «Нужен совет»' },
@@ -55,8 +56,17 @@ function Field({ id, label, hint, children }: { id: string; label: string; hint?
   )
 }
 
-export default function SettingsForm({ settings }: { settings: SiteSetting }) {
+export default function SettingsForm({
+  settings,
+  categories = [],
+}: {
+  settings: SiteSetting
+  categories?: Category[]
+}) {
   const uid = useId()
+  const rawFeatured = 'featuredCategories' in settings ? (settings as { featuredCategories?: unknown }).featuredCategories : undefined
+  const initialFeatured: number[] = Array.isArray(rawFeatured) ? rawFeatured.filter((id): id is number => typeof id === 'number') : []
+  const [featuredCategoryIds, setFeaturedCategoryIds] = useState<number[]>(initialFeatured)
   const [heroDesktopId, setHeroDesktopId] = useState<number | null>(imageId(settings.heroBannerImage))
   const [heroDesktopPreview, setHeroDesktopPreview] = useState<string | undefined>(mediaUrl(settings.heroBannerImage))
   const [heroMobileId, setHeroMobileId] = useState<number | null>(imageId(settings.heroBannerImageMobile))
@@ -120,7 +130,7 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
     const result = await saveSiteSettings({
       heroBannerImage: heroDesktopId,
       heroBannerImageMobile: heroMobileId,
-      heroKicker,
+      featuredCategories: featuredCategoryIds,
       heroCity,
       heroHeadline,
       heroSubtext,
@@ -197,6 +207,103 @@ export default function SettingsForm({ settings }: { settings: SiteSetting }) {
             </Field>
           </section>
 
+          <section id="categories" className={sectionClass}>
+            <SectionHead
+              title="Категории на главной"
+              where="Плитки разделов в блоке «Выберите, чем снимать». Рекомендуется выбрать 6 категорий. Если список пуст, автоматически показываются первые 6 активных категорий."
+            />
+            <div className="mt-4">
+              <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle mb-2">
+                Выбранные категории (в порядке показа на главной): {featuredCategoryIds.length}
+              </div>
+              {featuredCategoryIds.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-input p-4 text-[13px] text-subtle">
+                  Сейчас категории не выбраны вручную — на главной показываются первые 6 активных категорий по умолчанию.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {featuredCategoryIds.map((id, index) => {
+                    const cat = categories.find((c) => c.id === id)
+                    if (!cat) return null
+                    return (
+                      <div key={id} className="flex items-center justify-between gap-3 rounded-xl bg-muted p-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-5 text-center text-[12px] font-semibold text-subtle">{index + 1}</span>
+                          <span className="text-[14px] font-medium text-foreground">{cat.name}</span>
+                          {cat.tag && (
+                            <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-subtle">
+                              {cat.tag}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => {
+                              const next = [...featuredCategoryIds]
+                              const temp = next[index - 1]
+                              next[index - 1] = next[index]
+                              next[index] = temp
+                              setFeaturedCategoryIds(next)
+                            }}
+                            className="h-7 w-7 rounded-lg bg-white text-[12px] text-subtle hover:text-foreground disabled:opacity-30"
+                            title="Поднять выше"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === featuredCategoryIds.length - 1}
+                            onClick={() => {
+                              const next = [...featuredCategoryIds]
+                              const temp = next[index + 1]
+                              next[index + 1] = next[index]
+                              next[index] = temp
+                              setFeaturedCategoryIds(next)
+                            }}
+                            className="h-7 w-7 rounded-lg bg-white text-[12px] text-subtle hover:text-foreground disabled:opacity-30"
+                            title="Опустить ниже"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFeaturedCategoryIds(featuredCategoryIds.filter((cid) => cid !== id))}
+                            className="h-7 w-7 rounded-lg bg-white text-[12px] text-subtle hover:text-status-alert"
+                            title="Убрать с главной"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="mt-5">
+              <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle mb-2">
+                Добавить категорию на главную:
+              </div>
+              <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto rounded-xl border border-input bg-muted-well p-2.5">
+                {categories
+                  .filter((c) => !featuredCategoryIds.includes(c.id))
+                  .map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setFeaturedCategoryIds([...featuredCategoryIds, c.id])}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-2.5 py-1 text-[12.5px] font-medium text-foreground hover:border-foreground hover:bg-muted"
+                    >
+                      <span>+</span>
+                      <span>{c.name}</span>
+                      {c.tag && <span className="text-[10px] text-subtle">({c.tag})</span>}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </section>
           <section id="facts" className={sectionClass}>
             <SectionHead title="Цифры под первым экраном" where="Две карточки в ряду под первым экраном главной: крупное значение и подпись под ним." />
             <div className="grid grid-cols-1 gap-x-3.5 sm:grid-cols-2">

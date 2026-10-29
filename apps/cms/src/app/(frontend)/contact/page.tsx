@@ -83,7 +83,13 @@ export default async function ContactPage() {
         </div>
 
         <div className="pb-map-card">
-          <span className="pb-map-pin" aria-hidden />
+          <img
+            src="/contact-map.png"
+            alt="Расположение Playback Rental на карте Кемерово"
+            className="pb-map-tile"
+            width={650}
+            height={450}
+          />
           <div className="pb-map-panel">
             <div className="pb-kicker">Как&nbsp;добраться</div>
             <div className="pb-map-panel-title">{address}</div>

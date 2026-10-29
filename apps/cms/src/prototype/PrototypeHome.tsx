@@ -46,7 +46,11 @@ export default async function PrototypeHome(){
  const statIds=Array.from(new Set(rootCategories.flatMap(c=>getSubtreeIds(c.id,categories))))
  const catStats=await getCategoryProductStats(statIds)
  const catMeta=(c:Category)=>{let count=0,min:number|undefined;for(const id of getSubtreeIds(c.id,categories)){const s=catStats.get(id);if(!s)continue;count+=s.count;min=min===undefined?s.minPrice:Math.min(min,s.minPrice)}return count&&min!==undefined?`${count} позиций · от ${formatCurrency(min)}`:''}
- const featuredCategories=rootCategories.filter(c=>catMeta(c)!=='').slice(0,6)
+ const rawFeatured = 'featuredCategories' in settings ? (settings as { featuredCategories?: unknown }).featuredCategories : undefined
+ const manualCategoryIds: number[] = Array.isArray(rawFeatured) ? rawFeatured.filter((id): id is number => typeof id === 'number') : []
+ const featuredCategories = manualCategoryIds.length > 0
+   ? manualCategoryIds.map(id => categories.find(c => c.id === id)).filter((c): c is Category => Boolean(c))
+   : rootCategories.filter(c => catMeta(c) !== '').slice(0, 6)
  const hero=mediaUrl(settings.heroBannerImage),heroMobile=mediaUrl(settings.heroBannerImageMobile)||hero
  const stats=[{value:String(totals.total),label:'Позиций в парке'},{value:String(totals.inStock),label:'Свободны сегодня'},{value:settings.depositLabel||'0 ₽',label:settings.depositCaption||'Залог'},{value:settings.pickupTimeLabel||'10 мин',label:settings.pickupTimeCaption||'Выдача по паспорту'}]
  const promos=promotions.map(p=>({id:p.id,title:p.title,kicker:p.kicker||undefined,text:p.text||undefined,imageUrl:mediaUrl(p.image),linkUrl:p.linkUrl||(p.slug?`/promotions/${p.slug}`:undefined)}))

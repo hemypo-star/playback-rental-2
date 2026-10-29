@@ -268,11 +268,8 @@ a.pb-contact-value:hover{color:var(--pb-red)}
 .pb-contact-sub{display:block;margin-top:3px;font-size:13px;font-weight:400;letter-spacing:0;color:var(--pb-sub)}
 .pb-contact-actions{margin-top:auto;padding-top:22px;display:flex;flex-wrap:wrap;gap:10px}
 .pb-map-card{grid-column:span 5;position:relative;overflow:hidden;min-height:360px;border-radius:26px;border:1px solid var(--pb-border);background:#E6E4E0;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;animation:pbClip .9s var(--pb-ease) .12s both}
-.pb-map-card::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,10,10,.06) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(rgba(10,10,10,.06) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(150deg,#ECEAE6,#DED9D1)}
-.pb-map-card::after{content:'';position:absolute;left:-10%;right:-10%;top:46%;height:18px;background:rgba(255,255,255,.7);transform:rotate(-14deg);box-shadow:0 120px 0 -4px rgba(255,255,255,.55),0 -140px 0 -6px rgba(255,255,255,.5)}
-.pb-map-pin{position:absolute;left:50%;top:38%;z-index:2;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50% 50% 50% 0;background:var(--pb-red);transform:rotate(-45deg);box-shadow:0 14px 28px -10px rgba(214,36,16,.7);animation:pbFloat 3.2s ease-in-out infinite}
-.pb-map-pin::after{content:'';position:absolute;inset:15px;border-radius:50%;background:#fff}
-.pb-map-panel{position:relative;z-index:2;padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.86);backdrop-filter:blur(18px)}
+.pb-map-tile{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:1;user-select:none;pointer-events:none}
+.pb-map-panel{position:relative;z-index:2;padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.88);backdrop-filter:blur(18px);box-shadow:0 10px 30px rgba(0,0,0,.08)}
 .pb-map-panel-title{margin-top:8px;font-size:15px;font-weight:500;letter-spacing:-.015em;line-height:1.35}
 .pb-map-panel-links{margin-top:14px;display:flex;gap:8px}
 .pb-about-card{grid-column:span 5;border-radius:24px;padding:26px 28px}

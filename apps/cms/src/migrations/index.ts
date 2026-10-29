@@ -13,6 +13,7 @@ import * as migration_20260930_100000_kit_items_product_id from './20260930_1000
 import * as migration_20261015_090000_payload_3_90_reset_password_requested_at from './20261015_090000_payload_3_90_reset_password_requested_at';
 import * as migration_20261021_090000_consent_erasure_hero from './20261021_090000_consent_erasure_hero';
 import * as migration_20261021_100000_schema_drift_fixes from './20261021_100000_schema_drift_fixes';
+import * as migration_20261029_140000_site_settings_featured_categories from './20261029_140000_site_settings_featured_categories';
 
 export const migrations = [
   {
@@ -90,4 +91,9 @@ export const migrations = [
     down: migration_20261021_100000_schema_drift_fixes.down,
     name: '20261021_100000_schema_drift_fixes'
   },
+  {
+    up: migration_20261029_140000_site_settings_featured_categories.up,
+    down: migration_20261029_140000_site_settings_featured_categories.down,
+    name: '20261029_140000_site_settings_featured_categories'
+  }
 ];

@@ -50,6 +50,19 @@ export const SiteSettings: GlobalConfig = {
           ],
         },
         {
+          label: 'Главная — категории',
+          fields: [
+            {
+              name: 'featuredCategories',
+              type: 'json',
+              defaultValue: [],
+              admin: {
+                description: 'Массив ID категорий для блока «Выберите, чем снимать» на главной странице. Если пусто, показываются первые 6 активных категорий.',
+              },
+            },
+          ],
+        },
+        {
           label: 'Главная — факты и шаги',
           fields: [
             { name: 'depositLabel', type: 'text', defaultValue: '0 ₽', admin: { description: 'Statistic tile value (deposit amount).' } },
