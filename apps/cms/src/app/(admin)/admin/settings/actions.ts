@@ -32,6 +32,8 @@ async function requireAdmin() {
 export interface SiteSettingsInput {
   heroBannerImage: number | null
   heroBannerImageMobile: number | null
+  heroKicker: string
+  heroCity: string
   featuredCategories?: number[]
   featuredProducts?: number[]
   heroHeadline: string

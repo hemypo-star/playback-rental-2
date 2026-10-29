@@ -74,6 +74,7 @@ export default function SettingsForm({
   const initialFeaturedProducts: number[] = Array.isArray(rawFeaturedProducts) ? rawFeaturedProducts.filter((id): id is number => typeof id === 'number') : []
   const [featuredProductIds, setFeaturedProductIds] = useState<number[]>(initialFeaturedProducts)
   const [productSearch, setProductSearch] = useState('')
+  const [heroDesktopId, setHeroDesktopId] = useState<number | null>(imageId(settings.heroBannerImage))
   const [heroDesktopPreview, setHeroDesktopPreview] = useState<string | undefined>(mediaUrl(settings.heroBannerImage))
   const [heroMobileId, setHeroMobileId] = useState<number | null>(imageId(settings.heroBannerImageMobile))
   const [heroMobilePreview, setHeroMobilePreview] = useState<string | undefined>(mediaUrl(settings.heroBannerImageMobile))
@@ -138,6 +139,7 @@ export default function SettingsForm({
       heroBannerImageMobile: heroMobileId,
       featuredCategories: featuredCategoryIds,
       featuredProducts: featuredProductIds,
+      heroKicker,
       heroCity,
       heroHeadline,
       heroSubtext,
