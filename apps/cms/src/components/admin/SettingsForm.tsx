@@ -9,7 +9,7 @@
 // fallback as placeholder, instead of jargon like "Кикер".
 import { useId, useState, type ReactNode } from 'react'
 import Image from 'next/image'
-import type { Category, SiteSetting } from '../../payload-types'
+import type { Category, Product, SiteSetting } from '../../payload-types'
 import { mediaUrl } from '../../lib/mediaUrl'
 import { uploadMedia } from '../../lib/admin/mediaUpload'
 import ImageDropzone from './ImageDropzone'
@@ -28,6 +28,7 @@ function imageId(value: SiteSetting['heroBannerImage']): number | null {
 const SECTIONS = [
   { id: 'hero', title: 'Первый экран главной' },
   { id: 'categories', title: 'Категории на главной' },
+  { id: 'popular', title: 'Популярные товары' },
   { id: 'facts', title: 'Цифры под первым экраном' },
   { id: 'steps', title: 'Шаги «Как это работает»' },
   { id: 'cta', title: 'Блок «Нужен совет»' },
@@ -59,15 +60,20 @@ function Field({ id, label, hint, children }: { id: string; label: string; hint?
 export default function SettingsForm({
   settings,
   categories = [],
+  products = [],
 }: {
   settings: SiteSetting
   categories?: Category[]
+  products?: Product[]
 }) {
   const uid = useId()
   const rawFeatured = 'featuredCategories' in settings ? (settings as { featuredCategories?: unknown }).featuredCategories : undefined
   const initialFeatured: number[] = Array.isArray(rawFeatured) ? rawFeatured.filter((id): id is number => typeof id === 'number') : []
   const [featuredCategoryIds, setFeaturedCategoryIds] = useState<number[]>(initialFeatured)
-  const [heroDesktopId, setHeroDesktopId] = useState<number | null>(imageId(settings.heroBannerImage))
+  const rawFeaturedProducts = 'featuredProducts' in settings ? (settings as { featuredProducts?: unknown }).featuredProducts : undefined
+  const initialFeaturedProducts: number[] = Array.isArray(rawFeaturedProducts) ? rawFeaturedProducts.filter((id): id is number => typeof id === 'number') : []
+  const [featuredProductIds, setFeaturedProductIds] = useState<number[]>(initialFeaturedProducts)
+  const [productSearch, setProductSearch] = useState('')
   const [heroDesktopPreview, setHeroDesktopPreview] = useState<string | undefined>(mediaUrl(settings.heroBannerImage))
   const [heroMobileId, setHeroMobileId] = useState<number | null>(imageId(settings.heroBannerImageMobile))
   const [heroMobilePreview, setHeroMobilePreview] = useState<string | undefined>(mediaUrl(settings.heroBannerImageMobile))
@@ -131,6 +137,7 @@ export default function SettingsForm({
       heroBannerImage: heroDesktopId,
       heroBannerImageMobile: heroMobileId,
       featuredCategories: featuredCategoryIds,
+      featuredProducts: featuredProductIds,
       heroCity,
       heroHeadline,
       heroSubtext,
@@ -299,6 +306,111 @@ export default function SettingsForm({
                       <span>+</span>
                       <span>{c.name}</span>
                       {c.tag && <span className="text-[10px] text-subtle">({c.tag})</span>}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </section>
+
+          <section id="popular" className={sectionClass}>
+            <SectionHead
+              title="Популярные товары на главной"
+              where="Карточки в блоке «Берут чаще всего / Популярные позиции» на главной странице. Рекомендуется 4 товара. Если список пуст, автоматически выбираются 4 самые популярные позиции по истории заказов."
+            />
+            <div className="mt-4">
+              <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle mb-2">
+                Выбранные позиции (в порядке показа на главной): {featuredProductIds.length}
+              </div>
+              {featuredProductIds.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-input p-4 text-[13px] text-subtle">
+                  Сейчас позиции не выбраны вручную — на главной показываются 4 самые популярные позиции по истории заказов.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {featuredProductIds.map((id, index) => {
+                    const p = products.find((prod) => prod.id === id)
+                    if (!p) return null
+                    return (
+                      <div key={id} className="flex items-center justify-between gap-3 rounded-xl bg-muted p-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="w-5 text-center text-[12px] font-semibold text-subtle shrink-0">{index + 1}</span>
+                          <span className="text-[14px] font-medium text-foreground truncate">{p.title}</span>
+                          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-subtle shrink-0">
+                            {p.price} ₽
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => {
+                              const next = [...featuredProductIds]
+                              const temp = next[index - 1]
+                              next[index - 1] = next[index]
+                              next[index] = temp
+                              setFeaturedProductIds(next)
+                            }}
+                            className="h-7 w-7 rounded-lg bg-white text-[12px] text-subtle hover:text-foreground disabled:opacity-30"
+                            title="Поднять выше"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === featuredProductIds.length - 1}
+                            onClick={() => {
+                              const next = [...featuredProductIds]
+                              const temp = next[index + 1]
+                              next[index + 1] = next[index]
+                              next[index] = temp
+                              setFeaturedProductIds(next)
+                            }}
+                            className="h-7 w-7 rounded-lg bg-white text-[12px] text-subtle hover:text-foreground disabled:opacity-30"
+                            title="Опустить ниже"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFeaturedProductIds(featuredProductIds.filter((pid) => pid !== id))}
+                            className="h-7 w-7 rounded-lg bg-white text-[12px] text-subtle hover:text-status-alert"
+                            title="Убрать с главной"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5">
+              <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-subtle mb-2">
+                Добавить товар в популярные:
+              </div>
+              <input
+                type="text"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="Поиск по названию товара..."
+                className="mb-2 h-9 w-full rounded-xl border border-input bg-muted-well px-3 text-[13px] outline-none focus:border-foreground focus:bg-white"
+              />
+              <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto rounded-xl border border-input bg-muted-well p-2.5">
+                {products
+                  .filter((p) => !featuredProductIds.includes(p.id) && (!productSearch || p.title.toLowerCase().includes(productSearch.toLowerCase())))
+                  .slice(0, 30)
+                  .map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setFeaturedProductIds([...featuredProductIds, p.id])}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-2.5 py-1 text-[12px] font-medium text-foreground hover:border-foreground hover:bg-muted"
+                    >
+                      <span>+</span>
+                      <span className="truncate max-w-xs">{p.title}</span>
+                      <span className="text-[10.5px] text-subtle">({p.price} ₽)</span>
                     </button>
                   ))}
               </div>

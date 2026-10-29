@@ -3,6 +3,7 @@ import AdminPageHeader from '../../../../components/admin/AdminPageHeader'
 import SettingsForm from '../../../../components/admin/SettingsForm'
 import { getSiteSettingsRaw } from '../../../../lib/data/siteSettings'
 import { getCategories } from '../../../../lib/data/categories'
+import { getProducts } from '../../../../lib/data/products'
 
 // Ported from apps/web/src/pages/admin/settings.astro (docs/PLAN-next-
 // migration.md Stage 3.5, page group 6 — last of Stage 3). Reuses
@@ -14,15 +15,16 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminSettingsPage() {
   // Raw: the form edits the text as typed, without storefront typography.
-  const [settings, categories] = await Promise.all([
+  const [settings, categories, productsResult] = await Promise.all([
     getSiteSettingsRaw(),
     getCategories(),
+    getProducts({ limit: 0, depth: 0 }),
   ])
 
   return (
     <>
       <AdminPageHeader title="Тексты и контакты сайта" subtitle="Главная страница, контакты и часы работы. Товары и цены приходят из МойСклад." />
-      <SettingsForm settings={settings} categories={categories} />
+      <SettingsForm settings={settings} categories={categories} products={productsResult.docs} />
     </>
   )
 }

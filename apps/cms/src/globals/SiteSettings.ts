@@ -63,6 +63,19 @@ export const SiteSettings: GlobalConfig = {
           ],
         },
         {
+          label: 'Главная — популярные товары',
+          fields: [
+            {
+              name: 'featuredProducts',
+              type: 'json',
+              defaultValue: [],
+              admin: {
+                description: 'Массив ID товаров для блока «Популярные позиции» на главной странице. Если пусто, выбираются 4 самые популярные позиции по заказам.',
+              },
+            },
+          ],
+        },
+        {
           label: 'Главная — факты и шаги',
           fields: [
             { name: 'depositLabel', type: 'text', defaultValue: '0 ₽', admin: { description: 'Statistic tile value (deposit amount).' } },

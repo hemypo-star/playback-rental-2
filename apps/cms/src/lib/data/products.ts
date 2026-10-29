@@ -22,8 +22,8 @@ export function typoProduct(product: Product): Product {
 // translated to that shape. `categorySlug` from the REST version's params
 // was dead code there (declared, never read) — not carried over here.
 export interface GetProductsParams {
+  ids?: number[]
   categoryId?: number
-  // A parent category's page shows its own products plus every descendant
   // category's — pass the whole resolved subtree (see lib/categoryTree.ts's
   // getSubtreeIds) here instead of categoryId to get that. Wins over
   // categoryId if both are somehow passed.
@@ -59,6 +59,7 @@ export async function getProducts(params: GetProductsParams = {}) {
   const payload = await getPayload({ config })
 
   const extra: Where[] = []
+  if (params.ids?.length) extra.push({ id: { in: params.ids } })
   if (params.categoryIds) extra.push({ category: { in: params.categoryIds } })
   else if (params.categoryId) extra.push({ category: { equals: params.categoryId } })
   // Search matches any of title, description, or tag. `like` splits the query

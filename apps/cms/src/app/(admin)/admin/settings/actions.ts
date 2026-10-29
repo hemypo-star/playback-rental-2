@@ -33,7 +33,7 @@ export interface SiteSettingsInput {
   heroBannerImage: number | null
   heroBannerImageMobile: number | null
   featuredCategories?: number[]
-  heroCity: string
+  featuredProducts?: number[]
   heroHeadline: string
   heroSubtext: string
   depositLabel: string

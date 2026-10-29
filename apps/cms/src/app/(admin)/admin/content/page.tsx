@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 const SITE_TEXT_SECTIONS = [
   { anchor: 'hero', label: 'Первый экран главной' },
   { anchor: 'categories', label: 'Категории на главной' },
+  { anchor: 'popular', label: 'Популярные товары на главной' },
   { anchor: 'facts', label: 'Цифры под первым экраном' },
   { anchor: 'steps', label: 'Шаги «Как это работает»' },
   { anchor: 'cta', label: 'Тёмный блок «Нужен совет»' },
@@ -23,6 +24,7 @@ const GROUPS = [
     title: 'Каталог',
     items: [
       { href: '/admin/settings#categories', title: 'Категории на главной', where: 'Выбор и порядок категорий, отображаемых плитками на главной.' },
+      { href: '/admin/settings#popular', title: 'Популярные товары', where: 'Выбор и порядок товаров в блоке «Популярные позиции» на главной.' },
       { href: '/admin/categories', title: 'Категории', where: 'Разделы каталога, их порядок и названия.' },
       { href: '/admin/kits', title: 'Наборы', where: 'Комплекты техники в разделе «Наборы»: состав, цена, остаток.' },
     ],
